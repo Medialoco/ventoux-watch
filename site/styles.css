@@ -114,26 +114,40 @@ h1 {
   letter-spacing: -0.02em;
 }
 
+/* One line of readings, cut short rather than stacked. Wrapping was the quiet
+   way to lose height: three columns of a label, a figure and two notes folded
+   into seven lines and took fifty pixels off every section on the page. A
+   reading that will not fit is better trimmed than moved down, because the
+   figure at the head of it is the part anyone reads. */
 .facts {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: baseline;
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .facts > div {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: baseline;
   gap: 5px;
   padding: 0 10px;
   border-left: 1px solid var(--line);
+  white-space: nowrap;
   /* Allowed to give ground. Without this the weather column claims the width
      of its longest sentence, which alone pushes the whole row onto a second
      line and undoes what the single row was for. */
   min-width: 0;
   flex: 0 1 auto;
+  overflow: hidden;
 }
+
+/* The notes give way before the figures do. Each keeps its label and its
+   number whatever the window, and loses its tail first. */
+.facts dt, .facts dd:not(.sub) { flex: 0 0 auto; }
+.facts dd.sub { flex: 0 1 auto; min-width: 0; }
 
 .facts .sub {
   overflow: hidden;
@@ -607,6 +621,11 @@ h2 {
 
 @media (max-width: 980px) {
   .top-inner { align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+  /* On a narrow screen the readings may take a second line again. Height is
+     cheap there and width is not: kept on one line they would be trimmed to
+     the label, which says nothing. */
+  .facts { flex-wrap: wrap; overflow: visible; }
+  .facts > div { overflow: visible; }
   .facts { margin-left: 0; }
   .facts > div:first-child { padding-left: 0; border-left: 0; }
   .board { grid-template-columns: 1fr; }

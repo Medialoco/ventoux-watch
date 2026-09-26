@@ -13,6 +13,17 @@ const COPY = {
     weather: "Weather",
     passes: "Passes",
     namedLine: (named, habits) => `${named} named · ${habits} habits`,
+    // The menu says it shorter than the headings do. The six links spelled out
+    // in full took four hundred and seventy pixels of a row that has to hold
+    // the title, the readings and the buttons as well, and a reader who is
+    // already looking at the menu does not need "Live webcam" to guess which
+    // one is the webcam.
+    navLive: "Live",
+    navHistory: "History",
+    navRelief: "3D",
+    navCamera: "Camera",
+    navWeather: "Weather",
+    navPipeline: "Pipeline",
     live: "Live webcam",
     camera: "Camera",
     cameraText: "Fixed, facing 140°.",
@@ -116,6 +127,12 @@ const COPY = {
     weather: "Météo",
     passes: "Passages",
     namedLine: (named, habits) => `${named} nommés · ${habits} habitudes`,
+    navLive: "Direct",
+    navHistory: "Historique",
+    navRelief: "3D",
+    navCamera: "Caméra",
+    navWeather: "Météo",
+    navPipeline: "Pipeline",
     live: "Webcam en direct",
     camera: "Caméra",
     cameraText: "Fixe, vers 140°.",
@@ -404,20 +421,18 @@ function stationLabel() {
 }
 
 function paintWeather() {
-  const place = document.querySelector("#station");
-  const more = document.querySelector("#station-more");
-  const distance = `${Math.round(km(CAMERA, station))} km`;
-  if (!weatherNow) {
-    place.innerHTML = `<a class="out" href="${mapLink(station)}" target="_blank" rel="noopener">${escapeText(station.name)}</a> · ${escapeText(distance)}`;
-    return;
+  // Everything about the weather now reads in the weather section: which
+  // station, how far, the wind, the humidity. The bar at the top keeps the one
+  // line anybody glances at, and the temperature carries the sky with it
+  // rather than trailing a note underneath. Four stacked lines up there cost
+  // fifty pixels of every section on the page, every time anyone scrolled.
+  const more = document.querySelector("#view-air");
+  if (weatherNow) {
+    const sky = stationLabel();
+    document.querySelector("#weather").textContent =
+      [Number.isFinite(weatherNow.temp) ? `${weatherNow.temp} °C` : "—", sky].filter(Boolean).join(" · ");
   }
-  document.querySelector("#weather").textContent = Number.isFinite(weatherNow.temp) ? `${weatherNow.temp} °C` : "—";
-  // The name of the place is a claim about a location, so it carries the map
-  // that can check it. The reading comes from that point, not from this page.
-  const rest = [distance, stationLabel()].filter(Boolean).join(" · ");
-  place.innerHTML = `<a class="out" href="${mapLink(station)}" target="_blank" rel="noopener">${escapeText(station.name)}</a>`
-    + (rest ? ` · ${escapeText(rest)}` : "");
-  if (more) {
+  if (more && weatherNow) {
     more.textContent = [
       Number.isFinite(weatherNow.wind) ? `${t("wind")} ${weatherNow.wind} km/h` : "",
       Number.isFinite(weatherNow.humidity) ? `${t("humidity")} ${weatherNow.humidity} %` : "",
@@ -444,7 +459,10 @@ function paintBulletin() {
     words.textContent = t("compareEmpty");
     when.textContent = "";
     if (shot) shot.hidden = true;
-    place.textContent = "";
+    // Still say who the station is. It used to be named in the bar at the top
+    // as well, and with that gone this is the only place it appears: emptying
+    // the line would take the reading's source off the page altogether.
+    place.innerHTML = stationLine();
     return;
   }
   when.textContent = new Date(bulletin.t).toLocaleString(locale(), {
@@ -478,7 +496,11 @@ function paintBulletin() {
     Number.isFinite(bulletin.temp_c) ? `${bulletin.temp_c} °C` : "",
     skyText(bulletin.api) || stationLabel(),
   ].filter(Boolean).join(" · ");
-  place.innerHTML = `${t("nearestStation")} <a class="out" href="${mapLink(station)}" target="_blank" rel="noopener">${escapeText(station.name)}</a>`
+  place.innerHTML = stationLine(reading);
+}
+
+function stationLine(reading) {
+  return `${t("nearestStation")} <a class="out" href="${mapLink(station)}" target="_blank" rel="noopener">${escapeText(station.name)}</a>`
     + ` · ${escapeText(`${Math.round(km(CAMERA, station))} km`)}`
     + (reading ? ` · ${escapeText(reading)}` : "");
 }
@@ -712,7 +734,10 @@ function showText(value) {
 function paintCounts() {
   if (!counts) return;
   document.querySelector("#seen").textContent = String(counts.seen || 0);
-  document.querySelector("#named").textContent = t("namedLine")(counts.named || 0, counts.habits || 0);
+  // The breakdown belongs beside the history it describes. In the top bar it
+  // was a second line under the total, and the bar has no second line to give.
+  const tally = document.querySelector("#tally");
+  if (tally) tally.textContent = t("namedLine")(counts.named || 0, counts.habits || 0);
 }
 
 function escapeHtml(value) {

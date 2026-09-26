@@ -177,6 +177,38 @@ class SkyArchive:
         self._prune(now)
         return len(aircraft)
 
+    def recent(self, since: float, until: float | None = None) -> dict[str, list[tuple[float, dict]]]:
+        """Every flight's readings over a stretch of time, newest last.
+
+        The sky was only ever asked one question before: who was up there at
+        this instant. A contrail is not an instant, it is the last quarter of an
+        hour of a flight hanging in the air, so it needs the path and not the
+        point.
+        """
+        until = time.time() if until is None else until
+        if not self.path.is_file():
+            return {}
+        flights: dict[str, list[tuple[float, dict]]] = {}
+        with self.path.open(encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not since <= row["t"] <= until:
+                    continue
+                for aircraft in row["aircraft"]:
+                    icao = aircraft.get("icao24") or ""
+                    if not icao or aircraft.get("ground") or aircraft.get("altitude_m") is None:
+                        continue
+                    flights.setdefault(icao, []).append((row["t"], aircraft))
+        for states in flights.values():
+            states.sort(key=lambda item: item[0])
+        return flights
+
     def around(self, when: float, window_s: float = 120) -> list[dict]:
         if not self.path.is_file():
             return []

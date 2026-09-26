@@ -10,6 +10,8 @@ real code, untouched.
 
 from __future__ import annotations
 
+import math
+
 import cv2
 import numpy as np
 
@@ -90,6 +92,40 @@ def _flame(out: np.ndarray, base_x: float, base_y: float, column: float, rng) ->
     core = np.clip(core, 0, 1)[:, :, None]
     paint = np.full(out.shape, FLAME_BGR, dtype=np.float32)
     out[:] = out * (1 - core) + paint * core
+
+
+def trail(frame: np.ndarray, line: list[tuple[float, float]], lift: float = 6.0,
+          across: float = 0.010, seed: int = 0) -> np.ndarray:
+    """Lay a condensation trail along a path through the picture.
+
+    A contrail is not a stroke of constant brightness: it is thickest and
+    sharpest where it was laid last, and older stretches have spread and faded
+    into the sky. Drawing it evenly would make the detector look better than it
+    is, since the faint end is the half that decides whether a real trail is
+    found or missed, so the brightness falls off along the line and the width
+    grows to match.
+
+    lift is how far above the sky the freshest end sits, in levels of grey; it
+    is the one number worth sweeping, because it is what the measurement in
+    watcher/contrail.py reads back.
+    """
+    out = frame.astype(np.float32)
+    if len(line) < 2:
+        return np.clip(out, 0, 255).astype(np.uint8)
+    height, width = frame.shape[:2]
+    rng = np.random.default_rng(seed)
+    paint = np.zeros((height, width), np.float32)
+    for index, ((x1, y1), (x2, y2)) in enumerate(zip(line, line[1:])):
+        # The line is ordered oldest first, so the fresh end is the last
+        # segment and age runs backwards from it.
+        age = 1.0 - index / max(1, len(line) - 1)
+        fade = math.exp(-2.2 * age)
+        thick = across * width * (1.0 + 2.5 * age)
+        cv2.line(paint, (int(x1 * width), int(y1 * height)), (int(x2 * width), int(y2 * height)),
+                 float(lift * fade), max(1, int(thick)))
+    paint = cv2.GaussianBlur(paint, (0, 0), max(1.5, 0.004 * width))
+    paint *= 1.0 + rng.normal(0, 0.25, paint.shape).astype(np.float32)
+    return np.clip(out + paint[:, :, None], 0, 255).astype(np.uint8)
 
 
 def sensor_noise(frame: np.ndarray, seed: int = 0) -> np.ndarray:

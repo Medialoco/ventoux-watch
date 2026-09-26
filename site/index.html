@@ -26,12 +26,12 @@
         <h1>Mont Serein</h1>
       </div>
       <nav class="onpage" data-i18n-aria="sections" aria-label="Sections">
-        <a href="#live" data-i18n="live">Live</a>
-        <a href="#log" data-i18n="history">History</a>
-        <a href="#view3d" data-i18n="relief">3D view</a>
-        <a href="#camera" data-i18n="camera">Camera</a>
-        <a href="#weather-block" data-i18n="compare">Weather</a>
-        <a href="#flow" data-i18n="pipeline">Pipeline</a>
+        <a href="#live" data-i18n="navLive">Live</a>
+        <a href="#log" data-i18n="navHistory">History</a>
+        <a href="#view3d" data-i18n="navRelief">3D</a>
+        <a href="#camera" data-i18n="navCamera">Camera</a>
+        <a href="#weather-block" data-i18n="navWeather">Weather</a>
+        <a href="#flow" data-i18n="navPipeline">Pipeline</a>
       </nav>
       <dl class="facts">
       <div>
@@ -42,13 +42,10 @@
       <div>
         <dt data-i18n="weather">Weather</dt>
         <dd id="weather">—</dd>
-        <dd class="sub" id="station"></dd>
-        <dd class="sub" id="station-more"></dd>
       </div>
       <div>
         <dt data-i18n="passes">Passes</dt>
         <dd id="seen">—</dd>
-        <dd class="sub" id="named"></dd>
       </div>
       </dl>
       <p class="langs">
@@ -69,6 +66,7 @@
     <div class="history-head">
       <h2 id="log-title" data-i18n="history">History</h2><a class="anchor" href="#log" aria-hidden="true" tabindex="-1">#</a>
       <p class="count" id="count"></p>
+      <p class="sub" id="tally"></p>
       <div class="filters" role="tablist">
         <button type="button" class="on" data-filter="all" data-i18n="all">All</button>
         <button type="button" data-filter="vehicle" data-i18n="vehicles">Vehicles</button>
@@ -144,6 +142,7 @@
       <span class="moon" id="view-moon" hidden></span>
     </div>
     <p class="sub" id="view-station"></p>
+    <p class="sub" id="view-air"></p>
   </section>
 
   <section class="block pipeline" id="flow" aria-labelledby="flow-title">
