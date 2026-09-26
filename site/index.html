@@ -28,6 +28,7 @@
       <nav class="onpage" data-i18n-aria="sections" aria-label="Sections">
         <a href="#live" data-i18n="navLive">Live</a>
         <a href="#log" data-i18n="navHistory">History</a>
+        <a href="#figures" data-i18n="navFigures">Dataviz</a>
         <a href="#view3d" data-i18n="navRelief">3D</a>
         <a href="#camera" data-i18n="navCamera">Camera</a>
         <a href="#weather-block" data-i18n="navWeather">Weather</a>
@@ -89,6 +90,29 @@
       </thead>
       <tbody id="list"></tbody>
     </table>
+    <nav class="pager" id="pager" data-i18n-aria="pages" aria-label="Pages" hidden>
+      <button type="button" data-step="-1" data-i18n="prevPage">Previous</button>
+      <span id="pager-where"></span>
+      <button type="button" data-step="1" data-i18n="nextPage">Next</button>
+    </nav>
+  </section>
+
+  <section class="block figures" id="figures" aria-labelledby="figures-title">
+    <div class="head">
+      <h2 id="figures-title" data-i18n="figures">Dataviz</h2><a class="anchor" href="#figures" aria-hidden="true" tabindex="-1">#</a>
+      <p class="sub" id="figures-span"></p>
+    </div>
+    <p class="legend" id="figures-legend"></p>
+    <div class="panels">
+      <figure>
+        <figcaption data-i18n="byHour">By hour of the day</figcaption>
+        <div class="bars" id="by-hour"></div>
+      </figure>
+      <figure>
+        <figcaption data-i18n="byDay">By day of the week</figcaption>
+        <div class="bars wide" id="by-day"></div>
+      </figure>
+    </div>
   </section>
 
   <section class="block relief" id="view3d" aria-labelledby="view3d-title">

@@ -20,10 +20,25 @@ const COPY = {
     // one is the webcam.
     navLive: "Live",
     navHistory: "History",
+    navFigures: "Dataviz",
     navRelief: "3D",
     navCamera: "Camera",
     navWeather: "Weather",
     navPipeline: "Pipeline",
+    prevPage: "Previous",
+    nextPage: "Next",
+    pages: "Pages",
+    pageOf: (first, last, all) => `${first}–${last} of ${all}`,
+    figures: "Dataviz",
+    byHour: "By hour of the day",
+    byDay: "By day of the week",
+    figuresSpan: (days, all) => `${all} named passes over ${days} ${days > 1 ? "days" : "day"}, Paris time.`,
+    figuresEmpty: "Nothing recorded yet.",
+    weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    kinds: {
+      vehicle: "Vehicles", person: "Pedestrians", bus: "Buses",
+      crowd: "Crowds", fire: "Fires", plane: "Planes", other: "Other",
+    },
     live: "Live webcam",
     camera: "Camera",
     cameraText: "Fixed, facing 140°.",
@@ -129,10 +144,25 @@ const COPY = {
     namedLine: (named, habits) => `${named} nommés · ${habits} habitudes`,
     navLive: "Direct",
     navHistory: "Historique",
+    navFigures: "Dataviz",
     navRelief: "3D",
     navCamera: "Caméra",
     navWeather: "Météo",
     navPipeline: "Pipeline",
+    prevPage: "Précédent",
+    nextPage: "Suivant",
+    pages: "Pages",
+    pageOf: (first, last, all) => `${first}–${last} sur ${all}`,
+    figures: "Dataviz",
+    byHour: "Par heure de la journée",
+    byDay: "Par jour de la semaine",
+    figuresSpan: (days, all) => `${all} passages nommés sur ${days} jour${days > 1 ? "s" : ""}, heure de Paris.`,
+    figuresEmpty: "Rien d'enregistré pour l'instant.",
+    weekdays: ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"],
+    kinds: {
+      vehicle: "Véhicules", person: "Piétons", bus: "Bus",
+      crowd: "Attroupements", fire: "Feux", plane: "Avions", other: "Autres",
+    },
     live: "Webcam en direct",
     camera: "Caméra",
     cameraText: "Fixe, vers 140°.",
@@ -376,6 +406,7 @@ function applyLang() {
   paintBulletin();
   paintCounts();
   render();
+  paintFigures();
   paintSequence();
 }
 
@@ -555,6 +586,11 @@ const list = document.querySelector("#list");
 const empty = document.querySelector("#empty");
 let events = [];
 let filter = "all";
+// A page of the log, not the whole of it. Eight thousand passes make a table
+// forty thousand pixels tall, which is a section no reader ever reaches the
+// foot of and a page no browser lays out quickly.
+const PER_PAGE = 25;
+let page = 0;
 
 const loupe = document.querySelector("#loupe");
 const loupeImg = loupe.querySelector("img");
@@ -588,9 +624,20 @@ list.addEventListener("mouseout", (event) => {
 document.querySelectorAll(".filters button").forEach((button) => {
   button.addEventListener("click", () => {
     filter = button.dataset.filter;
+    page = 0;
     document.querySelectorAll(".filters button").forEach((item) => item.classList.toggle("on", item === button));
     render();
   });
+});
+
+document.querySelector("#pager")?.addEventListener("click", (hit) => {
+  const step = hit.target.closest("button")?.dataset.step;
+  if (!step) return;
+  page += Number(step);
+  render();
+  // Back to the head of the log, otherwise turning the page leaves the reader
+  // looking at the foot of a table whose rows have all changed under them.
+  document.querySelector("#log")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 function who(info) {
@@ -666,7 +713,19 @@ function render() {
   empty.hidden = shown.length > 0;
   const count = document.querySelector("#count");
   if (count) count.textContent = shown.length ? String(shown.length) : "";
-  list.innerHTML = shown.map((event) => {
+  const pages = Math.max(1, Math.ceil(shown.length / PER_PAGE));
+  page = Math.min(Math.max(page, 0), pages - 1);
+  const pager = document.querySelector("#pager");
+  if (pager) {
+    pager.hidden = shown.length <= PER_PAGE;
+    const where = pager.querySelector("#pager-where");
+    const first = page * PER_PAGE + 1;
+    const last = Math.min((page + 1) * PER_PAGE, shown.length);
+    if (where) where.textContent = t("pageOf")(first, last, shown.length);
+    pager.querySelector('[data-step="-1"]').disabled = page === 0;
+    pager.querySelector('[data-step="1"]').disabled = page >= pages - 1;
+  }
+  list.innerHTML = shown.slice(page * PER_PAGE, (page + 1) * PER_PAGE).map((event) => {
     const moment = new Date(event.t);
     const clock = moment.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Paris" });
     const day = moment.toLocaleDateString(locale(), { day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/Paris" });
@@ -685,6 +744,89 @@ function render() {
       + `<td class="event">${escapeHtml(title)}${extra}</td>`
       + `<td class="place">${escapeHtml(place)}</td>`
       + `<td class="shot">${picture}</td></tr>`;
+  }).join("");
+}
+
+// The order the bars are stacked in, bottom first, and the order the legend
+// reads. Fixed rather than taken from the data, so a quiet day does not
+// reshuffle the colours and make two charts impossible to compare.
+const KINDS = ["vehicle", "person", "bus", "crowd", "fire", "plane", "other"];
+
+function kindOf(event) {
+  if (event.type === "car") return "vehicle";
+  return KINDS.includes(event.type) ? event.type : "other";
+}
+
+// Paris time, because that is the clock the history is written in and the one
+// the hillside lives by. Reading the hour off the browser would put a visitor
+// in California nine hours out and make the busiest hour of the day midnight.
+function parisParts(stamp) {
+  const bits = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Paris", weekday: "short", hour: "2-digit", hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date(stamp));
+  const get = (kind) => bits.find((part) => part.type === kind)?.value || "";
+  const days = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+  return {
+    hour: Number(get("hour")) % 24,
+    day: days[get("weekday")] ?? 0,
+    date: `${get("year")}-${get("month")}-${get("day")}`,
+  };
+}
+
+function paintFigures() {
+  const hourBox = document.querySelector("#by-hour");
+  const dayBox = document.querySelector("#by-day");
+  const legend = document.querySelector("#figures-legend");
+  const span = document.querySelector("#figures-span");
+  if (!hourBox || !dayBox || !legend || !span) return;
+  if (!events.length) {
+    span.textContent = t("figuresEmpty");
+    hourBox.innerHTML = dayBox.innerHTML = legend.innerHTML = "";
+    return;
+  }
+  const hours = Array.from({ length: 24 }, () => ({}));
+  const days = Array.from({ length: 7 }, () => ({}));
+  const whole = {};
+  const dates = new Set();
+  for (const event of events) {
+    const kind = kindOf(event);
+    const when = parisParts(event.t);
+    dates.add(when.date);
+    hours[when.hour][kind] = (hours[when.hour][kind] || 0) + 1;
+    days[when.day][kind] = (days[when.day][kind] || 0) + 1;
+    whole[kind] = (whole[kind] || 0) + 1;
+  }
+  span.textContent = t("figuresSpan")(dates.size, events.length);
+  legend.innerHTML = KINDS.filter((kind) => whole[kind]).map((kind) =>
+    `<span class="key"><i style="background:var(--cat-${kind})"></i>${escapeHtml(t("kinds")[kind])}`
+    + ` <b>${share(whole[kind], events.length)}</b></span>`).join("");
+  hourBox.innerHTML = bars(hours, events.length, (index) => String(index).padStart(2, "0"));
+  dayBox.innerHTML = bars(days, events.length, (index) => t("weekdays")[index]);
+}
+
+function share(part, all) {
+  if (!all) return "0 %";
+  const value = (part / all) * 100;
+  return `${value >= 10 ? Math.round(value) : value.toFixed(1)} %`;
+}
+
+function bars(buckets, all, label) {
+  // Heights are read against the busiest bucket, so the tallest bar fills the
+  // panel whatever the totals are; the number printed on it is the share of
+  // everything, which is the figure that means something on its own.
+  const totals = buckets.map((bucket) => Object.values(bucket).reduce((sum, n) => sum + n, 0));
+  const peak = Math.max(1, ...totals);
+  return buckets.map((bucket, index) => {
+    const total = totals[index];
+    const parts = KINDS.filter((kind) => bucket[kind]).map((kind) =>
+      `<i style="flex:${bucket[kind]};background:var(--cat-${kind})"></i>`).join("");
+    const told = KINDS.filter((kind) => bucket[kind])
+      .map((kind) => `${t("kinds")[kind]} ${bucket[kind]}`).join(" · ");
+    return `<div class="bar" title="${escapeHtml(`${label(index)} — ${share(total, all)}${told ? ` · ${told}` : ""}`)}">`
+      + `<b class="val">${total ? share(total, all) : ""}</b>`
+      + `<span class="col" style="height:${(total / peak) * 100}%">${parts}</span>`
+      + `<span class="tick">${escapeHtml(label(index))}</span></div>`;
   }).join("");
 }
 
@@ -751,6 +893,7 @@ async function load() {
   const payload = await response.json();
   events = payload.events || [];
   render();
+  paintFigures();
   try {
     const learning = await fetch("data/learning.json", { cache: "no-store" });
     if (learning.ok) {

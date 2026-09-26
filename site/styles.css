@@ -8,6 +8,16 @@
   --card: #fffdfa;
   --veil: rgba(244, 242, 237, 0.94);
   --shade: rgba(23, 23, 26, 0.06);
+  /* One colour per kind of event, the same in every chart. Chosen to stay
+     apart from each other for the common forms of colour blindness, which
+     rules out putting the vehicles and the fires on the same red. */
+  --cat-vehicle: #36678c;
+  --cat-person: #b07533;
+  --cat-bus: #6a5a9c;
+  --cat-crowd: #2f8f6f;
+  --cat-fire: #bf4630;
+  --cat-plane: #7d8b95;
+  --cat-other: #9a938a;
 }
 
 :root[data-theme="dark"] {
@@ -23,6 +33,15 @@
   --card: #1b1e23;
   --veil: rgba(20, 22, 26, 0.94);
   --shade: rgba(255, 255, 255, 0.07);
+  /* Lifted, not reused. The daylight colours are picked to sit on paper and
+     go muddy against a dark card. */
+  --cat-vehicle: #5e9ec9;
+  --cat-person: #d9a35c;
+  --cat-bus: #9b8ad2;
+  --cat-crowd: #55bf99;
+  --cat-fire: #e0705a;
+  --cat-plane: #a3b1bc;
+  --cat-other: #b4aca1;
 }
 
 :root { color-scheme: light; }
@@ -619,7 +638,117 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
+/* Turning the pages of the log */
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pager button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  padding: 4px 12px;
+  font: 11px/1.2 ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.pager button:hover:not(:disabled) { border-color: var(--pine); color: var(--pine); }
+.pager button:disabled { color: var(--muted); border-color: var(--hair); cursor: default; }
+
+/* Dataviz */
+
+.figures .panels {
+  display: grid;
+  grid-template-columns: 2.4fr 1fr;
+  gap: 26px;
+  align-items: end;
+}
+
+.figures figure { margin: 0; min-width: 0; }
+
+.figures figcaption {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 0 16px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.legend .key { display: inline-flex; align-items: center; gap: 6px; }
+.legend .key i { width: 9px; height: 9px; border-radius: 2px; }
+.legend .key b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 150px;
+}
+
+.bars.wide { gap: 8px; }
+
+.bar {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 3px;
+}
+
+/* The share is printed above the bar and the hour below it, so the column
+   itself is only ever the measurement. A figure written inside a bar has to
+   be readable against seven different colours, which no one colour is. */
+.bar .val {
+  font-size: 9px;
+  font-weight: 400;
+  text-align: center;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bar .col {
+  display: flex;
+  flex-direction: column-reverse;
+  min-height: 1px;
+  border-radius: 2px 2px 0 0;
+  overflow: hidden;
+}
+
+.bar .col i { display: block; min-height: 1px; }
+.bar:hover .col { outline: 1px solid var(--ink); outline-offset: 1px; }
+
+.bar .tick {
+  font-size: 9px;
+  text-align: center;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 980px) {
+  .figures .panels { grid-template-columns: 1fr; }
+  .bars { height: 120px; }
+
   .top-inner { align-items: flex-start; flex-wrap: wrap; gap: 16px; }
   /* On a narrow screen the readings may take a second line again. Height is
      cheap there and width is not: kept on one line they would be trimmed to
