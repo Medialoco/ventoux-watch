@@ -22,3 +22,12 @@ _site/
 # Réponses OpenStreetMap et altitudes, refaites par scripts/build_scene.py
 data/osm/
 data/watch.lock
+
+# Jeu d'essai pour comparer les modeles, refait a la demande
+data/crops/
+
+# Modeles plus gros, exportes a la demande pour comparaison
+/yolo11*.pt
+/yolo11*.onnx
+models/yolo11s.onnx
+models/yolo11m.onnx
