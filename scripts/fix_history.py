@@ -118,6 +118,13 @@ REFRAME = {
     },
 }
 DROP = {
+    # Les trois départs de feu du 27 septembre au matin. Des nuages et le
+    # brouillard résiduel de la nuit : 39,7 m, 56,8 m et 211,1 m de large, et
+    # aucune chaleur du tout. La météo annonçait « ciel dégagé » parce qu'elle
+    # décrit la vallée mille mètres plus bas. Voir FIRE_WIDEST_M.
+    "2026-09-27T09:33:59Z": "un nuage de 211 m de large sur la pente, sans la moindre chaleur",
+    "2026-09-27T08:40:03Z": "un nuage, et il était dans le ciel",
+    "2026-09-27T08:09:49Z": "le brouillard résiduel de la nuit, 39,7 m de large et froid",
     # Les huit avions du 26 septembre. Tous des nuages : le plus proche était
     # à 8,8 km et la tache faisait trente-sept fois la taille de l'appareil,
     # les autres entre cinquante et cent kilomètres, où un avion de ligne

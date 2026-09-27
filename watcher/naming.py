@@ -359,6 +359,14 @@ NIGHT_CONF = 0.25
 EMBER_WARM = 1.15
 NIGHT_FRAMES = 6
 NIGHT_SECONDS = 3.0
+# How wide a cold thing may be and still be called a start of fire. The three
+# false starts of 27 September measured 39.7 m, 56.8 m and 211.1 m across,
+# every one of them cloud or the residue of the night's fog, and every one at a
+# warm ratio of exactly zero. The watcher reads a frame a second, so a fire is
+# met while it is still small: what is already this wide the first time it is
+# seen drifted in. Asked only of the cold ones — a hillside truly alight is
+# wide and warm together.
+FIRE_WIDEST_M = 30.0
 SUN_LOW = 15.0
 SUN_NEAR = 8.0
 # A sun higher than fifteen degrees no longer shines through the trees into the
@@ -561,6 +569,29 @@ def decide(obs: Observation) -> Decision:
                 return _motion(obs, "weather_glow", "Lueur dans la météo", "La tache chaude reste ambiguë par ce temps.")
             if obs.period == "night" and plume and not flame:
                 return _motion(obs, "night_plume", "Masse sur la pente", "Une masse pâle monte, mais de nuit une fumée ne se distingue pas d'un nuage bas.")
+            if obs.zone == "sky":
+                # Nothing burns up there. One cloud on the morning of 27
+                # September was called a fire while it sat in the sky band.
+                return _motion(obs, "cloud", "Nuage", "Une masse pâle monte, mais elle est dans le ciel. Rien n'y brûle.")
+            if not flame and obs.width_m > FIRE_WIDEST_M:
+                # The watcher looks every second, so a real fire is met while
+                # it is still small. Something already this wide the first time
+                # it is seen did not grow there, it drifted in. The morning of
+                # 27 September published three starts of 39.7 m, 56.8 m and
+                # 211.1 m; all three were cloud and the residue of the night's
+                # fog, and all three had a warm ratio of exactly zero.
+                #
+                # Width is asked only of the ones with no heat. A hillside
+                # genuinely alight is wide and warm at once — one measured 60.9
+                # m across at a warm ratio of 0.846 — and this guard was put
+                # here to narrow a door, not to close it.
+                return _motion(
+                    obs,
+                    "cloud",
+                    "Nuage sur la pente",
+                    f"Environ {obs.width_m:.0f} m de large d'emblée. Un feu qui commence est petit ; "
+                    "ce qui arrive déjà large est un nuage.",
+                )
             return _stamp(
                 Decision(
                     "publish",

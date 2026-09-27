@@ -1,6 +1,45 @@
 {
   "events": [
     {
+      "id": "2026-09-27T14-06-35Z-vehicle-20",
+      "t": "2026-09-27T14:06:35Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-09-27T14-06-35Z-vehicle-20.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 2.7,
+        "height_m": 1.4,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "measured": {
+          "travel": 0.138,
+          "area_ratio": 0.00078,
+          "duration_s": 7.5,
+          "frames": 13,
+          "width_m": 2.7,
+          "height_m": 1.4,
+          "seen_as": [
+            "car 0.46",
+            "person 0.38"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.5656,
+          0.8889,
+          0.1031,
+          0.0944
+        ],
+        "count": 2,
+        "since": "2026-09-27T14:06:35Z"
+      },
+      "closeup": "data/closeups/2026-09-27T14-06-35Z-vehicle-20.jpg"
+    },
+    {
       "id": "2026-09-27T14-04-13Z-person-15",
       "t": "2026-09-27T14:04:54Z",
       "type": "vehicle",
@@ -2299,43 +2338,6 @@
       "closeup": "data/closeups/2026-09-27T09-39-20Z-vehicle-288.jpg"
     },
     {
-      "id": "2026-09-27T09-33-59Z-fire-274",
-      "t": "2026-09-27T09:33:59Z",
-      "type": "fire",
-      "label": "Départ de feu",
-      "zone": "slope",
-      "confidence": 0.281,
-      "thumb": "data/thumbs/2026-09-27T09-33-59Z-fire-274.jpg",
-      "clip_url": "",
-      "detail": {
-        "warm_ratio": 0.0,
-        "smoke_ratio": 0.351,
-        "rise": 0.0194,
-        "grow": 2.27,
-        "width_m": 211.1,
-        "surface": "forest",
-        "period": "day",
-        "weather": "ciel dégagé",
-        "context": "de jour, ciel dégagé",
-        "measured": {
-          "travel": 0.0422,
-          "area_ratio": 0.00565,
-          "duration_s": 32.3,
-          "frames": 24,
-          "width_m": 211.1,
-          "height_m": 31.8,
-          "seen_as": []
-        },
-        "box": [
-          0.5437,
-          0.2389,
-          0.1453,
-          0.0389
-        ]
-      },
-      "closeup": "data/closeups/2026-09-27T09-33-59Z-fire-274.jpg"
-    },
-    {
       "id": "2026-09-27T09-30-50Z-vehicle-270",
       "t": "2026-09-27T09:30:50Z",
       "type": "vehicle",
@@ -2671,43 +2673,6 @@
       "closeup": "data/closeups/2026-09-27T08-51-46Z-vehicle-143.jpg"
     },
     {
-      "id": "2026-09-27T08-40-03Z-fire-131",
-      "t": "2026-09-27T08:40:03Z",
-      "type": "fire",
-      "label": "Départ de feu",
-      "zone": "sky",
-      "confidence": 0.319,
-      "thumb": "data/thumbs/2026-09-27T08-40-03Z-fire-131.jpg",
-      "clip_url": "",
-      "detail": {
-        "warm_ratio": 0.0,
-        "smoke_ratio": 0.399,
-        "rise": 0.0583,
-        "grow": 14.95,
-        "width_m": 56.8,
-        "surface": "forest",
-        "period": "day",
-        "weather": "peu nuageux",
-        "context": "de jour, peu nuageux",
-        "measured": {
-          "travel": 0.056,
-          "area_ratio": 0.00415,
-          "duration_s": 14.5,
-          "frames": 15,
-          "width_m": 56.8,
-          "height_m": 64.6,
-          "seen_as": []
-        },
-        "box": [
-          0.9516,
-          0.0222,
-          0.0453,
-          0.0917
-        ]
-      },
-      "closeup": "data/closeups/2026-09-27T08-40-03Z-fire-131.jpg"
-    },
-    {
       "id": "2026-09-27T08-35-39Z-vehicle-109",
       "t": "2026-09-27T08:36:25Z",
       "type": "vehicle",
@@ -2893,43 +2858,6 @@
         "since": "2026-09-27T08:14:40Z"
       },
       "closeup": "data/closeups/2026-09-27T08-14-40Z-vehicle-55.jpg"
-    },
-    {
-      "id": "2026-09-27T08-09-49Z-fire-52",
-      "t": "2026-09-27T08:09:49Z",
-      "type": "fire",
-      "label": "Départ de feu",
-      "zone": "slope",
-      "confidence": 0.796,
-      "thumb": "data/thumbs/2026-09-27T08-09-49Z-fire-52.jpg",
-      "clip_url": "",
-      "detail": {
-        "warm_ratio": 0.0,
-        "smoke_ratio": 0.996,
-        "rise": 0.0222,
-        "grow": 1.63,
-        "width_m": 39.7,
-        "surface": "",
-        "period": "day",
-        "weather": "peu nuageux",
-        "context": "de jour, peu nuageux",
-        "measured": {
-          "travel": 0.0117,
-          "area_ratio": 0.00128,
-          "duration_s": 7.5,
-          "frames": 10,
-          "width_m": 39.7,
-          "height_m": 52.9,
-          "seen_as": []
-        },
-        "box": [
-          0.3187,
-          0.3778,
-          0.0234,
-          0.0556
-        ]
-      },
-      "closeup": "data/closeups/2026-09-27T08-09-49Z-fire-52.jpg"
     },
     {
       "id": "2026-09-27T08-06-41Z-vehicle-33",

@@ -1075,6 +1075,36 @@ class FogTests(unittest.TestCase):
         self.assertEqual(decide(car).type, "vehicle")
         self.assertEqual(decide(car).action, "publish")
 
+    def test_a_cloud_drifting_over_the_slope_is_not_a_start_of_fire(self):
+        """The three false starts of 27 September, by their own measurements.
+
+        No warmth at all, a pale mass rising and growing — which is what a
+        cloud does — and 39.7 m, 56.8 m and 211.1 m wide. The forecast called
+        it a clear sky because it describes the valley a thousand metres below.
+        """
+        for width in (39.7, 56.8, 211.1):
+            cloud = Observation(zone="slope", surface="forest", period="day", width_m=width,
+                                duration_s=32.3, travel=0.02, warm_ratio=0.0, smoke_ratio=0.35,
+                                rise=0.0194, area_grow=2.27, fire_sustain_s=5.0, fire_grow=1.6,
+                                fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
+            self.assertEqual(decide(cloud).type, "motion", f"{width} m")
+            self.assertEqual(decide(cloud).reason, "cloud", f"{width} m")
+
+    def test_a_small_plume_on_the_slope_is_still_a_fire(self):
+        # The size limit must not close the door it was put there to narrow.
+        start = Observation(zone="slope", surface="forest", period="day", width_m=8.0,
+                            duration_s=9.0, travel=0.02, warm_ratio=0.0, smoke_ratio=0.35,
+                            rise=0.0194, area_grow=2.27, fire_sustain_s=5.0, fire_grow=1.6,
+                            fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
+        self.assertEqual(decide(start).type, "fire")
+
+    def test_nothing_burns_in_the_sky(self):
+        cloud = Observation(zone="sky", surface="forest", period="day", width_m=8.0,
+                            duration_s=14.5, travel=0.02, warm_ratio=0.0, smoke_ratio=0.399,
+                            rise=0.0583, area_grow=14.95, fire_sustain_s=5.0, fire_grow=1.6,
+                            fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
+        self.assertNotEqual(decide(cloud).type, "fire")
+
     def test_a_lorry_does_not_bring_the_watcher_down(self):
         """min_conf is a threshold per class, not a number.
 
