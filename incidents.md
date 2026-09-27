@@ -25,10 +25,17 @@ Trois traces, et aucune n'est complète :
   minorant grossier — une heure sans rien publier peut être une heure sans
   rien à voir.
 
-Ce qui manque : **personne n'enregistre les interruptions au moment où elles
-se produisent**. Les périodes ci-dessous ont été reconstituées après coup, et
-celles d'avant le 27 septembre sont définitivement perdues. C'est la première
-chose de la liste « à faire » en fin de fichier.
+Depuis le 27 septembre au soir, le veilleur tient lui-même
+`data/interruptions.jsonl` : une ligne par période, avec son début, sa fin et
+sa durée. L'écart entre deux battements est par construction du temps sans
+surveillance, qu'il vienne d'un veilleur arrêté ou d'un flux qui s'est tu, et
+c'est le seul instant où ce chiffre est encore connaissable — une image plus
+tard, le battement est écrasé. Le fichier est publié avec l'historique qu'il
+explique. Les interruptions de moins de trente secondes ne sont pas notées :
+c'est une relance prise au vol, pas un trou.
+
+Le tableau ci-dessous, lui, a été reconstitué après coup et le restera : les
+périodes d'avant le 27 septembre sont définitivement perdues.
 
 `data/sky.jsonl` ressemble à un journal de fonctionnement — une ligne par
 minute — mais n'en est pas un : l'archive n'écrit que lorsqu'il y a un avion
@@ -37,7 +44,8 @@ ne doit pas servir à ce calcul.
 
 ## Périodes de non surveillance
 
-Heures de Paris, comme sur le site.
+Heures de Paris, comme sur le site. Ce tableau s'arrête au 27 septembre au
+soir ; après cette date, `data/interruptions.jsonl` fait foi (heures UTC).
 
 | Début | Fin | Durée | Cause |
 | --- | --- | --- | --- |
@@ -137,10 +145,6 @@ commandée. Détaillé dans [infra.md](infra.md).
 
 ## Ce qui reste à faire
 
-- **Enregistrer les interruptions au moment où elles se produisent.** Au
-  démarrage, le veilleur connaît l'heure du dernier battement : l'écart est
-  exactement la durée pendant laquelle personne ne regardait. Il faut l'écrire
-  quelque part qui s'accumule, et non l'écraser.
 - Faire remonter ces périodes sur le site. Un historique qui ne distingue pas
   « rien ne s'est passé » de « personne ne regardait » ment par omission.
 - Vérifier que le veilleur du Pi ne souffre d'aucune de ces morts silencieuses

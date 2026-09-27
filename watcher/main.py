@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fcntl
+import json
 import logging
 import math
 import os
@@ -41,6 +42,50 @@ CLIP_TYPES = {"plane", "bus", "fire"}
 # image a second, so half a minute of silence is already a stream that has
 # stopped, not one that is merely slow.
 STREAM_SILENCE_S = 30
+# Below this, the gap is a restart caught in flight rather than a spell of
+# blindness worth a line of its own.
+INTERRUPTION_FLOOR_S = 30
+
+
+def _utc(when: float) -> str:
+    return datetime.fromtimestamp(when, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _last_beat(beat: Path) -> float:
+    """The second of the last picture treated, or zero on a first run."""
+    try:
+        return float(beat.read_text().strip())
+    except (OSError, ValueError):
+        return 0.0
+
+
+def _note_interruption(journal: Path, stopped: float, now: float) -> float:
+    """Write down how long nobody was watching, before watching resumes.
+
+    The distance between two beats is, by construction, the length of a blind
+    spell: the beat is written at every picture, so anything longer than a
+    second is time the mountain spent unwatched. Read at a start it measures a
+    watcher that was down; read inside the loop it measures a stream that went
+    quiet. Both are the same thing seen from the outside, and both are written
+    here.
+
+    It has to be caught at this instant. One picture later the beat has been
+    overwritten and the interruption has left no trace anywhere — which is
+    exactly what happened on 27 September, when four hours held barely a minute
+    of real watching and it took a reconstruction after the fact to know it.
+
+    It matters because an empty stretch of history has two readings that look
+    alike and are not: nothing happened, or nobody was there.
+    """
+    gap = now - stopped
+    if not stopped or gap < INTERRUPTION_FLOOR_S:
+        return 0.0
+    row = {"start": _utc(stopped), "end": _utc(now), "seconds": int(gap)}
+    with journal.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    spell = f"{int(gap)} s" if gap < 120 else f"{int(gap // 60)} min"
+    log.warning("Surveillance interrompue %s, de %s à %s", spell, row["start"], row["end"])
+    return gap
 
 
 def main() -> None:
@@ -50,6 +95,11 @@ def main() -> None:
     if not _only_one(root / "data" / "watch.lock"):
         log.error("Un veilleur tourne déjà. Celui-ci s'arrête.")
         return
+    _heartbeat = root / "data" / "battement"
+    _interruptions = root / "data" / "interruptions.jsonl"
+    # Read before anything else writes it: loading the model and the scene map
+    # takes half a minute, and that half minute is blind time too.
+    beat_at = _last_beat(_heartbeat)
     zones = load_zones(root / cfg["zones"])
     motion = MotionDetector(
         zones,
@@ -89,7 +139,6 @@ def main() -> None:
     last_gtfs = 0.0
     last_publish = 0.0
     last_view = 0.0
-    _heartbeat = root / "data" / "battement"
 
     while True:
         try:
@@ -100,6 +149,8 @@ def main() -> None:
                 # without dying — ffmpeg waiting on a stream that stopped
                 # answering keeps the process alive and silent — and a service
                 # that is still running is not a service that is still working.
+                _note_interruption(_interruptions, beat_at, now)
+                beat_at = now
                 _heartbeat.write_text(str(int(now)))
                 ok, encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
                 if ok:

@@ -15,7 +15,7 @@ import numpy as np
 
 from watcher.geometry import assign_zone
 from watcher.gtfs import GtfsIndex, load_feed
-from watcher.main import _box_of_the_named, _crossed_sky, _might_be_bus
+from watcher.main import _box_of_the_named, _crossed_sky, _might_be_bus, _note_interruption, _utc
 from watcher.naming import Decision
 from watcher.motion import MotionDetector, Track
 from watcher.naming import Detection, Observation, Trip, choose_aircraft, decide, in_camera_view
@@ -898,6 +898,43 @@ class ReviewTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class InterruptionTests(unittest.TestCase):
+    """An empty history must say whether nothing happened or nobody watched."""
+
+    def setUp(self):
+        self.note = _note_interruption
+        self.journal = ROOT / "data" / "interruptions-test.jsonl"
+        self.journal.unlink(missing_ok=True)
+
+    def tearDown(self):
+        self.journal.unlink(missing_ok=True)
+
+    def _rows(self):
+        if not self.journal.exists():
+            return []
+        return [json.loads(line) for line in self.journal.read_text().splitlines()]
+
+    def test_an_hour_of_blindness_is_written_down(self):
+        self.assertEqual(self.note(self.journal, 1_790_000_000.0, 1_790_003_600.0), 3600.0)
+        row = self._rows()[0]
+        self.assertEqual(row["seconds"], 3600)
+        self.assertEqual((row["start"], row["end"]), (_utc(1_790_000_000.0), _utc(1_790_003_600.0)))
+
+    def test_one_slow_picture_is_not_an_interruption(self):
+        self.assertEqual(self.note(self.journal, 1_790_000_000.0, 1_790_000_012.0), 0.0)
+        self.assertEqual(self._rows(), [])
+
+    def test_a_first_run_has_nothing_to_report(self):
+        """No beat at all means no watcher before, not an infinite blind spell."""
+        self.assertEqual(self.note(self.journal, 0.0, 1_790_000_000.0), 0.0)
+        self.assertEqual(self._rows(), [])
+
+    def test_each_spell_keeps_its_own_line(self):
+        self.note(self.journal, 1_790_000_000.0, 1_790_003_600.0)
+        self.note(self.journal, 1_790_010_000.0, 1_790_010_300.0)
+        self.assertEqual([row["seconds"] for row in self._rows()], [3600, 300])
 
 
 class SingleWatcherTests(unittest.TestCase):
