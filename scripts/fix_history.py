@@ -20,6 +20,11 @@ ROOT = Path(__file__).resolve().parents[1]
 # last field is the box the photo was first drawn with, so the old stroke can
 # be found even after the entry has been corrected once.
 RENAME = {
+    # Nuit du 26 au 27, relue à la main. Deux voitures au rond-point : l'une
+    # avait un piéton de trop dans son libellé, l'autre était devenue piéton
+    # entière. Voir SHORTEST_PERSON_M et _fits dans watcher/naming.py.
+    "2026-09-26T22:14:44Z": ("vehicle", "Voiture", None, None),
+    "2026-09-26T22:12:19Z": ("vehicle", "Voiture blanche", None, None),
     # Le 26 septembre, relu à la main. Presque tous les « piétons » du
     # rond-point étaient des cyclistes et des motards : le détecteur n'avait
     # ni vélo ni moto dans sa liste, et ne pouvait rendre que le cavalier.

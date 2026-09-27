@@ -960,6 +960,22 @@ class WalkerWidthTests(unittest.TestCase):
                                detections=[Detection("person", conf)])
             self.assertNotEqual(decide(wide).type, "person", f"largeur {width}")
 
+    def test_a_scrap_too_short_to_stand_is_not_a_walker(self):
+        # The white car coming into frame at the bottom left on 26 September at
+        # 22:12. Only its corner was caught: a metre wide, seventy-seven
+        # centimetres tall, and read as somebody on foot at half confidence.
+        scrap = Observation(zone="roundabout", period="night", travel=0.2, surface="road",
+                            width_m=1.02, height_m=0.77, box_w=0.031,
+                            detections=[Detection("person", 0.497)])
+        self.assertNotEqual(decide(scrap).type, "person")
+
+    def test_the_shortest_walker_ever_measured_still_passes(self):
+        # Sixty-three by daylight; the shortest stood ninety-nine centimetres.
+        short = Observation(zone="road", period="day", travel=0.2, surface="road",
+                            width_m=1.40, height_m=0.99, box_w=0.033,
+                            detections=[Detection("person", 0.53)])
+        self.assertEqual(decide(short).type, "person")
+
     def test_a_walker_of_the_usual_width_is_still_named(self):
         usual = Observation(zone="road", period="day", travel=0.2, surface="road",
                             box_w=0.062, detections=[Detection("person", 0.55)])

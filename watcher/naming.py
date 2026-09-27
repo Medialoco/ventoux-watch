@@ -59,6 +59,13 @@ BLOAT = 25.0
 # two metres and a half across the ground, a bus eleven. Below two metres there
 # is nothing on wheels: a walker is that wide, and so is a patch of light.
 SMALLEST_M = {"car": 2.0, "truck": 2.0, "bus": 2.0}
+# How short a thing may stand on the ground and still be somebody on foot.
+# Only the width was ever asked. A white car coming into frame at the bottom
+# left was caught by its corner alone, a scrap a metre wide and seventy-seven
+# centimetres tall, and the model called the scrap a walker at half confidence.
+# Sixty-three daylight walkers were measured against it and the shortest stood
+# ninety-nine centimetres, so this floor lets every one of them through.
+SHORTEST_PERSON_M = 0.9
 # How long something has to burn before the word "incendie" is used. The width
 # of a plume says nothing: smoke spreads over a hundred metres in a minute
 # above a fire the size of a car. How long it has held does say something.
@@ -674,6 +681,10 @@ def decide(obs: Observation) -> Decision:
                 f"Environ {obs.height_m * 100:.0f} cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
             )
         if not _fits(obs, "person"):
+            person = None
+        if person is not None and 0 < obs.height_m < SHORTEST_PERSON_M:
+            # Too wide has always been asked; too short never was, and that is
+            # the gap a vehicle cut by the edge of the frame walks through.
             person = None
         if person is not None and _car_shaped(obs):
             # The model reads a car on this roundabout at about a quarter
