@@ -211,3 +211,5 @@ main sur le Pi, une fois.
   permanence. Sans conséquence tant qu'une seule machine publie, bloquant dès
   que le Mac et le Pi publieront tous les deux.
 - Passer les vignettes sur un stockage objet avant que git regrossisse.
+- Comprendre pourquoi un feu simulé sur la pente à 578 m n'est pas vu, alors
+  que les mêmes feux à 140 m et 183 m sont nommés en six secondes.

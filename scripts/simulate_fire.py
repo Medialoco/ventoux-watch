@@ -113,6 +113,9 @@ def _judge(track, frame, now, cfg, scene_map, period):
         warm_ratio=warm_ratio(jpeg, track.bbox),
         smoke_ratio=smoke_ratio(jpeg, track.bbox),
         rise=track.rise,
+        # Sans cela le simulateur jugeait sur un pied immobile par défaut,
+        # c'est-à-dire plus indulgent que le veilleur ne l'est vraiment.
+        foot_climb=track.foot_climb,
         area_grow=track.area_grow,
         area_ratio=track.area_ratio,
         travel=track.travel,

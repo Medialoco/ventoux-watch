@@ -276,6 +276,21 @@ def smoke_ratio(jpeg: bytes, bbox=None) -> float:
     Smoke shows before flame, and from a kilometre away it is all a camera will
     ever see of a fire that has just started. It has almost no colour, it is
     brighter than the wood behind it, and it is never as blue as the sky.
+
+    Measured over the whole box, and not over the moving pixels alone. That was
+    tried on 27 September and taken out the same day. The reasoning looked
+    sound — the box holds the hillside as well as the thing, so the share ought
+    to be diluted — and it is wrong twice over. Measured, the mask changed no
+    verdict at all on three simulated fires. And it cuts the wrong way: a cloud
+    is pale and moving too, so counting only what moved raises its share as
+    surely as a plume's, which is the opposite of what is wanted.
+
+    The reason the detector looked blind that morning was not the denominator.
+    The fire had been simulated at a spot that sits against the sky in that
+    frame, where a veil of smoke stays blue and `blue - red` refuses it — one
+    hundred per cent of those pixels were bright enough and a third were pale
+    enough, but almost none passed the test for not being sky. Put the same
+    fire on the slope and it is named within six seconds.
     """
     image = _crop(jpeg, bbox)
     if image is None:
