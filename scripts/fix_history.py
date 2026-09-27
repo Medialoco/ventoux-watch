@@ -20,6 +20,11 @@ ROOT = Path(__file__).resolve().parents[1]
 # last field is the box the photo was first drawn with, so the old stroke can
 # be found even after the entry has been corrected once.
 RENAME = {
+    # 27 septembre, 16:06 locales. Publié « Voiture », rectangle posé sur le
+    # groupe de piétons. Sur la photo il n'y a pas de voiture du tout : le gros
+    # plan en montre une, mais il vient d'un autre instant de la séquence. Le
+    # groupe mesurait 2,7 m sur 1,4 m et le modèle l'a lu « car 0.46 ».
+    "2026-09-27T14:06:35Z": ("person", "Piétons", None, None),
     # Nuit du 26 au 27, relue à la main. Deux voitures au rond-point : l'une
     # avait un piéton de trop dans son libellé, l'autre était devenue piéton
     # entière. Voir SHORTEST_PERSON_M et _fits dans watcher/naming.py.

@@ -15,7 +15,8 @@ import numpy as np
 
 from watcher.geometry import assign_zone
 from watcher.gtfs import GtfsIndex, load_feed
-from watcher.main import _crossed_sky, _might_be_bus
+from watcher.main import _box_of_the_named, _crossed_sky, _might_be_bus
+from watcher.naming import Decision
 from watcher.motion import MotionDetector, Track
 from watcher.naming import Detection, Observation, Trip, choose_aircraft, decide, in_camera_view
 from watcher.review import apply_review, parse_review
@@ -1074,6 +1075,29 @@ class FogTests(unittest.TestCase):
         self.assertNotEqual(decide(car).reason, "fog")
         self.assertEqual(decide(car).type, "vehicle")
         self.assertEqual(decide(car).action, "publish")
+
+    def test_the_box_is_drawn_on_the_thing_that_was_named(self):
+        """27 September, 16:06 local. A car and a group of walkers moved
+        together on the roundabout. The word published was "Voiture" and the
+        red rectangle sat on the walkers, because the box came from the motion
+        blob — which holds everything that moved — while the model's own box,
+        the one that knows which of the two was the car, was thrown away at the
+        line that built the Detection.
+        """
+        frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        seen = [Detection("person", 0.88, box=(1400, 900, 40, 90)),
+                Detection("car", 0.46, box=(1000, 950, 200, 100))]
+        box = _box_of_the_named(frame, Decision("publish", "vehicle", "Voiture", "x", {}, 0.5), seen)
+        middle = (box[0] + box[2] / 2, box[1] + box[3] / 2)
+        self.assertAlmostEqual(middle[0], 1100 / 1920, places=2)
+        self.assertAlmostEqual(middle[1], 1000 / 1080, places=2)
+
+    def test_the_blob_still_stands_where_the_model_said_nothing(self):
+        # It says nothing about most of what moves here. Nothing is forced.
+        frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        seen = [Detection("person", 0.88, box=(1400, 900, 40, 90))]
+        self.assertIsNone(_box_of_the_named(frame, Decision("publish", "vehicle", "Voiture", "x", {}, 0.5), seen))
+        self.assertIsNone(_box_of_the_named(frame, Decision("publish", "fire", "Départ de feu", "x", {}, 0.5), seen))
 
     def test_a_cloud_drifting_over_the_slope_is_not_a_start_of_fire(self):
         """The three false starts of 27 September, by their own measurements.

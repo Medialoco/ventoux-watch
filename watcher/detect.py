@@ -47,13 +47,30 @@ class YoloDetector:
     def detect(self, frame: np.ndarray, bbox: tuple[int, int, int, int] | None = None) -> list[Detection]:
         if self.session is None:
             return []
-        crop = frame if bbox is None else _crop(frame, bbox, margin=0.35)
+        left, top = 0, 0
+        crop = frame
+        if bbox is not None:
+            left, top, right, bottom = _crop_window(frame, bbox, margin=0.35)
+            crop = frame[top:bottom, left:right]
         if crop.size == 0:
             return []
-        blob, _gain, _pad = _letterbox(crop, 640)
+        blob, gain, (pad_x, pad_y) = _letterbox(crop, 640)
         raw = self.session.run(None, {self.input_name: blob})[0]
-        boxes = _parse(raw)
-        return [Detection(name, conf) for _x0, _y0, _x1, _y1, conf, name in _nms(boxes)]
+        # Where the model found it, kept. This was thrown away until 27
+        # September, and the cost was a rectangle drawn on the motion blob
+        # instead of on the thing named: a car and a group of walkers moved
+        # together on the roundabout, the model read both, and the red box
+        # landed on the walkers under the word "Voiture". The model knew where
+        # the car was the whole time.
+        found = []
+        for x0, y0, x1, y1, conf, name in _nms(_parse(raw)):
+            height, width = frame.shape[:2]
+            x = min(max(0, int(left + (x0 - pad_x) / gain)), width - 1)
+            y = min(max(0, int(top + (y0 - pad_y) / gain)), height - 1)
+            w = min(int((x1 - x0) / gain), width - x)
+            h = min(int((y1 - y0) / gain), height - y)
+            found.append(Detection(name, conf, box=(x, y, max(1, w), max(1, h))))
+        return found
 
     def locate(self, frame: np.ndarray) -> list[tuple[str, float, int, int, int, int]]:
         """Class boxes in the frame's own pixels. The box is the find, not a mask."""
@@ -144,7 +161,7 @@ def _balanced(frame: np.ndarray, crop: np.ndarray) -> np.ndarray:
     return np.clip(crop.astype(np.float32) * gain, 0, 255).astype(np.uint8)
 
 
-def _crop(frame: np.ndarray, bbox: tuple[int, int, int, int], margin: float) -> np.ndarray:
+def _crop_window(frame: np.ndarray, bbox: tuple[int, int, int, int], margin: float) -> tuple[int, int, int, int]:
     height, width = frame.shape[:2]
     x, y, w, h = bbox
     mx = int(w * margin)
@@ -153,6 +170,11 @@ def _crop(frame: np.ndarray, bbox: tuple[int, int, int, int], margin: float) -> 
     y0 = max(0, y - my)
     x1 = min(width, x + w + mx)
     y1 = min(height, y + h + my)
+    return x0, y0, x1, y1
+
+
+def _crop(frame: np.ndarray, bbox: tuple[int, int, int, int], margin: float) -> np.ndarray:
+    x0, y0, x1, y1 = _crop_window(frame, bbox, margin)
     return frame[y0:y1, x0:x1]
 
 

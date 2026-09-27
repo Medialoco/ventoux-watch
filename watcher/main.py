@@ -224,8 +224,9 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         last_fire["fire"] = now
     if surface:
         decision.detail["surface"] = surface
-    if box:
-        decision.detail["box"] = [round(value, 4) for value in box]
+    drawn = _box_of_the_named(frame, decision, detections) or box
+    if drawn:
+        decision.detail["box"] = [round(value, 4) for value in drawn]
     event = store.add_event(when, decision.type, decision.label, track.zone, decision.confidence, track.best_jpeg, decision.detail)
     if width_m >= BUS_LENGTH_M:
         close = store.keep_closeup(event, frame, track.best_bbox)
@@ -346,6 +347,49 @@ def _crossed_sky(track, cfg) -> bool:
     if track.zone != "sky":
         return False
     return track.travel >= cfg["min_travel"] and track.area_ratio <= cfg["max_sky_area"]
+
+
+# Which classes stand behind each word the watcher publishes.
+NAMED_BY = {
+    "vehicle": {"car", "truck", "bus", "motorcycle", "bicycle"},
+    "car": {"car", "truck"},
+    "bus": {"bus", "truck"},
+    "person": {"person"},
+    "animal": {"dog", "horse"},
+}
+# How much room to leave around the model's box. Tight enough to point at one
+# thing, loose enough not to sit on top of it.
+BOX_MARGIN = 0.14
+
+
+def _box_of_the_named(frame, decision, detections) -> tuple[float, float, float, float] | None:
+    """Where the model put the thing that was named, if it named one.
+
+    The motion blob holds everything that moved together, and on a roundabout
+    that is often a car and a group of walkers at once. Drawing the blob then
+    marks the wrong subject: on 27 September a car was published with the red
+    box around the pedestrians beside it. The model had read the car and knew
+    where it was.
+
+    Nothing is forced. Where the model said nothing about the word used — and
+    it says nothing about most of what moves here — the blob stands.
+    """
+    wanted = NAMED_BY.get(decision.type)
+    if frame is None or not wanted:
+        return None
+    hits = [hit for hit in detections if hit.cls in wanted and hit.box]
+    if not hits:
+        return None
+    x, y, w, h = max(hits, key=lambda hit: hit.conf).box
+    height, width = frame.shape[:2]
+    mx, my = w * BOX_MARGIN, h * BOX_MARGIN
+    x0 = max(0.0, (x - mx) / width)
+    y0 = max(0.0, (y - my) / height)
+    x1 = min(1.0, (x + w + mx) / width)
+    y1 = min(1.0, (y + h + my) / height)
+    if x1 - x0 < 0.002 or y1 - y0 < 0.002:
+        return None
+    return x0, y0, x1 - x0, y1 - y0
 
 
 def _norm_box(frame, track) -> tuple[float, float, float, float] | None:

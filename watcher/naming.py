@@ -78,6 +78,9 @@ class Detection:
     conf: float
     cx: float | None = None
     cy: float | None = None
+    # Where the model put it, in the frame's own pixels. The motion blob holds
+    # everything that moved together; this holds the one thing that was named.
+    box: tuple[int, int, int, int] | None = None
 
 
 @dataclass
