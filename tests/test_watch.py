@@ -1075,17 +1075,20 @@ class FogTests(unittest.TestCase):
         self.assertEqual(decide(car).type, "vehicle")
         self.assertEqual(decide(car).action, "publish")
 
-    def test_a_car_the_model_cannot_see_is_named_by_its_size(self):
-        # The roundabout car of 27 September: 4.4 m long, travelling, and the
-        # model returned nothing at all. Three sizes of YOLO11 were measured on
-        # eighteen objects like it and none of them put a box on one.
+    def test_the_ground_size_alone_never_names_a_vehicle(self):
+        """Car-shaped on the ground is not enough, and this is the proof.
+
+        Naming on ground size alone ran four hours on 27 September and
+        published 128 vehicles; the ones that were checked were walkers,
+        nearly all of them. Of the objects the model does confirm, vehicles
+        run 2.13 wide for one high and people 1.13, and the two overlap past
+        any cut: demanding a ratio of 4 and a height under two metres kept
+        only 32 vehicles of 256 and still let 9 people through.
+        """
         car = Observation(zone="roundabout", period="day", surface="road", travel=0.2112,
-                          width_m=4.4, box_w=0.140, frames=4, detections=[],
-                          fogged=True, hazy=True)
-        called = decide(car)
-        self.assertEqual(called.type, "vehicle")
-        self.assertEqual(called.reason, "ground_size")
-        self.assertTrue(called.publish)
+                          width_m=4.4, box_w=0.140, frames=4, detections=[])
+        self.assertEqual(decide(car).type, "motion")
+        self.assertEqual(decide(car).reason, "unnamed_vehicle")
 
     def test_a_flicker_of_one_frame_is_not_named_a_vehicle(self):
         blink = Observation(zone="road", period="day", surface="road", travel=0.2,
