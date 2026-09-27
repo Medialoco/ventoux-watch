@@ -960,6 +960,27 @@ class WalkerWidthTests(unittest.TestCase):
                                detections=[Detection("person", conf)])
             self.assertNotEqual(decide(wide).type, "person", f"largeur {width}")
 
+    def test_a_thing_bolted_to_the_ground_is_never_a_walker(self):
+        # The wooden statue beside the path, forty centimetres wide and a metre
+        # sixty tall on the ground: exactly a person. It was named a walker on
+        # three separate nights. The travel test never caught it because a
+        # car's headlights sweeping across it lend it a movement it never had.
+        carved = Observation(zone="other", period="night", travel=0.4, surface="path",
+                             width_m=0.4, height_m=1.6, box_w=0.011,
+                             fixture="statue", landmark="statue",
+                             detections=[Detection("person", 0.44)])
+        self.assertEqual(decide(carved).reason, "landmark")
+        self.assertEqual(decide(carved).type, "motion")
+
+    def test_somebody_walking_past_the_statue_is_still_named(self):
+        # Beside it, not centred on it: scenemap.landmark_under says no, and
+        # only that one refuses outright.
+        passer = Observation(zone="other", period="night", travel=0.4, surface="path",
+                             width_m=0.5, height_m=1.7, box_w=0.012,
+                             landmark="statue",
+                             detections=[Detection("person", 0.62)])
+        self.assertEqual(decide(passer).type, "person")
+
     def test_a_scrap_too_short_to_stand_is_not_a_walker(self):
         # The white car coming into frame at the bottom left on 26 September at
         # 22:12. Only its corner was caught: a metre wide, seventy-seven

@@ -129,6 +129,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
     box = _norm_box(frame, track)
     surface = scene_map.surface_under(box) if box else ""
     landmark = scene_map.landmark_at(box) if box else None
+    fixture = scene_map.landmark_under(box) if box else None
     lit = car_lights(frame, track.bbox) if frame is not None and current.period != "day" else 0.0
     aircraft = sky.ask(track.updated, cfg["opensky"]["match_window_s"]) if _crossed_sky(track, cfg) else []
     width_m = scene_map.metres_across(box) if box else 0.0
@@ -166,6 +167,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         near_road=scene_map.drivable_near(box) if box else True,
         colour=body_colour(frame, track.best_bbox) if frame is not None and current.period == "day" else "",
         landmark=(landmark or {}).get("name", ""),
+        fixture=(fixture or {}).get("name", ""),
         lit_ratio=lit,
         # The middle of the blob, not its corner: an aircraft is matched against
         # where the thing is, and a box records where it begins.

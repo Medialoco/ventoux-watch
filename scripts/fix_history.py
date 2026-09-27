@@ -25,6 +25,9 @@ RENAME = {
     # entière. Voir SHORTEST_PERSON_M et _fits dans watcher/naming.py.
     "2026-09-26T22:14:44Z": ("vehicle", "Voiture", None, None),
     "2026-09-26T22:12:19Z": ("vehicle", "Voiture blanche", None, None),
+    # Dix et huit mètres au sol : une voiture et le halo de ses phares.
+    "2026-09-26T21:56:17Z": ("vehicle", "Voiture", None, None),
+    "2026-09-26T21:42:43Z": ("vehicle", "Voiture", None, None),
     # Le 26 septembre, relu à la main. Presque tous les « piétons » du
     # rond-point étaient des cyclistes et des motards : le détecteur n'avait
     # ni vélo ni moto dans sa liste, et ne pouvait rendre que le cavalier.
@@ -160,6 +163,9 @@ DROP = {
     "2026-09-27T00:35:17Z": "le lampadaire du rond-point, son halo dans le brouillard",
     "2026-09-27T01:02:05Z": "le lampadaire du rond-point, rien ne roulait",
     "2026-09-27T01:14:43Z": "le lampadaire du chalet, son halo dans le brouillard",
+    # Quarante centimètres de large et un mètre soixante de haut : la taille
+    # d'une personne, à l'endroit exact où la carte porte une statue.
+    "2026-09-26T21:45:15Z": "la statue en bois au bord du chemin, éclairée",
 }
 
 

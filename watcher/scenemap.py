@@ -164,3 +164,23 @@ class SceneMap:
             if x - reach <= mx <= x + w + reach and y - rise <= my <= y + h + rise:
                 return mark
         return None
+
+    def landmark_under(self, box: tuple[float, float, float, float]) -> dict | None:
+        """A fixed thing of the map that this box is drawn *on*, not merely near.
+
+        The looser reading above allows a walker beside the statue, which is
+        what it is for. This one asks that the box be centred on the mark, and
+        it is the reading used to refuse a name outright: a thing bolted to the
+        ground does not become somebody because a headlight swept across it.
+        """
+        x, y, w, h = box
+        cx, cy = x + w / 2, y + h / 2
+        for mark in self.landmarks:
+            mx, my = mark.get("x", -1), mark.get("y", -1)
+            reach = float(mark.get("r") or 0.02)
+            rise = float(mark.get("ry") or reach)
+            if w > 2 * reach or h > 2 * rise:
+                continue
+            if abs(cx - mx) <= reach and abs(cy - my) <= rise:
+                return mark
+        return None

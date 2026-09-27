@@ -125,6 +125,8 @@ class Observation:
     near_road: bool = True
     colour: str = ""
     landmark: str = ""
+    # A landmark the box is centred on, rather than merely standing beside.
+    fixture: str = ""
     lit_ratio: float = 0.0
     frames: int = 0
     clipped: bool = False
@@ -712,6 +714,19 @@ def decide(obs: Observation) -> Decision:
             cycle = None
         if animal is not None and not _fits(obs, animal.cls):
             animal = None
+        if obs.fixture:
+            # Centred on something the map says is bolted to the ground, and
+            # about its size. The travel test below is not enough for these:
+            # the wooden statue beside the path stands forty centimetres wide
+            # and a metre sixty tall, which is exactly a person, and a car's
+            # headlights sweeping across it give it a travel it never had. It
+            # has been named a walker three nights running.
+            return _motion(
+                obs,
+                "landmark",
+                "Repère éclairé",
+                f"{obs.fixture} est fixé au sol. C'est une lumière qui a bougé, pas lui.",
+            )
         if obs.landmark and obs.travel < obs.min_travel:
             return _motion(
                 obs,
