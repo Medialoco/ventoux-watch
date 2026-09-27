@@ -528,6 +528,20 @@ class GtfsTests(unittest.TestCase):
         self.assertTrue(all(row["stop_name"] != "Avignon" for row in rows))
 
 
+def _view(sky, ground=(40, 34, 30), height=80, width=160):
+    """A frame shaped like this camera's: sky on top, the crest, then hillside.
+
+    Flat colour fields will not do any more. Weather is now partly read from
+    how sharp the crest of the Ventoux is against the sky, and a picture with
+    no crest in it at all reads as fog, which is the right answer for a picture
+    with no crest in it and the wrong one for a test fixture.
+    """
+    frame = np.zeros((height, width, 3), dtype=np.uint8)
+    frame[:] = sky
+    frame[int(height * 0.30):] = ground
+    return frame
+
+
 class SceneTests(unittest.TestCase):
     def test_noon_is_day_and_deep_night_is_night(self):
         paris = ZoneInfo("Europe/Paris")
@@ -540,15 +554,23 @@ class SceneTests(unittest.TestCase):
         self.assertEqual(weather_label(95), "orage")
 
     def test_blue_sky_is_clear_and_a_dark_frame_is_night(self):
-        blue = np.zeros((80, 160, 3), dtype=np.uint8)
-        blue[:] = (210, 120, 30)
+        blue = _view((210, 120, 30))
         dark = np.zeros((80, 160, 3), dtype=np.uint8)
         dark[:] = (8, 8, 8)
         gray = np.zeros((80, 160, 3), dtype=np.uint8)
         gray[:] = (150, 150, 150)
         self.assertEqual(read_sky(blue), "ciel dégagé")
         self.assertEqual(read_sky(dark), "nuit")
+        # Lit, but flat from edge to edge: the crest is not there to be seen.
         self.assertEqual(read_sky(gray), "brouillard")
+
+    def test_a_lit_night_with_no_crest_is_fog_and_not_clear_sky(self):
+        # The night of 26 September, when the forecast said "ciel dégagé" until
+        # dawn. The sky band stays bright all night here, so the colour tests
+        # alone never had anything to go on.
+        night = _view((70, 62, 58), ground=(58, 52, 48))
+        self.assertEqual(read_sky(night), "brouillard")
+        self.assertNotEqual(read_sky(_view((70, 62, 58), ground=(6, 6, 6))), "brouillard")
 
     def test_only_the_last_bulletin_is_kept(self):
         folder = ROOT / "data" / "view-test"
@@ -556,8 +578,7 @@ class SceneTests(unittest.TestCase):
         path = folder / "view.json"
         path.unlink(missing_ok=True)
         log = ViewLog(path, every_s=900, change_s=120)
-        blue = np.zeros((40, 80, 3), dtype=np.uint8)
-        blue[:] = (210, 120, 30)
+        blue = _view((210, 120, 30), height=40, width=80)
         start = datetime(2026, 9, 25, 16, 0, tzinfo=ZoneInfo("UTC"))
         log.note(blue, "peu nuageux", 21.2, start, "day")
         log.note(blue, "peu nuageux", 21, start.replace(minute=5), "day")

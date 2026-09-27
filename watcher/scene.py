@@ -339,7 +339,15 @@ def read_sky(frame: np.ndarray | None) -> str:
     spread = float(val.std())
     blue = float(((hue >= 90) & (hue <= 130) & (sat >= 40)).mean())
     if mean_v < 45:
+        # Nothing can be measured in a black frame, so nothing is claimed. In
+        # practice this camera never gives one: its sky band sits between 45
+        # and 110 all night, lit by the lamps and the glow of the sky.
         return "nuit"
+    # Asked before the colour tests, which read a strip of pure sky and so only
+    # ever see fog by daylight. That is how a night with the crest of the
+    # Ventoux nowhere in the picture came to be filed as "ciel dégagé".
+    if skyline_edge(frame) < FOG_RIDGE:
+        return "brouillard"
     if mean_s < 28 and spread < 16:
         return "brouillard"
     if blue >= 0.45 and mean_s >= 50:
