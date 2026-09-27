@@ -788,7 +788,12 @@ function paintFigures() {
   const legend = document.querySelector("#figures-legend");
   const span = document.querySelector("#figures-span");
   if (!hourBox || !dayBox || !legend || !span) return;
-  if (!events.length) {
+  // A drawn fire is not a fire that happened. These figures are meant to say
+  // what goes past this camera at which hour, and a simulation went past
+  // nothing: the two on file were the only entries in the "fire" column and
+  // gave it 0.7 % of the whole.
+  const seen = events.filter((event) => !(event.detail || {}).simulation);
+  if (!seen.length) {
     span.textContent = t("figuresEmpty");
     hourBox.innerHTML = dayBox.innerHTML = legend.innerHTML = "";
     return;
@@ -797,7 +802,7 @@ function paintFigures() {
   const days = Array.from({ length: 7 }, () => ({}));
   const whole = {};
   const dates = new Set();
-  for (const event of events) {
+  for (const event of seen) {
     const kind = kindOf(event);
     const when = parisParts(event.t);
     dates.add(when.date);
@@ -805,12 +810,12 @@ function paintFigures() {
     days[when.day][kind] = (days[when.day][kind] || 0) + 1;
     whole[kind] = (whole[kind] || 0) + 1;
   }
-  span.textContent = t("figuresSpan")(dates.size, events.length);
+  span.textContent = t("figuresSpan")(dates.size, seen.length);
   legend.innerHTML = KINDS.filter((kind) => whole[kind]).map((kind) =>
     `<span class="key"><i style="background:var(--cat-${kind})"></i>${escapeHtml(t("kinds")[kind])}`
-    + ` <b>${share(whole[kind], events.length)}</b></span>`).join("");
-  hourBox.innerHTML = bars(hours, events.length, (index) => String(index).padStart(2, "0"));
-  dayBox.innerHTML = bars(days, events.length, (index) => t("weekdays")[index]);
+    + ` <b>${share(whole[kind], seen.length)}</b></span>`).join("");
+  hourBox.innerHTML = bars(hours, seen.length, (index) => String(index).padStart(2, "0"));
+  dayBox.innerHTML = bars(days, seen.length, (index) => t("weekdays")[index]);
 }
 
 function share(part, all) {
