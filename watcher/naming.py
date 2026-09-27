@@ -891,10 +891,12 @@ def decide(obs: Observation) -> Decision:
         ):
             # The model is silent on 88 % of what moves on this road, and the
             # fog has nothing to do with it: the figure is the same in clear
-            # air. A car down there is fifty-eight pixels wide, and the three
-            # sizes of YOLO11 were measured on eighteen of these objects —
-            # nano, small and medium alike put a box on none of them, the
-            # medium one taking five times longer to fail.
+            # air. A car down there is seventy pixels wide. Three sizes of
+            # YOLO11 were measured on eighty-nine of these objects, collected
+            # without asking the model's opinion, and all three named exactly
+            # twelve — nano, small and medium alike, the medium one taking
+            # five times longer to do no better. Weight is not the missing
+            # ingredient here, so the model is not asked for a bigger one.
             #
             # So the model is not asked. Everything that reaches this line has
             # already been refused by every other rule: it is not a landmark,
