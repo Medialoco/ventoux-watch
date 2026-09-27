@@ -110,9 +110,11 @@ def main() -> None:
                 if step.roundabout_motion:
                     last_crowd = _crowd(frame, now, cfg, yolo, zones, crowd_hits, last_crowd, store, pending)
                 _flush_clips(pending, ring, now, drive, store)
-                if (store.dirty or view.dirty) and now - last_publish >= cfg["publish_interval_s"]:
+                due = store.urgent or now - last_publish >= cfg["publish_interval_s"]
+                if (store.dirty or view.dirty) and due:
                     publish(root)
                     store.dirty = False
+                    store.urgent = False
                     view.dirty = False
                     last_publish = now
         except Exception:

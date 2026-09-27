@@ -13,6 +13,10 @@ THUMB_WIDTH = 480
 THUMB_QUALITY = 52
 PASSAGE_ZONES = {"road", "roundabout", "other"}
 RANK = {"fire": 6, "crowd": 5, "bus": 4, "vehicle": 3, "car": 3, "person": 3, "plane": 2, "motion": 1, "habit": 0}
+# What is published the moment it is seen, instead of waiting for the group.
+# The whole point of the watch is the start of a fire; a quarter of an hour of
+# delay would give away the only thing it is for.
+URGENT_TYPES = {"fire", "crowd"}
 
 
 class Store:
@@ -25,11 +29,17 @@ class Store:
         self.candidates_path = root / "candidates.jsonl"
         self.thumbs.mkdir(parents=True, exist_ok=True)
         self.dirty = False
+        # A fire does not wait for the next round of publication. Ordinary
+        # traffic is grouped to spare the machine and the network; this flag is
+        # what lets one event jump the queue.
+        self.urgent = False
         self._seq = 0
         self.events = self._load()
 
     def add_event(self, when: datetime, type_: str, label: str, zone: str, confidence: float, jpeg: bytes, detail: dict) -> dict:
         self.events = self._load()
+        if type_ in URGENT_TYPES:
+            self.urgent = True
         stamp = when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
         self._seq += 1
         event = {
