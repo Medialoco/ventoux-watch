@@ -1073,7 +1073,33 @@ class FogTests(unittest.TestCase):
                           fogged=True, hazy=True)
         self.assertNotEqual(decide(car).reason, "fog")
         self.assertEqual(decide(car).type, "vehicle")
-        self.assertTrue(decide(car).publish)
+        self.assertEqual(decide(car).action, "publish")
+
+    def test_a_car_the_model_cannot_see_is_named_by_its_size(self):
+        # The roundabout car of 27 September: 4.4 m long, travelling, and the
+        # model returned nothing at all. Three sizes of YOLO11 were measured on
+        # eighteen objects like it and none of them put a box on one.
+        car = Observation(zone="roundabout", period="day", surface="road", travel=0.2112,
+                          width_m=4.4, box_w=0.140, frames=4, detections=[],
+                          fogged=True, hazy=True)
+        called = decide(car)
+        self.assertEqual(called.type, "vehicle")
+        self.assertEqual(called.reason, "ground_size")
+        self.assertTrue(called.publish)
+
+    def test_a_flicker_of_one_frame_is_not_named_a_vehicle(self):
+        blink = Observation(zone="road", period="day", surface="road", travel=0.2,
+                            width_m=4.4, box_w=0.140, frames=1, detections=[])
+        # "motion" is filed among the candidates and never reaches the site.
+        self.assertEqual(decide(blink).type, "motion")
+        self.assertEqual(decide(blink).reason, "unnamed_vehicle")
+
+    def test_something_far_too_long_for_a_car_is_not_named_one(self):
+        # Fog banks that morning measured 11 m to 22 m across.
+        bank = Observation(zone="road", period="day", surface="road", travel=0.2,
+                           width_m=21.4, box_w=0.68, frames=9, detections=[])
+        self.assertEqual(decide(bank).type, "motion")
+        self.assertEqual(decide(bank).reason, "oversized")
 
     def test_a_bank_of_fog_on_the_slope_is_still_refused_by_day(self):
         # The same morning at 06:09, fog banks measured 11 m to 22 m across.

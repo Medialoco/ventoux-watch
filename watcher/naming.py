@@ -359,6 +359,11 @@ NIGHT_CONF = 0.25
 EMBER_WARM = 1.15
 NIGHT_FRAMES = 6
 NIGHT_SECONDS = 3.0
+# How long a thing must be held before its size on the ground alone may name
+# it a vehicle. Measured on 144 daylight objects of car width on the roadway:
+# the median was held four frames, the lower quartile two. Three keeps 92 of
+# the 144 and still refuses the one-frame flickers.
+GROUND_FRAMES = 3
 SUN_LOW = 15.0
 SUN_NEAR = 8.0
 # A sun higher than fifteen degrees no longer shines through the trees into the
@@ -871,6 +876,36 @@ def decide(obs: Observation) -> Decision:
                 "too_small",
                 "Trop petit pour un véhicule",
                 f"Environ {obs.width_m * 100:.0f} cm au sol. Une voiture en couvre deux mètres et demi ici.",
+            )
+        if obs.period == "day" and _fits(obs, "car") and obs.frames >= GROUND_FRAMES:
+            # The model is silent on 88 % of what moves on this road, and the
+            # fog has nothing to do with it: the figure is the same in clear
+            # air. A car down there is fifty-eight pixels wide, and the three
+            # sizes of YOLO11 were measured on eighteen of these objects —
+            # nano, small and medium alike put a box on none of them, the
+            # medium one taking five times longer to fail.
+            #
+            # So the model is not asked. Everything that reaches this line has
+            # already been refused by every other rule: it is not a landmark,
+            # not parked, not still, not too small, and it is on a roadway the
+            # map knows. Something of that length travelling along a road is a
+            # vehicle, and saying so is not a guess.
+            #
+            # Daylight only, and that restriction is not caution but evidence.
+            # After dark the same shape is a headlight sweeping the grass in
+            # front of the chalet: sixteen were measured one evening, car-sized
+            # on the ground and travelling, every one of them false. That is
+            # why the night rule demands a glimpse from the model before it
+            # will speak, and why this one must not reach across into the dark.
+            return _stamp(
+                Decision(
+                    "publish",
+                    "vehicle",
+                    _tinted("Véhicule", obs.colour),
+                    reason="ground_size",
+                    confidence=0.5,
+                ),
+                obs,
             )
         return _motion(obs, "unnamed_vehicle", "Mouvement sur la route", "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.")
 
