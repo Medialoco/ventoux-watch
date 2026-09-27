@@ -6,8 +6,18 @@ encore fait.
 
 ## Où ça tourne
 
-Aujourd'hui sur le Mac, en permanence, lancé à la main. C'est provisoire et ça
-ne survit pas à une fermeture de session.
+Aujourd'hui sur le Mac, en permanence, lancé à la main par
+`./scripts/mac_veille.sh`. C'est provisoire et ça ne survit pas à une fermeture
+de session.
+
+Ce script existe pour une raison précise. Lancée depuis un terminal, même avec
+`nohup`, la veille meurt avec lui : `nohup` ne protège que du raccrochage, et
+le shell qui se termine emporte tout son groupe de processus. Le 27 septembre
+elle s'est arrêtée trois fois ainsi, chaque fois quelques secondes après la
+commande qui l'avait démarrée, sans une ligne de journal pour le dire — la
+mesure la plus trompeuse de la journée, parce que le fichier de verrou gardait
+le numéro d'un processus qui n'existait plus. Le script fait du veilleur le
+chef de sa propre session, et plus personne ne l'emporte en partant.
 
 Demain sur un **Raspberry Pi 5**, qui est la machine cible : elle consomme
 quelques watts, ne fait que ça, et se remplace pour cent euros. Le but à terme
