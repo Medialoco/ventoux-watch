@@ -108,12 +108,9 @@ class Observation:
     width_m: float = 0.0
     height_m: float = 0.0
     area_grow: float = 1.0
-    person_count: int = 0
-    kind: str = "track"
     min_travel: float = 0.03
     max_sky_area: float = 0.02
     min_conf: dict | None = None
-    crowd_min: int = 4
     fire_sustain_s: float = 20.0
     fire_grow: float = 1.5
     fire_warm: float = 0.08
@@ -514,21 +511,6 @@ def decide(obs: Observation) -> Decision:
             "Il rend visibles les faisceaux des lampes et les bancs qui dérivent, "
             "et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
         )
-    if obs.kind == "crowd":
-        if obs.person_count >= obs.crowd_min:
-            return _stamp(
-                Decision(
-                    "publish",
-                    "crowd",
-                    "Attroupement",
-                    reason="persons",
-                    detail={"persons": obs.person_count},
-                    confidence=1.0,
-                ),
-                obs,
-            )
-        return Decision("hold", reason="crowd_below_threshold", detail={"persons": obs.person_count})
-
     if (obs.surface in FLAMMABLE or (obs.zone == "slope" and not obs.surface)) and obs.duration_s >= obs.fire_sustain_s:
         flame = obs.warm_ratio >= obs.fire_warm
         # A fire that has just caught shows as a pale plume climbing out of the

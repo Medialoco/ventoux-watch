@@ -72,7 +72,6 @@ class Track:
 @dataclass
 class MotionStep:
     ended: list[Track] = field(default_factory=list)
-    roundabout_motion: bool = False
     global_change: bool = False
 
 
@@ -112,11 +111,8 @@ class MotionDetector:
 
     def _update_tracks(self, blobs: list[dict], frame: np.ndarray, now: float) -> MotionStep:
         unused = set(range(len(self.tracks)))
-        roundabout = False
         for blob in blobs:
             zone = assign_zone(blob["cx"], blob["cy"], self.zones)
-            if zone == "roundabout":
-                roundabout = True
             if zone == "sky" and blob["area_ratio"] < 0.00005:
                 continue
             if zone != "sky" and blob["area_ratio"] < 0.0004:
@@ -172,7 +168,7 @@ class MotionDetector:
                 continue
             kept.append(track)
         self.tracks = kept
-        return MotionStep(ended=ended, roundabout_motion=roundabout)
+        return MotionStep(ended=ended)
 
     def _match(self, cx: float, cy: float, zone: str, unused: set[int]) -> int | None:
         """Nearest open track, whatever zone the blob has drifted into.

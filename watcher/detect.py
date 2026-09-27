@@ -93,10 +93,6 @@ class YoloDetector:
         return found
 
 
-def count_persons(detections: list[Detection], min_conf: float = 0.35) -> int:
-    return sum(1 for item in detections if item.cls == "person" and item.conf >= min_conf)
-
-
 def car_lights(frame: np.ndarray, bbox: tuple[int, int, int, int] | None = None) -> float:
     """How much of a blob is car lighting, between 0 and 1.
 

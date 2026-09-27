@@ -18,7 +18,7 @@ import numpy as np
 
 from watcher.airports import describe_route
 from watcher.config import load_config
-from watcher.detect import YoloDetector, body_colour, car_lights, count_persons
+from watcher.detect import YoloDetector, body_colour, car_lights
 from watcher.drive import DriveUploader
 from watcher.geometry import load_zones
 from watcher.gtfs import GtfsIndex, PARIS
@@ -35,7 +35,7 @@ log = logging.getLogger("ventoux")
 # Above this, on the ground, the thing is longer than a car and the timetable
 # is worth opening.
 BUS_LENGTH_M = 5.5
-CLIP_TYPES = {"plane", "bus", "fire", "crowd"}
+CLIP_TYPES = {"plane", "bus", "fire"}
 
 
 def main() -> None:
@@ -79,8 +79,6 @@ def main() -> None:
     drive = DriveUploader(str(root / cfg["drive"]["credentials"]), cfg["drive"].get("folder_id") or "")
     ring: deque[tuple[float, bytes]] = deque(maxlen=14)
     pending: list[dict] = []
-    crowd_hits: deque[tuple[float, int]] = deque()
-    last_crowd = 0.0
     last_fire: dict[str, float] = {}
     alerted: set[int] = set()
     last_gtfs = 0.0
@@ -107,8 +105,6 @@ def main() -> None:
                     _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map)
                 for track in _burning(motion.tracks, now, cfg, scene_map, alerted):
                     _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map)
-                if step.roundabout_motion:
-                    last_crowd = _crowd(frame, now, cfg, yolo, zones, crowd_hits, last_crowd, store, pending)
                 _flush_clips(pending, ring, now, drive, store)
                 due = store.urgent or now - last_publish >= cfg["publish_interval_s"]
                 if (store.dirty or view.dirty) and due:
@@ -399,31 +395,6 @@ def _norm_box(frame, track) -> tuple[float, float, float, float] | None:
     height, width = frame.shape[:2]
     x, y, w, h = bbox
     return x / width, y / height, max(w, 1) / width, max(h, 1) / height
-
-
-def _crowd(frame, now, cfg, yolo, zones, hits, last_crowd, store, pending) -> float:
-    if now - last_crowd < cfg["crowd"]["cooldown_s"]:
-        return last_crowd
-    polygon = zones["polygons"]["roundabout"]
-    height, width = frame.shape[:2]
-    xs = [point[0] for point in polygon]
-    ys = [point[1] for point in polygon]
-    bbox = (int(min(xs) * width), int(min(ys) * height), int((max(xs) - min(xs)) * width), int((max(ys) - min(ys)) * height))
-    persons = count_persons(yolo.detect(frame, bbox))
-    hits.append((now, persons))
-    sustain = cfg["crowd"]["sustain_s"]
-    while hits and now - hits[0][0] > sustain:
-        hits.popleft()
-    if hits and now - hits[0][0] >= sustain and all(count >= cfg["crowd"]["min_persons"] for _, count in hits):
-        when = datetime.fromtimestamp(now, timezone.utc)
-        ok, encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
-        jpeg = encoded.tobytes() if ok else b""
-        event = store.add_event(when, "crowd", "Attroupement", "roundabout", 1.0, jpeg, {"persons": persons})
-        pending.append({"id": event["id"], "after": now + 4, "started": now - 8})
-        hits.clear()
-        log.info("Publié attroupement (%s personnes)", persons)
-        return now
-    return last_crowd
 
 
 def _flush_clips(pending, ring, now, drive, store) -> None:

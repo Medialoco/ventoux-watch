@@ -470,11 +470,6 @@ class NamingTests(unittest.TestCase):
         )
         self.assertNotEqual(decision.type, "fire")
 
-    def test_crowd_needs_enough_people(self):
-        self.assertFalse(decide(Observation(kind="crowd", person_count=2)).publish)
-        decision = decide(Observation(kind="crowd", person_count=5))
-        self.assertEqual(decision.type, "crowd")
-
     def test_growing_warm_patch_on_the_slope_is_fire(self):
         decision = decide(Observation(zone="slope", duration_s=25, area_grow=2.0, warm_ratio=0.2))
         self.assertEqual(decision.type, "fire")
@@ -1058,9 +1053,7 @@ class FogTests(unittest.TestCase):
                              box_w=0.070, detections=[Detection("person", 0.62)], fogged=True, hazy=True)
         van = Observation(zone="road", period="night", surface="road", travel=0.05, width_m=4.2,
                           box_w=0.133, detections=[Detection("car", 0.71)], fogged=True, hazy=True)
-        throng = Observation(zone="roundabout", period="night", kind="crowd", person_count=9,
-                             crowd_min=6, fogged=True, hazy=True)
-        for seen in (walker, van, throng):
+        for seen in (walker, van):
             self.assertEqual(decide(seen).reason, "fog")
             self.assertEqual(decide(seen).type, "motion")
 
@@ -1191,12 +1184,10 @@ class FogTests(unittest.TestCase):
                            fogged=True, hazy=True)
         self.assertFalse(decide(bank).publish)
 
-    def test_the_same_three_are_named_once_the_air_clears(self):
+    def test_the_same_ones_are_named_once_the_air_clears(self):
         walker = Observation(zone="roundabout", period="night", surface="road", travel=0.02,
                              box_w=0.070, detections=[Detection("person", 0.62)])
-        throng = Observation(zone="roundabout", period="night", kind="crowd", person_count=9, crowd_min=6)
         self.assertEqual(decide(walker).type, "person")
-        self.assertEqual(decide(throng).type, "crowd")
 
     def test_a_haloed_lamp_in_haze_is_not_a_fire_either(self):
         # The first alarm of that night, at a ridge of 49: not yet fog, but

@@ -12,11 +12,11 @@ import numpy as np
 THUMB_WIDTH = 480
 THUMB_QUALITY = 52
 PASSAGE_ZONES = {"road", "roundabout", "other"}
-RANK = {"fire": 6, "crowd": 5, "bus": 4, "vehicle": 3, "car": 3, "person": 3, "plane": 2, "motion": 1, "habit": 0}
+RANK = {"fire": 6, "bus": 4, "vehicle": 3, "car": 3, "person": 3, "plane": 2, "motion": 1, "habit": 0}
 # What is published the moment it is seen, instead of waiting for the group.
 # The whole point of the watch is the start of a fire; a quarter of an hour of
 # delay would give away the only thing it is for.
-URGENT_TYPES = {"fire", "crowd"}
+URGENT_TYPES = {"fire"}
 
 
 class Store:

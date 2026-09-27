@@ -37,7 +37,7 @@ const COPY = {
     weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     kinds: {
       vehicle: "Vehicles", person: "Pedestrians", bus: "Buses",
-      crowd: "Crowds", fire: "Fires", plane: "Planes", other: "Other",
+      fire: "Fires", plane: "Planes", other: "Other",
     },
     live: "Live webcam",
     camera: "Camera",
@@ -55,8 +55,6 @@ const COPY = {
     planeText: "OpenSky. A callsign is kept only when that aircraft is in the camera’s view, close enough to be seen. Otherwise the history says it is not in the picture.",
     bus: "Bus",
     busText: "Trans'CoVe or ZOU. A single trip within ±15 min gives the route. Otherwise “Bus”, from a confidence of 0.6.",
-    crowd: "Crowd",
-    crowdText: "4 people or more, held for 8 seconds.",
     fire: "Fire",
     fireText: "On the slope, 5 s, area ×1.5, at least 8% warm pixels or a rising plume. Not at dusk. In rain, fog, or snow, it takes 20%.",
     rest: "Unknown",
@@ -67,7 +65,6 @@ const COPY = {
     vehicles: "Vehicles",
     pedestrians: "Pedestrians",
     buses: "Buses",
-    crowds: "Crowds",
     fires: "Fires",
     motions: "Motion",
     habits: "Habits",
@@ -161,7 +158,7 @@ const COPY = {
     weekdays: ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"],
     kinds: {
       vehicle: "Véhicules", person: "Piétons", bus: "Bus",
-      crowd: "Attroupements", fire: "Feux", plane: "Avions", other: "Autres",
+      fire: "Feux", plane: "Avions", other: "Autres",
     },
     live: "Webcam en direct",
     camera: "Caméra",
@@ -179,8 +176,6 @@ const COPY = {
     planeText: "OpenSky. L’indicatif n’est gardé que si l’avion est dans le champ, assez près pour être vu. Sinon l’historique dit qu’il n’est pas dans l’image.",
     bus: "Bus",
     busText: "Trans'CoVe ou ZOU. Une seule course à ±15 min donne la ligne. Sinon « Bus », à partir d’une confiance de 0,6.",
-    crowd: "Attroupement",
-    crowdText: "4 personnes ou plus, tenues 8 secondes.",
     fire: "Feu",
     fireText: "Sur la pente, 5 s, surface ×1,5, au moins 8 % de pixels chauds ou un panache qui monte. Au crépuscule, non. Sous la pluie, le brouillard ou la neige, il faut 20 %.",
     rest: "Inconnu",
@@ -191,7 +186,6 @@ const COPY = {
     vehicles: "Véhicules",
     pedestrians: "Piétons",
     buses: "Bus",
-    crowds: "Attroupements",
     fires: "Incendies",
     motions: "Mouvements",
     habits: "Habitudes",
@@ -269,7 +263,6 @@ const LABELS = {
   "Camion": "Truck",
   "Véhicule": "Vehicle",
   "Camping-car": "Camper van",
-  "Attroupement": "Crowd",
   "Incendie": "Fire",
   "Habitude du cadrage": "Habit of the frame",
   "Mouvement": "Motion",
@@ -705,7 +698,6 @@ function detail(event) {
   if (event.type === "bus" && info.route) {
     return `${info.headsign || info.route} · ${info.scheduled || ""} · ${info.source || ""}`.trim();
   }
-  if (event.type === "crowd") return `${info.persons} ${t("people")}`;
   if (event.type === "fire") return showText(info.reading) || t("fireNote");
   if (info.reading) return [showText(info.context), showText(info.reading)].filter(Boolean).join(" · ");
   if (info.context) return showText(info.context);
@@ -758,7 +750,7 @@ function render() {
 // The order the bars are stacked in, bottom first, and the order the legend
 // reads. Fixed rather than taken from the data, so a quiet day does not
 // reshuffle the colours and make two charts impossible to compare.
-const KINDS = ["vehicle", "person", "bus", "crowd", "fire", "plane", "other"];
+const KINDS = ["vehicle", "person", "bus", "fire", "plane", "other"];
 
 function kindOf(event) {
   if (event.type === "car") return "vehicle";
