@@ -456,6 +456,28 @@ def _azimuth(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 def decide(obs: Observation) -> Decision:
     conf = obs.min_conf or {"bus": 0.45, "bus_unnamed": 0.6, "car": 0.4}
+    if obs.fogged:
+        # Once the crest of the Ventoux is out of the picture, the watcher
+        # stops naming. Not only fires: on the night of 26 September the fog
+        # published twelve events between 22:24 and 01:14 and every one of them
+        # was wrong — eight fires, two walkers and two vehicles, nearly all of
+        # them the street lamp by the chalet or the beam it threw into the air.
+        #
+        # The near field does stay readable, which is the argument for carrying
+        # on, and it was tested: neither the distance of the subject nor the
+        # sharpness of its outline tells the true from the false, because the
+        # false ones sit close by and contain the lamp, which is the crispest
+        # thing in the frame. Against a record of twelve out of twelve, saying
+        # nothing is the honest answer. The watcher keeps looking and keeps
+        # filing what it sees; it simply does not put a name to it.
+        return _motion(
+            obs,
+            "fog",
+            "Brouillard",
+            "La crête du Ventoux a disparu : le brouillard est descendu. "
+            "Il rend visibles les faisceaux des lampes et les bancs qui dérivent, "
+            "et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        )
     if obs.kind == "crowd":
         if obs.person_count >= obs.crowd_min:
             return _stamp(
@@ -472,21 +494,6 @@ def decide(obs: Observation) -> Decision:
         return Decision("hold", reason="crowd_below_threshold", detail={"persons": obs.person_count})
 
     if (obs.surface in FLAMMABLE or (obs.zone == "slope" and not obs.surface)) and obs.duration_s >= obs.fire_sustain_s:
-        if obs.fogged:
-            # Nothing warm can be believed once the cloud is down. Fog turns
-            # every lamp into a wide orange patch that swells and shrinks as
-            # the air moves, which is fire colour and fire growth together,
-            # and the two are all this rule ever had. On the night of 26
-            # September it cried fire eight times in three hours, always at the
-            # same street lamp by the chalet. A real fire in fog cannot be seen
-            # from here either, so nothing is lost by saying so plainly.
-            return _motion(
-                obs,
-                "fog",
-                "Halo dans le brouillard",
-                "La crête du Ventoux a disparu : le brouillard est descendu. "
-                "Une tache chaude qui grandit, là, c'est une lumière portée par l'air.",
-            )
         flame = obs.warm_ratio >= obs.fire_warm
         # A fire that has just caught shows as a pale plume climbing out of the
         # trees, minutes before any flame is large enough to colour a pixel.

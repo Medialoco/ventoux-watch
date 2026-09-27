@@ -1013,6 +1013,26 @@ class FogTests(unittest.TestCase):
         self.assertEqual(called.type, "motion")
         self.assertEqual(called.reason, "fog")
 
+    def test_fog_silences_every_name_and_not_only_fire(self):
+        # Between 22:24 and 01:14 the fog published eight fires, two walkers
+        # and two vehicles. All twelve were wrong.
+        walker = Observation(zone="roundabout", period="night", surface="road", travel=0.02,
+                             box_w=0.070, detections=[Detection("person", 0.62)], fogged=True, hazy=True)
+        van = Observation(zone="road", period="night", surface="road", travel=0.05, width_m=4.2,
+                          box_w=0.133, detections=[Detection("car", 0.71)], fogged=True, hazy=True)
+        throng = Observation(zone="roundabout", period="night", kind="crowd", person_count=9,
+                             crowd_min=6, fogged=True, hazy=True)
+        for seen in (walker, van, throng):
+            self.assertEqual(decide(seen).reason, "fog")
+            self.assertEqual(decide(seen).type, "motion")
+
+    def test_the_same_three_are_named_once_the_air_clears(self):
+        walker = Observation(zone="roundabout", period="night", surface="road", travel=0.02,
+                             box_w=0.070, detections=[Detection("person", 0.62)])
+        throng = Observation(zone="roundabout", period="night", kind="crowd", person_count=9, crowd_min=6)
+        self.assertEqual(decide(walker).type, "person")
+        self.assertEqual(decide(throng).type, "crowd")
+
     def test_a_haloed_lamp_in_haze_is_not_a_fire_either(self):
         # The first alarm of that night, at a ridge of 49: not yet fog, but
         # already not clear.

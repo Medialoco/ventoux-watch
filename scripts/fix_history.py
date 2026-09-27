@@ -135,6 +135,26 @@ DROP = {
     "2026-09-25T17:08:06Z": "ombre et soleil à la lisière",
     "2026-09-25T17:02:48Z": "la statue en bois",
     "2026-09-25T17:01:45Z": "la statue en bois",
+    # La nuit du 26 au 27 septembre. Le brouillard est descendu à 22h24 : la
+    # crête du Ventoux passe de 57 à 12 d'une vue à l'autre et ne remonte plus.
+    # Treize publications ont suivi et les treize sont fausses. Presque toutes
+    # sont le lampadaire du chalet, son halo ou le faisceau que la brume rend
+    # visible ; la météo, elle, annonçait « ciel dégagé » jusqu'à l'aube.
+    # Seule la voiture de 22h40, qu'on voit rouler sur la route, est réelle et
+    # reste dans l'historique.
+    "2026-09-26T22:24:16Z": "le lampadaire du rond-point dans le brouillard, personne dedans",
+    "2026-09-26T22:42:30Z": "la brume sur le versant, aucune fumée",
+    "2026-09-26T22:53:06Z": "le halo du lampadaire du chalet",
+    "2026-09-26T23:18:24Z": "un banc de brouillard qui dérive, rien dedans",
+    "2026-09-26T23:18:38Z": "le brouillard sur le toit du chalet",
+    "2026-09-26T23:19:29Z": "le halo du lampadaire, personne dedans",
+    "2026-09-26T23:30:49Z": "le lampadaire du chalet, sa lumière portée par l'air",
+    "2026-09-27T00:03:45Z": "le lampadaire du chalet, sa lumière portée par l'air",
+    "2026-09-27T00:12:20Z": "le brouillard sur le versant, aucune fumée",
+    "2026-09-27T00:18:33Z": "le faisceau du lampadaire rendu visible par la brume",
+    "2026-09-27T00:35:17Z": "le lampadaire du rond-point, son halo dans le brouillard",
+    "2026-09-27T01:02:05Z": "le lampadaire du rond-point, rien ne roulait",
+    "2026-09-27T01:14:43Z": "le lampadaire du chalet, son halo dans le brouillard",
 }
 
 
