@@ -465,7 +465,7 @@ def _azimuth(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 def decide(obs: Observation) -> Decision:
     conf = obs.min_conf or {"bus": 0.45, "bus_unnamed": 0.6, "car": 0.4}
-    if obs.fogged:
+    if obs.fogged and obs.period != "day":
         # Once the crest of the Ventoux is out of the picture, the watcher
         # stops naming. Not only fires: on the night of 26 September the fog
         # published twelve events between 22:24 and 01:14 and every one of them
@@ -479,6 +479,16 @@ def decide(obs: Observation) -> Decision:
         # thing in the frame. Against a record of twelve out of twelve, saying
         # nothing is the honest answer. The watcher keeps looking and keeps
         # filing what it sees; it simply does not put a name to it.
+        #
+        # Daylight is excepted, and the exception is the whole point: every one
+        # of those twelve was the lamp, and by day the lamp is out. On the
+        # morning of 27 September the crest read 3.9 and a car drove round the
+        # roundabout in plain sight; the watcher tracked it for two and a half
+        # minutes, measured it at 4.4 m by 2.4 m, and refused it fifty-three
+        # times running. What fog does make by day is banks on the slope — that
+        # same morning they came out 11 m to 22 m across — and those are turned
+        # away by ground size, where they belong. Glow is turned away a few
+        # lines below by `hazy`, which is true here too.
         return _motion(
             obs,
             "fog",

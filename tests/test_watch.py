@@ -1063,6 +1063,27 @@ class FogTests(unittest.TestCase):
             self.assertEqual(decide(seen).reason, "fog")
             self.assertEqual(decide(seen).type, "motion")
 
+    def test_a_car_in_daylight_fog_is_still_named(self):
+        # 27 September, 06:11 to 06:13 UTC: the crest read 3.9 and a car went
+        # round the roundabout in plain sight. The watcher held it for two and
+        # a half minutes and refused it fifty-three times. By day the lamp that
+        # made every one of the twelve night mistakes is out.
+        car = Observation(zone="roundabout", period="day", surface="road", travel=0.2112,
+                          width_m=4.4, box_w=0.140, detections=[Detection("car", 0.68)],
+                          fogged=True, hazy=True)
+        self.assertNotEqual(decide(car).reason, "fog")
+        self.assertEqual(decide(car).type, "vehicle")
+        self.assertTrue(decide(car).publish)
+
+    def test_a_bank_of_fog_on_the_slope_is_still_refused_by_day(self):
+        # The same morning at 06:09, fog banks measured 11 m to 22 m across.
+        # Nothing on that road is twenty metres long, so ground size turns them
+        # away without any help from the fog rule.
+        bank = Observation(zone="slope", period="day", surface="forest", travel=0.0134,
+                           width_m=21.4, box_w=0.68, detections=[Detection("car", 0.55)],
+                           fogged=True, hazy=True)
+        self.assertFalse(decide(bank).publish)
+
     def test_the_same_three_are_named_once_the_air_clears(self):
         walker = Observation(zone="roundabout", period="night", surface="road", travel=0.02,
                              box_w=0.070, detections=[Detection("person", 0.62)])
