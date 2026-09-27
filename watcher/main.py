@@ -325,7 +325,15 @@ def _might_be_bus(track, detections, width_m, cfg) -> bool:
         return False
     if width_m >= BUS_LENGTH_M:
         return True
-    return any(item.cls in {"bus", "truck"} and item.conf >= cfg["min_conf"] for item in detections)
+    # min_conf is a threshold per class in the config file and a plain number
+    # in some callers. Compared whole against a confidence it raised a TypeError,
+    # and this line is reached only when the model reads a bus or a truck: the
+    # fault lay hidden until the first lorry of 27 September took the watcher
+    # down in the middle of the afternoon.
+    floor = cfg["min_conf"]
+    if isinstance(floor, dict):
+        floor = floor["bus"]
+    return any(item.cls in {"bus", "truck"} and item.conf >= floor for item in detections)
 
 
 def _crossed_sky(track, cfg) -> bool:

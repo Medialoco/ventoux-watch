@@ -1075,6 +1075,23 @@ class FogTests(unittest.TestCase):
         self.assertEqual(decide(car).type, "vehicle")
         self.assertEqual(decide(car).action, "publish")
 
+    def test_a_lorry_does_not_bring_the_watcher_down(self):
+        """min_conf is a threshold per class, not a number.
+
+        Compared whole it raises a TypeError, and the line is reached only when
+        the model reads a bus or a truck: the watcher ran three days before the
+        first lorry of 27 September found it.
+        """
+        from watcher.main import _might_be_bus
+
+        class _Track:
+            zone = "road"
+
+        cfg = {"min_conf": {"bus": 0.45, "bus_unnamed": 0.6, "car": 0.4}}
+        seen = [Detection("truck", 0.78)]
+        self.assertTrue(_might_be_bus(_Track(), seen, 4.0, cfg))
+        self.assertFalse(_might_be_bus(_Track(), [Detection("truck", 0.20)], 4.0, cfg))
+
     def test_the_ground_size_alone_never_names_a_vehicle(self):
         """Car-shaped on the ground is not enough, and this is the proof.
 
