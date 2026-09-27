@@ -1080,10 +1080,24 @@ class FogTests(unittest.TestCase):
         frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
         seen = [Detection("person", 0.88, box=(1400, 900, 40, 90)),
                 Detection("car", 0.46, box=(1000, 950, 200, 100))]
-        box = _box_of_the_named(frame, Decision("publish", "vehicle", "Voiture", "x", {}, 0.5), seen)
+        box = _box_of_the_named(frame, Decision("publish", "vehicle", "Voiture", "x", {}, 0.5), seen,
+                                (990, 940, 220, 120))
         middle = (box[0] + box[2] / 2, box[1] + box[3] / 2)
         self.assertAlmostEqual(middle[0], 1100 / 1920, places=2)
         self.assertAlmostEqual(middle[1], 1000 / 1080, places=2)
+
+    def test_the_parked_car_at_the_kerb_is_not_the_one_marked(self):
+        """27 September, 16:25 local. The model is handed a crop wider than the
+        blob, so it read both the car that drove past and one standing at the
+        kerb. The parked one was the more confident of the two and took the red
+        box. Confidence says what a thing is, never which of them moved.
+        """
+        frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        seen = [Detection("car", 0.82, box=(200, 600, 180, 90)),    # à l'arrêt
+                Detection("car", 0.41, box=(1000, 950, 200, 100))]  # celle qui passe
+        box = _box_of_the_named(frame, Decision("publish", "vehicle", "Voiture", "x", {}, 0.5), seen,
+                                (990, 940, 220, 120))
+        self.assertAlmostEqual(box[0] + box[2] / 2, 1100 / 1920, places=2)
 
     def test_the_blob_still_stands_where_the_model_said_nothing(self):
         # It says nothing about most of what moves here. Nothing is forced.

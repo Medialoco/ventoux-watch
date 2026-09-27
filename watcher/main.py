@@ -220,7 +220,8 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         last_fire["fire"] = now
     if surface:
         decision.detail["surface"] = surface
-    drawn = _box_of_the_named(frame, decision, detections) or box
+    moved = track.best_bbox if any(track.best_bbox) else track.bbox
+    drawn = _box_of_the_named(frame, decision, detections, moved) or box
     if drawn:
         decision.detail["box"] = [round(value, 4) for value in drawn]
     event = store.add_event(when, decision.type, decision.label, track.zone, decision.confidence, track.best_jpeg, decision.detail)
@@ -356,9 +357,23 @@ NAMED_BY = {
 # How much room to leave around the model's box. Tight enough to point at one
 # thing, loose enough not to sit on top of it.
 BOX_MARGIN = 0.14
+# How much of the model's box must fall inside what actually moved. The model
+# is given a crop wider than the blob, so it also reads the cars parked at the
+# kerb; a third is enough to tell the one that drove past from the ones that
+# did not, and low enough that a blob lagging behind a moving car still counts.
+BOX_OVERLAP = 0.33
 
 
-def _box_of_the_named(frame, decision, detections) -> tuple[float, float, float, float] | None:
+def _overlap(box, other) -> float:
+    """What share of the model's box lies inside the thing that moved."""
+    ax, ay, aw, ah = box
+    bx, by, bw, bh = other
+    wide = max(0, min(ax + aw, bx + bw) - max(ax, bx))
+    tall = max(0, min(ay + ah, by + bh) - max(ay, by))
+    return (wide * tall) / float(max(1, aw * ah))
+
+
+def _box_of_the_named(frame, decision, detections, moved=None) -> tuple[float, float, float, float] | None:
     """Where the model put the thing that was named, if it named one.
 
     The motion blob holds everything that moved together, and on a roundabout
@@ -367,6 +382,12 @@ def _box_of_the_named(frame, decision, detections) -> tuple[float, float, float,
     box around the pedestrians beside it. The model had read the car and knew
     where it was.
 
+    But the model reads the whole crop, parked cars included, and the most
+    confident car in the picture is often the one standing still at the kerb —
+    which is exactly what went out at 16:25 the same afternoon. So the two
+    must be crossed: the model says what a thing is and where, the motion says
+    which of them moved. Confidence only breaks a tie.
+
     Nothing is forced. Where the model said nothing about the word used — and
     it says nothing about most of what moves here — the blob stands.
     """
@@ -374,9 +395,11 @@ def _box_of_the_named(frame, decision, detections) -> tuple[float, float, float,
     if frame is None or not wanted:
         return None
     hits = [hit for hit in detections if hit.cls in wanted and hit.box]
+    if moved:
+        hits = [hit for hit in hits if _overlap(hit.box, moved) >= BOX_OVERLAP]
     if not hits:
         return None
-    x, y, w, h = max(hits, key=lambda hit: hit.conf).box
+    x, y, w, h = max(hits, key=lambda hit: (round(_overlap(hit.box, moved), 2) if moved else 0, hit.conf)).box
     height, width = frame.shape[:2]
     mx, my = w * BOX_MARGIN, h * BOX_MARGIN
     x0 = max(0.0, (x - mx) / width)

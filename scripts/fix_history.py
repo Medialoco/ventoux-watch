@@ -73,6 +73,13 @@ RENAME = {
 # Strokes drawn on the wrong thing, given straight in thumbnail pixels because
 # they were never stored as a box.
 REFRAME = {
+    # 27 septembre, 16:25 locales. Le rectangle était sur une voiture à
+    # l'arrêt au bord de la route, pas sur celle qui passait : le modèle lit
+    # tout le recadrage et la plus sûre des deux était l'immobile. Le trait est
+    # retiré sans en dessiner un autre, faute de savoir où était l'autre.
+    # Corrigé à la source par BOX_OVERLAP dans watcher/main.py.
+    "2026-09-27T14:25:59Z": {"erase": [(38, 163, 58, 180)]},
+
     "2026-09-25T18:58:22Z": {
         "type": "vehicle",
         "label": "Voiture",
