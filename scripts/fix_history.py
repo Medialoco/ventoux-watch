@@ -74,11 +74,11 @@ RENAME = {
 # they were never stored as a box.
 REFRAME = {
     # 27 septembre, 16:25 locales. Le rectangle était sur une voiture à
-    # l'arrêt au bord de la route, pas sur celle qui passait : le modèle lit
-    # tout le recadrage et la plus sûre des deux était l'immobile. Le trait est
-    # retiré sans en dessiner un autre, faute de savoir où était l'autre.
+    # l'arrêt dans la rangée du bord, pas sur celle qui passait : le modèle lit
+    # tout le recadrage et la plus sûre des deux était l'immobile. Celle qui
+    # roulait est la berline bleue, seule sur la chaussée et plus près de nous.
     # Corrigé à la source par BOX_OVERLAP dans watcher/main.py.
-    "2026-09-27T14:25:59Z": {"erase": [(38, 163, 58, 180)]},
+    "2026-09-27T14:25:59Z": {"erase": [(38, 163, 58, 180)], "draw": (69, 182, 98, 202)},
 
     "2026-09-25T18:58:22Z": {
         "type": "vehicle",
@@ -193,9 +193,15 @@ def _raw_box(rect: tuple[int, int, int, int], width: int, height: int) -> list[f
     box = []
     for low, high, span in ((rect[0], rect[2], width), (rect[1], rect[3], height)):
         room = high - low
-        side = room - 20 if room <= 42 else room / 1.9
-        pad = max(10.0, side * 0.45)
-        box.append(((low + pad), max(side, 1.0)))
+        # The store pads by ten pixels at least, so its stroke is always wider
+        # than what it points at, and taking twenty back works on a stroke
+        # drawn around a car. On a small one it leaves nothing: the rectangle
+        # measured by hand around a car twenty pixels tall, on 27 September,
+        # came out one pixel high. Never give back less than half, and keep
+        # what is given back in the middle of the stroke rather than against
+        # its left edge.
+        side = max(room - 20, room * 0.5, 1.0)
+        box.append((low + (room - side) / 2, side))
     (x, w), (y, h) = box
     return [round(x / width, 4), round(y / height, 4), round(w / width, 4), round(h / height, 4)]
 
