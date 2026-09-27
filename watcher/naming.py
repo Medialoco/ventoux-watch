@@ -877,7 +877,18 @@ def decide(obs: Observation) -> Decision:
                 "Trop petit pour un véhicule",
                 f"Environ {obs.width_m * 100:.0f} cm au sol. Une voiture en couvre deux mètres et demi ici.",
             )
-        if obs.period == "day" and _fits(obs, "car") and obs.frames >= GROUND_FRAMES:
+        if (
+            obs.period == "day"
+            # A width of zero means the ground size could not be worked out at
+            # all, and _fits() waves those through: its job is to reject the
+            # too big and the too small, not to demand a measurement. A rule
+            # that names a thing by its size must refuse to speak when it has
+            # no size. Replayed over the candidates of 26 September, letting
+            # them pass turned 67 vehicles into 458.
+            and obs.width_m > 0
+            and _fits(obs, "car")
+            and obs.frames >= GROUND_FRAMES
+        ):
             # The model is silent on 88 % of what moves on this road, and the
             # fog has nothing to do with it: the figure is the same in clear
             # air. A car down there is fifty-eight pixels wide, and the three

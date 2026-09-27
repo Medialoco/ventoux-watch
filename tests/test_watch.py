@@ -1094,6 +1094,13 @@ class FogTests(unittest.TestCase):
         self.assertEqual(decide(blink).type, "motion")
         self.assertEqual(decide(blink).reason, "unnamed_vehicle")
 
+    def test_a_thing_of_unknown_size_is_not_named_by_its_size(self):
+        # A width of zero is not a small car, it is a failure to measure.
+        unknown = Observation(zone="road", period="day", surface="road", travel=0.2,
+                              width_m=0.0, box_w=0.140, frames=9, detections=[])
+        self.assertEqual(decide(unknown).type, "motion")
+        self.assertEqual(decide(unknown).reason, "unnamed_vehicle")
+
     def test_something_far_too_long_for_a_car_is_not_named_one(self):
         # Fog banks that morning measured 11 m to 22 m across.
         bank = Observation(zone="road", period="day", surface="road", travel=0.2,
