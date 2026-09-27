@@ -101,6 +101,7 @@ class Observation:
     warm_ratio: float = 0.0
     smoke_ratio: float = 0.0
     rise: float = 0.0
+    foot_climb: float = 0.0
     width_m: float = 0.0
     height_m: float = 0.0
     area_grow: float = 1.0
@@ -367,6 +368,11 @@ NIGHT_SECONDS = 3.0
 # seen drifted in. Asked only of the cold ones — a hillside truly alight is
 # wide and warm together.
 FIRE_WIDEST_M = 30.0
+# What share of its own climb the foot of a plume is allowed to follow. Zero
+# would demand a foot nailed to the ground; one would accept a body drifting
+# whole, which is a cloud. Half leaves room for a plume thinning at its near
+# edge while still refusing anything that simply moved.
+FOOT_HOLD = 0.5
 SUN_LOW = 15.0
 SUN_NEAR = 8.0
 # A sun higher than fifteen degrees no longer shines through the trees into the
@@ -524,7 +530,17 @@ def decide(obs: Observation) -> Decision:
         flame = obs.warm_ratio >= obs.fire_warm
         # A fire that has just caught shows as a pale plume climbing out of the
         # trees, minutes before any flame is large enough to colour a pixel.
-        plume = obs.smoke_ratio >= obs.fire_smoke and obs.rise >= obs.fire_rise
+        #
+        # A rising top is not enough, and asking only for that is what let
+        # three clouds through on the morning of 27 September. Smoke is rooted:
+        # it climbs off the spot that burns while its foot stays there, or
+        # spreads downhill as the fire widens. A cloud drifts with its whole
+        # body and lifts its foot by as much as its top. So the foot is
+        # required to hold — it may rise a little, since the near edge of a
+        # plume thins as it leaves the trees, but not to travel up with the
+        # rest of it.
+        rooted = obs.foot_climb <= obs.rise * FOOT_HOLD
+        plume = obs.smoke_ratio >= obs.fire_smoke and obs.rise >= obs.fire_rise and rooted
         # Plainly the colour of fire, not merely warm, since nothing else here
         # vouches for it: no growth, no plume, no movement. Only while the air
         # is clear, though: haze reddens and swells whatever is lit, so colour

@@ -150,6 +150,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         warm_ratio=warm_ratio(track.best_jpeg, track.best_bbox) if fire_ready else 0.0,
         smoke_ratio=smoke_ratio(track.best_jpeg, track.best_bbox) if fire_ready else 0.0,
         rise=track.rise,
+        foot_climb=track.foot_climb,
         width_m=width_m,
         height_m=scene_map.metres_tall(box) if box else 0.0,
         area_grow=track.area_grow,

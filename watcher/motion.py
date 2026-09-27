@@ -28,6 +28,8 @@ class Track:
     updated: float = 0.0
     first_top: float = 0.0
     top: float = 0.0
+    first_base: float = 0.0
+    base: float = 0.0
 
     @property
     def rise(self) -> float:
@@ -36,6 +38,23 @@ class Track:
         A plume grows upwards while a car, a walker or a shadow does not.
         """
         return max(0.0, self.first_top - self.top)
+
+    @property
+    def foot_climb(self) -> float:
+        """How far the foot of the blob has lifted off the ground it began on.
+
+        A rising top proves nothing on its own: a cloud drifting up the slope
+        has one too, and on the morning of 27 September three of them were
+        published as starts of fire. What separates them is the foot. Smoke is
+        rooted at the point that burns, so its top climbs while its foot stays
+        put, or even spreads downhill as the fire widens. A cloud carries its
+        whole body along and lifts its foot by as much as its top.
+
+        Signed on purpose. A fire that spreads downhill gives a negative
+        figure, and that must not be mistaken for the thing it is the opposite
+        of.
+        """
+        return self.first_base - self.base
 
     @property
     def travel(self) -> float:
@@ -119,6 +138,8 @@ class MotionDetector:
                     frames=1,
                     first_top=blob["top"],
                     top=blob["top"],
+                    first_base=blob["base"],
+                    base=blob["base"],
                 )
                 self._next_id += 1
                 track.best_jpeg = _jpeg(frame)
@@ -130,6 +151,7 @@ class MotionDetector:
             track.misses = 0
             track.centroid = (blob["cx"], blob["cy"])
             track.top = blob["top"]
+            track.base = blob["base"]
             track.bbox = blob["bbox"]
             track.area_ratio = blob["area_ratio"]
             track.updated = now
@@ -208,6 +230,7 @@ def _blobs(mask: np.ndarray, scale: float) -> list[dict]:
                 "cx": (x + w / 2) / width,
                 "cy": (y + h / 2) / height,
                 "top": y / height,
+                "base": (y + h) / height,
                 "bbox": (int(x / scale), int(y / scale), max(int(w / scale), 1), max(int(h / scale), 1)),
                 "area_ratio": (w * h) / float(width * height),
             }
