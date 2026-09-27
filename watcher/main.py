@@ -84,11 +84,18 @@ def main() -> None:
     last_gtfs = 0.0
     last_publish = 0.0
     last_view = 0.0
+    _heartbeat = root / "data" / "battement"
 
     while True:
         try:
             for frame in _frames(cfg["stream_url"]):
                 now = time.time()
+                # A sign of life, once a second. Nothing reads it here: it is
+                # for the machine watching from outside. The watcher can hang
+                # without dying — ffmpeg waiting on a stream that stopped
+                # answering keeps the process alive and silent — and a service
+                # that is still running is not a service that is still working.
+                _heartbeat.write_text(str(int(now)))
                 ok, encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
                 if ok:
                     ring.append((now, encoded.tobytes()))

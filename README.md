@@ -40,34 +40,30 @@ Les zones sont dessinées sur l’image de nuit `data/reference.jpg` :
 
 Le fichier `data/zones-preview.jpg` sert à les corriger. Les coordonnées dans `config/zones.json` vont de 0 à 1.
 
-## Quand le Pi est branché
+## Sur le Pi
 
-Le port USB-C alimente le Pi. La liaison avec l’ordinateur est un câble Ethernet ou le Wi-Fi, puis SSH.
+Une seule commande, rejouable sans rien casser :
 
 ```bash
-sudo mkdir -p /opt/ventoux-watch
-sudo rsync -a --exclude .venv ./ /opt/ventoux-watch/
-cd /opt/ventoux-watch
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-sudo cp deploy/ventoux-watch.service /etc/systemd/system/
-sudo systemctl enable --now ventoux-watch
+ssh ventoux 'bash -s' < scripts/pi_install.sh
 ```
 
-Secrets, uniquement sur le Pi, dans `config/local.json` :
+Elle installe les paquets, crée la clé de déploiement, clone le dépôt dans `/opt/ventoux-watch`, monte le service systemd et met en place le redémarrage autonome. Le script s’arrête et affiche la clé publique tant qu’elle n’est pas déclarée en écriture sur le dépôt.
+
+Les secrets ne sont pas copiés par le script. Il faut porter `config/local.json` à la main, une fois, et il reste hors du dépôt :
 
 ```json
 {
-  "opensky": {"username": "...", "password": "..."},
+  "opensky": {"client_id": "...", "client_secret": "..."},
   "drive": {"credentials": "secrets/drive.json", "folder_id": "..."}
 }
 ```
 
-OpenSky et Drive sont facultatifs. Sans compte OpenSky, l’archive des avions reste anonyme et plus limitée. Sans clé Drive, les photos sont publiées, pas les extraits. La clé Google et le jeton git ne vont pas dans le dépôt.
+OpenSky et Drive sont facultatifs. Sans compte OpenSky, l’archive des avions reste anonyme et plus limitée. Sans clé Drive, les photos sont publiées, pas les extraits. Pour les extraits : `pip install -r requirements-drive.txt`, un compte de service, et le dossier Drive partagé avec ce compte.
 
-Le service pousse `data/events.json`, `data/learning.json` et `data/thumbs/` au plus toutes les quinze minutes. GitHub Pages reconstruit le site : [https://medialoco.github.io/ventoux-watch/](https://medialoco.github.io/ventoux-watch/).
+Un départ de feu est publié immédiatement ; tout le reste est groupé et poussé au plus toutes les quinze minutes. GitHub Pages reconstruit le site : [https://medialoco.github.io/ventoux-watch/](https://medialoco.github.io/ventoux-watch/).
 
-Pour les extraits : `pip install -r requirements-drive.txt`, un compte de service, et le dossier Drive partagé avec ce compte.
+Le matériel, la carte SD, le disque externe, le chien de garde et les secrets sont décrits dans [`infra.md`](infra.md).
 
 ## Voir le site en local
 

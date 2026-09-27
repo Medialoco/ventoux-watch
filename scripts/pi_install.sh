@@ -99,6 +99,71 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable ventoux-watch >/dev/null
 
+dire "Chien de garde matériel"
+# Trois pannes différentes, trois parades, parce qu'aucune ne couvre les autres.
+#
+# 1. Le processus meurt : systemd le relance (Restart=always, ci-dessus).
+# 2. Le noyau se fige : le compteur matériel du BCM2712 n'est plus caressé et
+#    la carte redémarre toute seule. C'est la seule parade à un gel complet,
+#    et sur une machine sans clavier à mille mètres d'altitude, elle compte.
+# 3. Le veilleur tourne sans travailler : ffmpeg peut attendre indéfiniment un
+#    flux qui a cessé de répondre. Le processus vit, ne consomme rien, et ne
+#    regarde plus la montagne. Ni systemd ni le chien de garde matériel ne
+#    voient quoi que ce soit. D'où le battement de cœur ci-dessous.
+if ! grep -q "^dtparam=watchdog=on" /boot/firmware/config.txt 2>/dev/null; then
+    echo "dtparam=watchdog=on" | sudo tee -a /boot/firmware/config.txt >/dev/null
+    echo "Chien de garde activé dans config.txt (effectif au prochain démarrage)."
+fi
+sudo mkdir -p /etc/systemd/system.conf.d
+sudo tee /etc/systemd/system.conf.d/chien-de-garde.conf >/dev/null <<'EOF'
+[Manager]
+# Si le noyau ne caresse plus le compteur pendant quinze secondes, la carte
+# redémarre. RebootWatchdogSec borne l'arrêt lui-même : un arrêt qui traîne
+# est un arrêt qui ne finit pas.
+RuntimeWatchdogSec=15
+RebootWatchdogSec=2min
+EOF
+
+dire "Battement de cœur"
+# Le veilleur écrit data/battement à chaque image, soit une fois par seconde.
+# Si ce fichier a plus de cinq minutes, c'est que la boucle ne tourne plus,
+# quoi qu'en dise l'état du service.
+sudo tee /usr/local/bin/ventoux-battement >/dev/null <<EOF
+#!/usr/bin/env bash
+# Relance le veilleur s'il a cessé de regarder.
+set -eu
+BATTEMENT="$RACINE/data/battement"
+LIMITE=300
+[ -f "\$BATTEMENT" ] || exit 0
+AGE=\$(( \$(date +%s) - \$(stat -c %Y "\$BATTEMENT") ))
+if [ "\$AGE" -gt "\$LIMITE" ]; then
+    logger -t ventoux-battement "battement vieux de \${AGE}s, relance du veilleur"
+    systemctl restart ventoux-watch
+fi
+EOF
+sudo chmod +x /usr/local/bin/ventoux-battement
+sudo tee /etc/systemd/system/ventoux-battement.service >/dev/null <<'EOF'
+[Unit]
+Description=Vérifie que le veilleur regarde encore
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ventoux-battement
+EOF
+sudo tee /etc/systemd/system/ventoux-battement.timer >/dev/null <<'EOF'
+[Unit]
+Description=Vérifie le veilleur toutes les deux minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable ventoux-battement.timer >/dev/null
+
 dire "État"
 if [ ! -f "$RACINE/config/local.json" ]; then
     echo "config/local.json absent : les identifiants OpenSky n'ont pas encore"
