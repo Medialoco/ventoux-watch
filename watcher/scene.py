@@ -88,7 +88,7 @@ class SceneReader:
             # The same correction as above, and the night the forecast got most
             # wrong: it read "ciel dégagé" from dusk to dawn on 26 September
             # while the crest of the Ventoux was not in the picture at all.
-            weather = "Brouillard"
+            weather = "brouillard"
         elif overhead is not None:
             weather = weather_from_sky(overhead)
         else:

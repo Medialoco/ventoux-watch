@@ -1,5 +1,6 @@
 import json
 import math
+import re
 import subprocess
 import sys
 import time
@@ -552,6 +553,14 @@ class SceneTests(unittest.TestCase):
         self.assertEqual(weather_label(0), "ciel dégagé")
         self.assertEqual(weather_label(45), "brouillard")
         self.assertEqual(weather_label(95), "orage")
+
+    def test_every_weather_word_has_an_english_twin(self):
+        # site/app.js looks these up exactly, so a stray capital would reach an
+        # English reader untranslated.
+        said = {weather_label(code) for code in (0, 2, 3, 45, 61, 71, 95)}
+        said.add(read_sky(_view((70, 62, 58), ground=(58, 52, 48))))
+        known = set(re.findall(r'^  "(.+?)":', (ROOT / "site" / "app.js").read_text(encoding="utf-8"), re.M))
+        self.assertTrue(said <= known, f"sans traduction : {sorted(said - known)}")
 
     def test_blue_sky_is_clear_and_a_dark_frame_is_night(self):
         blue = _view((210, 120, 30))
