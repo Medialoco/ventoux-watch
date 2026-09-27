@@ -6,6 +6,7 @@ import fcntl
 import logging
 import math
 import os
+import select
 import subprocess
 import tempfile
 import time
@@ -36,6 +37,10 @@ log = logging.getLogger("ventoux")
 # is worth opening.
 BUS_LENGTH_M = 5.5
 CLIP_TYPES = {"plane", "bus", "fire"}
+# How long the stream may say nothing before it is opened again. It gives an
+# image a second, so half a minute of silence is already a stream that has
+# stopped, not one that is merely slow.
+STREAM_SILENCE_S = 30
 
 
 def main() -> None:
@@ -468,7 +473,22 @@ def _frames(url: str):
     buffer = b""
     try:
         while True:
-            chunk = process.stdout.read(65536)
+            # Waiting with a limit, because waiting without one is how the
+            # watch stops without anyone noticing. The stream gives an image a
+            # second; when it dries up, ffmpeg does not die — its own reconnect
+            # keeps it alive while it tries to catch the stream again — so a
+            # plain read simply never returns. On 27 September the watcher sat
+            # like that for forty-six minutes, process alive, log silent, no
+            # exception to catch. Twice in the same hour.
+            #
+            # Running out here ends the generator, which ends the loop that
+            # drives it, and the caller opens the stream afresh.
+            ready, _, _ = select.select([process.stdout], [], [], STREAM_SILENCE_S)
+            if not ready:
+                log.warning("Aucune image depuis %s s, le flux est repris", STREAM_SILENCE_S)
+                break
+            # read1 takes what has arrived; read would wait for the full count.
+            chunk = process.stdout.read1(65536)
             if not chunk:
                 break
             buffer += chunk
