@@ -2,7 +2,8 @@
 
 Où tourne le veilleur, sur quoi il écrit, et comment il se relève tout seul.
 Ce fichier décrit l'état réel au 27 septembre 2026, y compris ce qui n'est pas
-encore fait.
+encore fait. Les pannes et les périodes de non surveillance sont tenues à part,
+dans [incidents.md](incidents.md).
 
 ## Où ça tourne
 
@@ -223,3 +224,5 @@ main sur le Pi, une fois.
 - Passer les vignettes sur un stockage objet avant que git regrossisse.
 - Comprendre pourquoi un feu simulé sur la pente à 578 m n'est pas vu, alors
   que les mêmes feux à 140 m et 183 m sont nommés en six secondes.
+- Enregistrer les interruptions de surveillance au moment où elles se
+  produisent, au lieu de les reconstituer après coup ([incidents.md](incidents.md)).

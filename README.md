@@ -40,6 +40,8 @@ Les zones sont dessinées sur l’image de nuit `data/reference.jpg` :
 
 Le fichier `data/zones-preview.jpg` sert à les corriger. Les coordonnées dans `config/zones.json` vont de 0 à 1.
 
+La veille se lance par `./scripts/mac_veille.sh`, jamais à la main en arrière-plan : lancée depuis un terminal, elle meurt avec lui, et `nohup` n’y change rien. Le script la détache dans sa propre session. Voir [`incidents.md`](incidents.md).
+
 ## Sur le Pi
 
 Une seule commande, rejouable sans rien casser :
@@ -63,7 +65,7 @@ OpenSky et Drive sont facultatifs. Sans compte OpenSky, l’archive des avions r
 
 Un départ de feu est publié immédiatement ; tout le reste est groupé et poussé au plus toutes les quinze minutes. GitHub Pages reconstruit le site : [https://medialoco.github.io/ventoux-watch/](https://medialoco.github.io/ventoux-watch/).
 
-Le matériel, la carte SD, le disque externe, le chien de garde et les secrets sont décrits dans [`infra.md`](infra.md).
+Le matériel, la carte SD, le disque externe, le chien de garde et les secrets sont décrits dans [`infra.md`](infra.md). Les pannes et les périodes où la montagne n’était regardée par personne sont tenues dans [`incidents.md`](incidents.md).
 
 ## Voir le site en local
 
