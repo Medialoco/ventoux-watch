@@ -448,6 +448,13 @@ function escapeText(word) {
 }
 
 function stationLabel() {
+  // The camera before the station. The forecast is modelled on a grid whose
+  // ground here lies a thousand metres below the lens, so it answers for the
+  // valley: it read "clear" from dusk to dawn on 26 September while the crest
+  // of the Ventoux was nowhere in the picture. The bulletin is read off the
+  // webcam itself, and where the two disagree the webcam is the one standing
+  // on the mountain.
+  if (bulletin && bulletin.webcam && bulletin.webcam !== "nuit") return skyText(bulletin.webcam);
   return weatherNow ? t("weatherCodes")[weatherNow.code] || "" : "";
 }
 
@@ -542,7 +549,8 @@ async function loadView() {
     if (!response.ok) return;
     const payload = await response.json();
     bulletin = payload.last || null;
-    paintBulletin();
+    // Not paintBulletin alone: the bar at the top quotes the webcam too now.
+    paintWeather();
   } catch (_) {
     /* The card fills once the watcher has read the sky. */
   }
