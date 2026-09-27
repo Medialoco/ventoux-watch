@@ -738,7 +738,7 @@ function render() {
     const clock = moment.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Paris" });
     const day = moment.toLocaleDateString(locale(), { day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/Paris" });
     const picture = event.thumb
-      ? `<img src="${escapeHtml(event.thumb)}" alt="">`
+      ? `<img src="${escapeHtml(event.thumb)}" alt="" loading="lazy" decoding="async">`
       : `<span class="placeholder"></span>`;
     const info = event.detail || {};
     const people = Number(info.persons || 0);
