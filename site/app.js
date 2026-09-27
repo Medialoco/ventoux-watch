@@ -854,7 +854,7 @@ function reviewControls(event) {
 function reviewUrl(event, verdict, label, classe) {
   const title = `revue ${event.id}`;
   const body = `event_id: ${event.id}\nverdict: ${verdict}\nlecture: ${event.label}\n${classe ? `classe: ${classe}\n` : ""}`;
-  return `https://github.com/thepriben/ventoux-watch/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${label}`;
+  return `https://github.com/Medialoco/ventoux-watch/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${label}`;
 }
 
 // Colours are written after the word and spelt to agree with it, so English

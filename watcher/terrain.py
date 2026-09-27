@@ -18,7 +18,7 @@ from pathlib import Path
 
 import numpy as np
 
-AGENT = "ventoux-watch/0.1 (github.com/thepriben/ventoux-watch)"
+AGENT = "ventoux-watch/0.1 (github.com/Medialoco/ventoux-watch)"
 # Twenty-five metres across Europe, then thirty worldwide, then a ninety-metre
 # grid as a last resort. The first that answers wins.
 SOURCES = (

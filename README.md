@@ -1,6 +1,6 @@
 # Mont Serein — veille
 
-Le Raspberry Pi 5 regarde la webcam du Mont Serein. Chaque mouvement est gardé et interprété avec le jour, la nuit et la météo. Un avion, une voiture, un bus, un attroupement ou un incendie ne sont nommés que lorsque la lecture est assez sûre. Le site est [thepriben.github.io/ventoux-watch](https://thepriben.github.io/ventoux-watch/).
+Le Raspberry Pi 5 regarde la webcam du Mont Serein. Chaque mouvement est gardé et interprété avec le jour, la nuit et la météo. Un avion, une voiture, un bus, un attroupement ou un incendie ne sont nommés que lorsque la lecture est assez sûre. Le site est [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/).
 
 Le flux est celui déjà utilisé par [dataroads-fr84.info](https://dataroads-fr84.info/), source Vision-Environnement. Le site affiche ce direct. Il ne réhéberge pas la vidéo continue.
 
@@ -65,7 +65,7 @@ Secrets, uniquement sur le Pi, dans `config/local.json` :
 
 OpenSky et Drive sont facultatifs. Sans compte OpenSky, l’archive des avions reste anonyme et plus limitée. Sans clé Drive, les photos sont publiées, pas les extraits. La clé Google et le jeton git ne vont pas dans le dépôt.
 
-Le service pousse `data/events.json`, `data/learning.json` et `data/thumbs/` au plus toutes les quinze minutes. GitHub Pages reconstruit le site : [https://thepriben.github.io/ventoux-watch/](https://thepriben.github.io/ventoux-watch/).
+Le service pousse `data/events.json`, `data/learning.json` et `data/thumbs/` au plus toutes les quinze minutes. GitHub Pages reconstruit le site : [https://medialoco.github.io/ventoux-watch/](https://medialoco.github.io/ventoux-watch/).
 
 Pour les extraits : `pip install -r requirements-drive.txt`, un compte de service, et le dossier Drive partagé avec ce compte.
 

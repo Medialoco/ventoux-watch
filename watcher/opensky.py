@@ -10,7 +10,7 @@ import urllib.request
 from base64 import b64encode
 from pathlib import Path
 
-AGENT = "ventoux-watch/0.3 (github.com/thepriben/ventoux-watch)"
+AGENT = "ventoux-watch/0.3 (github.com/Medialoco/ventoux-watch)"
 TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
 log = logging.getLogger("ventoux.opensky")

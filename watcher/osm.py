@@ -17,7 +17,7 @@ from pathlib import Path
 
 log = logging.getLogger("ventoux.osm")
 
-AGENT = "ventoux-watch/0.1 (github.com/thepriben/ventoux-watch)"
+AGENT = "ventoux-watch/0.1 (github.com/Medialoco/ventoux-watch)"
 MIRRORS = (
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
