@@ -159,6 +159,8 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         fire_smoke=float(cfg["fire"].get("smoke_ratio") or 0.35),
         fire_rise=float(cfg["fire"].get("rise") or 0.008),
         period=current.period,
+        fogged=current.fogged,
+        hazy=current.hazy,
         weather=current.weather,
         surface=surface,
         near_road=scene_map.drivable_near(box) if box else True,

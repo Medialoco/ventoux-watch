@@ -109,6 +109,10 @@ class Observation:
     fire_smoke: float = 0.35
     fire_rise: float = 0.008
     period: str = "day"
+    # How far one can see, read off the picture and not off the forecast, which
+    # describes the valley a thousand metres below. See watcher/scene.py.
+    fogged: bool = False
+    hazy: bool = False
     weather: str = ""
     surface: str = ""
     near_road: bool = True
@@ -468,13 +472,41 @@ def decide(obs: Observation) -> Decision:
         return Decision("hold", reason="crowd_below_threshold", detail={"persons": obs.person_count})
 
     if (obs.surface in FLAMMABLE or (obs.zone == "slope" and not obs.surface)) and obs.duration_s >= obs.fire_sustain_s:
+        if obs.fogged:
+            # Nothing warm can be believed once the cloud is down. Fog turns
+            # every lamp into a wide orange patch that swells and shrinks as
+            # the air moves, which is fire colour and fire growth together,
+            # and the two are all this rule ever had. On the night of 26
+            # September it cried fire eight times in three hours, always at the
+            # same street lamp by the chalet. A real fire in fog cannot be seen
+            # from here either, so nothing is lost by saying so plainly.
+            return _motion(
+                obs,
+                "fog",
+                "Halo dans le brouillard",
+                "La crête du Ventoux a disparu : le brouillard est descendu. "
+                "Une tache chaude qui grandit, là, c'est une lumière portée par l'air.",
+            )
         flame = obs.warm_ratio >= obs.fire_warm
         # A fire that has just caught shows as a pale plume climbing out of the
         # trees, minutes before any flame is large enough to colour a pixel.
         plume = obs.smoke_ratio >= obs.fire_smoke and obs.rise >= obs.fire_rise
         # Plainly the colour of fire, not merely warm, since nothing else here
-        # vouches for it: no growth, no plume, no movement.
-        burning = obs.warm_ratio >= EMBER_WARM * obs.fire_warm
+        # vouches for it: no growth, no plume, no movement. Only while the air
+        # is clear, though: haze reddens and swells whatever is lit, so colour
+        # and growth together are exactly what it counterfeits.
+        burning = obs.warm_ratio >= EMBER_WARM * obs.fire_warm and not obs.hazy
+        if obs.hazy and not plume:
+            # Short of fog, but the ridge is soft and the distances are not
+            # honest. A fire seen through haze still shows the one thing haze
+            # cannot invent: smoke climbing.
+            return _motion(
+                obs,
+                "haze",
+                "Lueur dans la brume",
+                "La crête est noyée, on y voit mal. Une lueur chaude qui gonfle ne suffit pas ici, "
+                "il faut un panache qui monte.",
+            )
         if (flame or plume) and (obs.area_grow >= obs.fire_grow or burning):
             if not plume and _facing_the_sun(obs):
                 # Warm, wide and growing, with no smoke and no plume rising, in

@@ -19,7 +19,7 @@ from watcher.motion import MotionDetector, Track
 from watcher.naming import Detection, Observation, Trip, choose_aircraft, decide, in_camera_view
 from watcher.review import apply_review, parse_review
 from watcher.opensky import SkyArchive
-from watcher.scene import ViewLog, moon_spot, read_sky, solar_period, weather_label
+from watcher.scene import Scene, ViewLog, moon_spot, read_sky, solar_period, weather_label
 from watcher.store import Store, fold_events, small_jpeg
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -962,3 +962,54 @@ class ColourBeforeSmokeTests(unittest.TestCase):
                             at_x=0.153, camera_bearing=126.713, camera_fov=78.755)
         self.assertEqual(decide(dawn).type, "motion")
         self.assertEqual(decide(dawn).reason, "low_sun")
+
+
+class FogTests(unittest.TestCase):
+    """The night of 26 September, when a street lamp was called a fire eight times."""
+
+    def _lamp(self, **extra):
+        # The readings the watcher actually filed at 01:14 UTC: warm, swelling,
+        # and with no plume worth the name.
+        base = dict(zone="slope", surface="forest", duration_s=7.6, travel=0.0008,
+                    area_grow=9.6, warm_ratio=0.308, smoke_ratio=0.105, rise=0.0028,
+                    fire_sustain_s=5.0, fire_grow=1.6, fire_warm=0.08,
+                    fire_smoke=0.35, fire_rise=0.008, period="night",
+                    sun_bearing=250.0, sun_elevation=-30.0)
+        base.update(extra)
+        return Observation(**base)
+
+    def test_a_haloed_lamp_in_fog_is_not_a_fire(self):
+        called = decide(self._lamp(fogged=True, hazy=True))
+        self.assertEqual(called.type, "motion")
+        self.assertEqual(called.reason, "fog")
+
+    def test_a_haloed_lamp_in_haze_is_not_a_fire_either(self):
+        # The first alarm of that night, at a ridge of 49: not yet fog, but
+        # already not clear.
+        called = decide(self._lamp(hazy=True))
+        self.assertEqual(called.type, "motion")
+        self.assertEqual(called.reason, "haze")
+
+    def test_the_same_readings_in_clear_air_still_raise_the_alarm(self):
+        # The fire rule itself is untouched: it is the bad air that is refused,
+        # not the warmth.
+        self.assertEqual(decide(self._lamp()).type, "fire")
+
+    def test_a_plume_is_believed_even_through_haze(self):
+        # Smoke climbing is the one thing haze cannot counterfeit, so a fire
+        # that shows one is still named.
+        real = self._lamp(hazy=True, smoke_ratio=0.42, rise=0.011)
+        self.assertEqual(decide(real).type, "fire")
+
+    def test_the_ridge_is_what_decides(self):
+        # Every night in the archive reads 60 to 72 clear; the fogged night of
+        # 27 September read 8 to 15, and the fog arriving read 49.
+        clear = Scene(period="night", weather="", ridge=70.9)
+        arriving = Scene(period="night", weather="", ridge=49.4)
+        soup = Scene(period="night", weather="", ridge=9.3)
+        self.assertFalse(clear.hazy)
+        self.assertFalse(clear.fogged)
+        self.assertTrue(arriving.hazy)
+        self.assertFalse(arriving.fogged)
+        self.assertTrue(soup.hazy)
+        self.assertTrue(soup.fogged)

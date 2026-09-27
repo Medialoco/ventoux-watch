@@ -19,6 +19,21 @@ import numpy as np
 
 log = logging.getLogger("ventoux.scene")
 
+# How far one can see, read off the picture, because nothing else here can see
+# it. The forecast service describes the valley a thousand metres below the
+# camera: it called the night of 26 September "ciel dégagé" from end to end
+# while the hillside was shut in, and on that word the watcher cried fire eight
+# times at the same street lamp by the chalet.
+#
+# What is measured is the crest of the Ventoux, which is either an edge against
+# the sky or it is nothing. Over every night in the archive it reads 60 to 72
+# when the air is clear and 4 to 15 once the cloud is down, and the eight false
+# alarms fall between 4 and 49. The first of them, at 49, is the fog arriving:
+# that is why there are two marks rather than one, and why the middle band asks
+# the fire rule for more evidence instead of silencing it.
+CLEAR_RIDGE = 60.0
+FOG_RIDGE = 40.0
+
 
 @dataclass
 class Scene:
@@ -28,6 +43,17 @@ class Scene:
     clouds: int | None = None
     luminance: float = 0.0
     measured_sky: bool = False
+    ridge: float = CLEAR_RIDGE
+
+    @property
+    def fogged(self) -> bool:
+        """The ridge is gone: nothing at that distance can be read at all."""
+        return self.ridge < FOG_RIDGE
+
+    @property
+    def hazy(self) -> bool:
+        """The ridge is softened: what can still be read must be read harder."""
+        return self.ridge < CLEAR_RIDGE
 
     @property
     def context(self) -> str:
@@ -57,13 +83,24 @@ class SceneReader:
         # clear sky. In daylight the picture is the better witness, and it is
         # free. The model is kept for the night, when there is nothing to read.
         overhead = sky_cover(frame) if period == "day" else None
+        ridge = skyline_edge(frame)
+        if ridge < FOG_RIDGE:
+            # The same correction as above, and the night the forecast got most
+            # wrong: it read "ciel dégagé" from dusk to dawn on 26 September
+            # while the crest of the Ventoux was not in the picture at all.
+            weather = "Brouillard"
+        elif overhead is not None:
+            weather = weather_from_sky(overhead)
+        else:
+            weather = self._weather
         return Scene(
             period=period,
-            weather=weather_from_sky(overhead) if overhead is not None else self._weather,
+            weather=weather,
             temperature_c=self._temperature,
             clouds=round(overhead) if overhead is not None else self._clouds,
             luminance=luminance(frame),
-            measured_sky=overhead is not None,
+            measured_sky=overhead is not None or ridge < FOG_RIDGE,
+            ridge=ridge,
         )
 
     def _refresh(self) -> None:
@@ -152,6 +189,41 @@ def solar_elevation(when: datetime, lat: float, lon: float) -> float:
 SKY_BAND = 0.22
 # The top fifth of the frame. Below that the summit ridge comes in, and green
 # hillside read as cloud would make every clear day overcast.
+
+
+# Both fog gauges are counts of pixels, so both move when the picture is
+# resized, and the watcher does not always hold the same size: the frame off
+# the stream is 1920 wide and the photo it files is 480. The same clear night
+# read a halo of 24 at one size and 67 at the other, which is the whole width
+# of the difference between clear air and fog. So every fog reading is taken at
+# one agreed size and the numbers below mean something on their own.
+FOG_WIDTH = 480
+
+
+def _at_fog_width(frame: np.ndarray) -> np.ndarray:
+    width = frame.shape[1]
+    if width == FOG_WIDTH:
+        return frame
+    return cv2.resize(frame, (FOG_WIDTH, max(1, round(frame.shape[0] * FOG_WIDTH / width))))
+
+
+def skyline_edge(frame: np.ndarray | None) -> float:
+    """How sharp the crest of the Ventoux still is, in grey levels per pixel.
+
+    The strongest vertical step of each column, not the average of them: the
+    ridge is one line across an otherwise plain sky, and averaging over the
+    plain part would drown it.
+    """
+    if frame is None or frame.size == 0:
+        return 0.0
+    frame = _at_fog_width(frame)
+    height = frame.shape[0]
+    band = cv2.cvtColor(frame[int(height * 0.18):int(height * 0.42)], cv2.COLOR_BGR2GRAY).astype(np.float32)
+    if band.size == 0:
+        return 0.0
+    band = cv2.GaussianBlur(band, (0, 0), 1.5)
+    step = np.abs(cv2.Sobel(band, cv2.CV_32F, 0, 1, ksize=3))
+    return float(np.mean(np.max(step, axis=0)))
 
 
 def sky_cover(frame: np.ndarray | None) -> float | None:
