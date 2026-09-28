@@ -911,6 +911,8 @@ async function load() {
   const response = await fetch("data/events.json", { cache: "no-store" });
   const payload = await response.json();
   events = payload.events || [];
+  const stamp = document.getElementById("version");
+  if (stamp && payload.version) stamp.textContent = `v${payload.version}`;
   render();
   paintFigures();
   try {

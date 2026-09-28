@@ -19,6 +19,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from watcher import __version__
 from watcher.airports import describe_route
 from watcher.config import load_config
 from watcher.detect import YoloDetector, body_colour, car_lights
@@ -124,6 +125,7 @@ def _note_interruption(journal: Path, stopped: float, now: float) -> float:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    log.info("Veilleur v%s", __version__)
     cfg = load_config()
     root = Path(cfg["_root"])
     if not _only_one(root / "data" / "watch.lock"):

@@ -3,6 +3,7 @@ import math
 import re
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 from dataclasses import replace
@@ -1261,6 +1262,25 @@ class FogTests(unittest.TestCase):
         # The little box sits wholly inside the blob, and holds a hundredth of it.
         self.assertAlmostEqual(_overlap(corner, blob), 1.0, places=3)
         self.assertAlmostEqual(_covers(corner, blob), 0.01, places=3)
+
+    def test_the_history_says_which_watcher_wrote_it(self):
+        """The footer read v0.3.0 while the code called itself 0.1.0.
+
+        Written in three places by hand, it drifted in all three. From the day
+        the Mac and the Pi both publish, the page must say which one it is
+        showing.
+        """
+        import watcher
+        from watcher.store import Store
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            store = Store(root)
+            store._write()
+            payload = json.loads((root / "events.json").read_text(encoding="utf-8"))
+        self.assertEqual(payload["version"], watcher.__version__)
+        page = (Path(__file__).resolve().parents[1] / "site" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="version"></span>', page)
 
     def test_a_correction_keeps_the_measurements_that_caused_it(self):
         """A verdict must leave more than a tally behind.

@@ -9,6 +9,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from . import __version__
+
 THUMB_WIDTH = 480
 THUMB_QUALITY = 52
 PASSAGE_ZONES = {"road", "roundabout", "other"}
@@ -147,7 +149,7 @@ class Store:
         return list(payload.get("events") or [])
 
     def _write(self) -> None:
-        payload = {"events": self.events}
+        payload = {"version": __version__, "events": self.events}
         self.events_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
