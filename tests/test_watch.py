@@ -1166,6 +1166,61 @@ class FogTests(unittest.TestCase):
                             fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
         self.assertEqual(decide(start).type, "fire")
 
+    def test_the_tractor_working_the_meadow_is_not_a_start_of_fire(self):
+        """28 September, 14:02 Paris, by its own measurements.
+
+        A pale grey cab on green grass reads as smoke, it rose and it grew, and
+        at twenty pixels across the model returned nothing to contradict it.
+        The one thing it did that a fire cannot is drive off.
+        """
+        tractor = Observation(zone="slope", period="day", width_m=7.0, duration_s=6.0,
+                              travel=0.03, drift_rate=0.152, warm_ratio=0.0, smoke_ratio=0.426,
+                              rise=0.0278, area_grow=2.8, fire_sustain_s=5.0, fire_grow=1.6,
+                              fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
+        self.assertEqual(decide(tractor).type, "motion")
+        self.assertEqual(decide(tractor).reason, "machine")
+
+    def test_a_fire_leaning_in_the_wind_still_alerts(self):
+        """The foot is measured, not the middle, exactly so this one survives.
+
+        A plume leans downwind within seconds of catching. Its body crosses the
+        picture; the ground it burns does not.
+        """
+        blown = Observation(zone="slope", surface="forest", period="day", width_m=9.0,
+                            duration_s=6.0, travel=0.06, drift_rate=0.019, warm_ratio=0.0,
+                            smoke_ratio=0.42, rise=0.0278, area_grow=2.8, fire_sustain_s=5.0,
+                            fire_grow=1.6, fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
+        self.assertEqual(decide(blown).type, "fire")
+
+    def test_a_hillside_alight_may_run(self):
+        """The drift limit is asked of the cold ones only.
+
+        A front driven by wind does travel, and when it does it is warm. Asking
+        it to hold still would be a way of never alerting on the worst case.
+        """
+        running = Observation(zone="slope", surface="forest", period="day", width_m=25.0,
+                              duration_s=12.0, travel=0.08, drift_rate=0.30, warm_ratio=0.62,
+                              smoke_ratio=0.3, rise=0.03, area_grow=3.1, fire_sustain_s=5.0,
+                              fire_grow=1.6, fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
+        self.assertEqual(decide(running).type, "fire")
+
+    def test_the_foot_of_a_blob_is_read_at_its_lowest_rows(self):
+        """A plume that leans keeps its foot; its middle does not."""
+        from watcher.motion import _foot_x
+
+        leaning = np.array([[[100, 10]], [[140, 10]], [[112, 60]], [[108, 60]]], dtype=np.int32)
+        self.assertAlmostEqual(_foot_x(leaning, 200), 110 / 200, places=3)
+
+    def test_the_walk_is_counted_in_the_blob_s_own_widths(self):
+        """The tractor of 28 September: 0.03 of the frame, on a body 0.0328 wide."""
+        from watcher.main import _foot_walk
+
+        self.assertAlmostEqual(_foot_walk(0.03, 0.0328, 6.0), 0.152, places=3)
+        # A plume sixty metres across wavering by the same 0.03 of the frame is
+        # not walking anywhere: it is twenty times wider, so it counts as less.
+        self.assertAlmostEqual(_foot_walk(0.03, 0.66, 6.0), 0.008, places=3)
+        self.assertEqual(_foot_walk(0.03, 0.0, 6.0), 0.0)
+
     def test_nothing_burns_in_the_sky(self):
         cloud = Observation(zone="sky", surface="forest", period="day", width_m=8.0,
                             duration_s=14.5, travel=0.02, warm_ratio=0.0, smoke_ratio=0.399,

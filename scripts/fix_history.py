@@ -137,6 +137,11 @@ DROP = {
     "2026-09-27T09:33:59Z": "un nuage de 211 m de large sur la pente, sans la moindre chaleur",
     "2026-09-27T08:40:03Z": "un nuage, et il était dans le ciel",
     "2026-09-27T08:09:49Z": "le brouillard résiduel de la nuit, 39,7 m de large et froid",
+    # 28 septembre, 14:02 locales. Un tracteur au travail dans la prairie : une
+    # cabine grise sur de l'herbe verte passe pour de la fumée, et à vingt
+    # pixels de large le modèle ne reconnaît rien qui la contredise. Ce qu'il a
+    # fait et qu'un feu ne peut pas faire : repartir. Voir FIRE_DRIFT_RATE.
+    "2026-09-28T12:02:21Z": "un tracteur qui travaillait la prairie, sans la moindre chaleur",
     # Les huit avions du 26 septembre. Tous des nuages : le plus proche était
     # à 8,8 km et la tache faisait trente-sept fois la taille de l'appareil,
     # les autres entre cinquante et cent kilomètres, où un avion de ligne

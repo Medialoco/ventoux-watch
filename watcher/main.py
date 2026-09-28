@@ -47,6 +47,22 @@ STREAM_SILENCE_S = 30
 INTERRUPTION_FLOOR_S = 30
 
 
+def _foot_walk(drift: float, span: float, duration_s: float) -> float:
+    """How fast the foot walks away from its own footprint, in widths a second.
+
+    Measured against the thing's own width rather than in metres, and that is
+    deliberate. Metres would need the survey, which not every webcam will have,
+    and they flatter a big blob: a plume sixty metres across that wavers by a
+    twentieth of itself moves three metres, which sounds like walking and is
+    not. A share of its own width says the same thing about a tractor at eight
+    hundred metres and a tractor at eighty, on this camera and on the next one,
+    with nothing to calibrate.
+    """
+    if not (drift and span and duration_s):
+        return 0.0
+    return drift / span / duration_s
+
+
 def _utc(when: float) -> str:
     return datetime.fromtimestamp(when, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -210,6 +226,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         smoke_ratio=smoke_ratio(track.best_jpeg, track.best_bbox) if fire_ready else 0.0,
         rise=track.rise,
         foot_climb=track.foot_climb,
+        drift_rate=_foot_walk(track.drift, box[2] if box else 0.0, duration),
         width_m=width_m,
         height_m=scene_map.metres_tall(box) if box else 0.0,
         area_grow=track.area_grow,
@@ -259,6 +276,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         # the fact; written down, the next one is read straight off the entry.
         "width_m": round(width_m, 1),
         "height_m": round(obs.height_m, 1),
+        "drift_rate": round(obs.drift_rate, 3),
         "seen_as": [f"{hit.cls} {hit.conf:.2f}" for hit in detections[:4]],
     }
     decision.detail.setdefault("measured", measured)

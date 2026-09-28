@@ -71,6 +71,54 @@ Le même mode de lancement était utilisé les jours précédents. Les mêmes
 interruptions s'y sont donc très probablement produites, sans qu'on puisse
 aujourd'hui dire lesquelles ni combien de temps.
 
+## Les pannes du 28 septembre
+
+### Un tracteur publié comme départ de feu
+
+14:02, sur la prairie. Une cabine grise sur de l'herbe verte satisfait le test
+de fumée — pâle, grise, et `bleu − rouge < 25`, donc « ce n'est pas le ciel » —
+la tache est montée de 2,8 % de l'image et a triplé de surface. Le modèle n'a
+rien vu du tout pour la contredire : à sept mètres de large et à cette
+distance, l'engin fait une vingtaine de pixels.
+
+Ce qu'il a fait et qu'un feu ne peut pas faire : repartir. Le foyer d'un
+incendie ne traverse pas le terrain, il grandit sur place.
+
+Correctif : mesure du déplacement du **pied** de la tache, c'est-à-dire de ses
+rangées les plus basses, et non de son centre — un panache penche dans le vent
+en quelques secondes, et un panache qui penche brûle toujours au même endroit.
+Le déplacement est compté **en largeurs de la tache elle-même**, pas en mètres,
+pour deux raisons : les mètres demandent le relevé du terrain, que la prochaine
+webcam n'aura pas forcément, et ils flattent les grandes taches — un panache de
+soixante mètres qui ondule d'un vingtième de lui-même parcourt trois mètres,
+ce qui sonne comme une marche et n'en est pas une. Seuil `FIRE_DRIFT_RATE` à
+0,05 largeur par seconde, demandé aux seules masses froides.
+
+Mesuré, pas supposé : quatre panaches simulés sur quatre emplacements donnent
+0,017, 0,019, 0,009 et 0,010 à la seconde où ils sont jugés ; le tracteur était
+à 0,15. Le seuil laisse plus du double de marge de chaque côté.
+
+### Le simulateur dessine un panache qui n'est pas à l'échelle
+
+Trouvé en vérifiant le correctif ci-dessus, et plus grave que lui. Le panache
+de `watcher/simulate.py` est dessiné en **parts d'image** — `CLIMB_PER_S`,
+`SPREAD_PER_S` — et non en mètres. Sa taille réelle dépend donc de l'endroit où
+on le pose : au même nombre de pixels, un foyer lointain représente un incendie
+énorme et un foyer proche un feu de camp.
+
+Conséquence immédiate : **les quatre panaches essayés font entre 13 et 21 m de
+large dès leur première seconde et entre 38 et 60 m à la sixième**, et sont
+tous refusés comme « Nuage sur la pente » par le plafond `FIRE_WIDEST_M = 30`
+posé la veille. Vérifié en rejouant le simulateur sur le code d'avant : les
+verdicts sont identiques, donc ce n'est pas une régression du jour — mais cela
+veut dire qu'on ne sait pas aujourd'hui si ce plafond refuserait un vrai
+départ de feu, parce que le seul instrument dont on dispose pour le savoir ne
+mesure pas en mètres.
+
+Rien n'a été desserré sur cette base : un seuil de feu ne se règle pas contre
+un étalon faux. La suite est de dessiner le panache à l'échelle du terrain, et
+de reprendre le plafond ensuite.
+
 ## Les pannes du 27 septembre
 
 ### La veille mourait avec le terminal qui l'avait lancée
@@ -145,6 +193,12 @@ commandée. Détaillé dans [infra.md](infra.md).
 
 ## Ce qui reste à faire
 
+- **Dessiner le panache du simulateur en mètres**, par la carte de la scène,
+  au lieu de parts d'image. Tant que ce n'est pas fait, le simulateur ne dit
+  pas si le plafond de largeur laisserait passer un vrai feu, et il explique
+  probablement aussi pourquoi un foyer à 578 m n'est jamais vu quand les mêmes
+  à 140 m et 183 m alertent en six secondes.
+- Reprendre `FIRE_WIDEST_M` une fois le simulateur à l'échelle.
 - Faire remonter ces périodes sur le site. Un historique qui ne distingue pas
   « rien ne s'est passé » de « personne ne regardait » ment par omission.
 - Vérifier que le veilleur du Pi ne souffre d'aucune de ces morts silencieuses

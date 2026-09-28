@@ -23,6 +23,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from watcher.main import _foot_walk
 from watcher.motion import MotionDetector, smoke_ratio, warm_ratio
 from watcher.naming import Observation, decide
 from watcher.scenemap import FLAMMABLE, SceneMap
@@ -82,8 +83,11 @@ def main() -> int:
         decision, obs = _judge(track, frame, now, cfg, scene_map, period)
         alert = decision.type == "fire"
         mark = f"ALERTE {decision.label}" if alert else decision.reason
+        # Largeur et dérive à l'affichage : ce sont elles qui refusent un feu
+        # sans le dire, et les lire après coup revient à deviner.
         print(f"  {second:3d} s  âge {obs.duration_s:4.0f} s  fumée {obs.smoke_ratio:.2f}  flamme {obs.warm_ratio:.2f}"
-              f"  montée {obs.rise:.3f}  croissance {obs.area_grow:.1f}  -> {mark}")
+              f"  montée {obs.rise:.3f}  croissance {obs.area_grow:.1f}"
+              f"  largeur {obs.width_m:5.1f} m  dérive {obs.drift_rate:.3f}/s  -> {mark}")
         if alert and raised is None:
             raised = (second, decision, frame, track)
 
@@ -116,6 +120,7 @@ def _judge(track, frame, now, cfg, scene_map, period):
         # Sans cela le simulateur jugeait sur un pied immobile par défaut,
         # c'est-à-dire plus indulgent que le veilleur ne l'est vraiment.
         foot_climb=track.foot_climb,
+        drift_rate=_foot_walk(track.drift, box[2], max(0.0, now - track.started)),
         area_grow=track.area_grow,
         area_ratio=track.area_ratio,
         travel=track.travel,

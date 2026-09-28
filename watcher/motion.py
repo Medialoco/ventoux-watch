@@ -30,6 +30,8 @@ class Track:
     top: float = 0.0
     first_base: float = 0.0
     base: float = 0.0
+    first_foot_x: float = 0.0
+    foot_x: float = 0.0
 
     @property
     def rise(self) -> float:
@@ -55,6 +57,17 @@ class Track:
         of.
         """
         return self.first_base - self.base
+
+    @property
+    def drift(self) -> float:
+        """How far the foot has crossed the picture, sideways, as a share of it.
+
+        Fire stays where the fuel is. It widens, it climbs, it leans with the
+        wind, but the ground it burns does not move. Anything whose foot walks
+        across the frame carries its own source with it, which is what an
+        engine does and a fire cannot.
+        """
+        return abs(self.foot_x - self.first_foot_x)
 
     @property
     def travel(self) -> float:
@@ -136,6 +149,8 @@ class MotionDetector:
                     top=blob["top"],
                     first_base=blob["base"],
                     base=blob["base"],
+                    first_foot_x=blob["foot_x"],
+                    foot_x=blob["foot_x"],
                 )
                 self._next_id += 1
                 track.best_jpeg = _jpeg(frame)
@@ -148,6 +163,7 @@ class MotionDetector:
             track.centroid = (blob["cx"], blob["cy"])
             track.top = blob["top"]
             track.base = blob["base"]
+            track.foot_x = blob["foot_x"]
             track.bbox = blob["bbox"]
             track.area_ratio = blob["area_ratio"]
             track.updated = now
@@ -227,11 +243,27 @@ def _blobs(mask: np.ndarray, scale: float) -> list[dict]:
                 "cy": (y + h / 2) / height,
                 "top": y / height,
                 "base": (y + h) / height,
+                "foot_x": _foot_x(contour, width),
                 "bbox": (int(x / scale), int(y / scale), max(int(w / scale), 1), max(int(h / scale), 1)),
                 "area_ratio": (w * h) / float(width * height),
             }
         )
     return blobs
+
+
+def _foot_x(contour: np.ndarray, width: int) -> float:
+    """Where the blob touches down, as a share of the frame.
+
+    Not the middle of the blob: the middle of a plume leans downwind within
+    seconds of catching, and a plume that leans is still a fire burning in one
+    spot. What stays over the fuel is the lowest part of the shape. Taking the
+    average x of the rows nearest the bottom rather than a single point, so one
+    stray pixel of shadow does not move the foot.
+    """
+    points = contour.reshape(-1, 2)
+    low = points[:, 1].max()
+    bottom = points[points[:, 1] >= low - 2]
+    return float(bottom[:, 0].mean()) / float(width)
 
 
 def _jpeg(frame: np.ndarray) -> bytes:
