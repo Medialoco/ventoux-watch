@@ -252,6 +252,41 @@ chargeur d'ordinateur portable annonce sa puissance à 20 V et ne fournit
 souvent que 2 A en 5 V : la carte démarre et s'effondre. Alimentation 27 W
 commandée. Détaillé dans [infra.md](infra.md).
 
+### Ce que les corrections deviennent
+
+Jusqu'au 28 septembre, corriger une lecture voulait dire modifier l'historique
+et écrire pourquoi dans un commentaire de `scripts/fix_history.py`. Un verdict
+rendu depuis le site, lui, ne déplaçait que deux compteurs dans
+`data/learning.json` : combien de fois nous avons raison, combien de fois
+tort, et rien sur le pourquoi.
+
+Désormais chaque verdict écrit une ligne dans `data/reviewed.jsonl` : ce que la
+veille avait dit, ce que c'était, la zone, la photo, et les mesures du moment
+— largeur au sol, hauteur, vitesse de montée, ce que le modèle a lu. C'est la
+seule matière qui permette de régler un seuil sur des faits plutôt que sur un
+cas.
+
+Les 87 corrections déjà rendues y ont été repassées par
+`scripts/backfill_reviews.py`, qui retrouve dans git l'étiquette d'origine —
+celle que la correction avait écrasée. Ce que le corpus dit :
+
+| La veille a dit | C'était | Nombre |
+| --- | --- | --- |
+| Piéton | une voiture, un vélo, une moto, un camion | 33 |
+| Départ de feu ou incendie | un nuage, du brouillard, un lampadaire | 13 |
+| un avion nommé | un nuage sur la crête | 9 |
+| Piéton | la statue, les pierres de l'îlot, un halo | 9 |
+
+`scripts/replay_reviews.py` repose la question au modèle d'aujourd'hui sur le
+gros plan conservé. Sur les rejets il se tait quinze fois sur seize : les faux
+feux ne venaient pas de lui mais de nos règles. Sur les voitures mal nommées
+il ne rend rien du tout — le même silence que les vingt-six passages du 28 au
+soir.
+
+Seules 20 des 87 corrections ont encore un gros plan : il n'était gardé que
+pour les véhicules longs. Il l'est maintenant pour tout ce qui est publié,
+trois mégaoctets par jour contre cinquante pour les vignettes.
+
 ## Ce qui reste à faire
 
 - Décider si un véhicule qui brûle sur la chaussée doit alerter : aujourd'hui

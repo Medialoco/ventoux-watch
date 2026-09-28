@@ -22,6 +22,7 @@ def publish(repo: Path) -> bool:
         # The register of blind spells travels with the history it explains.
         # Kept on the watching machine alone, it would be lost with the machine.
         "data/interruptions.jsonl",
+        "data/reviewed.jsonl",
     ]
     try:
         _git(repo, "pull", "--rebase", "origin", "main")

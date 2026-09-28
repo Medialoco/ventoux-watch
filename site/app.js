@@ -121,7 +121,10 @@ const COPY = {
     right: "Right",
     wrong: "Wrong",
     carWord: "Car",
+    vanWord: "Lorry",
     busWord: "Bus",
+    walkerWord: "Walker",
+    cycleWord: "Bike",
     confirmed: "confirmed",
     rejected: "rejected",
     fireNote: "A warm patch grew. This is not an alert.",
@@ -242,7 +245,10 @@ const COPY = {
     right: "Juste",
     wrong: "Faux",
     carWord: "Voiture",
+    vanWord: "Camion",
     busWord: "Bus",
+    walkerWord: "Piéton",
+    cycleWord: "Vélo",
     confirmed: "validé",
     rejected: "rejeté",
     fireNote: "Tache chaude qui a grossi. Ce n’est pas une alerte.",
@@ -835,13 +841,21 @@ function bars(buckets, all, label) {
   }).join("");
 }
 
+const REVIEW_CLASSES = [
+  ["voiture", "carWord", "Voiture"],
+  ["camion", "vanWord", "Camion"],
+  ["bus", "busWord", "Bus"],
+  ["pieton", "walkerWord", "Piéton"],
+  ["velo", "cycleWord", "Vélo"],
+];
+
 function reviewControls(event) {
   if (event.type === "motion") {
     const correction = (event.detail || {}).correction;
-    const car = correction === "Voiture" ? " on" : "";
-    const bus = correction === "Bus" ? " on" : "";
     const rejected = event.review === "rejected" ? " on" : "";
-    return `<p class="verdict"><a class="yes${car}" href="${reviewUrl(event, "accepted", "valide", "voiture")}">${escapeHtml(t("carWord"))}</a><a class="yes${bus}" href="${reviewUrl(event, "accepted", "valide", "bus")}">${escapeHtml(t("busWord"))}</a><a class="no${rejected}" href="${reviewUrl(event, "rejected", "rejete")}">${escapeHtml(t("wrong"))}</a></p>`;
+    const choices = REVIEW_CLASSES.map(([classe, word, label]) =>
+      `<a class="yes${correction === label ? " on" : ""}" href="${reviewUrl(event, "accepted", "valide", classe)}">${escapeHtml(t(word))}</a>`).join("");
+    return `<p class="verdict">${choices}<a class="no${rejected}" href="${reviewUrl(event, "rejected", "rejete")}">${escapeHtml(t("wrong"))}</a></p>`;
   }
   const accepted = event.review === "accepted" ? " on" : "";
   const rejected = event.review === "rejected" ? " on" : "";

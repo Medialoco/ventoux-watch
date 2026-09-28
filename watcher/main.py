@@ -318,6 +318,15 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         log.info("Compté sans nouvelle carte %s", decision.label)
         return
     if decision.type in {"motion", "habit"}:
+        if _worth_reviewing(decision, cfg, last_fire, now):
+            last_fire["unnamed"] = now
+            if box:
+                decision.detail["box"] = [round(value, 4) for value in box]
+            entry = store.add_event(when, decision.type, decision.label, track.zone,
+                                    decision.confidence, track.best_jpeg, decision.detail)
+            store.keep_closeup(entry, frame, track.best_bbox)
+            log.info("Passage soumis à revue %s", track.zone)
+            return
         store.add_candidate(when, track.zone, decision.reason, decision.detail)
         return
     if decision.type == "fire":
@@ -328,10 +337,9 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
     if drawn:
         decision.detail["box"] = [round(value, 4) for value in drawn]
     event = store.add_event(when, decision.type, decision.label, track.zone, decision.confidence, track.best_jpeg, decision.detail)
-    if width_m >= BUS_LENGTH_M:
-        close = store.keep_closeup(event, frame, track.best_bbox)
-        if close:
-            log.info("Recadrage gardé pour %s : %s", decision.label, close)
+    close = store.keep_closeup(event, frame, track.best_bbox)
+    if close and width_m >= BUS_LENGTH_M:
+        log.info("Recadrage gardé pour %s : %s", decision.label, close)
     log.info("Publié %s %s", decision.type, decision.label)
     if decision.type in CLIP_TYPES:
         pending.append({"id": event["id"], "after": now + 4, "started": track.started - 8})
@@ -474,6 +482,30 @@ def _overlap(box, other) -> float:
     wide = max(0, min(ax + aw, bx + bw) - max(ax, bx))
     tall = max(0, min(ay + ah, by + bh) - max(ay, by))
     return (wide * tall) / float(max(1, aw * ah))
+
+
+REVIEW_REASONS = {"unnamed_vehicle"}
+
+
+def _worth_reviewing(decision, cfg, seen: dict, now: float) -> bool:
+    """Should this crossing be put in front of somebody, having no name?
+
+    Unnamed motion is not published — the history is a list of things the
+    watcher could name, and filling it with shrugs would make it useless. This
+    is the one exception, and it exists because the shrugs are the problem: on
+    the evening of 28 September, twenty-six things crossed the road in an hour
+    and the model returned no class at all for twenty-five of them. Those are
+    the cases worth a human's eye, and until now they left no photograph to
+    look at.
+
+    Rate-limited on purpose. A busy afternoon would otherwise put hundreds of
+    them on the page, which is not a review queue but a second stream. One
+    every five minutes is enough to learn from and few enough to read.
+    """
+    gap = float(cfg.get("review_unnamed_s") or 0)
+    if not gap or decision.reason not in REVIEW_REASONS:
+        return False
+    return now - seen.get("unnamed", 0.0) >= gap
 
 
 def _covers(box, other) -> float:

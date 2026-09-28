@@ -1262,6 +1262,70 @@ class FogTests(unittest.TestCase):
         self.assertAlmostEqual(_overlap(corner, blob), 1.0, places=3)
         self.assertAlmostEqual(_covers(corner, blob), 0.01, places=3)
 
+    def test_a_correction_keeps_the_measurements_that_caused_it(self):
+        """A verdict must leave more than a tally behind.
+
+        Counting how often we are wrong says nothing about why. The reading
+        that produced the mistake, married to the human's word, is the only
+        thing that can move a threshold on evidence.
+        """
+        event = {
+            "id": "m1", "at": "2026-09-28T12:52:16Z", "type": "motion",
+            "label": "Mouvement sur la route", "zone": "road", "photo": "thumbs/m1.jpg",
+            "detail": {"measured": {"width_m": 2.1, "rise_ms": 0.4, "seen_as": []}},
+        }
+        lessons: list = []
+        self.assertTrue(apply_review([event], {}, "m1", "accepted", "velo", lessons))
+        self.assertEqual(len(lessons), 1)
+        row = lessons[0]
+        self.assertEqual((row["truth"], row["guessed"]), ("Vélo", "Mouvement sur la route"))
+        self.assertEqual(row["measured"]["width_m"], 2.1)
+        self.assertEqual(row["photo"], "thumbs/m1.jpg")
+
+    def test_a_rejection_is_kept_as_well(self):
+        # Knowing a shape is not a car is worth as much as knowing it is.
+        event = {"id": "m2", "label": "Voiture", "detail": {"measured": {"width_m": 9.0}}}
+        lessons: list = []
+        self.assertTrue(apply_review([event], {}, "m2", "rejected", "", lessons))
+        self.assertEqual(lessons[0]["verdict"], "rejected")
+        self.assertEqual(lessons[0]["guessed"], "Voiture")
+        self.assertEqual(lessons[0]["truth"], "")
+
+    def test_an_unnamed_crossing_goes_to_review_once_every_five_minutes(self):
+        """The one exception to keeping unnamed motion off the page.
+
+        Twenty-six things crossed the road in the hour of 28 September when
+        nothing was published, and the model returned no class at all for
+        twenty-five of them. They are what there is to learn from, and they
+        left no photograph behind.
+        """
+        from watcher.main import _worth_reviewing
+
+        cfg = {"review_unnamed_s": 300}
+        crossing = Decision("publish", "motion", "Mouvement sur la route", "unnamed_vehicle", {}, 0.3)
+        seen: dict = {}
+        self.assertTrue(_worth_reviewing(crossing, cfg, seen, 1_000.0))
+        seen["unnamed"] = 1_000.0
+        self.assertFalse(_worth_reviewing(crossing, cfg, seen, 1_200.0))
+        self.assertTrue(_worth_reviewing(crossing, cfg, seen, 1_300.0))
+
+    def test_only_the_crossings_are_reviewed_and_only_when_asked(self):
+        from watcher.main import _worth_reviewing
+
+        fog = Decision("publish", "motion", "Brouillard", "fog", {}, 0.3)
+        crossing = Decision("publish", "motion", "Mouvement sur la route", "unnamed_vehicle", {}, 0.3)
+        self.assertFalse(_worth_reviewing(fog, {"review_unnamed_s": 300}, {}, 1_000.0))
+        # Zero turns the queue off without touching the code.
+        self.assertFalse(_worth_reviewing(crossing, {"review_unnamed_s": 0}, {}, 1_000.0))
+
+    def test_a_reviewer_may_answer_with_what_really_passes_here(self):
+        from watcher.review import CLASSES
+
+        self.assertEqual(
+            {name for name, _ in CLASSES.values()} | set(CLASSES),
+            {"vehicle", "bus", "person", "cycle", "voiture", "camion", "bus", "pieton", "velo"},
+        )
+
     def test_nothing_burns_in_the_sky(self):
         cloud = Observation(zone="sky", surface="forest", period="day", width_m=8.0,
                             duration_s=14.5, travel=0.02, warm_ratio=0.0, smoke_ratio=0.399,

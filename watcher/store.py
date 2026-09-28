@@ -74,11 +74,17 @@ class Store:
         return event
 
     def keep_closeup(self, event: dict, frame, bbox) -> str:
-        """Keep the vehicle at full resolution, so the lettering can be read.
+        """Keep the subject at full resolution, so the lettering can be read.
 
         The thumbnail is 480 px wide and the stream is 1920: an operator's name
         on the side of a coach is four pixels tall in the thumbnail and sixteen
-        here. Only long vehicles earn one, so the folder stays small.
+        here.
+
+        Kept for everything published, not just long vehicles. Of the
+        eighty-seven readings a human has corrected so far, sixty-seven have no
+        crop left, and a correction without the picture the model was shown
+        teaches nothing that can be checked later. At twenty kilobytes each it
+        costs about three megabytes a day, against fifty for the thumbnails.
         """
         if frame is None or not bbox or not any(bbox):
             return ""
