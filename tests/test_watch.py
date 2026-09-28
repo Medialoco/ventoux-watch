@@ -1171,35 +1171,47 @@ class FogTests(unittest.TestCase):
 
         A pale grey cab on green grass reads as smoke, it rose and it grew, and
         at twenty pixels across the model returned nothing to contradict it.
-        The one thing it did that a fire cannot is drive off.
+        The one thing it cannot counterfeit is buoyancy: its top wandered
+        upwards at half a metre a second, where every plume measured climbs at
+        more than two.
         """
         tractor = Observation(zone="slope", period="day", width_m=7.0, duration_s=6.0,
-                              travel=0.03, drift_rate=0.152, warm_ratio=0.0, smoke_ratio=0.426,
+                              travel=0.03, rise_ms=0.55, warm_ratio=0.0, smoke_ratio=0.426,
                               rise=0.0278, area_grow=2.8, fire_sustain_s=5.0, fire_grow=1.6,
                               fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
         self.assertEqual(decide(tractor).type, "motion")
         self.assertEqual(decide(tractor).reason, "machine")
 
-    def test_a_fire_leaning_in_the_wind_still_alerts(self):
-        """The foot is measured, not the middle, exactly so this one survives.
+    def test_a_plume_climbing_at_its_measured_speed_alerts(self):
+        """The slowest of eleven readings across three simulated plumes."""
+        rising = Observation(zone="slope", surface="forest", period="day", width_m=18.4,
+                             duration_s=7.0, travel=0.06, rise_ms=2.21, warm_ratio=0.0,
+                             smoke_ratio=0.42, rise=0.044, area_grow=4.2, fire_sustain_s=5.0,
+                             fire_grow=1.6, fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
+        self.assertEqual(decide(rising).type, "fire")
 
-        A plume leans downwind within seconds of catching. Its body crosses the
-        picture; the ground it burns does not.
+    def test_a_fire_the_survey_cannot_measure_still_alerts(self):
+        """No metres means no test, never a refusal.
+
+        The climb is read through the ground distance. Where the survey is
+        silent there is no speed to compare, and a fire that cannot be measured
+        must still be able to raise the alarm.
         """
-        blown = Observation(zone="slope", surface="forest", period="day", width_m=9.0,
-                            duration_s=6.0, travel=0.06, drift_rate=0.019, warm_ratio=0.0,
-                            smoke_ratio=0.42, rise=0.0278, area_grow=2.8, fire_sustain_s=5.0,
-                            fire_grow=1.6, fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
-        self.assertEqual(decide(blown).type, "fire")
+        unmeasured = Observation(zone="slope", surface="forest", period="day", width_m=0.0,
+                                 duration_s=7.0, travel=0.06, rise_ms=0.0, warm_ratio=0.0,
+                                 smoke_ratio=0.42, rise=0.044, area_grow=4.2, fire_sustain_s=5.0,
+                                 fire_grow=1.6, fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
+        self.assertEqual(decide(unmeasured).type, "fire")
 
-    def test_a_hillside_alight_may_run(self):
-        """The drift limit is asked of the cold ones only.
+    def test_a_hillside_alight_need_not_climb(self):
+        """The climb is asked of the cold ones only.
 
-        A front driven by wind does travel, and when it does it is warm. Asking
-        it to hold still would be a way of never alerting on the worst case.
+        A front running through scrub shows colour before it shows a column.
+        Asking it for a plume as well would be a way of never alerting on the
+        worst case.
         """
         running = Observation(zone="slope", surface="forest", period="day", width_m=25.0,
-                              duration_s=12.0, travel=0.08, drift_rate=0.30, warm_ratio=0.62,
+                              duration_s=12.0, travel=0.08, rise_ms=0.2, warm_ratio=0.62,
                               smoke_ratio=0.3, rise=0.03, area_grow=3.1, fire_sustain_s=5.0,
                               fire_grow=1.6, fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
         self.assertEqual(decide(running).type, "fire")
@@ -1211,15 +1223,13 @@ class FogTests(unittest.TestCase):
         leaning = np.array([[[100, 10]], [[140, 10]], [[112, 60]], [[108, 60]]], dtype=np.int32)
         self.assertAlmostEqual(_foot_x(leaning, 200), 110 / 200, places=3)
 
-    def test_the_walk_is_counted_in_the_blob_s_own_widths(self):
-        """The tractor of 28 September: 0.03 of the frame, on a body 0.0328 wide."""
-        from watcher.main import _foot_walk
+    def test_the_climb_is_read_in_metres_a_second(self):
+        """The tractor of 28 September: 5.3 m tall over 0.0444 of the frame."""
+        from watcher.main import _climb
 
-        self.assertAlmostEqual(_foot_walk(0.03, 0.0328, 6.0), 0.152, places=3)
-        # A plume sixty metres across wavering by the same 0.03 of the frame is
-        # not walking anywhere: it is twenty times wider, so it counts as less.
-        self.assertAlmostEqual(_foot_walk(0.03, 0.66, 6.0), 0.008, places=3)
-        self.assertEqual(_foot_walk(0.03, 0.0, 6.0), 0.0)
+        self.assertAlmostEqual(_climb(0.0278, 5.3, 0.0444, 6.0), 0.553, places=2)
+        # Without the survey there is no metre, so there is no speed to give.
+        self.assertEqual(_climb(0.0278, 0.0, 0.0444, 6.0), 0.0)
 
     def test_nothing_burns_in_the_sky(self):
         cloud = Observation(zone="sky", surface="forest", period="day", width_m=8.0,

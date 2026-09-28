@@ -10,6 +10,11 @@ answer the watcher would give on a real fire in that spot.
 
 Published events say so: the label begins with "Simulation", and the entry
 carries simulation: true. Nothing can mistake one for a fire that happened.
+
+Une série de mesures passe par --frame sur une photo figée. Par défaut le
+simulateur tire une image du direct à chaque lancement, si bien que deux séries
+ne se comparent pas : le 28 septembre, deux conclusions ont d'abord été tirées
+sans s'en apercevoir, et toutes les deux étaient fausses.
 """
 
 from __future__ import annotations
@@ -23,7 +28,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from watcher.main import _foot_walk
+from watcher.main import _climb, _foot_walk
 from watcher.motion import MotionDetector, smoke_ratio, warm_ratio
 from watcher.naming import Observation, decide
 from watcher.scenemap import FLAMMABLE, SceneMap
@@ -57,6 +62,10 @@ def main() -> int:
     spot = _spot(args.spot, scene_map)
     when = _when(args.at, args.frame)
     period = "night" if args.night else "day"
+    scale = scene_map.share_per_metre(*spot)
+    if not all(scale):
+        print("Le relevé ne donne pas la distance à ce point : le panache ne peut pas être mis à l'échelle.")
+        return 1
     print(f"Foyer en {spot[0]:.3f}, {spot[1]:.3f} sur {scene_map.surface_at(*spot) or 'pente'}"
           f" à {scene_map.distance_at(*spot):.0f} m, de {period}"
           + (f", couleur seule pendant {args.ember:.0f} s" if args.ember else ""))
@@ -74,7 +83,7 @@ def main() -> int:
     raised = None
     for second in range(1, args.seconds + 1):
         frame = plume(sensor_noise(base, seed=100 + second), spot, second,
-                      flame=args.night or args.ember > 0, seed=7, smoke_after_s=args.ember)
+                      flame=args.night or args.ember > 0, seed=7, smoke_after_s=args.ember, scale=scale)
         now = start + second
         motion.step(frame, now)
         track = _widest(motion.tracks)
@@ -87,7 +96,7 @@ def main() -> int:
         # sans le dire, et les lire après coup revient à deviner.
         print(f"  {second:3d} s  âge {obs.duration_s:4.0f} s  fumée {obs.smoke_ratio:.2f}  flamme {obs.warm_ratio:.2f}"
               f"  montée {obs.rise:.3f}  croissance {obs.area_grow:.1f}"
-              f"  largeur {obs.width_m:5.1f} m  dérive {obs.drift_rate:.3f}/s  -> {mark}")
+              f"  largeur {obs.width_m:5.1f} m  montée {obs.rise_ms:5.2f} m/s  dérive {obs.drift_rate:.3f}/s  -> {mark}")
         if alert and raised is None:
             raised = (second, decision, frame, track)
 
@@ -121,6 +130,7 @@ def _judge(track, frame, now, cfg, scene_map, period):
         # c'est-à-dire plus indulgent que le veilleur ne l'est vraiment.
         foot_climb=track.foot_climb,
         drift_rate=_foot_walk(track.drift, box[2], max(0.0, now - track.started)),
+        rise_ms=_climb(track.rise, scene_map.metres_tall(box), box[3], max(0.0, now - track.started)),
         area_grow=track.area_grow,
         area_ratio=track.area_ratio,
         travel=track.travel,

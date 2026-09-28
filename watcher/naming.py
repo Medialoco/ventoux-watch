@@ -106,6 +106,7 @@ class Observation:
     rise: float = 0.0
     foot_climb: float = 0.0
     drift_rate: float = 0.0
+    rise_ms: float = 0.0
     width_m: float = 0.0
     height_m: float = 0.0
     area_grow: float = 1.0
@@ -374,22 +375,21 @@ FIRE_WIDEST_M = 30.0
 # whole, which is a cloud. Half leaves room for a plume thinning at its near
 # edge while still refusing anything that simply moved.
 FOOT_HOLD = 0.5
-# How fast the foot of a cold mass may walk away from its own footprint and
-# still be called a start of fire, counted in its own widths a second. A fire
-# front does travel, but it travels by burning new ground: the blob widens and
-# warms as it goes. A shape that keeps its size and its coldness while crossing
-# the meadow is carrying its own source, which an engine does and a fire
-# cannot. The tractor working the meadow on the morning of 28 September moved
-# at about 0.15 of its width a second at a warm ratio of exactly zero, and was
-# published as a start of fire.
+# How slowly the top of a cold mass may climb and still be called a start of
+# fire, in metres a second. Smoke is buoyant — that is the whole of it. A
+# column off a fire that has just caught is carried up by its own heat and
+# keeps going; nothing else on this mountain climbs at all. A machine, a
+# walker, a patch of light have tops that wander with the shape.
 #
-# Measured on the simulator, four plumes on four different spots gave 0.017,
-# 0.019, 0.009 and 0.010 at the second they were judged. Five hundredths sits
-# between the two with more than double the room on either side. Young blobs
-# jitter far more than that — up to 0.14 in their first second — but a fire is
-# judged only after it has held for the sustain time, so that noise never
-# reaches this line. Asked only of the cold ones, like the width above.
-FIRE_DRIFT_RATE = 0.05
+# Measured, not supposed. Eleven readings across three simulated plumes, at the
+# seconds they were judged, gave between 2.21 and 3.34 m/s. The tractor of 28
+# September gave 0.55. One metre a second sits between them with more than
+# double the room on either side.
+#
+# Skipped when it cannot be measured: without the survey there is no metre, and
+# an unmeasurable fire must still be able to alert. Asked only of the cold
+# ones, like the width above.
+FIRE_CLIMB_MS = 1.0
 SUN_LOW = 15.0
 SUN_NEAR = 8.0
 # A sun higher than fifteen degrees no longer shines through the trees into the
@@ -610,17 +610,19 @@ def decide(obs: Observation) -> Decision:
                     f"Environ {obs.width_m:.0f} m de large d'emblée. Un feu qui commence est petit ; "
                     "ce qui arrive déjà large est un nuage.",
                 )
-            if not flame and obs.drift_rate > FIRE_DRIFT_RATE:
+            if not flame and obs.rise_ms and obs.rise_ms < FIRE_CLIMB_MS:
                 # The pale grey cab of a tractor on green grass passes the test
                 # for smoke, and at twenty pixels across the model sees nothing
-                # at all to contradict it. What gives it away is that it drives
-                # off: the ground a fire burns does not move.
+                # at all to contradict it. What it cannot counterfeit is
+                # buoyancy: its top wandered upwards at half a metre a second,
+                # where every plume measured climbs at more than two.
                 return _motion(
                     obs,
                     "machine",
                     "Engin",
-                    f"La base de la tache s'éloigne de son empreinte de {obs.drift_rate:.2f} largeur par seconde. "
-                    "Un foyer reste où est le combustible ; ce qui se déplace emporte sa propre source.",
+                    f"Le haut de la tache ne monte qu'à {obs.rise_ms:.1f} m/s. "
+                    "La fumée d'un feu qui vient de prendre s'élève plusieurs fois plus vite : "
+                    "elle est portée par sa propre chaleur.",
                 )
             return _stamp(
                 Decision(

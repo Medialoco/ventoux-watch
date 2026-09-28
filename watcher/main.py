@@ -63,6 +63,23 @@ def _foot_walk(drift: float, span: float, duration_s: float) -> float:
     return drift / span / duration_s
 
 
+def _climb(rise: float, height_m: float, span: float, duration_s: float) -> float:
+    """How fast the top of the shape is climbing, in metres a second.
+
+    Smoke is buoyant: a column off a fire that has just caught lifts at metres
+    a second and keeps lifting. Nothing else on this mountain does. A machine,
+    a walker, a patch of light have tops that wander with the shape and go
+    nowhere, which is a tenth of that.
+
+    Metres again, not pixels, and for the same reason as the width: the number
+    means the same thing at four hundred metres and at nine hundred, and on the
+    next webcam whose surroundings are surveyed.
+    """
+    if not (rise > 0 and height_m and span and duration_s):
+        return 0.0
+    return rise * (height_m / span) / duration_s
+
+
 def _utc(when: float) -> str:
     return datetime.fromtimestamp(when, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -210,6 +227,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
     lit = car_lights(frame, track.bbox) if frame is not None and current.period != "day" else 0.0
     aircraft = sky.ask(track.updated, cfg["opensky"]["match_window_s"]) if _crossed_sky(track, cfg) else []
     width_m = scene_map.metres_across(box) if box else 0.0
+    height_m = scene_map.metres_tall(box) if box else 0.0
     trips = gtfs.trips_at(when.astimezone(PARIS), cfg["gtfs_window_min"]) if _might_be_bus(track, detections, width_m, cfg) else []
     duration = max(0.0, track.updated - track.started)
     on_fuel = surface in FLAMMABLE or (track.zone == "slope" and not surface)
@@ -227,8 +245,9 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         rise=track.rise,
         foot_climb=track.foot_climb,
         drift_rate=_foot_walk(track.drift, box[2] if box else 0.0, duration),
+        rise_ms=_climb(track.rise, height_m, box[3] if box else 0.0, duration),
         width_m=width_m,
-        height_m=scene_map.metres_tall(box) if box else 0.0,
+        height_m=height_m,
         area_grow=track.area_grow,
         min_travel=cfg["min_travel"],
         max_sky_area=cfg["max_sky_area"],
@@ -276,6 +295,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         # the fact; written down, the next one is read straight off the entry.
         "width_m": round(width_m, 1),
         "height_m": round(obs.height_m, 1),
+        "rise_ms": round(obs.rise_ms, 2),
         "drift_rate": round(obs.drift_rate, 3),
         "seen_as": [f"{hit.cls} {hit.conf:.2f}" for hit in detections[:4]],
     }

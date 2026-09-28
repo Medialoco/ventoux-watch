@@ -15,15 +15,27 @@ import math
 import cv2
 import numpy as np
 
-# How fast the plume climbs and spreads, as a share of the frame height per
-# second. A fire in scrub throws a visible column within seconds; these numbers
-# are deliberately modest so the test is not made easy.
-CLIMB_PER_S = 0.020
-SPREAD_PER_S = 0.004
-DRIFT_PER_S = 0.004
-# How fast the burning patch itself widens, as a share of the frame height per
-# second. Slower than the column: flames spread across the ground, smoke climbs.
-FLAME_PER_S = 0.010
+# The fire, in metres and metres a second.
+#
+# These were shares of the frame until 28 September, which quietly made the
+# test depend on where the spot was put: at a fixed number of pixels, a plume
+# on the far ridge stands for an inferno and the same plume by the chalet for a
+# camp fire. Four spots measured that day gave a column between 13 and 21
+# metres wide in its first second — nothing that has just caught is that size,
+# and every one of them was refused as a cloud on its width alone.
+#
+# In metres the drawing says what it means. A small fire in scrub lifts its
+# smoke at a couple of metres a second, widens the column at about half a metre
+# a second, leans with whatever wind there is, and burns outwards along the
+# ground far more slowly than it climbs.
+CLIMB_MS = 2.0
+SPREAD_MS = 0.45
+DRIFT_MS = 1.2
+START_RADIUS_M = 1.2
+# How fast the burning patch itself widens, in metres a second. A surface fire
+# in dry scrub advances by tens of centimetres a second at most; the column
+# above it climbs an order of magnitude faster.
+FLAME_MS = 0.25
 SMOKE_BGR = (196, 196, 196)
 FLAME_BGR = (30, 95, 235)
 
@@ -35,12 +47,19 @@ def plume(
     flame: bool = False,
     seed: int = 0,
     smoke_after_s: float = 0.0,
+    scale: tuple[float, float] = (0.0, 0.0),
 ) -> np.ndarray:
     """The view as it would look age_s seconds after the fire caught at spot.
 
     spot is given in the normalised frame, the base of the fire. The drawing
     is turbulent and seeded on the second, so two frames never match and the
     background subtractor sees the plume move.
+
+    scale is how much of the picture one metre covers at that spot, across and
+    upwards, as the scene map reads it. It is what turns metres into pixels,
+    and without it nothing here can be drawn honestly: the same fire is a
+    hand's width of picture on the near meadow and a few pixels on the far
+    ridge, and a test that ignores the difference is measuring its own framing.
 
     smoke_after_s holds the smoke back while the flame is already burning. A
     fire in dry scrub often shows colour before it shows a column: a few square
@@ -51,19 +70,25 @@ def plume(
     if age_s <= 0:
         return frame.copy()
     height, width = frame.shape[:2]
+    across, up = scale
+    if not (across > 0 and up > 0):
+        raise ValueError("Le panache se dessine en mètres : il faut l'échelle du terrain au foyer")
+    # Pixels for one metre, sideways and upwards. They differ: the picture is
+    # wider than it is tall for the same angle.
+    wide_px, tall_px = across * width, up * height
     base_x, base_y = spot[0] * width, spot[1] * height
     smoke_age = max(0.0, age_s - smoke_after_s)
-    column = CLIMB_PER_S * smoke_age * height
+    column = CLIMB_MS * smoke_age * tall_px
     smoke = np.zeros((height, width), dtype=np.float32)
     rng = np.random.default_rng(seed + int(age_s * 4))
     puffs = max(8, int(column / 4)) if smoke_age > 0 else 0
     for index in range(puffs):
         along = (index + 1) / max(puffs, 1)
-        radius = (0.010 + SPREAD_PER_S * smoke_age * along) * height
-        x = base_x + DRIFT_PER_S * smoke_age * along * width + rng.normal(0, radius * 0.5)
+        radius = (START_RADIUS_M + SPREAD_MS * smoke_age * along) * wide_px
+        x = base_x + DRIFT_MS * smoke_age * along * wide_px + rng.normal(0, radius * 0.5)
         y = base_y - column * along + rng.normal(0, radius * 0.3)
         weight = (1.0 - 0.55 * along) * rng.uniform(0.7, 1.0)
-        cv2.circle(smoke, (int(x), int(y)), max(2, int(radius)), float(weight), -1)
+        cv2.circle(smoke, (int(x), int(y)), max(1, int(radius)), float(weight), -1)
     blur = max(3, int(column / 6) | 1)
     smoke = cv2.GaussianBlur(smoke, (blur, blur), 0)
     smoke = np.clip(smoke, 0, 1)[:, :, None]
@@ -72,7 +97,7 @@ def plume(
     if flame:
         # The hot core grows on its own clock, not the plume's, so that it is
         # there in the seconds before there is any plume at all.
-        _flame(out, base_x, base_y, max(column, FLAME_PER_S * age_s * height), rng)
+        _flame(out, base_x, base_y, max(column, FLAME_MS * age_s * tall_px), rng)
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
@@ -83,7 +108,10 @@ def _flame(out: np.ndarray, base_x: float, base_y: float, column: float, rng) ->
     dark and only the flame carries any colour.
     """
     core = np.zeros(out.shape[:2], dtype=np.float32)
-    reach = max(4.0, column * 0.22)
+    # One pixel is the floor, not four. A flame that covers less than a pixel
+    # at that distance covers less than a pixel, and padding it would be a way
+    # of passing the far spots by drawing them nearer than they are.
+    reach = max(1.0, column * 0.22)
     for _ in range(9):
         x = base_x + rng.normal(0, reach * 0.4)
         y = base_y - abs(rng.normal(0, reach * 0.5))

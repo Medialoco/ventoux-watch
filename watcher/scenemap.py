@@ -123,6 +123,22 @@ class SceneMap:
             return 0.0
         return h * 2 * span * math.tan(math.radians(hfov) / 2) / aspect
 
+    def share_per_metre(self, x: float, y: float) -> tuple[float, float]:
+        """How much of the picture one metre covers here, across and upwards.
+
+        The reverse of the two readings above, and the one anything drawing on
+        the view needs: a plume has to be painted the size it would really be,
+        which is not a fixed number of pixels but a number that shrinks with
+        the distance to the ground under it.
+        """
+        span = self.distance_at(min(0.999, max(0.0, x)), min(0.999, max(0.0, y)))
+        hfov = float(self.pose.get("hfov") or 0)
+        aspect = float(self.pose.get("aspect") or (16 / 9))
+        if span <= 0 or hfov <= 0 or aspect <= 0:
+            return (0.0, 0.0)
+        across = 1.0 / (2 * span * math.tan(math.radians(hfov) / 2))
+        return (across, across * aspect)
+
     def drivable_near(self, box: tuple[float, float, float, float], slack: float = 0.025) -> bool:
         """Is there roadway close enough that a car here would still be on it?
 

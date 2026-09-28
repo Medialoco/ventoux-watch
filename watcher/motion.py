@@ -66,6 +66,22 @@ class Track:
         wind, but the ground it burns does not move. Anything whose foot walks
         across the frame carries its own source with it, which is what an
         engine does and a fire cannot.
+
+        Recorded, not judged on, and the difference was earned. This was built
+        on 28 September to refuse the tractor that had been published as a
+        start of fire, and measuring it settled the matter the other way: a
+        real lorry on the road gave 0.063 of its width a second and a genuine
+        plume, drawn at its true size, gave 0.082. The two overlap. Rather than
+        a footprint that stays put, what the plume has and the tractor has not
+        is buoyancy, which is read from the climb in metres a second.
+
+        Straightness was tried as a rescue — distance made over ground covered,
+        on the idea that a machine walks in a line and a ragged foot shuffles —
+        and it failed too: a plume leaning in a steady wind scored up to 0.94,
+        which is as straight as anything driving. It was removed.
+
+        The figure stays in the record because the next case of this kind will
+        be diagnosed from what was written down, not from guesswork.
         """
         return abs(self.foot_x - self.first_foot_x)
 

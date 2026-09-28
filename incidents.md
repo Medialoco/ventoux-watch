@@ -81,43 +81,77 @@ la tache est montée de 2,8 % de l'image et a triplé de surface. Le modèle n'a
 rien vu du tout pour la contredire : à sept mètres de large et à cette
 distance, l'engin fait une vingtaine de pixels.
 
-Ce qu'il a fait et qu'un feu ne peut pas faire : repartir. Le foyer d'un
-incendie ne traverse pas le terrain, il grandit sur place.
+Ce qu'il ne peut pas contrefaire, c'est la poussée d'Archimède. La fumée d'un
+feu qui vient de prendre est portée par sa propre chaleur et monte à plusieurs
+mètres par seconde ; rien d'autre sur cette montagne ne monte. Le haut du
+tracteur montait à **0,55 m/s**, les onze relevés faits sur trois panaches
+simulés donnent entre **2,21 et 3,34 m/s**. Seuil `FIRE_CLIMB_MS` à 1 m/s,
+demandé aux seules masses froides, et **ignoré quand il n'est pas mesurable** :
+sans relevé du terrain il n'y a pas de mètre, et un feu qu'on ne sait pas
+mesurer doit pouvoir alerter quand même.
 
-Correctif : mesure du déplacement du **pied** de la tache, c'est-à-dire de ses
-rangées les plus basses, et non de son centre — un panache penche dans le vent
-en quelques secondes, et un panache qui penche brûle toujours au même endroit.
-Le déplacement est compté **en largeurs de la tache elle-même**, pas en mètres,
-pour deux raisons : les mètres demandent le relevé du terrain, que la prochaine
-webcam n'aura pas forcément, et ils flattent les grandes taches — un panache de
-soixante mètres qui ondule d'un vingtième de lui-même parcourt trois mètres,
-ce qui sonne comme une marche et n'en est pas une. Seuil `FIRE_DRIFT_RATE` à
-0,05 largeur par seconde, demandé aux seules masses froides.
+#### Ce qui a été essayé avant, et pourquoi c'était faux
 
-Mesuré, pas supposé : quatre panaches simulés sur quatre emplacements donnent
-0,017, 0,019, 0,009 et 0,010 à la seconde où ils sont jugés ; le tracteur était
-à 0,15. Le seuil laisse plus du double de marge de chaque côté.
+D'abord le déplacement du **pied** de la tache : un foyer ne traverse pas le
+terrain, il grandit sur place. L'idée était juste et la mesure ne l'a pas
+suivie. Un camion réel passé le matin même dérivait de 0,063 de sa largeur par
+seconde, et un vrai panache dessiné à sa taille réelle montait à 0,082 : les
+deux se recouvrent. Pire, le garde-fou refusait des panaches authentiques une
+seconde sur trois.
 
-### Le simulateur dessine un panache qui n'est pas à l'échelle
+Puis la **droiture** du pied — distance parcourue sur terrain couvert, l'idée
+étant qu'un engin marche en ligne et qu'un pied déchiqueté piétine. Échec aussi :
+un panache qui penche dans un vent régulier marque jusqu'à 0,94, aussi droit
+que n'importe quoi qui roule.
+
+Les deux mesures ont été retirées de la décision. La dérive reste **inscrite**
+dans chaque événement, sans juger : le prochain cas de ce genre se diagnostique
+sur ce qui a été écrit, pas sur des suppositions.
+
+### Le simulateur dessinait un panache qui n'était pas à l'échelle
 
 Trouvé en vérifiant le correctif ci-dessus, et plus grave que lui. Le panache
-de `watcher/simulate.py` est dessiné en **parts d'image** — `CLIMB_PER_S`,
-`SPREAD_PER_S` — et non en mètres. Sa taille réelle dépend donc de l'endroit où
-on le pose : au même nombre de pixels, un foyer lointain représente un incendie
-énorme et un foyer proche un feu de camp.
+de `watcher/simulate.py` était dessiné en **parts d'image** et non en mètres.
+Sa taille réelle dépendait donc de l'endroit où on le posait : au même nombre
+de pixels, un foyer lointain représentait un incendie énorme et un foyer proche
+un feu de camp. Les quatre panaches essayés faisaient entre 13 et 21 m de large
+dès leur première seconde et jusqu'à 60 m à la sixième — et étaient tous
+refusés comme « Nuage sur la pente » par le plafond `FIRE_WIDEST_M = 30` posé
+la veille.
 
-Conséquence immédiate : **les quatre panaches essayés font entre 13 et 21 m de
-large dès leur première seconde et entre 38 et 60 m à la sixième**, et sont
-tous refusés comme « Nuage sur la pente » par le plafond `FIRE_WIDEST_M = 30`
-posé la veille. Vérifié en rejouant le simulateur sur le code d'avant : les
-verdicts sont identiques, donc ce n'est pas une régression du jour — mais cela
-veut dire qu'on ne sait pas aujourd'hui si ce plafond refuserait un vrai
-départ de feu, parce que le seul instrument dont on dispose pour le savoir ne
-mesure pas en mètres.
+Le plafond n'était donc pas en cause : l'étalon l'était. Le panache est
+maintenant dessiné en mètres, par `SceneMap.share_per_metre()`, avec des
+constantes physiques — 2 m/s de montée, 0,45 m/s d'élargissement, 1,2 m/s de
+vent, et un front de flamme qui progresse au sol à 0,25 m/s, dix fois moins
+vite que la colonne ne s'élève.
 
-Rien n'a été desserré sur cette base : un seuil de feu ne se règle pas contre
-un étalon faux. La suite est de dessiner le panache à l'échelle du terrain, et
-de reprendre le plafond ensuite.
+Le plancher de quatre pixels du cœur de flamme est tombé à un : une flamme qui
+couvre moins d'un pixel à cette distance en couvre moins d'un, et la rembourrer
+revenait à faire passer les foyers lointains en les dessinant plus près qu'ils
+ne sont.
+
+### La portée réelle, enfin mesurée
+
+Avec le panache à l'échelle, sur une image figée, un départ de feu est nommé :
+
+| Distance | De jour | De nuit |
+| --- | --- | --- |
+| 106 m | 6e seconde | 6e seconde |
+| 230 m | 7e seconde | 7e seconde |
+| 390 m | 10e seconde | 12e seconde |
+| 544 m | 10e seconde | 10e seconde |
+| 830 m | 17e seconde | 18e seconde |
+
+Le mystère du foyer à 578 m « jamais vu » était donc le simulateur, pas le
+veilleur. Un seul emplacement manque de jour, à 198 m : il tombe dans la zone
+route, où le feu n'est pas cherché du tout puisqu'un foyer se juge sur du
+combustible. Un véhicule qui brûle sur la chaussée n'est aujourd'hui pas
+couvert, et c'est une question ouverte, pas un réglage.
+
+**Le simulateur n'est pas reproductible par défaut** : `--frame live` tire une
+image du direct à chaque lancement, donc deux séries ne se comparent pas. Toute
+mesure de seuil doit passer par `--frame` sur une photo figée. Deux conclusions
+de la journée ont d'abord été tirées sans cela et étaient fausses.
 
 ## Les pannes du 27 septembre
 
@@ -193,12 +227,8 @@ commandée. Détaillé dans [infra.md](infra.md).
 
 ## Ce qui reste à faire
 
-- **Dessiner le panache du simulateur en mètres**, par la carte de la scène,
-  au lieu de parts d'image. Tant que ce n'est pas fait, le simulateur ne dit
-  pas si le plafond de largeur laisserait passer un vrai feu, et il explique
-  probablement aussi pourquoi un foyer à 578 m n'est jamais vu quand les mêmes
-  à 140 m et 183 m alertent en six secondes.
-- Reprendre `FIRE_WIDEST_M` une fois le simulateur à l'échelle.
+- Décider si un véhicule qui brûle sur la chaussée doit alerter : aujourd'hui
+  le feu n'est cherché que sur du combustible, donc la route en est exclue.
 - Faire remonter ces périodes sur le site. Un historique qui ne distingue pas
   « rien ne s'est passé » de « personne ne regardait » ment par omission.
 - Vérifier que le veilleur du Pi ne souffre d'aucune de ces morts silencieuses
