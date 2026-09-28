@@ -108,6 +108,33 @@ Les deux mesures ont été retirées de la décision. La dérive reste **inscrit
 dans chaque événement, sans juger : le prochain cas de ce genre se diagnostique
 sur ce qui a été écrit, pas sur des suppositions.
 
+### Un cycliste publié comme « Voiture orange »
+
+14:52, au rond-point. Le modèle a lu « car » à 0,30 de confiance — bien en
+dessous du seuil habituel — sur une boîte de neuf pixels sur quinze. La
+branche qui rattrape les lectures faibles a alors demandé au sol de trancher :
+3,5 m sur 2,0, plus large que haut, c'est-à-dire en forme de voiture. Publié.
+
+Le sol avait raison sur l'empreinte : un vélo avec une remorque et son cycliste
+occupent bien cette place. C'est l'assemblage qui était faux. **La boîte du
+modèle couvrait 3,9 % de ce qui avait bougé.** Un mot dit sur un vingt-cinquième
+d'une chose ne dit rien de la chose.
+
+Correctif : dans cette branche — et dans elle seule, car elle est déjà une
+exception — la lecture doit couvrir au moins un cinquième de la tache pour que
+son mot vaille pour l'ensemble (`NAMED_SHARE`). Un cinquième laisse la place à
+une tache gonflée par l'ombre, par le halo des phares sur la chaussée, ou par
+une deuxième chose qui a bougé à côté.
+
+La mesure de recouvrement est désormais inscrite dans chaque événement, à côté
+de ce que le modèle a cru voir : `car 0.30 sur 4 %` se lit d'un coup d'œil, là
+où il fallait jusqu'ici reconstituer le calcul à la main.
+
+Deux mesures voisines existent maintenant et répondent à des questions
+opposées. `_overlap` demande si le modèle regardait la chose qui bougeait, et
+décide où va le rectangle. `_covers` demande s'il en regardait la totalité, et
+décide si son mot vaut pour l'ensemble.
+
 ### Le simulateur dessinait un panache qui n'était pas à l'échelle
 
 Trouvé en vérifiant le correctif ci-dessus, et plus grave que lui. Le panache

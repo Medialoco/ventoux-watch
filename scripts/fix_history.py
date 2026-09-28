@@ -73,6 +73,18 @@ RENAME = {
 # Strokes drawn on the wrong thing, given straight in thumbnail pixels because
 # they were never stored as a box.
 REFRAME = {
+    # 28 septembre, 14:52 locales. Publié « Voiture orange » sur un cycliste
+    # qui tire une remorque. Le modèle a lu « car 0.30 » sur une boîte couvrant
+    # 3,9 % de ce qui avait bougé, et l'empreinte au sol — 3,5 m sur 2,0 —
+    # était assez en forme de voiture pour laisser passer la lecture faible.
+    # Les deux indices ne parlaient pas du même objet. Voir NAMED_SHARE.
+    "2026-09-28T12:52:16Z": {
+        "type": "cycle",
+        "label": "Vélo",
+        "erase": [(68, 252, 92, 269)],
+        "draw": (65, 234, 102, 264),
+    },
+
     # 27 septembre, 16:25 locales. Le rectangle était sur une voiture à
     # l'arrêt dans la rangée du bord, pas sur celle qui passait : le modèle lit
     # tout le recadrage et la plus sûre des deux était l'immobile. Celle qui

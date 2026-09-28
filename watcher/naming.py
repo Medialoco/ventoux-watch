@@ -81,6 +81,10 @@ class Detection:
     # Where the model put it, in the frame's own pixels. The motion blob holds
     # everything that moved together; this holds the one thing that was named.
     box: tuple[int, int, int, int] | None = None
+    # How much of what moved this box covers. One by default, because a reading
+    # made without the blob to compare against should not be treated as though
+    # it had failed a test that was never run.
+    share: float = 1.0
 
 
 @dataclass
@@ -277,6 +281,14 @@ def _vehicle_word(obs: Observation, vehicle: Detection | None, bus: Detection | 
 
 
 SHAPE_CONF = 0.2
+# How much of what moved a reading must cover before its word is taken as
+# evidence about the whole of it. Asked only where the model is already unsure
+# and the footprint is being used to settle the matter: the two have to be
+# speaking about the same object. A fifth leaves plenty of room for a blob
+# swollen by shadow, by headlight wash on the road, or by a second thing that
+# moved alongside — and it refuses the four per cent that named a bicycle and
+# its trailer an orange car.
+NAMED_SHARE = 0.2
 CAR_TALL_M = 2.6
 
 
@@ -877,10 +889,17 @@ def decide(obs: Observation) -> Decision:
                 ),
                 obs,
             )
-        if vehicle is not None and vehicle.conf >= SHAPE_CONF and _car_shaped(obs):
+        if (vehicle is not None and vehicle.conf >= SHAPE_CONF and _car_shaped(obs)
+                and vehicle.share >= NAMED_SHARE):
             # Below the usual threshold, but the footprint settles it. Asked
             # only of something already shaped like a car: this is not a lower
             # bar, it is a second kind of evidence.
+            #
+            # And the two pieces of evidence have to be about the same thing.
+            # On 28 September a cyclist towing a trailer was published as an
+            # orange car on a box that covered four per cent of what moved: the
+            # footprint was a bicycle's and the word was said about a corner of
+            # it. A reading that small vouches for nothing.
             return _stamp(
                 Decision(
                     "publish",

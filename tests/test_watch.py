@@ -1231,6 +1231,37 @@ class FogTests(unittest.TestCase):
         # Without the survey there is no metre, so there is no speed to give.
         self.assertEqual(_climb(0.0278, 0.0, 0.0444, 6.0), 0.0)
 
+    def test_a_word_said_about_a_corner_does_not_name_the_whole(self):
+        """28 September, 14:52. A cyclist towing a trailer, published as an
+        orange car. The model read "car" at 0.30 on a box covering four per
+        cent of what moved, and the footprint — 3.5 m by 2.0 — was car-shaped
+        enough to let it through. Both pieces of evidence have to be about the
+        same object.
+        """
+        seen = [Detection("car", 0.30, box=(320, 1030, 9, 15), share=0.039)]
+        corner = Observation(zone="roundabout", surface="roundabout", period="day",
+                             detections=seen, width_m=3.5, height_m=2.0, travel=0.25,
+                             min_conf={"car": 0.45, "bus": 0.5, "person": 0.4})
+        self.assertNotEqual(decide(corner).type, "vehicle")
+
+    def test_the_same_reading_over_the_whole_thing_still_names_it(self):
+        """The bar is about coverage, not confidence: a car read at the same
+        0.30 over most of what moved is still named.
+        """
+        seen = [Detection("car", 0.30, box=(320, 1030, 200, 110), share=0.71)]
+        whole = Observation(zone="roundabout", surface="roundabout", period="day",
+                            detections=seen, width_m=3.5, height_m=2.0, travel=0.25,
+                            min_conf={"car": 0.45, "bus": 0.5, "person": 0.4})
+        self.assertEqual(decide(whole).type, "vehicle")
+
+    def test_coverage_and_overlap_answer_opposite_questions(self):
+        from watcher.main import _covers, _overlap
+
+        blob, corner = (100, 100, 200, 100), (110, 110, 20, 10)
+        # The little box sits wholly inside the blob, and holds a hundredth of it.
+        self.assertAlmostEqual(_overlap(corner, blob), 1.0, places=3)
+        self.assertAlmostEqual(_covers(corner, blob), 0.01, places=3)
+
     def test_nothing_burns_in_the_sky(self):
         cloud = Observation(zone="sky", surface="forest", period="day", width_m=8.0,
                             duration_s=14.5, travel=0.02, warm_ratio=0.0, smoke_ratio=0.399,

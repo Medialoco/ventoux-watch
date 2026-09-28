@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import time
 from collections import deque
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -217,6 +218,8 @@ def main() -> None:
 def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map=None) -> None:
     frame = cv2.imdecode(np.frombuffer(track.best_jpeg, dtype=np.uint8), cv2.IMREAD_COLOR) if track.best_jpeg else None
     detections = yolo.detect(frame, track.bbox) if frame is not None else []
+    moved = track.best_bbox if any(track.best_bbox) else track.bbox
+    detections = [replace(hit, share=_covers(hit.box, moved)) if hit.box else hit for hit in detections]
     when = datetime.fromtimestamp(track.updated, timezone.utc)
     current = scene.read(frame, when)
     scene_map = scene_map or SceneMap()
@@ -297,7 +300,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         "height_m": round(obs.height_m, 1),
         "rise_ms": round(obs.rise_ms, 2),
         "drift_rate": round(obs.drift_rate, 3),
-        "seen_as": [f"{hit.cls} {hit.conf:.2f}" for hit in detections[:4]],
+        "seen_as": [f"{hit.cls} {hit.conf:.2f} sur {hit.share:.0%}" for hit in detections[:4]],
     }
     decision.detail.setdefault("measured", measured)
     if decision.type == "plane" and decision.detail.get("icao24"):
@@ -321,7 +324,6 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         last_fire["fire"] = now
     if surface:
         decision.detail["surface"] = surface
-    moved = track.best_bbox if any(track.best_bbox) else track.bbox
     drawn = _box_of_the_named(frame, decision, detections, moved) or box
     if drawn:
         decision.detail["box"] = [round(value, 4) for value in drawn]
@@ -472,6 +474,21 @@ def _overlap(box, other) -> float:
     wide = max(0, min(ax + aw, bx + bw) - max(ax, bx))
     tall = max(0, min(ay + ah, by + bh) - max(ay, by))
     return (wide * tall) / float(max(1, aw * ah))
+
+
+def _covers(box, other) -> float:
+    """The other way round: what share of the thing that moved this box holds.
+
+    The pair are easy to confuse and they answer opposite questions. Overlap
+    asks whether the model was looking at the moving thing at all, which is
+    what decides where the rectangle goes. This asks whether it was looking at
+    all of it, which is what decides whether its word can stand for the whole.
+    """
+    ax, ay, aw, ah = box
+    bx, by, bw, bh = other
+    wide = max(0, min(ax + aw, bx + bw) - max(ax, bx))
+    tall = max(0, min(ay + ah, by + bh) - max(ay, by))
+    return (wide * tall) / float(max(1, bw * bh))
 
 
 def _box_of_the_named(frame, decision, detections, moved=None) -> tuple[float, float, float, float] | None:
