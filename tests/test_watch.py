@@ -2126,6 +2126,30 @@ class FogTests(unittest.TestCase):
         real = self._lamp(hazy=True, smoke_ratio=0.42, rise=0.011)
         self.assertEqual(decide(real).type, "fire")
 
+    def test_the_distance_grid_agrees_with_the_surveyed_landmarks(self):
+        """Thirteen places whose distance is known, and the map must find them.
+
+        Read at the foot of each landmark, where the ground is, and not at its
+        middle: the camera sees the first hundred metres almost edge-on — the
+        eye is at 1392 m and the ground at 1388 — so a metre and a half of
+        height there is worth a hundred metres of distance. Measured at the
+        middle the map looks 16 % out across the whole vehicle band; measured
+        where the code actually reads it, the error is 5 %.
+        """
+        from watcher.scenemap import SceneMap
+
+        carte = SceneMap.load(ROOT / "config" / "scene.json")
+        ecarts = []
+        for mark in carte.landmarks:
+            releve = float(mark.get("distance_m") or 0)
+            pied = carte.distance_at(min(0.999, mark["x"]), min(0.999, mark["y"] + mark["ry"]))
+            if not (releve and pied):
+                continue
+            ecarts.append(abs(pied / releve - 1))
+        self.assertGreaterEqual(len(ecarts), 10, "trop peu de repères relevés pour juger")
+        ecarts.sort()
+        self.assertLess(ecarts[len(ecarts) // 2], 0.10)
+
     def test_no_landmark_hides_behind_the_ground(self):
         # Un repère sert à refuser un événement : « une boîte serrée autour de
         # la statue est une ombre, pas un passage ». Six repères sur dix-neuf
