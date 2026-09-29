@@ -58,7 +58,13 @@ sudo umount "${DISQUE}"* 2>/dev/null || true
 sudo wipefs -a "$DISQUE"
 sudo sgdisk -Z -n 1:0:0 -t 1:8300 -c 1:ventoux "$DISQUE"
 sudo partprobe "$DISQUE"; sleep 2
-PART="$(lsblk -nro NAME "$DISQUE" | sed -n '2p')"
+# La partition est cherchée par son type et non par son rang : « la deuxième
+# ligne de lsblk » tombe juste tant que le disque est vierge, et sur autre
+# chose dès qu'il traîne une table ancienne que partprobe n'a pas encore
+# oubliée. Ici on efface le disque, donc se tromper de ligne, c'est formater
+# la mauvaise.
+PART="$(lsblk -nro NAME,TYPE "$DISQUE" | awk '$2 == "part" { print $1; exit }')"
+[ -n "$PART" ] || { echo "Refus : aucune partition créée sur $DISQUE." >&2; exit 1; }
 PART="/dev/$PART"
 # Pas de réserve pour root : ce disque ne porte pas de système.
 sudo mkfs.ext4 -q -m 0 -L ventoux "$PART"
@@ -71,6 +77,33 @@ sudo mkdir -p "$POINT"
 sudo mount "$PART" "$POINT"
 sudo chown "$USER:$USER" "$POINT"
 rsync -a "$RACINE/data/" "$POINT/"
+
+# La copie est recomptée avant que l'original soit détruit. rsync rend la main
+# sur zéro dans des cas où il n'a pas tout porté, et l'étape suivante efface la
+# seule autre copie qui existe : c'est le seul endroit du parc où une erreur ne
+# se rattrape pas. Trois mille vignettes et un historique de six cents
+# événements ne se reconstituent pas.
+# Deux précautions dans ces deux lignes, l'une et l'autre trouvées en répétant
+# le script sur un disque factice. « lost+found » est créé par mkfs sur toute
+# partition ext4 neuve : il appartient à root, donc find s'y arrête faute de
+# droits, et il pèse seize kilo-octets que la source n'a pas. Et l'on somme la
+# taille des fichiers plutôt que celle du dossier, car la taille apparente d'un
+# répertoire dépend du système de fichiers qui le porte — comparer deux
+# `du -sb` aurait fait échouer une copie pourtant fidèle.
+compte() { sudo find "$1" -type f -not -path '*/lost+found/*' | wc -l; }
+pesee()  { sudo find "$1" -type f -not -path '*/lost+found/*' -printf '%s\n' \
+             | awk '{ total += $1 } END { print total + 0 }'; }
+SOURCE_N="$(compte "$RACINE/data")"; COPIE_N="$(compte "$POINT")"
+SOURCE_O="$(pesee  "$RACINE/data")"; COPIE_O="$(pesee  "$POINT")"
+echo "Source : $SOURCE_N fichiers, $SOURCE_O octets"
+echo "Copie  : $COPIE_N fichiers, $COPIE_O octets"
+if [ "$SOURCE_N" != "$COPIE_N" ] || [ "$SOURCE_O" != "$COPIE_O" ]; then
+    echo >&2
+    echo "Refus : la copie ne correspond pas à la source. Rien n'est effacé." >&2
+    echo "Les données restent sur la carte SD, le disque est monté sur $POINT." >&2
+    exit 1
+fi
+
 sudo umount "$POINT"
 # Le dossier d'origine est vidé : ce qu'il contiendrait encore serait masqué
 # par le montage et occuperait la carte SD pour rien.
@@ -94,6 +127,14 @@ sudo fstrim -v "$RACINE/data" || echo "TRIM non supporté par ce boîtier."
 
 dire "État"
 df -h "$RACINE/data" | tail -1
+echo "Après déménagement : $(compte "$RACINE/data") fichiers, $(pesee "$RACINE/data") octets"
 git -C "$RACINE" status --porcelain -- data | head -3
 echo "Si git ne signale rien ci-dessus, le déménagement est transparent."
-echo "Redémarrer le veilleur : sudo systemctl start ventoux-watch"
+
+# Le veilleur est relancé ici, et non laissé à la main de qui lira. Une veille
+# arrêtée ne se signale pas toute seule : c'est précisément ainsi qu'on perd
+# des heures sans s'en apercevoir, et une migration de données est un des rares
+# moments où l'on arrête tout en croyant n'en avoir que pour une minute.
+sudo systemctl start ventoux-watch
+sleep 5
+echo "Veilleur : $(systemctl is-active ventoux-watch)"
