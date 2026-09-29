@@ -2126,6 +2126,28 @@ class FogTests(unittest.TestCase):
         real = self._lamp(hazy=True, smoke_ratio=0.42, rise=0.011)
         self.assertEqual(decide(real).type, "fire")
 
+    def test_no_landmark_hides_behind_the_ground(self):
+        # Un repère sert à refuser un événement : « une boîte serrée autour de
+        # la statue est une ombre, pas un passage ». Six repères sur dix-neuf
+        # se projetaient pourtant sur du sol bien plus proche qu'eux — le
+        # mémorial de Tom Simpson, à 2 447 m derrière la crête, tombait au
+        # milieu de la piste de ski, où il faisait rejeter de vrais passages.
+        from watcher.scenemap import SceneMap
+
+        carte = SceneMap.load(ROOT / "config" / "scene.json")
+        self.assertTrue(carte.landmarks)
+        for mark in carte.landmarks:
+            releve = float(mark.get("distance_m") or 0)
+            sol = carte.distance_at(min(0.999, mark["x"]), min(0.999, mark["y"]))
+            # Zéro veut dire que la visée sort au-dessus de la crête : le repère
+            # se détache sur le ciel et rien ne le cache.
+            if not (releve and sol):
+                continue
+            self.assertGreaterEqual(
+                sol, releve * 0.8,
+                f"{mark['name']} est relevé à {releve:.0f} m mais le sol est atteint à {sol:.0f} m",
+            )
+
     def test_a_refusing_stream_is_asked_less_and_less(self):
         # On 29 September a stream that answered nothing was asked three
         # thousand times in forty minutes, because a generator that ends

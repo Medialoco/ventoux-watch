@@ -33,13 +33,17 @@ from watcher.config import load_config
 from watcher.frustum import Pose, distance_m, enu, fit, march, project
 from watcher.geometry import load_zones
 from watcher.osm import around, road_width_m, surface_of
-from watcher.scenemap import CODES
+from watcher.scenemap import CODES, SceneMap
 from watcher.terrain import Terrain
 
 GRID_W, GRID_H = 192, 108
 REACH_W, REACH_H = 96, 54
 LANDMARK_SIZE_M = 2.0
 LANDMARK_BIGGEST_M = 9.0
+# Un repère n'est gardé que si la ligne de visée l'atteint vraiment. En deçà de
+# cette part de sa distance relevée, le sol est rencontré avant lui : il est
+# derrière une crête et l'image, à cet endroit, montre autre chose.
+LANDMARK_SEEN_SHARE = 0.8
 # Fine enough to hold the island of a roundabout sixteen metres across.
 MAP_STEP_M = 1.0
 ROAD_SLACK_M = 2.5
@@ -134,6 +138,11 @@ def main() -> int:
     back[len(codes) + 1] = "sky"
     grid[far == 0] = len(codes) + 1
     rows = ["".join("." if cell == 0 else CODES[back[cell]] for cell in line) for line in grid]
+    # Réduite ici et non à l'écriture : les repères doivent être jugés visibles
+    # ou cachés sur la grille que le veilleur consultera, pas sur une plus fine
+    # qui dirait autre chose. Un radar déclaré visible par un calcul et caché
+    # par l'autre, c'est un repère dont plus personne ne sait quoi penser.
+    shrunk = _shrink(far)
 
     out = root / "config" / "scene.json"
     out.write_text(
@@ -141,8 +150,8 @@ def main() -> int:
             {
                 "pose": {**pose.as_dict(), "rms": round(rms, 5), "reach_m": reach},
                 "grid": rows,
-                "reach": _shrink(far),
-                "landmarks": _landmarks(data, pose, terrain, rms, reach),
+                "reach": shrunk,
+                "landmarks": _landmarks(data, pose, terrain, rms, reach, shrunk),
                 "lamps": _lamps(data, pose, terrain),
             },
             ensure_ascii=False,
@@ -281,7 +290,8 @@ def _offset(lat: float, lon: float, east_m: float, north_m: float) -> tuple[floa
     return lat + north_m / 111_320.0, lon + east_m / (111_320.0 * math.cos(math.radians(lat)))
 
 
-def _landmarks(data: dict, pose: Pose, terrain: Terrain, rms: float, reach_m: float) -> list[dict]:
+def _landmarks(data: dict, pose: Pose, terrain: Terrain, rms: float, reach_m: float,
+               reach: list[list[int]]) -> list[dict]:
     """The small fixed things a camera keeps mistaking for a passer-by.
 
     A wooden statue, a hut, a shelter: they never move, so a box drawn tightly
@@ -307,6 +317,21 @@ def _landmarks(data: dict, pose: Pose, terrain: Terrain, rms: float, reach_m: fl
         # put at mid-height and made tall enough to claim the whole column.
         seen = project(pose, lat, lon, terrain.height(east, north) + (lift / 2 if lift else size / 2))
         if seen is None or not (0 <= seen[0] <= 1 and 0 <= seen[1] <= 1):
+            continue
+        # Tomber dans le cadre ne veut pas dire se voir. Le mémorial de Tom
+        # Simpson est à 2 447 m sur l'autre versant : il se projette en plein
+        # milieu de la piste de ski, où la ligne de visée rencontre le sol dès
+        # 440 m. Six repères sur dix-neuf étaient dans ce cas, et ils ne
+        # faisaient pas que décorer la carte — un repère sert à refuser un
+        # événement, donc un fantôme posé sur une piste y faisait rejeter de
+        # vrais passages.
+        #
+        # Zéro veut dire que la visée sort au-dessus de la ligne de crête : le
+        # repère se détache alors sur le ciel, comme l'émetteur du sommet, et
+        # rien ne le cache.
+        ground = SceneMap({"reach": reach}).distance_at(seen[0], seen[1])
+        if ground and ground < span * LANDMARK_SEEN_SHARE:
+            print(f"Repère masqué : {tags.get('name') or _plain(tags)} à {span:.0f} m, sol atteint à {ground:.0f} m")
             continue
         half = math.degrees(math.atan2(max(size, LANDMARK_SIZE_M) / 2, max(span, 5.0)))
         width = math.tan(math.radians(half)) / (2 * math.tan(math.radians(pose.hfov / 2)))
