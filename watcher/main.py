@@ -292,6 +292,17 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         # number behind it cannot be argued with later: the sky has turned down
         # thousands of things and left no way to tell a jet from a cloud edge.
         "travel": round(obs.travel, 4),
+        # Travel alone says nothing about a car coming straight at the camera:
+        # it barely crosses the picture while it doubles in size. Growth is the
+        # other half of the movement, and it was the missing number on the
+        # night of 29 September, when a car arriving head-on at the roundabout
+        # was left unnamed and the rectangle went to the pool of light its own
+        # headlights threw on the tarmac.
+        "area_grow": round(track.area_grow, 2),
+        # Whether the blob runs into the edge of the picture. A shape cut by
+        # the frame has no true size, and the footprint measured from it is a
+        # floor rather than a measurement.
+        "clipped": bool(obs.clipped),
         "area_ratio": round(obs.area_ratio, 5),
         "duration_s": round(max(0.0, track.updated - track.started), 1),
         "frames": track.frames,

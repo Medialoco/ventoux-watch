@@ -62,7 +62,7 @@ def lesson(target: dict, verdict: str, classe: str, guessed: str, note: str = ""
 
 
 def apply_review(events: list[dict], learning: dict, event_id: str, verdict: str, classe: str = "",
-                 lessons: list | None = None) -> bool:
+                 lessons: list | None = None, note: str = "") -> bool:
     if verdict not in VERDICTS:
         return False
     target = next((event for event in events if event.get("id") == event_id), None)
@@ -87,17 +87,17 @@ def apply_review(events: list[dict], learning: dict, event_id: str, verdict: str
         learning[verdict] = int(learning.get(verdict, 0)) + 1
         changed = True
     if changed and lessons is not None:
-        lessons.append(lesson(target, verdict, classe, guessed))
+        lessons.append(lesson(target, verdict, classe, guessed, note))
     return changed
 
 
-def apply_files(root: Path, event_id: str, verdict: str, classe: str = "") -> bool:
+def apply_files(root: Path, event_id: str, verdict: str, classe: str = "", note: str = "") -> bool:
     events_path = root / "data" / "events.json"
     learning_path = root / "data" / "learning.json"
     payload = json.loads(events_path.read_text(encoding="utf-8"))
     learning = json.loads(learning_path.read_text(encoding="utf-8")) if learning_path.is_file() else {}
     lessons: list[dict] = []
-    if not apply_review(payload.get("events") or [], learning, event_id, verdict, classe, lessons):
+    if not apply_review(payload.get("events") or [], learning, event_id, verdict, classe, lessons, note):
         return False
     events_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     learning_path.write_text(json.dumps(learning, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
