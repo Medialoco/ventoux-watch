@@ -80,6 +80,47 @@ Mesurable de deux façons, l'une gratuite :
 C'est exactement la faute du 29 septembre à 02:51, où le rectangle a atterri
 sur la lumière des phares plutôt que sur la voiture.
 
+### La scène OSM comme base d'interprétation
+
+Cette couche existe déjà et elle porte plus qu'on ne s'en sert. `relief.json`
+tient **162 bâtiments avec leur hauteur et leur empreinte en mètres**, 9 arbres
+avec la leur, 67 bois, 275 tronçons de route, 5 mâts, un lampadaire relevé à
+7 m, et un terrain de 126 × 126 mailles de 40 m sur deux kilomètres et demi.
+`scene.json` en tire, pour chaque point de l'image, la surface, la distance et
+l'échelle. C'est déjà ce qui permet de dire qu'une tache fait 5,8 m de large,
+qu'elle est posée sur la chaussée, et qu'un piéton de 40 cm n'en est pas un.
+
+Ce qui manque, c'est de s'en servir pour **prédire**. Trois usages, du plus
+rentable au plus lointain.
+
+**Les ombres portées sont calculables.** On sait où est le soleil à la seconde
+près — `solar_azimuth` et `solar_elevation` sont écrits depuis le début. Avec
+la hauteur des objets et le relief, on sait donc où chaque ombre tombe et
+combien elle mesure. L'ombre du lampadaire du rond-point fait 15,4 m à 8 h
+UTC, 7,4 m à midi et 27,6 m à 16 h.
+
+Et surtout elle bouge à la vitesse du soleil, c'est-à-dire quinze degrés par
+heure : la pointe de cette ombre de 27 m avance de **deux millimètres par
+seconde**. Sur une piste de quatorze secondes, elle a parcouru trois
+centimètres. Une ombre portée par une chose fixe est donc, pour nous,
+immobile — et elle est à un endroit qu'on sait calculer d'avance. C'est ce qui
+la sépare d'une ombre de nuage, qui file à la vitesse du vent.
+
+*Réserve à connaître : 159 des 162 bâtiments portent une hauteur de 6 m, qui
+est une valeur par défaut et non un relevé. La longueur des ombres de
+bâtiments sera donc approximative ; leur direction, elle, est juste, et c'est
+la direction qui explique un bord qui bouge.*
+
+**L'occultation.** La scène dit ce qui est devant quoi. Une piste qui s'arrête
+net derrière le chalet n'a pas disparu, elle est cachée — aujourd'hui la piste
+se termine simplement, et la voiture qui ressort de l'autre côté devient un
+second passage.
+
+**Ce qui peut physiquement se trouver là.** Un véhicule est sur la chaussée et
+mesure entre trois et douze mètres ; à 300 m un piéton fait quelques pixels et
+une tache de trois pixels ne peut pas en être un. C'est en partie fait
+(`drivable_near`, `metres_across`), pas systématique.
+
 ### Le nuage et la brume : le pied monte autant que le haut
 
 Déjà mesuré pour le feu, et transposable tel quel. Un panache est ancré au sol
