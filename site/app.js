@@ -118,6 +118,8 @@ const COPY = {
     around: "Around",
     people: "people",
     clip: "Clip",
+    cameraFixed: "Fixed, facing",
+    cameraField: "field",
     right: "Right",
     wrong: "Wrong",
     carWord: "Car",
@@ -242,6 +244,8 @@ const COPY = {
     around: "Autour",
     people: "personnes",
     clip: "Extrait",
+    cameraFixed: "Fixe, cap",
+    cameraField: "champ",
     right: "Juste",
     wrong: "Faux",
     carWord: "Voiture",
@@ -926,8 +930,19 @@ async function load() {
   }
 }
 
-const VIEW_REACH = 600;
-const VIEW_ANGLE = 90;
+// Le cône n'est pas déclaré, il est mesuré. build_scene.py déplace le cap, le
+// site, le champ, la hauteur et jusqu'à la position de la caméra tant que les
+// dix-neuf repères OSM ne tombent pas là où on les voit dans l'image, et écrit
+// le résultat dans config/scene.json. Ces trois nombres étaient écrits à la
+// main ici : 140° de cap, 90° de champ, 600 m de portée, quand le calage dit
+// 126,7°, 78,8° et 2500 m. Le cône montré pointait treize degrés à côté et
+// s'arrêtait au quart de ce que la caméra atteint.
+//
+// L'écart résiduel du calage vaut 0,0136 en largeur d'image. Multiplié par le
+// champ, 0,0136 × 78,755° ≈ 1,1° : c'est la précision du cap. Le calcul qui
+// mène à camera:direction=127 est écrit dans scripts/build_scene.py.
+const AIM_FALLBACK = { lat: 44.1833492, lon: 5.2620281, yaw: 126.713, hfov: 78.755, reach: 2500 };
+let aim = AIM_FALLBACK;
 
 function offset(lat, lon, bearing, meters) {
   const rad = Math.PI / 180;
@@ -941,19 +956,24 @@ function offset(lat, lon, bearing, meters) {
 }
 
 function viewWedge() {
-  const points = [[CAMERA.lat, CAMERA.lon]];
-  const start = CAMERA.bearing - VIEW_ANGLE / 2;
+  const points = [[aim.lat, aim.lon]];
+  const start = aim.yaw - aim.hfov / 2;
   for (let step = 0; step <= 28; step += 1) {
-    points.push(offset(CAMERA.lat, CAMERA.lon, start + (VIEW_ANGLE * step) / 28, VIEW_REACH));
+    points.push(offset(aim.lat, aim.lon, start + (aim.hfov * step) / 28, aim.reach));
   }
   return points;
 }
 
-const ZOOMS = [
-  { zoom: 18, along: 0 },
-  { zoom: 16, along: VIEW_REACH * 0.35 },
-  { zoom: 14, along: VIEW_REACH * 0.4 },
-];
+// La portée du calage est de deux kilomètres et demi, mais ce qui a vraiment
+// été reconnu tient entre 106 et 830 m : les trois niveaux cadrent sur cette
+// bande-là, pas sur le bout du cône.
+function zoomLevels() {
+  return [
+    { zoom: 18, along: 0 },
+    { zoom: 16, along: aim.reach * 0.08 },
+    { zoom: 14, along: aim.reach * 0.16 },
+  ];
+}
 
 const map = L.map("map", {
   scrollWheelZoom: false,
@@ -968,17 +988,17 @@ L.tileLayer("https://data.geopf.fr/wmts?LAYER=ORTHOIMAGERY.ORTHOPHOTOS&FORMAT=im
   maxZoom: 19,
   attribution: "© IGN",
 }).addTo(map);
-L.polygon(viewWedge(), {
+const wedge = L.polygon(viewWedge(), {
   color: "#c4b094",
   weight: 1.5,
   fillColor: "#f3efe6",
   fillOpacity: 0.62,
 }).addTo(map);
-L.polyline([
-  [CAMERA.lat, CAMERA.lon],
-  offset(CAMERA.lat, CAMERA.lon, CAMERA.bearing, VIEW_REACH),
+const axis = L.polyline([
+  [aim.lat, aim.lon],
+  offset(aim.lat, aim.lon, aim.yaw, aim.reach),
 ], { color: "#c4b094", weight: 2, dashArray: "4 6" }).addTo(map);
-const cameraMark = L.circleMarker([CAMERA.lat, CAMERA.lon], {
+const cameraMark = L.circleMarker([aim.lat, aim.lon], {
   radius: 6,
   color: "#f4f1ea",
   weight: 2,
@@ -987,8 +1007,8 @@ const cameraMark = L.circleMarker([CAMERA.lat, CAMERA.lon], {
 }).addTo(map);
 
 function showZoom(index) {
-  const level = ZOOMS[index];
-  map.setView(offset(CAMERA.lat, CAMERA.lon, CAMERA.bearing, level.along), level.zoom);
+  const level = zoomLevels()[index];
+  map.setView(offset(aim.lat, aim.lon, aim.yaw, level.along), level.zoom);
   document.querySelectorAll(".zooms button").forEach((button) => {
     button.classList.toggle("on", Number(button.dataset.zoom) === index);
   });
@@ -999,6 +1019,41 @@ document.querySelectorAll(".zooms button").forEach((button) => {
 });
 showZoom(1);
 requestAnimationFrame(() => map.invalidateSize());
+
+async function loadAim() {
+  // Relu à chaque visite plutôt que recopié dans ce fichier : le jour où la
+  // caméra passera sur le toit du chalet, le calage changera et la carte doit
+  // suivre sans qu'on y pense.
+  try {
+    const response = await fetch("data/scene.json", { cache: "no-store" });
+    if (!response.ok) return;
+    const pose = (await response.json()).pose || {};
+    if (!pose.yaw || !pose.hfov) return;
+    aim = {
+      lat: pose.lat ?? aim.lat,
+      lon: pose.lon ?? aim.lon,
+      yaw: pose.yaw,
+      hfov: pose.hfov,
+      reach: pose.reach_m || aim.reach,
+      rms: pose.rms || 0,
+    };
+  } catch (_) {
+    /* Le cône reste sur le dernier calage connu. */
+  }
+  wedge.setLatLngs(viewWedge());
+  axis.setLatLngs([[aim.lat, aim.lon], offset(aim.lat, aim.lon, aim.yaw, aim.reach)]);
+  cameraMark.setLatLng([aim.lat, aim.lon]);
+  showZoom(1);
+  paintAim();
+}
+
+function paintAim() {
+  const label = document.querySelector('[data-i18n="cameraText"]');
+  if (!label) return;
+  const spread = aim.rms ? ` ± ${(aim.rms * aim.hfov).toFixed(1)}°` : "";
+  label.textContent = `${t("cameraFixed")} ${aim.yaw.toFixed(1)}°${spread} · ${t("cameraField")} ${aim.hfov.toFixed(1)}°`;
+  label.removeAttribute("data-i18n");
+}
 
 function paintCamera() {
   cameraMark.unbindTooltip();
@@ -1087,6 +1142,7 @@ loadWeather();
 setInterval(loadWeather, 600000);
 loadView();
 setInterval(loadView, 60000);
+loadAim();
 
 function paintSequence() {
   const frame = sequenceFrames[sequenceIndex];

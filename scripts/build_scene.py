@@ -70,6 +70,21 @@ def main() -> int:
     pose, score = _fit_position(pose, marks)
     rms = (score / len(marks)) ** 0.5
     print(f"Calage : cap {pose.yaw:.1f}° site {pose.pitch:.1f}° champ {pose.hfov:.1f}° écart {rms:.4f}")
+    # Ce cap est celui à porter sur OpenStreetMap, dans camera:direction du
+    # nœud man_made=surveillance : comme OSM, il se compte en degrés depuis le
+    # nord vrai, dans le sens des aiguilles. La convention se lit dans
+    # frustum.project : flat = (sin(yaw), cos(yaw), 0) en est-nord-haut, donc
+    # yaw = 0 regarde le nord et yaw = 90 l'est.
+    #
+    # Sa précision se déduit de l'écart résiduel, qui est une fraction de la
+    # largeur d'image : 0,0136 × 78,755° ≈ 1,1°.
+    #
+    # Vérifié par une route qui ne passe pas par le calage. Le sommet du
+    # Ventoux est à 128,103° de la caméra et se voit à x = 0,5125, soit
+    # (0,5125 − 0,5) × 78,755° = 0,98° à droite du centre ; l'axe vaut donc
+    # 128,103 − 0,98 = 127,1°, à 0,4° du cap calé et bien dans le degré de
+    # précision. D'où camera:direction=127.
+    print(f"  à porter sur OSM : camera:direction={pose.yaw:.0f} (± {rms * pose.hfov:.1f}°)")
 
     reach = float(camera.get("reach_m", 2500))
     apron = float(camera.get("apron_m", 60))

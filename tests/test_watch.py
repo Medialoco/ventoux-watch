@@ -1263,6 +1263,54 @@ class FogTests(unittest.TestCase):
         self.assertAlmostEqual(_overlap(corner, blob), 1.0, places=3)
         self.assertAlmostEqual(_covers(corner, blob), 0.01, places=3)
 
+    def test_the_map_draws_the_aim_that_was_measured(self):
+        """The cone on the map said 140° while the fit said 126,7°.
+
+        Thirteen degrees off, and stopping at a quarter of the range. The page
+        reads config/scene.json now; the numbers left in the script are only
+        what it falls back on, and they must not drift from the fit.
+        """
+        root = Path(__file__).resolve().parents[1]
+        pose = json.loads((root / "config" / "scene.json").read_text(encoding="utf-8"))["pose"]
+        script = (root / "site" / "app.js").read_text(encoding="utf-8")
+        fallback = re.search(r"const AIM_FALLBACK = \{([^}]+)\}", script).group(1)
+        for key, value in (("yaw", pose["yaw"]), ("hfov", pose["hfov"]), ("reach", pose["reach_m"])):
+            found = re.search(rf"{key}: ([\d.]+)", fallback)
+            self.assertIsNotNone(found, key)
+            self.assertAlmostEqual(float(found.group(1)), value, places=2, msg=key)
+        self.assertNotIn("VIEW_ANGLE", script)
+
+    def test_every_landmark_falls_inside_the_cone_the_map_draws(self):
+        """They are all visible in the picture, so all must be in the cone.
+
+        The hand-written one held three of the nineteen: it was aimed thirteen
+        degrees off and stopped at 600 m, while the furthest landmark the
+        camera reads is the Tom Simpson memorial at 2447 m.
+        """
+        root = Path(__file__).resolve().parents[1]
+        scene = json.loads((root / "config" / "scene.json").read_text(encoding="utf-8"))
+        pose, marks = scene["pose"], scene["landmarks"]
+        self.assertGreater(len(marks), 10)
+        for mark in marks:
+            # x is where the landmark sits across the picture, so its bearing
+            # off the axis is that offset times the field.
+            off = (mark["x"] - 0.5) * pose["hfov"]
+            self.assertLessEqual(abs(off), pose["hfov"] / 2, mark["name"])
+            self.assertLessEqual(mark["distance_m"], pose["reach_m"], mark["name"])
+
+    def test_the_heading_is_counted_the_way_openstreetmap_counts_it(self):
+        """Degrees clockwise from true north, so camera:direction can take it.
+
+        Checked on the geometry itself rather than on a number copied out of
+        the fit: a yaw of zero must look due north, ninety due east.
+        """
+        from watcher.frustum import Pose, axes
+
+        for yaw, east, north in ((0.0, 0.0, 1.0), (90.0, 1.0, 0.0), (180.0, 0.0, -1.0)):
+            _, forward, _ = axes(Pose(lat=44.18, lon=5.26, ele=1390.0, yaw=yaw, pitch=0.0, hfov=78.0))
+            self.assertAlmostEqual(forward[0], east, places=6, msg=f"{yaw}° est")
+            self.assertAlmostEqual(forward[1], north, places=6, msg=f"{yaw}° nord")
+
     def test_the_history_says_which_watcher_wrote_it(self):
         """The footer read v0.3.0 while the code called itself 0.1.0.
 
