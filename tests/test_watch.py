@@ -1530,6 +1530,21 @@ class FogTests(unittest.TestCase):
         style = (root / "site" / "styles.css").read_text(encoding="utf-8")
         self.assertIn("tr.wrong", style)
 
+    def test_a_verdict_carries_its_lesson_all_the_way_home(self):
+        """La ligne d'apprentissage doit survivre au trajet.
+
+        apply_review l'écrit dans data/reviewed.jsonl, mais le workflow ne
+        versait que events.json et learning.json : la ligne était produite puis
+        abandonnée sur le coureur, et chaque relecture retombait à un compteur.
+        Or c'est elle qui porte le mot juste avec la mesure de la tache, donc
+        tout ce à partir de quoi un seuil peut se régler.
+        """
+        root = Path(__file__).resolve().parents[1]
+        flux = (root / ".github/workflows/review.yml").read_text(encoding="utf-8")
+        self.assertIn("data/reviewed.jsonl", flux)
+        publie = (root / "watcher/publish.py").read_text(encoding="utf-8")
+        self.assertIn("data/reviewed.jsonl", publie)
+
     def test_sharpening_a_vague_reading_is_not_calling_it_wrong(self):
         """« Véhicule » pour une voiture est flou, pas faux.
 
