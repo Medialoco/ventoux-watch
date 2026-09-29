@@ -234,6 +234,12 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
     aircraft = sky.ask(track.updated, cfg["opensky"]["match_window_s"]) if _crossed_sky(track, cfg) else []
     width_m = scene_map.metres_across(box) if box else 0.0
     height_m = scene_map.metres_tall(box) if box else 0.0
+    # La même chose mesurée sur la boîte du modèle plutôt que sur la tache.
+    # Notée sans être encore employée : la décision attendra qu'on ait de quoi
+    # comparer les deux sur de vrais passages.
+    named = _named_box(frame, detections)
+    width_named_m = scene_map.metres_across(named) if named else 0.0
+    height_named_m = scene_map.metres_tall(named) if named else 0.0
     trips = gtfs.trips_at(when.astimezone(PARIS), cfg["gtfs_window_min"]) if _might_be_bus(track, detections, width_m, cfg) else []
     duration = max(0.0, track.updated - track.started)
     on_fuel = surface in FLAMMABLE or (track.zone == "slope" and not surface)
@@ -320,6 +326,14 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         # the fact; written down, the next one is read straight off the entry.
         "width_m": round(width_m, 1),
         "height_m": round(obs.height_m, 1),
+        # Mesurées sur la boîte du modèle et non sur la tache de mouvement.
+        # Zéro quand le modèle n'a rien posé. Le 28 septembre à 10 h 43 un
+        # tracteur a été publié comme voiture : la tache disait 6,7 m sur 4,5,
+        # ce qui n'est pas une voiture, mais les voitures publiées mesurent
+        # elles-mêmes 2,30 m de haut de médiane, donc le chiffre ne pouvait rien
+        # refuser. C'est la mesure qu'il faut redresser avant la règle.
+        "width_named_m": round(width_named_m, 1),
+        "height_named_m": round(height_named_m, 1),
         "rise_ms": round(obs.rise_ms, 2),
         "drift_rate": round(obs.drift_rate, 3),
         "seen_as": [f"{hit.cls} {hit.conf:.2f} sur {hit.share:.0%}" for hit in detections[:4]],
@@ -654,6 +668,26 @@ def _norm_box(frame, track) -> tuple[float, float, float, float] | None:
         return None
     height, width = frame.shape[:2]
     x, y, w, h = bbox
+    return x / width, y / height, max(w, 1) / width, max(h, 1) / height
+
+
+def _named_box(frame, detections) -> tuple[float, float, float, float] | None:
+    """Où le modèle a posé la chose, plutôt que tout ce qui a bougé.
+
+    La tache de mouvement est ce qui a changé : elle contient la chose, son
+    ombre, l'éclat de son pare-brise et ce qui passait à côté. Mesurée dessus,
+    une voiture fait 2,30 m de haut de médiane quand une vraie en fait 1,50, et
+    un piéton 2,10 quand il en fait 1,70. La boîte du modèle, elle, colle à la
+    chose.
+
+    C'est la même cause que le rectangle parti sur la flaque des phares le 29
+    septembre : la tache n'est pas la forme de ce qui a bougé.
+    """
+    best = max((hit for hit in detections if hit.box), key=lambda hit: hit.conf, default=None)
+    if frame is None or best is None:
+        return None
+    height, width = frame.shape[:2]
+    x, y, w, h = best.box
     return x / width, y / height, max(w, 1) / width, max(h, 1) / height
 
 

@@ -2011,12 +2011,27 @@ class FogTests(unittest.TestCase):
         self.assertFalse(_worth_reviewing(crossing, {"review_unnamed_s": 0}, {}, 1_000.0))
 
     def test_a_reviewer_may_answer_with_what_really_passes_here(self):
+        """Les mots doivent couvrir ce qui passe vraiment ici.
+
+        « Tracteur » est arrivé le 29 septembre, sur une tache publiée comme
+        voiture et qui n'en était pas une. Le modèle ne pourra jamais en nommer
+        un — COCO n'a pas de tracteurs — mais sans le mot, le relecteur n'avait
+        que « faux » à répondre, et la leçon se perdait.
+        """
         from watcher.review import CLASSES
 
         self.assertEqual(
             {name for name, _ in CLASSES.values()} | set(CLASSES),
-            {"vehicle", "bus", "person", "cycle", "voiture", "camion", "bus", "pieton", "velo"},
+            {"vehicle", "bus", "person", "cycle",
+             "voiture", "camion", "bus", "pieton", "velo", "tracteur"},
         )
+        # Et le site doit proposer exactement les mêmes : un bouton sans classe
+        # en face ouvrirait un ticket que rien ne saurait appliquer.
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "site" / "app.js").read_text(encoding="utf-8")
+        bloc = script[script.index("const REVIEW_CLASSES = ["):]
+        bloc = bloc[:bloc.index("];")]
+        self.assertEqual(set(re.findall(r'\["(\w+)",', bloc)), set(CLASSES))
 
     def test_nothing_burns_in_the_sky(self):
         cloud = Observation(zone="sky", surface="forest", period="day", width_m=8.0,

@@ -144,6 +144,7 @@ const COPY = {
     busWord: "Bus",
     walkerWord: "Walker",
     cycleWord: "Bike",
+    tractorWord: "Tractor",
     confirmed: "confirmed",
     rejected: "rejected",
     fireNote: "A warm patch grew. This is not an alert.",
@@ -287,6 +288,7 @@ const COPY = {
     busWord: "Bus",
     walkerWord: "Piéton",
     cycleWord: "Vélo",
+    tractorWord: "Tracteur",
     confirmed: "validé",
     rejected: "rejeté",
     fireNote: "Tache chaude qui a grossi. Ce n’est pas une alerte.",
@@ -319,6 +321,7 @@ const LABELS = {
   "Piéton": "Pedestrian",
   "Piétons": "Pedestrians",
   "Vélo": "Bicycle",
+  "Tracteur": "Tractor",
   "Moto": "Motorbike",
   "Deux-roues": "Two-wheeler",
   "Piétons et une voiture": "Pedestrians and a car",
@@ -1061,6 +1064,7 @@ const REVIEW_CLASSES = [
   ["bus", "busWord", "Bus"],
   ["pieton", "walkerWord", "Piéton"],
   ["velo", "cycleWord", "Vélo"],
+  ["tracteur", "tractorWord", "Tracteur"],
 ];
 
 // La question posée à trancher n'est pas « est-ce juste ? » mais « qu'y

@@ -16,6 +16,11 @@ CLASSES = {
     "bus": ("bus", "Bus"),
     "pieton": ("person", "Piéton"),
     "velo": ("cycle", "Vélo"),
+    # Ajouté le 29 septembre, sur un tracteur publié comme voiture. Le modèle
+    # ne connaît pas les tracteurs — COCO n'en a pas — donc il ne pourra jamais
+    # en nommer un ; mais sans ce mot, le relecteur n'avait aucun moyen de dire
+    # ce qu'il y avait, et la leçon se perdait en « faux ».
+    "tracteur": ("vehicle", "Tracteur"),
 }
 
 
