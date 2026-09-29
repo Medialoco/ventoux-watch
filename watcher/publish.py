@@ -23,6 +23,10 @@ def publish(repo: Path) -> bool:
         # Kept on the watching machine alone, it would be lost with the machine.
         "data/interruptions.jsonl",
         "data/reviewed.jsonl",
+        # Ce que chaque décision a eu sous les yeux. Sans ce fichier, un verdict
+        # rendu depuis un navigateur trois jours plus tard ne peut pas être
+        # rejoué, et une faute réparée ne le reste pas.
+        "data/observed.jsonl",
     ]
     try:
         _git(repo, "pull", "--rebase", "origin", "main")

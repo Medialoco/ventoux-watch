@@ -1006,6 +1006,47 @@ AUTONOMOUS = {
 }
 
 
+def write_observation(obs: Observation) -> dict:
+    """Tout ce que la décision a eu sous les yeux, en clair.
+
+    Ce qui est publié est un résumé : la largeur en mètres, la surface, le
+    contexte. Assez pour lire l'historique, pas pour refaire le raisonnement.
+    Il y manque les détections, la chaleur, la montée du pied — c'est-à-dire
+    précisément ce sur quoi décide() s'est appuyé.
+
+    Sans cela, une correction dit qu'on s'est trompé sans permettre de le
+    revivre, et « on affine tant qu'il y a des erreurs » n'a pas de prise : on
+    corrige l'entrée et rien n'empêche la même faute de revenir. Avec, chaque
+    verdict devient un cas rejouable, et une faute réparée le reste.
+    """
+    out = {}
+    for name, value in vars(obs).items():
+        if name in {"detections", "aircraft", "trips"}:
+            continue
+        out[name] = value
+    out["detections"] = [
+        {"cls": hit.cls, "conf": hit.conf, "cx": hit.cx, "cy": hit.cy,
+         "box": list(hit.box) if hit.box else None, "share": hit.share}
+        for hit in obs.detections
+    ]
+    # Les avions et les horaires sont des réponses d'un service tiers, datées,
+    # qu'on ne peut pas redemander telles quelles. Gardées comme elles sont
+    # venues : c'est ce que la décision a vu.
+    out["aircraft"] = [dict(plane) for plane in obs.aircraft]
+    out["trips"] = [vars(trip) for trip in obs.trips]
+    return out
+
+
+def read_observation(row: dict) -> Observation:
+    """Une observation rendue à sa forme, pour repasser par decide()."""
+    known = set(vars(Observation()))
+    fields = {name: value for name, value in row.items() if name in known}
+    fields["detections"] = [Detection(**hit) for hit in row.get("detections") or []]
+    fields["trips"] = [Trip(**trip) for trip in row.get("trips") or []]
+    fields["aircraft"] = list(row.get("aircraft") or [])
+    return Observation(**fields)
+
+
 def named_itself(kind: str, detections: list[Detection]) -> bool:
     """Le modèle a-t-il lu de lui-même la classe qui a été publiée ?
 

@@ -29,6 +29,7 @@ class Store:
         self.thumbs = root / "thumbs"
         self.closeups = root / "closeups"
         self.candidates_path = root / "candidates.jsonl"
+        self.seen_path = root / "observed.jsonl"
         self.thumbs.mkdir(parents=True, exist_ok=True)
         self.dirty = False
         # A fire does not wait for the next round of publication. Ordinary
@@ -118,6 +119,19 @@ class Store:
         with self.candidates_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
+    def record_seen(self, event_id: str, seen: dict) -> None:
+        """Garder ce que la décision a eu sous les yeux, à part de l'historique.
+
+        À part, parce que le site télécharge events.json à chaque visite et
+        qu'il n'a que faire de la chaleur des pixels ni du partage des boîtes.
+        Ici, une ligne par publication, sous son identifiant : c'est ce qui
+        permettra de refaire tourner le raisonnement sur un cas dont on sait
+        aujourd'hui ce qu'il était vraiment.
+        """
+        row = {"id": event_id, "seen": seen}
+        with self.seen_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
     def set_clip(self, event_id: str, url: str) -> None:
         for event in self.events:
             if event["id"] == event_id:
@@ -141,6 +155,21 @@ class Store:
             if event.get("closeup") and closeup.is_file():
                 closeup.unlink()
         self.events = kept
+        self._prune_seen({event["id"] for event in kept})
+
+    def _prune_seen(self, alive: set) -> None:
+        """Une observation ne survit pas à l'entrée qu'elle explique.
+
+        Un verdict porte sur une entrée de l'historique ; passé la fenêtre, il
+        n'y a plus d'entrée à corriger et l'observation n'expliquerait plus
+        rien. Sans cela le fichier grossirait d'un kilooctet par publication
+        sans jamais rien rendre.
+        """
+        if not self.seen_path.is_file():
+            return
+        gardees = [line for line in self.seen_path.read_text(encoding="utf-8").splitlines()
+                   if line.strip() and json.loads(line).get("id") in alive]
+        self.seen_path.write_text("\n".join(gardees) + ("\n" if gardees else ""), encoding="utf-8")
 
     def _load(self) -> list[dict]:
         if not self.events_path.is_file():

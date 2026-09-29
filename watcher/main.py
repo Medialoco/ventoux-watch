@@ -28,7 +28,7 @@ from watcher.geometry import load_zones
 from watcher.gtfs import GtfsIndex, PARIS
 from watcher.memory import Memory
 from watcher.motion import MotionDetector, smoke_ratio, warm_ratio
-from watcher.naming import Observation, decide, named_itself
+from watcher.naming import Observation, decide, named_itself, write_observation
 from watcher.opensky import SkyArchive
 from watcher.publish import publish
 from watcher.scene import SceneReader, ViewLog, solar_azimuth, solar_elevation
@@ -350,6 +350,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
             entry = store.add_event(when, decision.type, decision.label, track.zone,
                                     decision.confidence, track.best_jpeg, decision.detail)
             store.keep_closeup(entry, frame, track.best_bbox)
+            store.record_seen(entry["id"], write_observation(obs))
             log.info("Passage soumis à revue %s", track.zone)
             return
         store.add_candidate(when, track.zone, decision.reason, decision.detail)
@@ -363,6 +364,10 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         decision.detail["box"] = [round(value, 4) for value in drawn]
     event = store.add_event(when, decision.type, decision.label, track.zone, decision.confidence, track.best_jpeg, decision.detail)
     close = store.keep_closeup(event, frame, track.best_bbox)
+    # Ce que la décision a eu sous les yeux, gardé à part de l'historique. Un
+    # verdict rendu dans trois jours pourra ainsi repasser par decide() au lieu
+    # de se réduire à un compteur.
+    store.record_seen(event["id"], write_observation(obs))
     if close and width_m >= BUS_LENGTH_M:
         log.info("Recadrage gardé pour %s : %s", decision.label, close)
     log.info("Publié %s %s", decision.type, decision.label)

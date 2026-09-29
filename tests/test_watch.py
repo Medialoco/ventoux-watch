@@ -1610,6 +1610,84 @@ class FogTests(unittest.TestCase):
         style = (root / "site" / "styles.css").read_text(encoding="utf-8")
         self.assertIn("tr.wrong", style)
 
+    def test_a_decision_can_be_lived_through_again(self):
+        """Une observation doit survivre à l'aller-retour par le disque.
+
+        C'est la condition de tout le reste : sans elle un verdict dit qu'on
+        s'est trompé sans permettre de le revivre, et « on affine tant qu'il y
+        a des erreurs » n'a pas de prise. Ce qui est publié n'y suffit pas —
+        c'est un résumé, où manquent les détections, la chaleur et la montée du
+        pied, c'est-à-dire ce sur quoi la décision s'est appuyée.
+        """
+        from watcher.naming import Trip, read_observation, write_observation
+
+        obs = Observation(
+            zone="road", surface="road", travel=0.061, area_ratio=0.0042, duration_s=6.0,
+            frames=7, width_m=4.2, height_m=1.6, period="day", weather="ciel dégagé",
+            warm_ratio=0.03, rise_ms=0.4, foot_climb=-0.002, colour="grise",
+            detections=[Detection(cls="car", conf=0.71, cx=0.4, cy=0.8, box=(1, 2, 3, 4), share=0.9)],
+            trips=[Trip(route="10", headsign="Malaucène", stop_name="Mont Serein",
+                        scheduled="14:02", source="ZOU")],
+            aircraft=[{"icao24": "abc", "callsign": "AFR1"}],
+        )
+        rendu = read_observation(json.loads(json.dumps(write_observation(obs))))
+
+        avant, apres = decide(obs), decide(rendu)
+        self.assertEqual((avant.type, avant.label, avant.reason),
+                         (apres.type, apres.label, apres.reason))
+        # Et pas seulement le verdict : les entrées elles-mêmes, sans quoi deux
+        # chemins différents pourraient tomber par hasard sur le même mot.
+        self.assertEqual(rendu.detections[0].cls, "car")
+        self.assertEqual(rendu.detections[0].share, 0.9)
+        self.assertEqual(rendu.trips[0].route, "10")
+        self.assertEqual(rendu.aircraft[0]["callsign"], "AFR1")
+        self.assertEqual(rendu.warm_ratio, 0.03)
+        self.assertEqual(rendu.foot_climb, -0.002)
+
+    def test_every_mistake_already_paid_for_stays_fixed(self):
+        """Chaque faute corrigée devient une épreuve, et le reste.
+
+        Le verdict humain dit ce qu'il y avait ; l'observation gardée dit ce que
+        la veille avait sous les yeux. Les marier et repasser par decide()
+        demande à aujourd'hui de faire mieux qu'hier sur un cas réel — pas sur
+        une scène dessinée pour l'occasion.
+
+        Le compte part de zéro et grandit avec les relectures. Il vaut mieux
+        qu'il le dise que de passer en silence : une épreuve qui ne vérifie rien
+        doit avoir l'honnêteté de l'annoncer.
+        """
+        from watcher.naming import read_observation
+
+        root = Path(__file__).resolve().parents[1]
+        vus = {}
+        chemin = root / "data" / "observed.jsonl"
+        if chemin.is_file():
+            for ligne in chemin.read_text(encoding="utf-8").splitlines():
+                if ligne.strip():
+                    row = json.loads(ligne)
+                    vus[row["id"]] = row["seen"]
+
+        evenements = json.loads((root / "data/events.json").read_text(encoding="utf-8"))["events"]
+        fautes = []
+        rejoues = 0
+        for entree in evenements:
+            seen = vus.get(entree.get("id"))
+            # Seulement ce qui a été tranché, et seulement ce dont on a gardé
+            # l'observation. Une entrée non relue n'a pas de vérité à opposer.
+            if not seen or entree.get("review") != "accepted":
+                continue
+            rejoues += 1
+            dit = decide(read_observation(seen))
+            attendu = entree.get("label", "")
+            if dit.label != attendu:
+                fautes.append(f"{entree['id']} : attendu {attendu!r}, obtenu {dit.label!r}")
+
+        if not rejoues:
+            self.skipTest("aucune relecture n'a encore d'observation gardée : "
+                          "le compte part de zéro et grandit avec les verdicts")
+        self.assertFalse(fautes, "des fautes déjà corrigées sont revenues :\n  "
+                         + "\n  ".join(fautes))
+
     def test_the_site_claims_no_more_than_the_checks_allow(self):
         """Douze justes sur douze ne font pas cent pour cent.
 
