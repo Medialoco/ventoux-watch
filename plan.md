@@ -80,6 +80,36 @@ Mesurable de deux façons, l'une gratuite :
 C'est exactement la faute du 29 septembre à 02:51, où le rectangle a atterri
 sur la lumière des phares plutôt que sur la voiture.
 
+**Fait, 29 septembre.** La deuxième voie, celle qui ne dépend pas d'OpenCV.
+Chaque tache porte maintenant deux nombres dans son bloc mesuré : `shade`, sa
+clarté rapportée au fond mémorisé, et `kept`, la part d'elle-même où ce fond se
+voit encore. Pris sur la vue où la tache est la plus grande.
+
+La corrélation d'ensemble ne suffisait pas : le faisceau des phares a son propre
+dégradé, très fort, et elle tombait à 0,19 alors que le bitume était toujours
+là-dessous. Elle se prend donc par carreaux de quatre pixels, où même une
+lumière structurée se réduit à un gain — et un gain ne touche pas à la
+corrélation. Un carreau sans grain au départ est écarté, il n'a rien à
+conserver ; un carreau dont le grain a disparu compte comme caché.
+
+Ce que ça donne, mesuré par le vrai détecteur sur le décor réel :
+
+| ce qui bouge | clarté | décor gardé |
+| --- | --- | --- |
+| pan d'ombre qui traverse | 0,55 | > 0,85 |
+| flaque de phares, de nuit | 1,45–1,62 | 0,33–0,52 |
+| carrosserie | — | 0,00–0,20 |
+
+L'ombre est le cas franc. La flaque reste le cas dur, parce qu'elle crame le
+bitume en son cœur, mais elle garde nettement plus qu'une carrosserie.
+
+**Aucun seuil n'est posé.** Les deux nombres s'écrivent sur les publications
+comme sur les refus, et `scripts/lighting_report.py` les range par ce que les
+taches se sont révélées être. Le seuil attendra d'avoir de vraies ombres et de
+vrais véhicules à comparer, comme la montée en mètres par seconde avant lui.
+Les premiers relevés sont de nuit, quand la route ne sert pas : il en faut de
+jour.
+
 ### La scène OSM comme base d'interprétation
 
 Cette couche existe déjà et elle porte plus qu'on ne s'en sert. `relief.json`
