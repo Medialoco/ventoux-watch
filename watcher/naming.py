@@ -385,6 +385,17 @@ NIGHT_CONF = 0.25
 # dies and starts again, and its age never climbs past that. The subtractor
 # forgets a still fire faster than any rule could wait for it.
 EMBER_WARM = 1.15
+# Et un plancher, qui ne se déduit pas du réglage précédent. Ce seuil-là jouait
+# deux rôles avec un seul nombre : servir de plancher à une couleur qui n'est
+# qu'un témoin parmi d'autres, et servir de barre à une couleur qui accuse
+# toute seule. Les tests de la couleur seule sont écrits avec fire_warm à 0,35,
+# donc une barre à 0,40 ; la configuration en service dit 0,08, donc 0,092.
+# Une voie conçue pour « manifestement la couleur du feu » tournait à « un peu
+# chaud », et le 29 septembre elle a publié sept départs de feu entre onze
+# heures et seize heures sur un versant d'herbe sèche au soleil, dont c'est la
+# couleur ordinaire : de 0,102 à 0,305. Le seul incendie que ce veilleur ait
+# mesuré affichait 0,846.
+EMBER_ALONE = 0.40
 NIGHT_FRAMES = 6
 NIGHT_SECONDS = 3.0
 # How wide a cold thing may be and still be called a start of fire. The three
@@ -587,7 +598,7 @@ def decide(obs: Observation) -> Decision:
         # vouches for it: no growth, no plume, no movement. Only while the air
         # is clear, though: haze reddens and swells whatever is lit, so colour
         # and growth together are exactly what it counterfeits.
-        burning = obs.warm_ratio >= EMBER_WARM * obs.fire_warm and not obs.hazy
+        burning = obs.warm_ratio >= max(EMBER_ALONE, EMBER_WARM * obs.fire_warm) and not obs.hazy
         if obs.hazy and not plume:
             # Short of fog, but the ridge is soft and the distances are not
             # honest. A fire seen through haze still shows the one thing haze
@@ -631,7 +642,7 @@ def decide(obs: Observation) -> Decision:
                 # Nothing burns up there. One cloud on the morning of 27
                 # September was called a fire while it sat in the sky band.
                 return _motion(obs, "cloud", "Nuage", "Une masse pâle monte, mais elle est dans le ciel. Rien n'y brûle.")
-            if not flame and obs.width_m > FIRE_WIDEST_M:
+            if not burning and obs.width_m > FIRE_WIDEST_M:
                 # The watcher looks every second, so a real fire is met while
                 # it is still small. Something already this wide the first time
                 # it is seen did not grow there, it drifted in. The morning of
@@ -650,7 +661,22 @@ def decide(obs: Observation) -> Decision:
                     f"Environ {obs.width_m:.0f} m de large d'emblée. Un feu qui commence est petit ; "
                     "ce qui arrive déjà large est un nuage.",
                 )
-            if not flame and obs.rise_ms and obs.rise_ms < FIRE_CLIMB_MS:
+            if not burning and not plume and obs.rise <= 0:
+                # Zéro est ici une mesure, pas une absence de mesure, et c'est
+                # la distinction qui manquait. « rise_ms » vaut zéro aussi bien
+                # quand le haut de la tache n'a pas bougé d'un pixel que quand
+                # on ignore à quelle distance elle est, et la garde « rise_ms
+                # and » faisait profiter le doute au feu : une tache qui monte
+                # lentement était écartée, une tache qui ne monte pas du tout
+                # passait. La montée dans l'image, elle, se lit sans distance.
+                return _motion(
+                    obs,
+                    "not_rising",
+                    "Tache chaude immobile",
+                    "Le haut de la tache n'a pas monté d'un pixel. Une fumée portée par sa propre "
+                    "chaleur monte ; ce qui reste à plat est une ombre ou une lumière qui passe.",
+                )
+            if not burning and obs.rise_ms and obs.rise_ms < FIRE_CLIMB_MS:
                 # The pale grey cab of a tractor on green grass passes the test
                 # for smoke, and at twenty pixels across the model sees nothing
                 # at all to contradict it. What it cannot counterfeit is

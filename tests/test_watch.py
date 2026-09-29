@@ -542,9 +542,23 @@ class NamingTests(unittest.TestCase):
         )
         self.assertNotEqual(decision.type, "fire")
 
-    def test_growing_warm_patch_on_the_slope_is_fire(self):
-        decision = decide(Observation(zone="slope", duration_s=25, area_grow=2.0, warm_ratio=0.2))
-        self.assertEqual(decision.type, "fire")
+    def test_a_growing_warm_patch_is_a_fire_only_if_it_climbs(self):
+        """Ce test affirmait le contraire, et c'est ce qu'il a coûté.
+
+        Une tache tiède qui grossit sans monter passait pour un départ de feu.
+        Le 29 septembre le veilleur en a publié sept, entre onze heures et
+        seize heures, par ciel dégagé, sur un versant d'herbe sèche dont c'est
+        la couleur : de 0,102 à 0,305 de pixels chauds, et pas un pixel de
+        montée. Un feu est flottant — c'est la seule chose qu'une ombre de
+        nuage ou une lumière qui tourne ne sait pas contrefaire.
+        """
+        plate = dict(zone="slope", duration_s=25, area_grow=2.0, warm_ratio=0.2)
+        self.assertNotEqual(decide(Observation(**plate)).type, "fire")
+        self.assertEqual(decide(Observation(**plate)).reason, "not_rising")
+
+        # La même, montant comme monte une fumée portée par sa chaleur.
+        montante = decide(Observation(**plate, smoke_ratio=0.42, rise=0.044, rise_ms=2.21))
+        self.assertEqual(montante.type, "fire")
 
     def test_roundabout_point_is_not_sky(self):
         self.assertEqual(assign_zone(0.12, 0.9, ZONES), "roundabout")
