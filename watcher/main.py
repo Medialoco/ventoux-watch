@@ -28,7 +28,7 @@ from watcher.geometry import load_zones
 from watcher.gtfs import GtfsIndex, PARIS
 from watcher.memory import Memory
 from watcher.motion import MotionDetector, smoke_ratio, warm_ratio
-from watcher.naming import Observation, decide
+from watcher.naming import Observation, decide, named_itself
 from watcher.opensky import SkyArchive
 from watcher.publish import publish
 from watcher.scene import SceneReader, ViewLog, solar_azimuth, solar_elevation
@@ -315,6 +315,10 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         "drift_rate": round(obs.drift_rate, 3),
         "seen_as": [f"{hit.cls} {hit.conf:.2f} sur {hit.share:.0%}" for hit in detections[:4]],
     }
+    # Le nom vient-il du modèle, ou d'une règle de rattrapage ? Seul le premier
+    # cas prouve quelque chose de la reconnaissance, et c'est elle qu'on veut
+    # sûre avant de montrer quoi que ce soit.
+    decision.detail.setdefault("autonomous", named_itself(decision.type, detections))
     decision.detail.setdefault("measured", measured)
     if decision.type == "plane" and decision.detail.get("icao24"):
         # Asked now and not before: a route costs a call to OpenSky, and until

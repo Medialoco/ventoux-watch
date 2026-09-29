@@ -1397,6 +1397,27 @@ class FogTests(unittest.TestCase):
         self.assertGreater(_share_of(drawn, boxes[-1]), 0.25,
                            f"le rectangle {drawn} ne tient pas la voiture {boxes[-1]}")
 
+    def test_a_name_the_model_did_not_give_is_not_autonomous(self):
+        """Only what the model read itself counts as recognition.
+
+        A name reached another way — ground size, a coach timetable, the glare
+        of headlights — can be right and still prove nothing about the
+        recognition, which is the thing that has to be sure before anything is
+        shown. Answered on the surest reading and not on the whole list:
+        publishing "Voiture" while the best reading says person is a choice
+        made against the model, and eight entries of the history are that.
+        """
+        from watcher.naming import named_itself
+
+        car = Detection(cls="car", conf=0.62)
+        walker = Detection(cls="person", conf=0.71)
+        self.assertTrue(named_itself("vehicle", [car]))
+        self.assertFalse(named_itself("vehicle", [walker, car]))
+        self.assertTrue(named_itself("person", [walker, car]))
+        self.assertFalse(named_itself("vehicle", []))
+        # A fire or an aircraft is never named by this model.
+        self.assertFalse(named_itself("fire", [car]))
+
     def test_the_score_counts_a_corrected_entry_as_a_fault(self):
         """The gate before the site goes out is a rate, so it must not flatter.
 

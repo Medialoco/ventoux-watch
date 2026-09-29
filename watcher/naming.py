@@ -992,6 +992,36 @@ def _stamp(decision: Decision, obs: Observation) -> Decision:
     return decision
 
 
+# Ce que le modèle doit avoir lu pour qu'un nom soit dit autonome. Un nom
+# obtenu autrement — par la taille au sol, l'horaire d'un car, la brillance des
+# phares — peut être juste, mais il ne prouve rien de la reconnaissance, et
+# c'est la reconnaissance qu'on veut infaillible avant de publier.
+AUTONOMOUS = {
+    "vehicle": {"car", "truck", "bus"},
+    "car": {"car", "truck"},
+    "truck": {"truck"},
+    "bus": {"bus"},
+    "person": {"person"},
+    "cycle": {"bicycle", "motorcycle"},
+}
+
+
+def named_itself(kind: str, detections: list[Detection]) -> bool:
+    """Le modèle a-t-il lu de lui-même la classe qui a été publiée ?
+
+    Répondu sur la lecture la plus sûre et non sur l'ensemble : si la meilleure
+    lecture dit « person » et qu'une lecture faible dit « car » quelque part
+    dans le recadrage, publier « Voiture » n'est pas une reconnaissance, c'est
+    un choix qu'on a fait contre le modèle. Huit entrées de l'historique sont
+    dans ce cas.
+    """
+    wanted = AUTONOMOUS.get(kind)
+    if not wanted or not detections:
+        return False
+    best = max(detections, key=lambda hit: hit.conf)
+    return best.cls in wanted
+
+
 def _motion(obs: Observation, reason: str, label: str, reading: str) -> Decision:
     return _stamp(
         Decision("publish", "motion", label, reason=reason, detail={"reading": reading}, confidence=0.3),
