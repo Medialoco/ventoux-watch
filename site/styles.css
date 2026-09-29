@@ -392,6 +392,18 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
+.score {
+  margin: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Une lecture dite fausse reste dans le registre, mais l'œil ne doit pas la
+   compter comme une observation : grisée, et son libellé barré. */
+tr.wrong { opacity: 0.45; }
+
+tr.wrong .event { text-decoration: line-through; }
+
 .filters { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
 
 .filters button {

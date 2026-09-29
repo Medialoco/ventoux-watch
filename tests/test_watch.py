@@ -1397,6 +1397,38 @@ class FogTests(unittest.TestCase):
         self.assertGreater(_share_of(drawn, boxes[-1]), 0.25,
                            f"le rectangle {drawn} ne tient pas la voiture {boxes[-1]}")
 
+    def test_the_score_counts_a_corrected_entry_as_a_fault(self):
+        """The gate before the site goes out is a rate, so it must not flatter.
+
+        A corrected entry carries the right word today and was wrong when it
+        was published. Counting it as right would turn fifty-two hand
+        corrections into a score of 53 out of 54, which measures the correcting
+        rather than the watching. The honest figure is one.
+        """
+        root = Path(__file__).resolve().parents[1]
+        events = [event for event in json.loads(
+            (root / "data" / "events.json").read_text(encoding="utf-8"))["events"]
+            if not (event.get("detail") or {}).get("simulation")]
+        read = [event for event in events if event.get("review")]
+        right = [event for event in read if event.get("review") == "accepted"
+                 and not (event.get("detail") or {}).get("correction")]
+        self.assertGreater(len(read), 10, "trop peu de relectures pour juger")
+        self.assertLess(len(right), len(read), "aucune faute comptée : le score flatte")
+        script = (root / "site" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('!(event.detail || {}).correction', script)
+
+    def test_a_wrong_reading_stays_in_the_history(self):
+        """Struck through rather than removed.
+
+        A fault taken off the page cannot be counted, and the aim is a pipeline
+        that is never wrong — which is proved by a rate, not by a selection.
+        """
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "site" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('event.review === "rejected" ? \' class="wrong"\' : ""', script)
+        style = (root / "site" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn("tr.wrong", style)
+
     def test_the_map_draws_the_aim_that_was_measured(self):
         """The cone on the map said 140° while the fit said 126,7°.
 

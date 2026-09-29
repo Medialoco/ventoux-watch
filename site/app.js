@@ -118,6 +118,8 @@ const COPY = {
     around: "Around",
     people: "people",
     clip: "Clip",
+    scoreLine: (all, read, right) =>
+      `${all} published · ${read} reviewed · ${right} right as published`,
     cameraFixed: "Fixed, facing",
     cameraField: "field",
     right: "Right",
@@ -244,6 +246,8 @@ const COPY = {
     around: "Autour",
     people: "personnes",
     clip: "Extrait",
+    scoreLine: (all, read, right) =>
+      `${all} publications · ${read} relues · ${right} juste${right > 1 ? "s" : ""} du premier coup`,
     cameraFixed: "Fixe, cap",
     cameraField: "champ",
     right: "Juste",
@@ -722,7 +726,9 @@ function render() {
   });
   empty.hidden = shown.length > 0;
   const count = document.querySelector("#count");
-  if (count) count.textContent = shown.length ? String(shown.length) : "";
+  const right = shown.filter((event) => event.review !== "rejected").length;
+  if (count) count.textContent = right ? String(right) : "";
+  paintScore();
   const pages = Math.max(1, Math.ceil(shown.length / PER_PAGE));
   page = Math.min(Math.max(page, 0), pages - 1);
   const pager = document.querySelector("#pager");
@@ -750,7 +756,11 @@ function render() {
     // looking, so it carries its numbers and the place they came from.
     const extra = event.type === "plane" ? `<span class="sub">${detail(event)}</span>` : "";
     const place = t("places")[info.surface || event.zone] || "";
-    return `<tr><td class="when"><time>${clock}</time><span>${day}</span></td>`
+    // Une lecture que vous avez dite fausse reste ici, barrée. La retirer
+    // ferait une belle page et un mauvais registre : on ne peut pas viser le
+    // zéro faute en effaçant les fautes, et c'est de celles-là qu'on apprend.
+    const wrong = event.review === "rejected" ? ' class="wrong"' : "";
+    return `<tr${wrong}><td class="when"><time>${clock}</time><span>${day}</span></td>`
       + `<td class="event">${escapeHtml(title)}${extra}</td>`
       + `<td class="place">${escapeHtml(place)}</td>`
       + `<td class="shot">${picture}</td></tr>`;
@@ -794,7 +804,7 @@ function paintFigures() {
   // what goes past this camera at which hour, and a simulation went past
   // nothing: the two on file were the only entries in the "fire" column and
   // gave it 0.7 % of the whole.
-  const seen = events.filter((event) => !(event.detail || {}).simulation);
+  const seen = events.filter((event) => !(event.detail || {}).simulation && event.review !== "rejected");
   if (!seen.length) {
     span.textContent = t("figuresEmpty");
     hourBox.innerHTML = dayBox.innerHTML = legend.innerHTML = "";
@@ -894,6 +904,24 @@ function showText(value) {
     return `${tint.charAt(0).toUpperCase()}${tint.slice(1)} ${rest.toLowerCase()}`;
   }
   return value;
+}
+
+function paintScore() {
+  // Le but est un pipeline qui ne se trompe jamais, et cela se prouve par un
+  // taux plutôt que par une sélection. Le compte est tenu sur ce qui a été
+  // relu : une publication que personne n'a regardée n'est ni juste ni fausse.
+  const box = document.querySelector("#score");
+  if (!box) return;
+  const real = events.filter((event) => !(event.detail || {}).simulation);
+  const read = real.filter((event) => event.review);
+  // Une entrée corrigée à la main porte aujourd'hui le bon mot, mais elle
+  // était fausse quand elle a été publiée, et c'est cela qu'on compte. Sans
+  // cette ligne le score dirait 53 justes sur 54 en ne montrant que le travail
+  // de correction : il flatterait exactement la chose qu'il est censé juger.
+  const right = read.filter((event) => event.review === "accepted"
+    && !(event.detail || {}).correction);
+  box.textContent = t("scoreLine")(real.length, read.length, right.length);
+  box.hidden = read.length === 0;
 }
 
 function paintCounts() {
