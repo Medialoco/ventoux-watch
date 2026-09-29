@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from watcher.scenemap import DRIVABLE, FLAMMABLE
 
@@ -66,6 +66,15 @@ SMALLEST_M = {"car": 2.0, "truck": 2.0, "bus": 2.0}
 # Sixty-three daylight walkers were measured against it and the shortest stood
 # ninety-nine centimetres, so this floor lets every one of them through.
 SHORTEST_PERSON_M = 0.9
+# Jusqu'où le doute sur la distance laisse encore une taille servir de preuve.
+# Il ne se choisit pas : il se lit dans la table ci-dessus. La frontière la plus
+# serrée qu'on y franchit est soixante centimètres — un motif sur la chaussée —
+# contre quatre-vingt-dix — quelqu'un debout, un facteur un et demi. Pour qu'une
+# mesure ne puisse pas la traverser toute seule, son incertitude doit rester
+# sous (1,5 − 1) / (1,5 + 1), soit un cinquième. Aux deux tiers de cette image
+# elle y est ; le tiers qui reste est l'avant-plan, vu en rasant depuis deux
+# mètres de haut, où une distance ne veut rien dire et une taille non plus.
+SIZE_DOUBT_MAX = 0.2
 # How long something has to burn before the word "incendie" is used. The width
 # of a plume says nothing: smoke spreads over a hundred metres in a minute
 # above a fire the size of a car. How long it has held does say something.
@@ -113,6 +122,10 @@ class Observation:
     rise_ms: float = 0.0
     width_m: float = 0.0
     height_m: float = 0.0
+    # Ce que valent les deux lignes du dessus, en part d'elles-mêmes. Gardée
+    # dans l'observation et non appliquée avant elle : sur disque on veut
+    # pouvoir revivre la décision, y compris ce qui l'a fait renoncer.
+    distance_doubt: float = 0.0
     area_grow: float = 1.0
     min_travel: float = 0.03
     max_sky_area: float = 0.02
@@ -507,6 +520,21 @@ def _azimuth(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def decide(obs: Observation) -> Decision:
+    # Une taille en mètres est une taille en pixels multipliée par une distance,
+    # et cette distance n'est qu'une altitude divisée par une pente : elle ne
+    # vaut jamais mieux que le sol sous elle. Là où la caméra rase son
+    # avant-plan, trois mètres d'incertitude dans le modèle d'altitude en
+    # déplacent la moitié, et la cabane relevée à cinquante-neuf mètres s'y lit
+    # à quatre-vingt-trois. Mesurer quand même et nommer là-dessus, c'est
+    # inventer. Zéro est déjà, partout dans ce fichier, le mot pour « on ne
+    # sait pas » : chaque règle de taille est gardée par un « 0 < » ou un « > ».
+    #
+    # La vitesse de montée suit, car elle se calcule sur la même distance. La
+    # perdre veut dire qu'on ne pourra plus écarter un tracteur au prétexte
+    # qu'il monte trop lentement — donc, dans le doute, on laissera passer un
+    # feu plutôt que de le refuser sur une mesure qui n'en est pas une.
+    if obs.distance_doubt > SIZE_DOUBT_MAX:
+        obs = replace(obs, width_m=0.0, height_m=0.0, rise_ms=0.0)
     conf = obs.min_conf or {"bus": 0.45, "bus_unnamed": 0.6, "car": 0.4}
     if obs.fogged and obs.period != "day":
         # Once the crest of the Ventoux is out of the picture, the watcher

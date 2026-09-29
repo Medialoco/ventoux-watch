@@ -2150,6 +2150,42 @@ class FogTests(unittest.TestCase):
         ecarts.sort()
         self.assertLess(ecarts[len(ecarts) // 2], 0.10)
 
+    def test_a_size_read_where_the_ground_is_unknown_is_not_used(self):
+        """Where the distance is a guess, the size is one too, and it is dropped.
+
+        The same shape, judged twice: once where the camera looks down on solid
+        ground, once in the near field it sees edge-on. The first is refused
+        for covering twenty-five metres, which nothing that rolls or walks can
+        be. The second is not refused on that ground at all — not because the
+        shape changed, but because there is no longer a measurement to refuse
+        it with.
+        """
+        from watcher.naming import SIZE_DOUBT_MAX, Observation, decide
+
+        large = dict(zone="road", travel=0.2, width_m=25.0, height_m=3.0, surface="road")
+        sur = decide(Observation(**large, distance_doubt=0.0))
+        self.assertEqual(sur.reason, "oversized")
+        self.assertEqual(sur.label, "Tache trop large")
+
+        doute = decide(Observation(**large, distance_doubt=SIZE_DOUBT_MAX + 0.01))
+        self.assertNotEqual(doute.reason, "oversized")
+
+        # La vitesse de montée s'en va avec, puisqu'elle se calcule sur cette
+        # même distance. Le tracteur du 28 septembre n'est écarté que parce que
+        # son panache monte à un demi-mètre par seconde là où une fumée portée
+        # par sa chaleur en fait plusieurs. Mesuré sur un sol inconnu, ce
+        # demi-mètre par seconde n'est plus une mesure, et l'écarter là-dessus
+        # serait refuser un feu sur une preuve qu'on n'a pas. On penche donc du
+        # côté où l'on se trompe en alertant, pas du côté où l'on se tait.
+        tracteur = dict(zone="slope", period="day", width_m=7.0, duration_s=6.0,
+                        travel=0.03, rise_ms=0.55, warm_ratio=0.0, smoke_ratio=0.426,
+                        rise=0.0278, area_grow=2.8, fire_sustain_s=5.0, fire_grow=1.6,
+                        fire_warm=0.08, fire_smoke=0.35, fire_rise=0.008)
+        self.assertEqual(decide(Observation(**tracteur, distance_doubt=0.0)).reason, "machine")
+        doute = decide(Observation(**tracteur, distance_doubt=0.5))
+        self.assertNotEqual(doute.reason, "machine")
+        self.assertEqual(doute.type, "fire")
+
     def test_the_map_says_where_its_distances_are_worthless(self):
         """Knowing a distance is not enough; one must know what it is worth.
 

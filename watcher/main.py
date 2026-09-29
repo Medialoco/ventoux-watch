@@ -281,6 +281,9 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
     aircraft = sky.ask(track.updated, cfg["opensky"]["match_window_s"]) if _crossed_sky(track, cfg) else []
     width_m = scene_map.metres_across(box) if box else 0.0
     height_m = scene_map.metres_tall(box) if box else 0.0
+    # Lu au pied de la boîte, comme la distance elle-même : c'est là que la
+    # chose touche le sol, et c'est le sol qui porte toute la mesure.
+    doubt = scene_map.doubt_at(min(0.999, box[0] + box[2] / 2), min(0.999, box[1] + box[3])) if box else 0.0
     # La même chose mesurée sur la boîte du modèle plutôt que sur la tache.
     # Notée sans être encore employée : la décision attendra qu'on ait de quoi
     # comparer les deux sur de vrais passages.
@@ -307,6 +310,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         rise_ms=_climb(track.rise, height_m, box[3] if box else 0.0, duration),
         width_m=width_m,
         height_m=height_m,
+        distance_doubt=doubt,
         area_grow=track.area_grow,
         min_travel=cfg["min_travel"],
         max_sky_area=cfg["max_sky_area"],
