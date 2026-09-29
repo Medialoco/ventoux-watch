@@ -164,22 +164,56 @@ honnête plutôt qu'une distance mesurée un jour de beau temps.
 
 ## Étape 4 — Le direct habillé
 
-Un flux YouTube où l'on voit les détections se poser sur l'image.
+Un flux YouTube en continu, l'image de la webcam avec les détections dessinées
+dessus. C'est la sortie visible du reste, et c'est aussi ce qui rend le projet
+montrable à quelqu'un qui n'ouvrira jamais un fichier JSON.
 
-Techniquement, c'est un autre métier que la veille : la veille lit une image
-par seconde, un direct doit ré-encoder vingt-cinq images par seconde en
-permanence. Deux points de réalité à ne pas découvrir en route :
+### Comment ça marche
 
-- **Le Raspberry Pi 5 n'a pas d'encodeur H.264 matériel.** Contrairement au
-  Pi 4, il a perdu cet accélérateur. Un 1080p25 en x264 logiciel sur le Pi, en
-  plus de la veille, n'est pas raisonnable ; 720p ou un encodage sur une autre
-  machine le sont.
-- Les boîtes doivent être posées sur le flux sans attendre la décision, qui
-  prend plusieurs secondes — donc un léger différé, ou des boîtes qui
-  apparaissent après coup.
+La veille ne peut pas faire ce travail : elle lit **une image par seconde** et
+met plusieurs secondes à décider, puisqu'une piste demande au moins trois
+images. Un direct doit sortir vingt-cinq images par seconde sans jamais
+s'arrêter. Ce sont deux métiers, donc deux processus.
 
-À faire en dernier : un direct qui montre de mauvaises détections est pire que
-pas de direct.
+Le montage tient en quatre pièces :
+
+1. Un lecteur qui tire le flux HLS en continu et le garde dans un tampon de
+   vingt à trente secondes.
+2. La veille, inchangée, qui écrit ses boîtes au fil de l'eau dans un fichier
+   d'accompagnement : instant, rectangle, nom, sûreté.
+3. Un habilleur qui sort du tampon l'image d'il y a vingt secondes, y pose les
+   boîtes dont l'instant correspond, et l'encode.
+4. Une poussée RTMP vers YouTube.
+
+**Le différé est ce qui rend la chose possible.** Sans lui, il faudrait poser
+une boîte avant de savoir ce qu'elle entoure. Vingt secondes de retard sur une
+montagne ne coûtent rien et laissent à la décision le temps d'être prise ;
+elles permettent même de dessiner la boîte sur toute la durée du passage, y
+compris les secondes d'avant, puisqu'au moment où on encode l'affaire est
+close.
+
+### Ce qui coince, et qu'il vaut mieux savoir avant
+
+- **Le Raspberry Pi 5 n'a pas d'encodeur H.264 matériel.** Le Pi 4 en avait
+  un, le 5 l'a perdu. Il reste l'encodage logiciel sur ses quatre cœurs, en
+  plus de la veille et du modèle. Le 720p est la cible raisonnable ; le 1080p
+  demande d'être mesuré avant d'être promis, et une autre machine fera
+  peut-être mieux ce travail-là.
+- **Le flux n'est pas le nôtre.** Il appartient à Vision Environnement.
+  Rediffuser en continu sur YouTube n'est pas la même chose que lire une image
+  par seconde pour son propre compte, et cela se demande. Le site ne les
+  crédite d'ailleurs nulle part aujourd'hui, ce qui est à corriger quoi qu'il
+  arrive.
+- **Un direct qui montre de mauvaises détections est pire que pas de direct.**
+  D'où l'ordre : après l'étape 2, pas avant.
+
+### Une première marche, bien plus courte
+
+Avant le direct, le même habillage sur un enregistrement : **un résumé du jour
+en accéléré, boîtes comprises**, fabriqué une fois par nuit. Cela vérifie tout
+le montage — tampon, correspondance des instants, dessin, encodage — sans rien
+diffuser en continu ni rien demander à personne. Si le résumé est beau et
+juste, le direct n'est plus qu'une question de tuyau.
 
 ## Est-ce que ça a déjà été fait ?
 
