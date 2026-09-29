@@ -32,15 +32,25 @@ if lsblk -no MOUNTPOINT "$DISQUE" | grep -qx "/"; then
 fi
 [ "$AVEU" = "EFFACER" ] || { echo "Refus : confirmation manquante." >&2; exit 1; }
 
-dire "Liaison USB"
-# UASP fait la différence entre un disque utilisable et un disque poussif. Le
-# pilote doit être « uas », pas « usb-storage ».
-if lsusb -t | grep -q "Driver=uas"; then
-    echo "UASP actif."
-else
-    echo "ATTENTION : le disque est en usb-storage, sans UASP. Débit divisé"
-    echo "par trois environ, et charge processeur plus élevée."
-fi
+dire "Liaison"
+case "$DISQUE" in
+    /dev/nvme*)
+        # Branché sur le connecteur PCIe du Pi 5, par une nappe et une carte
+        # fille : il n'y a pas de port M.2 sur la carte elle-même.
+        echo "NVMe sur PCIe. UASP ne s'applique pas."
+        sudo nvme list 2>/dev/null | tail -2 || lsblk -o NAME,SIZE,MODEL "$DISQUE"
+        ;;
+    *)
+        # UASP fait la différence entre un disque utilisable et un disque
+        # poussif. Le pilote doit être « uas », pas « usb-storage ».
+        if lsusb -t | grep -q "Driver=uas"; then
+            echo "UASP actif."
+        else
+            echo "ATTENTION : le disque est en usb-storage, sans UASP. Débit divisé"
+            echo "par trois environ, et charge processeur plus élevée."
+        fi
+        ;;
+esac
 
 dire "Partition et système de fichiers"
 sudo systemctl stop ventoux-watch 2>/dev/null || true
