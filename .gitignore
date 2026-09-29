@@ -22,6 +22,10 @@ _site/
 # Réponses OpenStreetMap et altitudes, refaites par scripts/build_scene.py
 data/osm/
 data/watch.lock
+# Créé par mkfs le jour où data/ est devenu une partition à lui seul, appartient
+# à root et reste illisible au veilleur. Sans cette ligne, chaque git status du
+# service se plaint d'un répertoire qu'il ne peut pas ouvrir.
+data/lost+found/
 
 # Jeu d'essai pour comparer les modeles, refait a la demande
 data/crops/

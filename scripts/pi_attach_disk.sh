@@ -54,6 +54,18 @@ esac
 
 dire "Partition et système de fichiers"
 sudo systemctl stop ventoux-watch 2>/dev/null || true
+# À partir d'ici la veille est à terre, et elle doit se relever quoi qu'il
+# arrive ensuite — y compris si ce script meurt sur une ligne qui ne fait que
+# rendre compte. Le 30 septembre un « git status | head -3 » a suffi : head a
+# fermé le tuyau, git a reçu SIGPIPE, pipefail en a fait un échec et set -e a
+# coupé trois lignes avant la relance. Le commentaire qui promettait que le
+# veilleur serait relancé ici était devenu injoignable, et la webcam est restée
+# sans personne jusqu'à ce qu'on pense à regarder.
+#
+# Les données sont sûres dans les deux cas : ou le déménagement n'a pas eu lieu
+# et data/ est l'original, ou il a été vérifié avant que rien ne soit effacé.
+# Une veille debout sur l'un ou l'autre vaut mieux qu'une veille à terre.
+trap 'sudo systemctl start ventoux-watch 2>/dev/null || true' EXIT
 sudo umount "${DISQUE}"* 2>/dev/null || true
 sudo wipefs -a "$DISQUE"
 sudo sgdisk -Z -n 1:0:0 -t 1:8300 -c 1:ventoux "$DISQUE"
@@ -128,13 +140,17 @@ sudo fstrim -v "$RACINE/data" || echo "TRIM non supporté par ce boîtier."
 dire "État"
 df -h "$RACINE/data" | tail -1
 echo "Après déménagement : $(compte "$RACINE/data") fichiers, $(pesee "$RACINE/data") octets"
-git -C "$RACINE" status --porcelain -- data | head -3
-echo "Si git ne signale rien ci-dessus, le déménagement est transparent."
+# Sans head, et le tout capturé : c'est cette ligne-là qui a mis la veille par
+# terre, et un état des lieux n'a pas à pouvoir tuer ce dont il rend compte.
+ECART="$(git -C "$RACINE" status --porcelain -- data 2>/dev/null || true)"
+printf '%s\n' "${ECART:-Rien à signaler : le déménagement est transparent pour git.}" | head -3
 
-# Le veilleur est relancé ici, et non laissé à la main de qui lira. Une veille
-# arrêtée ne se signale pas toute seule : c'est précisément ainsi qu'on perd
-# des heures sans s'en apercevoir, et une migration de données est un des rares
-# moments où l'on arrête tout en croyant n'en avoir que pour une minute.
+# Le veilleur est relancé par le garde-fou posé plus haut, qui se déclenche
+# aussi bien après une réussite qu'après un échec. Ici on ne fait que dire ce
+# qu'il en est advenu.
+trap - EXIT
 sudo systemctl start ventoux-watch
 sleep 5
-echo "Veilleur : $(systemctl is-active ventoux-watch)"
+ETAT="$(systemctl is-active ventoux-watch || true)"
+echo "Veilleur : $ETAT"
+[ "$ETAT" = "active" ] || echo "ATTENTION : la veille n'est pas repartie. Personne ne regarde la webcam."
