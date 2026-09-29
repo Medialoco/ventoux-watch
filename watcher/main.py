@@ -303,13 +303,14 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         # the frame has no true size, and the footprint measured from it is a
         # floor rather than a measurement.
         "clipped": bool(obs.clipped),
-        # La clarté de la tache rapportée au fond qu'elle recouvre, et ce qu'il
-        # est advenu du dessin dessous. Une ombre et la flaque des phares
-        # changent la première sans toucher au second ; une chose qui passe
-        # efface le dessin. Noté et pas encore jugé : le seuil se mesurera sur
-        # de vrais passages, comme celui de la montée en mètres par seconde.
+        # La clarté de la tache rapportée au fond qu'elle recouvre, et la part
+        # de la tache où ce fond se voit encore. Une ombre et la flaque des
+        # phares changent la première en laissant la seconde près de un ; une
+        # chose qui passe cache ce qu'il y a derrière et la fait tomber. Noté et
+        # pas encore jugé : le seuil se mesurera sur de vrais passages, comme
+        # celui de la montée en mètres par seconde avant lui.
         "shade": round(track.shade, 3),
-        "texture": round(track.texture, 3),
+        "kept": round(track.texture, 3),
         "area_ratio": round(obs.area_ratio, 5),
         "duration_s": round(max(0.0, track.updated - track.started), 1),
         "frames": track.frames,

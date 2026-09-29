@@ -137,6 +137,48 @@ POOL_WIDE_M = 6.0
 LAMP_BGR = (170.0, 220.0, 245.0)
 
 
+def beam(frame: np.ndarray, frm: tuple[float, float], to: tuple[float, float],
+         scale: tuple[float, float]) -> np.ndarray:
+    """The pool of light the headlights throw on the tarmac, and nothing else.
+
+    Drawable on its own because on its own is how it does its damage. At
+    02:51 on 29 September the box went to the lit island and not to the car:
+    the sweeping beam broke the scene into fifteen one-frame blobs while the
+    long-lived track sat on the tarmac it had lit. The lit road is a bigger and
+    brighter shape than the car carrying it, and the background subtractor has
+    no reason to prefer the car.
+
+    What the light cannot do is hide the road. Whatever the tarmac's grain was,
+    it is still there underneath, brighter; and that is what tells this apart
+    from a thing that passed.
+    """
+    height, width = frame.shape[:2]
+    across, _ = scale
+    if not across > 0:
+        raise ValueError("Une flaque de phares se dessine en mètres : il faut l'échelle du terrain")
+    wide_px = across * width
+    out = frame.astype(np.float32)
+    glow = np.zeros((height, width), dtype=np.float32)
+    base_x, base_y = frm[0] * width, frm[1] * height
+    far_x, far_y = to[0] * width, to[1] * height
+    steps = 18
+    for index in range(steps):
+        along = (index + 1) / steps
+        x = base_x + (far_x - base_x) * along
+        y = base_y + (far_y - base_y) * along
+        # The pool widens as it goes and fades with the square of the way, as
+        # light does.
+        radius = max(1.0, (POOL_WIDE_M * 0.5) * wide_px * (0.4 + along))
+        cv2.circle(glow, (int(x), int(y)), int(radius), float((1.0 - along) ** 2), -1)
+    blur = max(3, int(POOL_WIDE_M * wide_px / 4) | 1)
+    glow = cv2.GaussianBlur(glow, (blur, blur), 0)
+    glow = np.clip(glow, 0, 1)[:, :, None] * 0.8
+    # Added to what is there rather than painted over it. Light falling on a
+    # road brightens the road; it does not replace it with a flat pale shape,
+    # and drawing it that way would erase the grain this is all about.
+    return np.clip(out + (255.0 - out) * glow, 0, 255).astype(np.uint8)
+
+
 def car(
     frame: np.ndarray,
     spot: tuple[float, float],
@@ -169,21 +211,7 @@ def car(
     out = frame.astype(np.float32)
 
     if pool_to is not None:
-        glow = np.zeros((height, width), dtype=np.float32)
-        far_x, far_y = pool_to[0] * width, pool_to[1] * height
-        steps = 18
-        for index in range(steps):
-            along = (index + 1) / steps
-            x = base_x + (far_x - base_x) * along
-            y = base_y + (far_y - base_y) * along
-            # The pool widens as it goes and fades with the square of the way,
-            # as light does.
-            radius = max(1.0, (POOL_WIDE_M * 0.5) * wide_px * (0.4 + along))
-            cv2.circle(glow, (int(x), int(y)), int(radius), float((1.0 - along) ** 2), -1)
-        blur = max(3, int(POOL_WIDE_M * wide_px / 4) | 1)
-        glow = cv2.GaussianBlur(glow, (blur, blur), 0)
-        glow = np.clip(glow, 0, 1)[:, :, None]
-        out = out * (1 - glow * 0.8) + np.float32(215) * glow * 0.8
+        out = beam(out, spot, pool_to, scale).astype(np.float32)
 
     half = CAR_WIDE_M * wide_px / 2
     tall = CAR_TALL_M * tall_px

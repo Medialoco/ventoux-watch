@@ -93,13 +93,14 @@ class Track:
 
         Le premier nombre est le rapport des clartés : au-dessous de un la
         tache est plus sombre que le fond qu'elle recouvre, au-dessus elle est
-        plus claire. Le second dit ce qu'il est advenu du dessin en dessous.
+        plus claire. Le second est la part de la tache où le décor d'avant se
+        voit encore.
 
         C'est là qu'est la séparation. Une ombre qui passe et la flaque des
         phares changent la clarté sans toucher au dessin : le muret reste le
         muret, ses pierres sont à leur place, simplement plus sombres ou plus
-        claires. Une chose qui passe, elle, cache ce qu'il y a derrière, et le
-        dessin d'en dessous disparaît avec.
+        claires, et la part vaut un. Une chose qui passe cache ce qu'il y a
+        derrière, et la part tombe à ce qu'elle laisse dépasser.
 
         Pris sur la vue où la tache était la plus grande, faute de quoi une
         voiture jugée sur l'image où elle n'était encore qu'un coin d'aile
@@ -281,14 +282,64 @@ def _lighting(small, behind, bbox, scale: float) -> tuple[float, float]:
     now = cv2.cvtColor(small[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.float32)
     was = cv2.cvtColor(behind[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.float32)
     shade = float(now.mean() / max(1.0, was.mean()))
-    a, b = now - now.mean(), was - was.mean()
-    spread = float(np.sqrt((a * a).sum() * (b * b).sum()))
-    if spread < 1e-6:
-        # Un fond parfaitement uni n'a pas de dessin à conserver, et la
-        # question ne se pose pas : sans grain, rien ne distingue une ombre
-        # d'un objet mat de la même clarté.
-        return shade, 0.0
-    return shade, float((a * b).sum() / spread)
+    return shade, _kept(now, was)
+
+
+# Le côté d'un carreau, en pixels de l'image réduite. Mesurer la corrélation
+# sur la tache entière ne marche pas contre une lumière structurée : la flaque
+# des phares a son propre dégradé, très fort, qui écrase le grain du bitume et
+# fait tomber la corrélation d'ensemble à 0,19 alors que le bitume est toujours
+# là-dessous. Sur un carreau, en revanche, l'éclairement est à peu près
+# constant, et la question redevient celle qu'on voulait poser.
+TILE = 4
+# À partir de quoi le dessin d'un carreau est tenu pour survivant. La
+# corrélation d'un carreau inchangé sous une autre lumière vaut près de un ;
+# d'un carreau caché par une carrosserie, elle tourne autour de zéro. La moitié
+# est loin des deux.
+KEPT = 0.5
+
+
+def _kept(now: np.ndarray, was: np.ndarray) -> float:
+    """La part de la tache où le décor d'avant se voit encore.
+
+    Un carreau à la fois, parce qu'une lumière peut être structurée mais reste
+    lisse : sur quatre pixels de côté elle se réduit à un gain, et un gain ne
+    touche pas à la corrélation. Une chose qui passe, elle, cache ce qui est
+    derrière, et les carreaux qu'elle couvre perdent le dessin.
+
+    La part plutôt que la moyenne, car c'est la question posée : une voiture qui
+    n'occupe que la moitié de sa tache laisse l'autre moitié intacte, et une
+    moyenne la dirait à demi transparente au lieu de dire qu'une moitié est
+    cachée.
+
+    Zéro quand rien ne peut être jugé — un fond sans grain n'a pas de dessin à
+    conserver — ce qui veut dire « je ne sais pas » et non « c'est un objet ».
+    """
+    tiles = 0
+    kept = 0
+    for top in range(0, now.shape[0] - TILE + 1, TILE):
+        for left in range(0, now.shape[1] - TILE + 1, TILE):
+            a = now[top:top + TILE, left:left + TILE]
+            b = was[top:top + TILE, left:left + TILE]
+            a, b = a - a.mean(), b - b.mean()
+            grain = float(np.sqrt((b * b).sum()))
+            if grain < 1e-3:
+                # Rien à conserver ici : ce carreau du fond n'avait pas de
+                # dessin, et il ne peut donc rien dire dans un sens ni l'autre.
+                continue
+            tiles += 1
+            trace = float(np.sqrt((a * a).sum()))
+            if trace < 1e-3:
+                # Le fond avait du grain et il n'en reste rien : c'est la preuve
+                # la plus nette qu'une chose s'est mise devant. Une carrosserie
+                # unie tombe exactement là, et sauter ces carreaux la faisait
+                # passer pour un décor intact.
+                continue
+            if float((a * b).sum() / (grain * trace)) >= KEPT:
+                kept += 1
+    if not tiles:
+        return 0.0
+    return kept / tiles
 
 
 def _resize_width(frame: np.ndarray, width: int) -> tuple[np.ndarray, float]:

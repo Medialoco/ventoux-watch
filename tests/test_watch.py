@@ -1361,11 +1361,19 @@ class FogTests(unittest.TestCase):
         self.assertGreater(shade, 1.2, "la flaque des phares éclaircit")
         self.assertGreater(texture, 0.9, "et laisse le dessin intact")
 
-        # Une carrosserie : une surface à elle, qui cache le mur.
-        car = wall.copy()
-        car[10:50, 15:75] = 80
-        shade, texture = _lighting(car, wall, box, 1.0)
-        self.assertLess(texture, 0.5, f"un objet efface le dessin, or {texture:.2f}")
+        # Une carrosserie : une surface à elle, qui cache le mur. Le nombre rendu
+        # est une part — celle de la tache où le décor se voit encore — et il
+        # doit donc suivre ce que l'objet couvre, ni plus ni moins.
+        plein = wall.copy()
+        plein[:] = 80
+        shade, texture = _lighting(plein, wall, box, 1.0)
+        self.assertEqual(texture, 0.0, "une chose qui remplit la boîte ne laisse rien voir")
+
+        moitie = wall.copy()
+        moitie[:, :45] = 80
+        shade, texture = _lighting(moitie, wall, box, 1.0)
+        self.assertAlmostEqual(texture, 0.5, delta=0.1,
+                               msg=f"la moitié cachée devrait rendre une moitié, or {texture:.2f}")
 
     def test_the_measure_survives_the_shrink_the_watcher_really_does(self):
         """La même mesure, mais par le vrai chemin, sur une image pleine taille.
@@ -1412,6 +1420,78 @@ class FogTests(unittest.TestCase):
         shade, texture = _lighting(darker, plain, (0.0, 0.0, 40.0, 40.0), 1.0)
         self.assertLess(shade, 0.7)
         self.assertEqual(texture, 0.0)
+
+    def test_the_headlight_pool_and_the_car_do_not_read_alike(self):
+        """Le cas du 29 septembre, posé sur la mesure qui doit le trancher.
+
+        À 02 h 51 le rectangle est allé sur l'îlot éclairé et non sur la
+        voiture : le faisceau qui balayait a fait quinze taches d'une image
+        pendant que la piste durable se tenait sur le bitume qu'il éclairait.
+        La lumière n'a pourtant pas caché le bitume — son grain est toujours
+        là, en plus clair — tandis que la carrosserie, elle, le cache.
+
+        Les deux sont donc dessinés sur le même décor, l'un après l'autre, et
+        passés par le vrai détecteur. Aucun seuil n'est posé ici : ce qui est
+        éprouvé, c'est que les deux ne se ressemblent pas.
+        """
+        from watcher.simulate import beam, car, sensor_noise
+
+        scene, run = _road_run(far_m=90.0, near_m=45.0, steps=7)
+        rng = np.random.default_rng(3)
+        # Du bitume de nuit : sombre, mais pas uni. Un fond sans grain rendrait
+        # zéro, c'est-à-dire « je ne sais pas », et l'épreuve ne dirait rien.
+        gros = rng.integers(26, 54, size=(108, 192, 3), dtype=np.uint8)
+        nuit = cv2.resize(gros, (1920, 1080), interpolation=cv2.INTER_NEAREST)
+
+        def lire(dessine):
+            detecteur = MotionDetector(ZONES, motion_width=640, min_track_frames=2, warmup_frames=4)
+            for index in range(8):
+                detecteur.step(sensor_noise(nuit, seed=index), index)
+            vus = []
+            for index, spot in enumerate(run):
+                image = dessine(sensor_noise(nuit, seed=40 + index), spot, index)
+                detecteur.step(image, 20 + index)
+                vus.extend((piste.shade, piste.texture) for piste in detecteur.tracks
+                           if piste.texture != 0.0)
+            return vus
+
+        def ombre(fond, spot, index):
+            """Un pan d'ombre qui traverse, comme celle d'un nuage.
+
+            Local, pas global : une baisse de lumière sur toute l'image est
+            déjà écartée plus haut, où plus de 35 % qui change vaut pour un
+            changement de jour. Ce qui reste à nommer, c'est le bord d'ombre
+            qui ne couvre qu'un morceau du décor.
+            """
+            out = fond.copy()
+            gauche = int((0.2 + index * 0.06) * fond.shape[1])
+            pan = out[400:700, gauche:gauche + 260].astype(np.float32) * 0.55
+            out[400:700, gauche:gauche + 260] = pan.astype(np.uint8)
+            return out
+
+        flaque = lire(lambda fond, spot, index: beam(
+            fond, spot, run[min(len(run) - 1, index + 3)], scene.share_per_metre(*spot)))
+        carrosserie = lire(lambda fond, spot, index: car(
+            fond, spot, scene.share_per_metre(*spot), body=70))
+        pan = lire(ombre)
+
+        self.assertTrue(flaque, "la flaque devrait faire au moins une tache")
+        self.assertTrue(carrosserie, "la voiture devrait faire au moins une tache")
+        self.assertTrue(pan, "l'ombre devrait faire au moins une tache")
+
+        # L'ombre assombrit sans rien cacher : c'est le cas franc, et celui qui
+        # pèse le plus lourd dans les 7 607 refus d'une journée.
+        self.assertLess(min(couple[0] for couple in pan), 0.8)
+        self.assertGreater(max(couple[1] for couple in pan), 0.85,
+                           "une ombre ne cache pas le décor qu'elle traverse")
+
+        # La flaque est le cas dur : le faisceau a son propre dégradé, très
+        # fort, et il crame le bitume en son cœur. Elle en garde tout de même
+        # nettement plus que la carrosserie, qui bouche ce qu'il y a derrière.
+        garde = max(couple[1] for couple in flaque)
+        cache = min(couple[1] for couple in carrosserie)
+        self.assertGreater(garde, cache + 0.25,
+                           f"lumière {garde:.2f} et carrosserie {cache:.2f} se ressemblent trop")
 
     def test_a_car_coming_towards_us_is_not_called_almost_still(self):
         """The fault of 29 September at 02:51, put in front of the watcher.
