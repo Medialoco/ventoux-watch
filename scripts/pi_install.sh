@@ -168,11 +168,35 @@ OnUnitActiveSec=2min
 WantedBy=timers.target
 EOF
 sudo systemctl daemon-reload
-sudo systemctl enable ventoux-battement.timer >/dev/null
+# --now, et pas seulement enable : sans lui la minuterie n'est armée qu'au
+# prochain démarrage. Elle est restée neuf heures « enabled » et inactive sur
+# la première installation, pendant lesquelles le veilleur a passé trente-huit
+# minutes à ne rien regarder sans que rien ne le relance.
+sudo systemctl enable --now ventoux-battement.timer >/dev/null
 
 dire "État"
 if [ ! -f "$RACINE/config/local.json" ]; then
     echo "config/local.json absent : les identifiants OpenSky n'ont pas encore"
     echo "été copiés depuis le Mac. Le veilleur tournera sans les avions."
 fi
+
+# Un garde-fou installé n'est pas un garde-fou armé. La distinction n'a rien
+# d'académique : la minuterie du battement a passé neuf heures « enabled » et
+# inactive sans que personne ne le voie, précisément pendant que le veilleur
+# cessait de regarder. Le script dit donc ce qui protège à cet instant, et non
+# ce qu'il a écrit sur le disque.
+dire "Garde-fous"
+if [ "$(systemctl is-active ventoux-battement.timer)" = "active" ]; then
+    echo "Battement     : armé, vérification toutes les deux minutes."
+else
+    echo "Battement     : INACTIF. Un veilleur figé ne serait pas relancé."
+fi
+if [ -e /dev/watchdog ]; then
+    echo "Chien de garde: armé, redémarrage après quinze secondes de gel."
+else
+    echo "Chien de garde: EN ATTENTE DE REDÉMARRAGE. Un gel du noyau resterait"
+    echo "                sans réponse jusqu'à une intervention sur place."
+fi
+
+echo
 echo "Installé dans $RACINE. Démarrer avec : sudo systemctl start ventoux-watch"
