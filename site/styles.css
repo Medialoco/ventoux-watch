@@ -525,6 +525,11 @@ tr.wrong .event { text-decoration: line-through; }
    sur un avis, et la retirer ôterait le moyen de se corriger. */
 .card.judged { opacity: 0.5; }
 
+/* Une tache écartée : la question posée dessous n'est pas la même, et la carte
+   doit le dire avant qu'on ait lu les boutons. */
+.card.missed .guess { font-weight: 400; font-style: italic; color: var(--muted); }
+.card.missed { border-style: dashed; }
+
 .verdict {
   display: flex;
   flex-wrap: wrap;

@@ -1610,6 +1610,74 @@ class FogTests(unittest.TestCase):
         style = (root / "site" / "styles.css").read_text(encoding="utf-8")
         self.assertIn("tr.wrong", style)
 
+    def test_what_was_thrown_away_keeps_its_rare_motives(self):
+        """Un échantillon par motif, pas un échantillon en bloc.
+
+        Quarante-neuf mille refus pour quatre cent dix-huit publications : tout
+        garder ferait cent cinquante mégaoctets de vignettes par jour. Mais le
+        renseignement est dans la variété des motifs et non dans leur nombre —
+        six mille « rien de reconnu » disent ce que dit le premier. Pris en
+        bloc, les motifs qui reviennent toutes les secondes mangeraient la place
+        des rares, et ce sont justement les rares qui ont des chances d'être des
+        fautes : « panache de nuit » n'est arrivé qu'une fois en cinquante mille.
+        """
+        from watcher.main import _worth_keeping
+
+        cfg = {"sample_refused_s": 600}
+        vus, instant = {}, 1000.0
+        self.assertTrue(_worth_keeping("none", cfg, vus, instant))
+        # Le motif bavard est muselé jusqu'à la prochaine fenêtre...
+        self.assertFalse(_worth_keeping("none", cfg, vus, instant + 5))
+        # ...mais il n'a pas pris la place du motif rare arrivé juste après.
+        self.assertTrue(_worth_keeping("night_plume", cfg, vus, instant + 5))
+        self.assertTrue(_worth_keeping("none", cfg, vus, instant + 601))
+
+        # Et on doit pouvoir tout couper d'un seul réglage.
+        self.assertFalse(_worth_keeping("none", {"sample_refused_s": 0}, {}, instant))
+
+    def test_a_refused_patch_never_takes_a_published_reading_s_place(self):
+        """Un refus ne rejoint aucun passage.
+
+        Les entrées voisines d'une même zone sont regroupées en un passage, et
+        la meilleure lecture l'emporte. Une tache écartée tombant dans la même
+        minute qu'une voiture y serait versée comme les autres : l'historique
+        publié dirait « rien de reconnu » là où il disait « voiture ».
+        """
+        from watcher.store import open_passage
+
+        voiture = {"id": "a", "t": "2026-09-29T08:00:00Z", "type": "vehicle",
+                   "label": "Voiture", "zone": "road"}
+        ecartee = {"id": "b", "t": "2026-09-29T08:00:20Z", "type": "missed",
+                   "label": "Rien de reconnu", "zone": "road"}
+        self.assertIsNone(open_passage([voiture], ecartee),
+                          "un refus ne doit rejoindre aucun passage")
+        autre = {"id": "c", "t": "2026-09-29T08:00:30Z", "type": "vehicle",
+                 "label": "Voiture", "zone": "road"}
+        self.assertIsNone(open_passage([ecartee], autre),
+                          "et n'en doit héberger aucun")
+        # La règle ne vaut que pour les refus : deux vraies lectures voisines se
+        # regroupent toujours, sans quoi chaque voiture ferait trois lignes.
+        self.assertIsNotNone(open_passage([voiture], autre))
+
+    def test_a_miss_is_asked_what_was_missed(self):
+        """La question change de sens sur une tache écartée.
+
+        Sur une publication, démentir veut dire « ce n'était pas cela ». Sur un
+        refus, cela veut dire « il n'y avait rien », donc que le refus avait
+        raison. Le même bouton, deux phrases opposées.
+        """
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "site" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('const deny = event.type === "missed" ? "nothing" : "wrong";', script)
+        for mot in ('nothing: "Nothing there"', 'nothing: "Rien"'):
+            self.assertIn(mot, script)
+        # Et chaque motif de refus doit avoir ses mots dans les deux langues,
+        # sans quoi un relecteur anglais lirait « against_the_ground ».
+        from watcher.naming import REFUSAL_WORDS
+        connus = set(re.findall(r'^  "(.+?)": ', script, re.M))
+        absents = sorted(set(REFUSAL_WORDS.values()) - connus)
+        self.assertFalse(absents, f"sans traduction : {absents}")
+
     def test_a_decision_can_be_lived_through_again(self):
         """Une observation doit survivre à l'aller-retour par le disque.
 
@@ -1665,19 +1733,26 @@ class FogTests(unittest.TestCase):
             for ligne in chemin.read_text(encoding="utf-8").splitlines():
                 if ligne.strip():
                     row = json.loads(ligne)
-                    vus[row["id"]] = row["seen"]
+                    vus[row["id"]] = row
 
         evenements = json.loads((root / "data/events.json").read_text(encoding="utf-8"))["events"]
         fautes = []
         rejoues = 0
         for entree in evenements:
-            seen = vus.get(entree.get("id"))
+            garde = vus.get(entree.get("id"))
             # Seulement ce qui a été tranché, et seulement ce dont on a gardé
             # l'observation. Une entrée non relue n'a pas de vérité à opposer.
-            if not seen or entree.get("review") != "accepted":
+            if not garde or entree.get("review") != "accepted":
+                continue
+            # Et pas ce que la mémoire du cadrage a repris après coup : son
+            # verdict tient à un compteur par cellule qui n'est pas dans
+            # l'observation, et decide() seul ne peut pas le retrouver. Le
+            # verdict humain reste utile sur ces taches — il dit que la règle
+            # d'habitude se trompe à cet endroit — mais ailleurs qu'ici.
+            if garde.get("habit"):
                 continue
             rejoues += 1
-            dit = decide(read_observation(seen))
+            dit = decide(read_observation(garde["seen"] if "seen" in garde else garde))
             attendu = entree.get("label", "")
             if dit.label != attendu:
                 fautes.append(f"{entree['id']} : attendu {attendu!r}, obtenu {dit.label!r}")

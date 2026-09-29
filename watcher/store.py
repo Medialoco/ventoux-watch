@@ -119,7 +119,7 @@ class Store:
         with self.candidates_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-    def record_seen(self, event_id: str, seen: dict) -> None:
+    def record_seen(self, event_id: str, seen: dict, *, habit: bool = False) -> None:
         """Garder ce que la décision a eu sous les yeux, à part de l'historique.
 
         À part, parce que le site télécharge events.json à chaque visite et
@@ -128,7 +128,11 @@ class Store:
         permettra de refaire tourner le raisonnement sur un cas dont on sait
         aujourd'hui ce qu'il était vraiment.
         """
-        row = {"id": event_id, "seen": seen}
+        # habit dit que la mémoire du cadrage a repris la main après coup, sur
+        # un compteur par cellule qui ne figure pas dans l'observation. Un tel
+        # verdict ne peut pas être rejoué par decide() seul, et le rejeu doit
+        # le savoir plutôt que de compter une fausse divergence.
+        row = {"id": event_id, "seen": seen, "habit": habit}
         with self.seen_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
@@ -199,10 +203,18 @@ def event_time(event: dict) -> datetime:
 
 
 def open_passage(events: list[dict], event: dict) -> dict | None:
+    # Une tache écartée ne rejoint aucun passage. Ce n'est pas la lecture d'une
+    # chose, c'est le constat qu'on n'a rien su lire : groupée avec la voiture
+    # passée dans la même minute, elle pourrait en prendre la place et
+    # l'historique publié dirait « rien de reconnu » là où il disait « voiture ».
+    if event.get("type") == "missed":
+        return None
     group = passage_group(event.get("zone", ""))
     when = event_time(event)
     newest = None
     for item in events:
+        if item.get("type") == "missed":
+            continue
         if passage_group(item.get("zone", "")) != group:
             continue
         if newest is None or event_time(item) > event_time(newest):

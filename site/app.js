@@ -138,6 +138,7 @@ const COPY = {
     cameraField: "field",
     right: "Right",
     wrong: "Wrong",
+    nothing: "Nothing there",
     carWord: "Car",
     vanWord: "Lorry",
     busWord: "Bus",
@@ -280,6 +281,7 @@ const COPY = {
     cameraField: "champ",
     right: "Juste",
     wrong: "Faux",
+    nothing: "Rien",
     carWord: "Voiture",
     vanWord: "Camion",
     busWord: "Bus",
@@ -345,6 +347,32 @@ const LABELS = {
   "Motif sur la chaussée": "Pattern on the roadway",
   "Décor de l’îlot": "Roundabout island furniture",
   "Lueur dans la météo": "Glow in the weather",
+  // Les motifs de refus, lus sous les photos de la page à trancher.
+  "Rien de reconnu": "Nothing recognised",
+  "Rien de reconnu sur la découpe": "Nothing recognised in the crop",
+  "Rien de reconnu à cet endroit": "Nothing recognised at that spot",
+  "Plusieurs lectures à cet endroit": "Several readings at that spot",
+  "Lecture ambiguë": "Ambiguous reading",
+  "Véhicule non nommé": "Unnamed vehicle",
+  "Immobile dans le ciel": "Still in the sky",
+  "Immobile sur la pente": "Still on the slope",
+  "Toujours au même endroit": "Always at the same spot",
+  "Trop petit": "Too small",
+  "Devant le relief": "Against the hillside",
+  "Au bord de l'image": "At the edge of the frame",
+  "Décor connu": "Known furniture",
+  "Décor de l'îlot": "Roundabout island furniture",
+  "Balise du sommet": "Summit beacon",
+  "Brouillard": "Fog",
+  "Brume": "Haze",
+  "Nuage": "Cloud",
+  "Panache de nuit": "Night plume",
+  "Phares": "Headlights",
+  "Forme inattendue": "Unexpected shape",
+  "Hors chaussée": "Off the road",
+  "Dans le champ": "In the frame",
+  "Horaire": "Timetable",
+  "Tache chaude qui grossit": "Warm patch growing",
 };
 
 let lang = localStorage.getItem("ventoux-lang") === "fr" ? "fr" : "en";
@@ -925,7 +953,11 @@ function card(event) {
   // avis doit être possible, et une carte qui disparaît une fois jugée
   // enlèverait le moyen de se corriger.
   const done = event.review ? ` judged ${event.review}` : "";
-  return `<figure class="card${done}">${picture}`
+  // Une tache écartée porte la marque de son refus : la question qu'on lui pose
+  // n'est pas la même. Sur une publication on demande si le nom est juste ; sur
+  // un refus, s'il y avait quelque chose que la veille a manqué.
+  const missed = event.type === "missed" ? " missed" : "";
+  return `<figure class="card${missed}${done}">${picture}`
     + `<figcaption><span class="when">${clock} · ${day}</span>`
     + `<span class="guess">${escapeHtml(showText(event.label))}</span>`
     + `<span class="place">${escapeHtml(place)}</span>`
@@ -1045,7 +1077,11 @@ function reviewControls(event, { naming = false } = {}) {
     const rejected = event.review === "rejected" ? " on" : "";
     const choices = REVIEW_CLASSES.map(([classe, word, label]) =>
       `<a class="yes${correction === label ? " on" : ""}" href="${reviewUrl(event, "accepted", "valide", classe)}">${escapeHtml(t(word))}</a>`).join("");
-    return `<p class="verdict">${choices}<a class="no${rejected}" href="${reviewUrl(event, "rejected", "rejete")}">${escapeHtml(t("wrong"))}</a></p>`;
+    // Sur une publication, démentir veut dire « ce n'était pas cela ». Sur une
+    // tache écartée, cela veut dire « il n'y avait rien », donc que le refus
+    // avait raison. Le même bouton, deux phrases opposées : il faut les écrire.
+    const deny = event.type === "missed" ? "nothing" : "wrong";
+    return `<p class="verdict">${choices}<a class="no${rejected}" href="${reviewUrl(event, "rejected", "rejete")}">${escapeHtml(t(deny))}</a></p>`;
   }
   const accepted = event.review === "accepted" ? " on" : "";
   const rejected = event.review === "rejected" ? " on" : "";

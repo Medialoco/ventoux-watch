@@ -1006,6 +1006,55 @@ AUTONOMOUS = {
 }
 
 
+# Pourquoi la veille a écarté une tache, dit en clair.
+#
+# Un motif comme `against_the_ground` ne veut rien dire pour qui doit juger sur
+# photo si ce qu'il y avait était vraiment rien. Ces mots-là sont écrits pour
+# être lus sous une image, et ils portent le doute quand il y en a : la veille
+# annonce ce qu'elle a cru, pas ce qui était.
+REFUSAL_WORDS = {
+    "none": "Rien de reconnu",
+    "unclassified": "Rien de reconnu sur la découpe",
+    "none_at_that_spot": "Rien de reconnu à cet endroit",
+    "several_at_that_spot": "Plusieurs lectures à cet endroit",
+    "ambiguous": "Lecture ambiguë",
+    "unnamed_vehicle": "Véhicule non nommé",
+    "static": "Presque immobile",
+    "sky_still": "Immobile dans le ciel",
+    "slope_still": "Immobile sur la pente",
+    "repeated_spot": "Toujours au même endroit",
+    "too_small": "Trop petit",
+    "oversized": "Tache trop large",
+    "against_the_ground": "Devant le relief",
+    "edge_of_frame": "Au bord de l'image",
+    "tarmac": "Motif sur la chaussée",
+    "landmark": "Décor connu",
+    "island": "Décor de l'îlot",
+    "beacon": "Balise du sommet",
+    "parked": "Voiture garée",
+    "fog": "Brouillard",
+    "haze": "Brume",
+    "cloud": "Nuage",
+    "sky_mass": "Masse dans le ciel",
+    "sunset": "Lueur du soir",
+    "weather_glow": "Lueur dans la météo",
+    "night_plume": "Panache de nuit",
+    "car_lights": "Phares",
+    "shape": "Forme inattendue",
+    "off_road": "Hors chaussée",
+    "in_frame": "Dans le champ",
+    "schedule": "Horaire",
+    "person": "Piéton",
+    "car_and_person": "Voiture et piéton",
+    "warm_growing": "Tache chaude qui grossit",
+}
+
+
+def refusal_words(reason: str) -> str:
+    """Le motif d'un refus, en mots. Le motif brut si on ne l'a pas prévu."""
+    return REFUSAL_WORDS.get(reason, reason.replace("_", " "))
+
+
 def write_observation(obs: Observation) -> dict:
     """Tout ce que la décision a eu sous les yeux, en clair.
 

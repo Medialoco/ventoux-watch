@@ -28,7 +28,8 @@ from watcher.geometry import load_zones
 from watcher.gtfs import GtfsIndex, PARIS
 from watcher.memory import Memory
 from watcher.motion import MotionDetector, smoke_ratio, warm_ratio
-from watcher.naming import Observation, decide, named_itself, write_observation
+from watcher.naming import (Observation, decide, named_itself, refusal_words,
+                            write_observation)
 from watcher.opensky import SkyArchive
 from watcher.publish import publish
 from watcher.scene import SceneReader, ViewLog, solar_azimuth, solar_elevation
@@ -332,12 +333,38 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         # Asked now and not before: a route costs a call to OpenSky, and until
         # the rule has settled on one aircraft there is nothing to ask about.
         decision.detail.update(describe_route(sky.route(decision.detail["icao24"], track.updated)))
-    if decision.type == "motion" and track.zone == "sky":
+    def refuse(quiet: bool = False) -> None:
+        """Écarter la tache, et en garder la trace quand son motif se fait rare.
+
+        Un refus gardé devient une carte à trancher comme une autre : sa photo,
+        le mot de son motif, et les cinq noms à choisir. Dire « c'était une
+        voiture » sur une chose écartée est la leçon la plus précieuse qui soit,
+        puisque c'est un raté, et le raté est la seule chose qui apprenne
+        quelque chose qu'on ne savait pas déjà.
+        """
         store.add_candidate(when, track.zone, decision.reason, decision.detail)
+        if not quiet:
+            log.info("Candidat %s %s", track.zone, decision.reason)
+        if not _worth_keeping(decision.reason, cfg, last_fire, now):
+            return
+        detail = dict(decision.detail)
+        detail["refused"] = decision.reason
+        # Faite par une règle, donc jamais revendiquée comme une lecture du
+        # modèle : une carte écartée n'a rien à faire dans l'historique publié.
+        detail["autonomous"] = False
+        if box:
+            detail["box"] = [round(value, 4) for value in box]
+        entry = store.add_event(when, "missed", refusal_words(decision.reason), track.zone,
+                                decision.confidence, track.best_jpeg, detail)
+        store.keep_closeup(entry, frame, track.best_bbox)
+        store.record_seen(entry["id"], write_observation(obs), habit=decision.type == "habit")
+        log.info("Refus gardé pour relecture : %s", decision.reason)
+
+    if decision.type == "motion" and track.zone == "sky":
+        refuse(quiet=True)
         return
     if not decision.publish:
-        store.add_candidate(when, track.zone, decision.reason, decision.detail)
-        log.info("Candidat %s %s", track.zone, decision.reason)
+        refuse()
         return
     if memory.observe(track.zone, track.centroid, decision) != "record":
         log.info("Compté sans nouvelle carte %s", decision.label)
@@ -353,7 +380,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
             store.record_seen(entry["id"], write_observation(obs))
             log.info("Passage soumis à revue %s", track.zone)
             return
-        store.add_candidate(when, track.zone, decision.reason, decision.detail)
+        refuse(quiet=True)
         return
     if decision.type == "fire":
         last_fire["fire"] = now
@@ -512,6 +539,36 @@ def _overlap(box, other) -> float:
     wide = max(0, min(ax + aw, bx + bw) - max(ax, bx))
     tall = max(0, min(ay + ah, by + bh) - max(ay, by))
     return (wide * tall) / float(max(1, aw * ah))
+
+
+# Ce que la veille écarte est plus nombreux que ce qu'elle publie, d'un facteur
+# cent : 49 775 refus pour 418 publications. Et un refus ne laisse aujourd'hui
+# ni photo ni observation, donc aucun moyen de savoir s'il avait raison. Tout ce
+# qu'on rate est perdu, ce qui est le contraire de ce qu'on veut.
+#
+# Tout garder est hors de portée : sept mille taches par jour, une vignette
+# chacune, feraient cent cinquante mégaoctets par jour. Mais le renseignement
+# est dans la variété des motifs, pas dans leur nombre — six mille « rien de
+# reconnu » disent ce que dit le premier. Un échantillon par motif garde donc
+# presque tout ce qu'il y a à apprendre, en gardant presque rien.
+SAMPLE_REFUSED_S = 3600
+
+
+def _worth_keeping(reason: str, cfg: dict, seen: dict, now: float) -> bool:
+    """Ce refus-là mérite-t-il d'être montré, son motif n'ayant rien donné depuis un moment ?
+
+    Par motif et non en bloc, sinon les motifs qui reviennent toutes les
+    secondes mangeraient la place des rares, et ce sont justement les rares qui
+    ont des chances d'être des fautes.
+    """
+    gap = float(cfg.get("sample_refused_s", SAMPLE_REFUSED_S) or 0)
+    if not gap:
+        return False
+    key = f"refused:{reason}"
+    if now - seen.get(key, 0.0) < gap:
+        return False
+    seen[key] = now
+    return True
 
 
 REVIEW_REASONS = {"unnamed_vehicle"}

@@ -12146,3 +12146,469 @@ Error writing trailer of pipe:: Broken pipe
 2026-09-28 19:41:18,783 INFO Historique publié
 av_interleaved_write_frame(): Broken pipe
 Error writing trailer of pipe:: Broken pipe
+2026-09-28 19:44:55,376 INFO Veilleur v0.4.0
+2026-09-28 19:44:55,429 INFO Carte de la scène : 19 repères, calage 0.01359
+2026-09-28 19:44:59,867 INFO GTFS: 0 passages indexés près de la caméra
+2026-09-28 19:56:39,338 WARNING Historique distant non rapatrié
+2026-09-28 19:56:39,386 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:56:53,920 WARNING Historique distant non rapatrié
+2026-09-28 19:56:53,965 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:57:08,378 WARNING Historique distant non rapatrié
+2026-09-28 19:57:08,420 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:57:22,909 WARNING Historique distant non rapatrié
+2026-09-28 19:57:22,956 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:57:37,403 WARNING Historique distant non rapatrié
+2026-09-28 19:57:37,441 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:57:51,841 WARNING Historique distant non rapatrié
+2026-09-28 19:57:51,887 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:58:07,331 WARNING Historique distant non rapatrié
+2026-09-28 19:58:07,371 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:58:23,700 WARNING Historique distant non rapatrié
+2026-09-28 19:58:23,741 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:58:38,387 WARNING Historique distant non rapatrié
+2026-09-28 19:58:38,439 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:58:52,800 WARNING Historique distant non rapatrié
+2026-09-28 19:58:52,842 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:59:07,150 WARNING Historique distant non rapatrié
+2026-09-28 19:59:07,194 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:59:22,795 WARNING Historique distant non rapatrié
+2026-09-28 19:59:22,833 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:59:38,604 WARNING Historique distant non rapatrié
+2026-09-28 19:59:38,647 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 19:59:53,484 WARNING Historique distant non rapatrié
+2026-09-28 19:59:53,526 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:00:07,978 WARNING Historique distant non rapatrié
+2026-09-28 20:00:08,013 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:00:22,454 WARNING Historique distant non rapatrié
+2026-09-28 20:00:22,503 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:00:37,087 WARNING Historique distant non rapatrié
+2026-09-28 20:00:37,130 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:00:53,917 WARNING Historique distant non rapatrié
+2026-09-28 20:00:53,955 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:01:08,406 WARNING Historique distant non rapatrié
+2026-09-28 20:01:08,453 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:01:22,945 WARNING Historique distant non rapatrié
+2026-09-28 20:01:22,986 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:01:37,319 WARNING Historique distant non rapatrié
+2026-09-28 20:01:37,359 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:01:51,659 WARNING Historique distant non rapatrié
+2026-09-28 20:01:51,705 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:02:06,137 WARNING Historique distant non rapatrié
+2026-09-28 20:02:06,181 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:02:20,446 WARNING Historique distant non rapatrié
+2026-09-28 20:02:20,493 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:02:36,159 WARNING Historique distant non rapatrié
+2026-09-28 20:02:36,208 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:02:50,740 WARNING Historique distant non rapatrié
+2026-09-28 20:02:50,791 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    publish(root)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:03:05,184 WARNING Historique distant non rapatrié
+2026-09-28 20:03:05,233 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    if (store.dirty or view.dirty) and due:
+        ^^^^^^^^^^^^^
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:03:19,736 WARNING Historique distant non rapatrié
+2026-09-28 20:03:19,785 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    if (store.dirty or view.dirty) and due:
+        ^^^^^^^^^^^^^
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:03:34,460 WARNING Historique distant non rapatrié
+2026-09-28 20:03:34,567 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    if (store.dirty or view.dirty) and due:
+        ^^^^^^^^^^^^^
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:03:48,900 WARNING Historique distant non rapatrié
+2026-09-28 20:03:48,940 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    if (store.dirty or view.dirty) and due:
+        ^^^^^^^^^^^^^
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:04:03,434 WARNING Historique distant non rapatrié
+2026-09-28 20:04:03,476 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    if (store.dirty or view.dirty) and due:
+        ^^^^^^^^^^^^^
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:04:17,969 WARNING Historique distant non rapatrié
+2026-09-28 20:04:18,017 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    if (store.dirty or view.dirty) and due:
+        ^^^^^^^^^^^^^
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:04:32,336 WARNING Historique distant non rapatrié
+2026-09-28 20:04:32,377 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    if (store.dirty or view.dirty) and due:
+        ^^^^^^^^^^^^^
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+2026-09-28 20:04:46,757 WARNING Historique distant non rapatrié
+2026-09-28 20:04:46,803 ERROR Flux interrompu, nouvel essai dans 10 s
+Traceback (most recent call last):
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/main.py", line 210, in main
+    if (store.dirty or view.dirty) and due:
+        ^^^^^^^^^^^^^
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 38, in publish
+    _git(repo, "add", "--", *paths)
+  File "/Users/benoitprieur/Desktop/Ventoux/watcher/publish.py", line 52, in _git
+    result = subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benoitprieur/.local/share/uv/python/cpython-3.12.11-macos-aarch64-none/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'add', '--', 'data/events.json', 'data/thumbs', 'data/learning.json', 'data/view.json', 'data/view.jpg', 'data/interruptions.jsonl', 'data/reviewed.jsonl', 'data/observed.jsonl']' returned non-zero exit status 128.
+av_interleaved_write_frame(): Broken pipe
+Error writing trailer of pipe:: Broken pipe
+2026-09-28 20:05:04,411 INFO Veilleur v0.4.0
+2026-09-28 20:05:04,468 INFO Carte de la scène : 19 repères, calage 0.01359
+2026-09-28 20:05:08,726 INFO GTFS: 0 passages indexés près de la caméra
+2026-09-28 20:05:11,368 INFO Refus gardé pour relecture : repeated_spot
+2026-09-28 20:05:11,393 WARNING Historique distant non rapatrié
+2026-09-28 20:05:13,545 INFO Historique publié
+av_interleaved_write_frame(): Broken pipe
+Error writing trailer of pipe:: Broken pipe
+2026-09-28 20:09:36,888 INFO Veilleur v0.4.0
+2026-09-28 20:09:36,936 INFO Carte de la scène : 19 repères, calage 0.01359
+2026-09-28 20:09:41,307 INFO GTFS: 0 passages indexés près de la caméra
