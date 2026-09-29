@@ -2,6 +2,92 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-29T16-35-59Z-vehicle-4",
+      "t": "2026-09-29T16:35:59Z",
+      "type": "vehicle",
+      "label": "Voiture grise",
+      "zone": "roundabout",
+      "confidence": 0.432,
+      "thumb": "data/thumbs/2026-09-29T16-35-59Z-vehicle-4.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.4,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.4023,
+          "area_grow": 0.05,
+          "clipped": false,
+          "shade": 0.774,
+          "kept": 0.32,
+          "area_ratio": 0.00043,
+          "duration_s": 7.4,
+          "frames": 7,
+          "width_m": 3.4,
+          "height_m": 1.8,
+          "width_named_m": 3.2,
+          "height_named_m": 2.9,
+          "rise_ms": 0.55,
+          "drift_rate": 0.464,
+          "seen_as": [
+            "car 0.43 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.3234,
+          0.8,
+          0.1,
+          0.0944
+        ]
+      },
+      "closeup": "data/closeups/2026-09-29T16-35-59Z-vehicle-4.jpg"
+    },
+    {
+      "id": "2026-09-29T16-35-52Z-missed-3",
+      "t": "2026-09-29T16:35:52Z",
+      "type": "missed",
+      "label": "Presque immobile",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-29T16-35-52Z-missed-3.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Le mouvement est trop court pour une voiture ou un bus.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.044,
+          "kept": 0.287,
+          "area_ratio": 0.00676,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.8,
+          "height_m": 0.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "static",
+        "box": [
+          0.7937,
+          0.9472,
+          0.1281,
+          0.0528
+        ]
+      },
+      "closeup": "data/closeups/2026-09-29T16-35-52Z-missed-3.jpg"
+    },
+    {
       "id": "2026-09-29T16-22-57Z-missed-1",
       "t": "2026-09-29T16:22:57Z",
       "type": "missed",
