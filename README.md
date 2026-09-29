@@ -65,7 +65,7 @@ OpenSky et Drive sont facultatifs. Sans compte OpenSky, l’archive des avions r
 
 Un départ de feu est publié immédiatement ; tout le reste est groupé et poussé au plus toutes les quinze minutes. GitHub Pages reconstruit le site : [https://medialoco.github.io/ventoux-watch/](https://medialoco.github.io/ventoux-watch/).
 
-Le matériel, la carte SD, le disque externe, le chien de garde et les secrets sont décrits dans [`infra.md`](infra.md). Les pannes et les périodes où la montagne n’était regardée par personne sont tenues dans [`incidents.md`](incidents.md).
+Le matériel, la carte SD, le disque externe, le chien de garde et les secrets sont décrits dans [`infra.md`](infra.md). Les pannes et les périodes où la montagne n’était regardée par personne sont tenues dans [`incidents.md`](incidents.md). Où l’on va — tout mouvement détecté et interprété, nuages et ombres compris — est écrit dans [`plan.md`](plan.md).
 
 ## Voir le site en local
 
