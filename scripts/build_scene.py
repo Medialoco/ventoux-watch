@@ -19,6 +19,7 @@ Serein: another camera only needs its own position and its own landmarks.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import math
 import sys
@@ -44,6 +45,11 @@ LANDMARK_BIGGEST_M = 9.0
 # cette part de sa distance relevée, le sol est rencontré avant lui : il est
 # derrière une crête et l'image, à cet endroit, montre autre chose.
 LANDMARK_SEEN_SHARE = 0.8
+# Ce que vaut l'altitude qu'on nous donne. EU-DEM à 25 m annonce une erreur
+# quadratique verticale de l'ordre de trois mètres, et c'est elle qu'on propage
+# jusqu'à la distance. Le chiffre n'a rien de propre à cette webcam : il suivra
+# la donnée sur n'importe quelle autre.
+TERRAIN_DOUBT_M = 2.9
 # Fine enough to hold the island of a roundabout sixteen metres across.
 MAP_STEP_M = 1.0
 ROAD_SLACK_M = 2.5
@@ -134,6 +140,46 @@ def main() -> int:
             if 0 <= x < land.shape[1] and 0 <= y < land.shape[0]:
                 grid[row, column] = land[y, x]
 
+    # Savoir la distance ne suffit pas : il faut savoir ce qu'elle vaut. On
+    # relève le terrain de son incertitude propre et on regarde de combien la
+    # distance bouge. Là où la caméra domine le sol de peu, la visée le rase et
+    # le moindre mètre d'altitude déplace le point d'impact de très loin : à
+    # cinquante-neuf mètres elle ne le domine que de cinq, et trois mètres de
+    # doute valent la moitié de la distance. Là où le versant remonte au-dessus
+    # d'elle, la même incertitude ne pèse plus rien.
+    # Deux doutes indépendants, et le lointain n'écoute que le second : à
+    # dix-sept cents mètres trois mètres d'altitude ne déplacent plus rien,
+    # mais le degré d'imprécision du calage balaie la pente sur des dizaines de
+    # mètres. Ils se composent comme deux erreurs sans lien, par la racine de
+    # la somme des carrés.
+    def _wobble(shift) -> np.ndarray:
+        out = np.zeros((GRID_H, GRID_W), dtype=np.float32)
+        for row in range(GRID_H):
+            for column in range(GRID_W):
+                if far[row, column] <= 0:
+                    continue
+                hit = shift((column + 0.5) / GRID_W, (row + 0.5) / GRID_H)
+                # Le sol disparaît sous le doute : la distance n'y veut plus
+                # rien dire, et on le dit ainsi plutôt que de se taire.
+                part = abs(hit[2] - far[row, column]) / far[row, column] if hit else 1.0
+                out[row, column] = min(1.0, part)
+        return out
+
+    terrain.bias += TERRAIN_DOUBT_M
+    sol = _wobble(lambda x, y: march(pose, x, y, terrain, reach))
+    terrain.bias -= TERRAIN_DOUBT_M
+    # L'écart résiduel du calage est une fraction de la largeur d'image ; en
+    # degrés c'est cette fraction du champ, et un objectif rectiligne se trompe
+    # autant en site qu'en cap.
+    penche = dataclasses.replace(pose, pitch=pose.pitch + rms * pose.hfov)
+    vue = _wobble(lambda x, y: march(penche, x, y, terrain, reach))
+    doubt = np.minimum(1.0, np.sqrt(sol ** 2 + vue ** 2))
+    sure = doubt[far > 0]
+    if sure.size:
+        print(f"Doute    : médiane {np.median(sure):.0%} sur la distance "
+              f"(terrain {np.median(sol[far > 0]):.0%}, calage {np.median(vue[far > 0]):.0%}), "
+              f"{(sure <= 0.2).mean():.0%} de l'image sous 20 %")
+
     back = {index: name for name, index in codes.items()}
     back[len(codes) + 1] = "sky"
     grid[far == 0] = len(codes) + 1
@@ -151,6 +197,10 @@ def main() -> int:
                 "pose": {**pose.as_dict(), "rms": round(rms, 5), "reach_m": reach},
                 "grid": rows,
                 "reach": shrunk,
+                # En centièmes : la grille est un tableau d'entiers comme sa
+                # voisine, et un point de pourcentage suffit largement ici.
+                "doubt": [[int(round(value * 100)) for value in line]
+                          for line in cv2.resize(doubt, (REACH_W, REACH_H), interpolation=cv2.INTER_AREA)],
                 "landmarks": _landmarks(data, pose, terrain, rms, reach, shrunk),
                 "lamps": _lamps(data, pose, terrain),
             },

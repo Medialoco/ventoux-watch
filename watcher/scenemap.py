@@ -42,6 +42,7 @@ class SceneMap:
         self.landmarks: list[dict] = list(payload.get("landmarks") or [])
         self.pose: dict = dict(payload.get("pose") or {})
         self.reach: list[list[int]] = list(payload.get("reach") or [])
+        self.uncertainty: list[list[int]] = list(payload.get("doubt") or [])
         self.height = len(self.rows)
         self.width = len(self.rows[0]) if self.rows else 0
 
@@ -94,6 +95,24 @@ class SceneMap:
         row = min(rows - 1, max(0, int(y * rows)))
         column = min(columns - 1, max(0, int(x * columns)))
         return float(self.reach[row][column])
+
+    def doubt_at(self, x: float, y: float) -> float:
+        """What the distance read here is worth, as a share of itself.
+
+        A distance is an altitude divided by an angle, so it is only as firm as
+        the ground beneath it. Where the camera stands well above what it looks
+        at, three metres of doubt in the elevation model move the answer by a
+        little. Where it barely clears it — the first hundred metres here, seen
+        almost edge-on from two metres up — the same three metres move it by
+        half. One is a measurement and the other is a guess, and nothing in the
+        picture tells them apart.
+        """
+        if not self.uncertainty:
+            return 0.0
+        rows, columns = len(self.uncertainty), len(self.uncertainty[0])
+        row = min(rows - 1, max(0, int(y * rows)))
+        column = min(columns - 1, max(0, int(x * columns)))
+        return float(self.uncertainty[row][column]) / 100
 
     def metres_across(self, box: tuple[float, float, float, float]) -> float:
         """The width of this box on the ground, in metres.

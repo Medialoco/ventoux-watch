@@ -2150,6 +2150,46 @@ class FogTests(unittest.TestCase):
         ecarts.sort()
         self.assertLess(ecarts[len(ecarts) // 2], 0.10)
 
+    def test_the_map_says_where_its_distances_are_worthless(self):
+        """Knowing a distance is not enough; one must know what it is worth.
+
+        A distance is a height divided by an angle, so it is only as firm as
+        the ground under it. The camera stands two metres up and looks at ground
+        four to six metres below, so its first hundred metres are seen almost
+        edge-on and three metres of doubt in the elevation model move the answer
+        by half. Past two hundred and fifty the slope climbs back above the lens
+        and the same three metres cost nothing. Nothing in the picture tells the
+        two apart, so the map has to carry it.
+        """
+        from watcher.scenemap import SceneMap
+
+        carte = SceneMap.load(ROOT / "config" / "scene.json")
+        self.assertTrue(carte.uncertainty, "la carte ne dit pas ce que valent ses distances")
+
+        # Le près est rasant, le loin ne l'est pas : c'est toute la différence.
+        cabane = [m for m in carte.landmarks if 50 < float(m.get("distance_m") or 0) < 70]
+        lointain = [m for m in carte.landmarks if float(m.get("distance_m") or 0) > 1500]
+        self.assertTrue(cabane and lointain)
+        pied = lambda m: (min(0.999, m["x"]), min(0.999, m["y"] + m["ry"]))  # noqa: E731
+        self.assertGreater(carte.doubt_at(*pied(cabane[0])), 0.4)
+        self.assertLess(min(carte.doubt_at(*pied(m)) for m in lointain), 0.15)
+
+        # Et il faut qu'il dise vrai : le doute annoncé doit couvrir l'écart
+        # constaté sur la plupart des repères relevés. Un budget à un écart-type
+        # en couvre deux tiers ; deux des treize passent au travers, tous deux à
+        # dix-sept cents mètres, et on les laisse dire plutôt que d'ajuster le
+        # doute jusqu'à ce qu'il ait toujours raison.
+        couverts = 0
+        releves = 0
+        for mark in carte.landmarks:
+            surveyed = float(mark.get("distance_m") or 0)
+            lu = carte.distance_at(*pied(mark))
+            if not (surveyed and lu):
+                continue
+            releves += 1
+            couverts += abs(lu / surveyed - 1) <= carte.doubt_at(*pied(mark)) + 0.02
+        self.assertGreaterEqual(couverts, int(releves * 0.7), f"{couverts}/{releves} seulement")
+
     def test_no_landmark_hides_behind_the_ground(self):
         # Un repère sert à refuser un événement : « une boîte serrée autour de
         # la statue est une ombre, pas un passage ». Six repères sur dix-neuf
