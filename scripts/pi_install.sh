@@ -47,10 +47,12 @@ fi
 ssh-keyscan -t ed25519 github.com 2>/dev/null >> "$HOME/.ssh/known_hosts"
 sort -u -o "$HOME/.ssh/known_hosts" "$HOME/.ssh/known_hosts"
 
-# GitHub salue puis sort en code 1, faute de shell à offrir. Sous pipefail, ce
-# 1 traverserait le tuyau et ferait passer une réussite pour un échec : on
-# recueille donc la réponse d'abord, on la lit ensuite.
-REPONSE="$(ssh -o BatchMode=yes -T git@github.com 2>&1 || true)"
+# Deux pièges dans cette seule ligne.
+# -n : ce script arrive par l'entrée standard (ssh ventoux 'bash -s' < …), et
+#      un ssh sans -n y puiserait, avalant tout ce qui reste à exécuter.
+# || true : GitHub salue puis sort en code 1, faute de shell à offrir ; sous
+#      pipefail ce 1 ferait passer une réussite pour un échec.
+REPONSE="$(ssh -n -o BatchMode=yes -T git@github.com 2>&1 || true)"
 if ! printf '%s' "$REPONSE" | grep -q "successfully authenticated"; then
     dire "ACTION REQUISE"
     echo "Cette clé publique doit être déclarée dans le dépôt, en écriture :"
