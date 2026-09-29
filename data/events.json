@@ -2,6 +2,92 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-29T09-28-27Z-motion-55",
+      "t": "2026-09-29T09:28:27Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-29T09-28-27Z-motion-55.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.6077,
+          "area_grow": 13.21,
+          "clipped": true,
+          "shade": 0.822,
+          "kept": 0.325,
+          "area_ratio": 0.00694,
+          "duration_s": 36.8,
+          "frames": 34,
+          "width_m": 5.8,
+          "height_m": 3.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.075,
+          "seen_as": []
+        },
+        "box": [
+          0.1094,
+          0.8,
+          0.2078,
+          0.2
+        ]
+      },
+      "closeup": "data/closeups/2026-09-29T09-28-27Z-motion-55.jpg"
+    },
+    {
+      "id": "2026-09-29T09-21-55Z-person-52",
+      "t": "2026-09-29T09:22:52Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "roundabout",
+      "confidence": 0.687,
+      "thumb": "data/thumbs/2026-09-29T09-21-55Z-person-52.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0642,
+          "area_grow": 3.38,
+          "clipped": false,
+          "shade": 0.954,
+          "kept": 0.536,
+          "area_ratio": 0.00242,
+          "duration_s": 2.1,
+          "frames": 5,
+          "width_m": 1.0,
+          "height_m": 1.7,
+          "width_named_m": 0.5,
+          "height_named_m": 1.2,
+          "rise_ms": 0.16,
+          "drift_rate": 1.069,
+          "seen_as": [
+            "person 0.69 sur 27%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.3972,
+          0.7926,
+          0.016,
+          0.0676
+        ],
+        "count": 3,
+        "since": "2026-09-29T09:21:55Z"
+      },
+      "closeup": "data/closeups/2026-09-29T09-21-55Z-person-52.jpg"
+    },
+    {
       "id": "2026-09-29T09-18-33Z-missed-51",
       "t": "2026-09-29T09:18:33Z",
       "type": "missed",
