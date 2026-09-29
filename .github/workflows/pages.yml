@@ -1,8 +1,11 @@
 name: pages
 
+# À la demande seulement. Le site partait à chaque poussée, donc toutes les
+# quinze minutes quand la veille publie, et il est lisible de tout le monde
+# alors que le dépôt est privé. Tant que la reconnaissance du quotidien n'est
+# pas fiable, rien ne sort tout seul : on le déclenche quand on décide de
+# montrer, avec « gh workflow run pages.yml ».
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
