@@ -155,9 +155,44 @@ class NamingTests(unittest.TestCase):
         self.assertEqual(decision.label, "Piéton")
 
     def test_static_blob_is_not_a_car(self):
-        decision = decide(Observation(zone="roundabout", travel=0.0, detections=[Detection("car", 0.9)]))
+        # La durée n'était pas écrite ici, et le test passait quand même : un
+        # déplacement nul sur un temps nul suffisait à prouver l'immobilité.
+        # Il faut désormais que la tache ait eu le temps de bouger et ne l'ait
+        # pas fait, ce qui est justement ce que ce test voulait dire.
+        decision = decide(Observation(zone="roundabout", travel=0.0, duration_s=8.0,
+                                      detections=[Detection("car", 0.9)]))
         self.assertEqual(decision.type, "motion")
+        self.assertEqual(decision.reason, "static")
         self.assertNotEqual(decision.label, "Voiture")
+
+    def test_a_track_too_short_to_have_moved_is_not_called_still(self):
+        """Le 29 septembre, treize refus « presque immobile » sur dix-sept.
+
+        Tous portaient sur des pistes sans durée mesurable. Un déplacement est
+        une vitesse multipliée par un temps : sans temps, il n'y a rien à
+        mesurer, et « ça n'a pas bougé » devient une affirmation sur le monde
+        tirée d'une absence de mesure. Parmi les taches écartées ainsi, un
+        camion lu à 0,65 couvrant 92 % de sa boîte sur le rond-point.
+        """
+        bref = dict(zone="roundabout", travel=0.0, duration_s=0.0, min_travel=0.01)
+
+        # Rien de reconnu : on refuse toujours, mais en disant pourquoi.
+        muet = decide(Observation(**bref))
+        self.assertEqual(muet.type, "motion")
+        self.assertEqual(muet.reason, "too_brief")
+
+        # Reconnu franchement : le déplacement non mesuré ne peut plus servir
+        # d'alibi, et le nom a la parole.
+        nomme = decide(Observation(**bref, detections=[Detection("car", 0.9)]))
+        self.assertEqual(nomme.action, "publish")
+        self.assertEqual(nomme.type, "vehicle")
+
+        # Et la garde ne s'ouvre que le temps de la non-mesure : dès que la
+        # piste a duré assez pour qu'un passage ordinaire ait franchi la barre,
+        # un déplacement nul redevient une preuve d'immobilité.
+        pose = decide(Observation(zone="roundabout", travel=0.0, duration_s=0.9, min_travel=0.01,
+                                  detections=[Detection("truck", 0.65)]))
+        self.assertEqual(pose.reason, "static")
 
     def test_dusk_glow_is_not_a_fire(self):
         decision = decide(Observation(zone="slope", duration_s=25, area_grow=2.0, warm_ratio=0.2, period="twilight"))

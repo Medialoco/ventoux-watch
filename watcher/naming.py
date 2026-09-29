@@ -128,6 +128,12 @@ class Observation:
     distance_doubt: float = 0.0
     area_grow: float = 1.0
     min_travel: float = 0.03
+    # À quelle vitesse apparente passe ce qui passe ici, en largeurs d'image
+    # par seconde. Réglage de caméra au même titre que min_travel, et mesuré
+    # de la même façon : la médiane des 239 passages publiés le 29 septembre
+    # qui avaient à la fois un déplacement et une durée. Sert à savoir si une
+    # piste a duré assez longtemps pour que min_travel ait pu être franchi.
+    cross_rate: float = 0.034
     max_sky_area: float = 0.02
     min_conf: dict | None = None
     fire_sustain_s: float = 20.0
@@ -547,6 +553,19 @@ def decide(obs: Observation) -> Decision:
     if obs.distance_doubt > SIZE_DOUBT_MAX:
         obs = replace(obs, width_m=0.0, height_m=0.0, rise_ms=0.0)
     conf = obs.min_conf or {"bus": 0.45, "bus_unnamed": 0.6, "car": 0.4}
+    # Un déplacement, c'est une vitesse multipliée par un temps. Si le temps
+    # écoulé n'aurait pas suffi à un passage ordinaire pour franchir la barre,
+    # alors « travel » sous la barre ne dit rien du monde : il dit qu'on n'a
+    # pas regardé assez longtemps. Le 29 septembre, treize des dix-sept refus
+    # « presque immobile » portaient sur des pistes sans durée mesurable, et
+    # parmi les taches ainsi écartées il y avait un camion lu à 0,65 couvrant
+    # 92 % de sa boîte sur le rond-point, en plein jour et par ciel dégagé.
+    #
+    # La garde ne fait pas tout passer, parce qu'elle ne fait que rendre la
+    # parole aux autres témoins. Les trois piétons de huit heures cinquante
+    # restent écartés : leurs boîtes cautionnaient zéro pour cent de ce qui
+    # avait bougé, et une lecture aussi petite ne répond de rien.
+    travelled = obs.duration_s * obs.cross_rate >= obs.min_travel
     if obs.fogged and obs.period != "day":
         # Once the crest of the Ventoux is out of the picture, the watcher
         # stops naming. Not only fires: on the night of 26 September the fog
@@ -906,8 +925,11 @@ def decide(obs: Observation) -> Decision:
                     ),
                     obs,
                 )
-        if obs.travel < obs.min_travel and not (person is not None and person.conf >= 0.4):
+        if obs.travel < obs.min_travel and travelled and not (person is not None and person.conf >= 0.4):
             return _motion(obs, "static", "Presque immobile", "Le mouvement est trop court pour une voiture ou un bus.")
+        # Quand le déplacement n'a pas eu le temps d'exister, la question passe
+        # à ceux qui savent encore répondre : les noms, juste en dessous. Un
+        # non-mesure ne témoigne ni à charge ni à décharge.
         if (
             vehicle is not None
             and person is not None
@@ -998,6 +1020,20 @@ def decide(obs: Observation) -> Decision:
                 obs,
             )
         if obs.travel < obs.min_travel:
+            # Les noms ont eu la parole au-dessus et n'ont rien dit. Reste à
+            # nommer le refus pour ce qu'il est vraiment : une tache qui n'a
+            # pas bougé, ou une tache qu'on n'a pas vue assez longtemps pour
+            # en juger. Les deux se refusent, mais ce ne sont pas les mêmes
+            # relectures, et confondre les deux est ce qui a caché ces cas.
+            if not travelled:
+                return _motion(
+                    obs,
+                    "too_brief",
+                    "Vu trop brièvement",
+                    f"{obs.duration_s:.1f} s de piste : un passage ordinaire n'aurait pas eu le temps de "
+                    "traverser la distance qu'on lui demande. On ne sait pas si ça a bougé, "
+                    "et rien n'a été reconnu.",
+                )
             return _motion(obs, "static", "Presque immobile", "Le mouvement est trop court pour une voiture ou un bus.")
         if 0 < obs.width_m < SMALLEST_M["car"]:
             # Asked after the walker has had its say: a walker really is that
@@ -1074,6 +1110,7 @@ REFUSAL_WORDS = {
     "ambiguous": "Lecture ambiguë",
     "unnamed_vehicle": "Véhicule non nommé",
     "static": "Presque immobile",
+    "too_brief": "Vu trop brièvement",
     "sky_still": "Immobile dans le ciel",
     "slope_still": "Immobile sur la pente",
     "repeated_spot": "Toujours au même endroit",

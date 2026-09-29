@@ -313,6 +313,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         distance_doubt=doubt,
         area_grow=track.area_grow,
         min_travel=cfg["min_travel"],
+        cross_rate=cfg["cross_rate"],
         max_sky_area=cfg["max_sky_area"],
         min_conf=cfg["min_conf"],
         fire_sustain_s=cfg["fire"]["sustain_s"],

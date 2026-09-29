@@ -317,6 +317,7 @@ const LABELS = {
   "Masse dans le ciel": "Mass in the sky",
   "Point dans le ciel": "Point in the sky",
   "Presque immobile": "Almost still",
+  "Vu trop brièvement": "Seen too briefly",
   "Véhicule incertain": "Uncertain vehicle",
   "Piéton": "Pedestrian",
   "Piétons": "Pedestrians",
