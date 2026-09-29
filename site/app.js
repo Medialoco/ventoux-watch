@@ -126,6 +126,14 @@ const COPY = {
     doubtWhy: "The watcher saw these move but did not read them itself. "
       + "Its guess is written under each picture; tell it what was really there.",
     doubtCount: (all) => `${all} waiting`,
+    doubtList: "Waiting for a name",
+    control: "Spot check",
+    controlWhy: "Drawn at random from what the site publishes. Reading these is the "
+      + "only way to know how often it is right: choosing what to check would measure "
+      + "what we like looking at instead.",
+    claimLine: (floor, togo) => togo
+      ? `At least ${floor} % right, on what has been checked. ${togo} more clean checks to claim 95 %.`
+      : `At least ${floor} % right, on what has been checked.`,
     cameraFixed: "Fixed, facing",
     cameraField: "field",
     right: "Right",
@@ -260,6 +268,14 @@ const COPY = {
     doubtWhy: "La veille a vu bouger ces choses sans les lire elle-même. "
       + "Sa supposition est écrite sous chaque photo ; dites-lui ce qu'il y avait vraiment.",
     doubtCount: (all) => `${all} en attente`,
+    doubtList: "En attente d'un nom",
+    control: "Contrôle",
+    controlWhy: "Tirées au hasard dans ce que le site publie. Les lire est le seul "
+      + "moyen de savoir à quelle fréquence il a raison : choisir quoi vérifier "
+      + "mesurerait ce qu'on aime regarder.",
+    claimLine: (floor, togo) => togo
+      ? `Au moins ${floor} % de juste, sur ce qui a été contrôlé. Encore ${togo} contrôles sans faute pour affirmer 95 %.`
+      : `Au moins ${floor} % de juste, sur ce qui a été contrôlé.`,
     cameraFixed: "Fixe, cap",
     cameraField: "champ",
     right: "Juste",
@@ -798,6 +814,63 @@ function render() {
   paintDoubt();
 }
 
+// Combien il faut contrôler, sans une seule faute, pour pouvoir dire 95 %.
+//
+// Sans aucune faute, la borne basse exacte du taux vaut 0,05^(1/n) : c'est le
+// taux le plus mauvais qui aurait tout de même une chance sur vingt de passer n
+// tirages sans se faire prendre. Elle atteint 0,95 quand n dépasse
+// ln(0,05)/ln(0,95) ≈ 58,4, donc à cinquante-neuf. Moins, et on n'affirme
+// rien ; une faute, et il en faut bien davantage.
+const CLEAN_RUN = 59;
+
+// Un ordre au hasard mais toujours le même, tiré de l'identifiant. Trier par
+// date mettrait tout le contrôle sur une seule journée, et laisser choisir
+// mesurerait ce qu'on aime regarder plutôt que ce que la veille sait faire.
+function scramble(id) {
+  let hash = 2166136261;
+  for (const letter of String(id)) {
+    hash ^= letter.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967296;
+}
+
+// Ce qu'on a le droit d'affirmer, à 95 % de confiance. Douze justes sur douze
+// ne veulent pas dire cent pour cent : ils veulent dire au moins
+// soixante-dix-huit, et c'est ce nombre-là qu'il faut écrire.
+function sureAtLeast(right, read) {
+  if (!read) return 0;
+  // Sans faute, la borne exacte tient en une ligne, et c'est le cas qui décide
+  // de la publication. Wilson est légèrement optimiste tout près de cent pour
+  // cent, ce qui est exactement l'endroit où on ne veut pas l'être.
+  if (right === read) return Math.pow(0.05, 1 / read);
+  // Sinon la borne basse de Wilson, unilatérale.
+  const z = 1.645;
+  const seen = right / read;
+  const weight = 1 + (z * z) / read;
+  const middle = (seen + (z * z) / (2 * read)) / weight;
+  const spread = (z / weight) * Math.sqrt((seen * (1 - seen)) / read + (z * z) / (4 * read * read));
+  return Math.max(0, middle - spread);
+}
+
+// Le tirage de contrôle : des publications que personne n'a encore lues, prises
+// dans l'ordre du brassage. Une douzaine à la fois, parce qu'une page de
+// soixante cartes ne se juge pas d'un trait.
+function paintControl() {
+  const box = document.querySelector("#control-list");
+  const block = document.querySelector("#control");
+  if (!box || !block) return;
+  const published = events.filter((event) => namedItself(event)
+    && !(event.detail || {}).simulation);
+  const waiting = published.filter((event) => !event.review)
+    .sort((one, other) => scramble(one.id) - scramble(other.id))
+    .slice(0, 12);
+  block.hidden = waiting.length === 0;
+  document.querySelector("#control-title").textContent = t("control");
+  document.querySelector("#control-why").textContent = t("controlWhy");
+  box.innerHTML = waiting.map(card).join("");
+}
+
 let doubtPage = 0;
 
 // Tout ce que la veille a vu bouger sans le reconnaître elle-même : une carte
@@ -830,26 +903,33 @@ function paintDoubt() {
     pager.querySelector('[data-step="1"]').disabled = doubtPage >= pages - 1;
   }
 
+  document.querySelector("#doubt-list-title").textContent = t("doubtList");
   box.innerHTML = waiting.slice(doubtPage * PER_PAGE, (doubtPage + 1) * PER_PAGE)
-    .map((event) => {
-      const moment = new Date(event.t);
-      const clock = moment.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Paris" });
-      const day = moment.toLocaleDateString(locale(), { day: "2-digit", month: "short", timeZone: "Europe/Paris" });
-      const picture = event.thumb
-        ? `<img src="${escapeHtml(event.thumb)}" alt="" loading="lazy" decoding="async">`
-        : `<span class="placeholder"></span>`;
-      const info = event.detail || {};
-      const place = t("places")[info.surface || event.zone] || "";
-      // Ce qui a déjà été tranché reste, avec son verdict visible : revenir sur
-      // un avis doit être possible, et une carte qui disparaît une fois jugée
-      // enlèverait le moyen de se corriger.
-      const done = event.review ? ` judged ${event.review}` : "";
-      return `<figure class="card${done}">${picture}`
-        + `<figcaption><span class="when">${clock} · ${day}</span>`
-        + `<span class="guess">${escapeHtml(showText(event.label))}</span>`
-        + `<span class="place">${escapeHtml(place)}</span>`
-        + `${reviewControls(event, { naming: true })}</figcaption></figure>`;
-    }).join("");
+    .map(card).join("");
+  paintControl();
+}
+
+// Une carte : la photo en grand, l'heure, la supposition et les mots à choisir.
+// La même pour le contrôle et pour ce qui attend un avis, sans quoi les deux
+// finiraient par ne plus poser tout à fait la même question.
+function card(event) {
+  const moment = new Date(event.t);
+  const clock = moment.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Paris" });
+  const day = moment.toLocaleDateString(locale(), { day: "2-digit", month: "short", timeZone: "Europe/Paris" });
+  const picture = event.thumb
+    ? `<img src="${escapeHtml(event.thumb)}" alt="" loading="lazy" decoding="async">`
+    : `<span class="placeholder"></span>`;
+  const info = event.detail || {};
+  const place = t("places")[info.surface || event.zone] || "";
+  // Ce qui a déjà été tranché reste, avec son verdict visible : revenir sur un
+  // avis doit être possible, et une carte qui disparaît une fois jugée
+  // enlèverait le moyen de se corriger.
+  const done = event.review ? ` judged ${event.review}` : "";
+  return `<figure class="card${done}">${picture}`
+    + `<figcaption><span class="when">${clock} · ${day}</span>`
+    + `<span class="guess">${escapeHtml(showText(event.label))}</span>`
+    + `<span class="place">${escapeHtml(place)}</span>`
+    + `${reviewControls(event, { naming: true })}</figcaption></figure>`;
 }
 
 // The order the bars are stacked in, bottom first, and the order the legend
@@ -1022,6 +1102,16 @@ function paintScore() {
     && !(event.detail || {}).correction);
   box.textContent = t("scoreLine")(real.length, read.length, right.length);
   box.hidden = read.length === 0;
+
+  // Ce qu'on a le droit d'affirmer, qui n'est pas ce qu'on a compté. Douze
+  // justes sur douze ne font pas cent pour cent : ils font au moins
+  // soixante-quatorze, et c'est ce nombre-là qui doit être écrit.
+  const claim = document.querySelector("#claim");
+  if (!claim) return;
+  claim.hidden = read.length === 0;
+  const floor = Math.floor(sureAtLeast(right.length, read.length) * 100);
+  const clean = read.length === right.length;
+  claim.textContent = t("claimLine")(floor, clean ? Math.max(0, CLEAN_RUN - read.length) : 0);
 }
 
 function paintCounts() {

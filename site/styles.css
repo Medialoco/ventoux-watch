@@ -479,6 +479,17 @@ tr.wrong .event { text-decoration: line-through; }
 
 /* À trancher */
 
+.doubt h3 {
+  margin: 22px 0 6px;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.doubt h3:first-of-type { margin-top: 0; }
+.control .sub { margin: 0 0 12px; }
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

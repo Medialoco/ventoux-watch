@@ -42,6 +42,10 @@ jobs:
           NUMBER: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
         run: gh issue close "$NUMBER" --repo "$REPO" --comment "La déduction est enregistrée dans l'historique."
+      # Le seul déclencheur automatique qui reste. pages.yml ne part plus à
+      # chaque commit, mais un verdict doit se voir : sans cette ligne, la page
+      # à trancher resterait figée sur l'état d'avant et on jugerait deux fois
+      # les mêmes cartes sans jamais voir l'effet du premier avis.
       - name: Rebuild the site
         env:
           GH_TOKEN: ${{ github.token }}

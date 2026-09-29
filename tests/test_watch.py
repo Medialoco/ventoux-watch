@@ -1610,6 +1610,29 @@ class FogTests(unittest.TestCase):
         style = (root / "site" / "styles.css").read_text(encoding="utf-8")
         self.assertIn("tr.wrong", style)
 
+    def test_the_site_claims_no_more_than_the_checks_allow(self):
+        """Douze justes sur douze ne font pas cent pour cent.
+
+        La page doit écrire ce qu'on a le droit d'affirmer, pas ce qu'on a
+        compté. Sans faute, la borne basse exacte du taux vaut 0,05^(1/n) : le
+        taux le plus mauvais qui aurait tout de même une chance sur vingt de
+        passer n tirages sans se faire prendre. Elle franchit 0,95 à
+        cinquante-neuf, et c'est de là que vient la constante du script.
+        """
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "site" / "app.js").read_text(encoding="utf-8")
+        found = re.search(r"const CLEAN_RUN = (\d+);", script)
+        self.assertIsNotNone(found, "le nombre de contrôles à blanc n'est plus déclaré")
+        voulu = math.ceil(math.log(0.05) / math.log(0.95))
+        self.assertEqual(int(found.group(1)), voulu,
+                         f"0,05^(1/n) passe 0,95 à {voulu}, pas à {found.group(1)}")
+        self.assertGreaterEqual(0.05 ** (1 / voulu), 0.95)
+        self.assertLess(0.05 ** (1 / (voulu - 1)), 0.95)
+        # Et le tirage doit être un tirage : trier par date mettrait tout le
+        # contrôle sur une journée, et choisir mesurerait nos préférences.
+        self.assertIn("function scramble(id)", script)
+        self.assertIn("scramble(one.id) - scramble(other.id)", script)
+
     def test_a_verdict_carries_its_lesson_all_the_way_home(self):
         """La ligne d'apprentissage doit survivre au trajet.
 

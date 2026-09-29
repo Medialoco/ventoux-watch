@@ -72,6 +72,8 @@
       <!-- Le score de justesse, rempli par l'historique. Caché tant que rien
            n'a été relu : sans lecture humaine, rien n'est ni juste ni faux. -->
       <p class="sub score" id="score" hidden></p>
+      <!-- Ce qu'on a le droit d'affirmer, borne basse comprise. -->
+      <p class="sub score" id="claim" hidden></p>
       <div class="filters" role="tablist">
         <button type="button" class="on" data-filter="all" data-i18n="all">All</button>
         <button type="button" data-filter="vehicle" data-i18n="vehicles">Vehicles</button>
@@ -111,6 +113,15 @@
       <p class="sub" id="doubt-why"></p>
       <p class="sub" id="doubt-count"></p>
     </div>
+    <!-- Le contrôle passe avant le reste. Tant que personne n'a lu un tirage
+         au hasard de ce qui est publié, le taux de justesse du site n'est pas
+         une mesure mais une impression. -->
+    <div class="control" id="control" hidden>
+      <h3 id="control-title"></h3>
+      <p class="sub" id="control-why"></p>
+      <div class="cards" id="control-list"></div>
+    </div>
+    <h3 id="doubt-list-title"></h3>
     <p id="doubt-empty" class="empty" data-i18n="doubtEmpty" hidden>Nothing waiting.</p>
     <div class="cards" id="doubt-list"></div>
     <nav class="pager" id="doubt-pager" data-i18n-aria="pages" aria-label="Pages" hidden>
