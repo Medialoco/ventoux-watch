@@ -2,6 +2,140 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-29T11-45-51Z-fire-119",
+      "t": "2026-09-29T11:45:51Z",
+      "type": "fire",
+      "label": "Départ de feu",
+      "zone": "slope",
+      "confidence": 0.31,
+      "thumb": "data/thumbs/2026-09-29T11-45-51Z-fire-119.jpg",
+      "clip_url": "",
+      "detail": {
+        "warm_ratio": 0.124,
+        "smoke_ratio": 0.388,
+        "rise": 0.0,
+        "grow": 0.76,
+        "width_m": 3.9,
+        "surface": "",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1947,
+          "area_grow": 0.76,
+          "clipped": false,
+          "shade": 0.853,
+          "kept": 0.933,
+          "area_ratio": 0.00047,
+          "duration_s": 45.5,
+          "frames": 12,
+          "width_m": 3.9,
+          "height_m": 6.8,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.167,
+          "seen_as": []
+        },
+        "box": [
+          0.3172,
+          0.6139,
+          0.0187,
+          0.0583
+        ]
+      },
+      "closeup": "data/closeups/2026-09-29T11-45-51Z-fire-119.jpg"
+    },
+    {
+      "id": "2026-09-29T11-41-47Z-vehicle-117",
+      "t": "2026-09-29T11:41:47Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.515,
+      "thumb": "data/thumbs/2026-09-29T11-41-47Z-vehicle-117.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.9,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2361,
+          "area_grow": 24.68,
+          "clipped": false,
+          "shade": 0.828,
+          "kept": 0.352,
+          "area_ratio": 0.01285,
+          "duration_s": 7.7,
+          "frames": 7,
+          "width_m": 3.9,
+          "height_m": 2.9,
+          "width_named_m": 2.7,
+          "height_named_m": 2.5,
+          "rise_ms": 0.0,
+          "drift_rate": 0.135,
+          "seen_as": [
+            "truck 0.52 sur 59%"
+          ]
+        },
+        "surface": "island",
+        "box": [
+          0.0904,
+          0.7612,
+          0.0873,
+          0.1434
+        ],
+        "count": 2,
+        "since": "2026-09-29T11:41:47Z"
+      },
+      "closeup": "data/closeups/2026-09-29T11-41-47Z-vehicle-117.jpg"
+    },
+    {
+      "id": "2026-09-29T11-41-32Z-missed-116",
+      "t": "2026-09-29T11:41:32Z",
+      "type": "missed",
+      "label": "Nuage",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-29T11-41-32Z-missed-116.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Une masse pâle monte, mais elle est dans le ciel. Rien n'y brûle.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.4192,
+          "area_grow": 6.0,
+          "clipped": false,
+          "shade": 1.381,
+          "kept": 0.1,
+          "area_ratio": 0.00065,
+          "duration_s": 12.6,
+          "frames": 12,
+          "width_m": 8.9,
+          "height_m": 21.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.241,
+          "seen_as": []
+        },
+        "refused": "cloud",
+        "box": [
+          0.9359,
+          0.2194,
+          0.0141,
+          0.0611
+        ]
+      },
+      "closeup": "data/closeups/2026-09-29T11-41-32Z-missed-116.jpg"
+    },
+    {
       "id": "2026-09-29T11-37-19Z-missed-115",
       "t": "2026-09-29T11:37:19Z",
       "type": "missed",
