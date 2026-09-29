@@ -959,10 +959,13 @@ class ReviewTests(unittest.TestCase):
         self.assertTrue(apply_review(events, learning, "m1", "accepted", "voiture"))
         self.assertEqual(events[0]["type"], "vehicle")
         self.assertEqual(events[0]["label"], "Voiture")
-        self.assertEqual(events[0]["detail"]["correction"], "Voiture")
+        # « Mouvement » ne nommait rien : le préciser n'est pas le démentir.
+        self.assertNotIn("correction", events[0]["detail"])
         self.assertTrue(apply_review(events, learning, "m1", "accepted", "bus"))
         self.assertEqual(events[0]["type"], "bus")
         self.assertEqual(events[0]["label"], "Bus")
+        # Cette fois la lecture disait « voiture » : dire bus la dément.
+        self.assertEqual(events[0]["detail"]["correction"], "Bus")
         self.assertTrue(apply_review(events, learning, "m1", "rejected", ""))
         self.assertEqual(events[0]["review"], "rejected")
 
@@ -1526,6 +1529,92 @@ class FogTests(unittest.TestCase):
         self.assertIn('event.review === "rejected" ? \' class="wrong"\' : ""', script)
         style = (root / "site" / "styles.css").read_text(encoding="utf-8")
         self.assertIn("tr.wrong", style)
+
+    def test_sharpening_a_vague_reading_is_not_calling_it_wrong(self):
+        """« Véhicule » pour une voiture est flou, pas faux.
+
+        La page à trancher propose maintenant les cinq mots sur chaque carte,
+        et confirmer « voiture » sur un « véhicule » est devenu le geste le plus
+        courant. Le marquer comme une correction ferait chuter le taux de
+        justesse à chaque fois qu'on précise une lecture prudente : le taux
+        mesurerait alors notre zèle plutôt que la veille.
+        """
+        from watcher.review import apply_review
+
+        def juge(publie, mot):
+            entree = {"id": "x", "type": "vehicle", "label": publie, "detail": {}}
+            apply_review([entree], {}, "x", "accepted", mot)
+            return (entree.get("detail") or {}).get("correction")
+
+        self.assertIsNone(juge("Véhicule", "voiture"), "affiner n'est pas démentir")
+        self.assertIsNone(juge("Mouvement sur la route", "voiture"))
+        self.assertIsNone(juge("Voiture", "voiture"))
+        self.assertIsNone(juge("Voiture grise", "voiture"), "la couleur reste une voiture")
+        self.assertEqual(juge("Voiture", "camion"), "Camion", "nommer autre chose est une faute")
+        self.assertEqual(juge("Voiture", "pieton"), "Piéton")
+
+        # Et le mot juste doit arriver sur l'entrée dans tous les cas : c'est
+        # lui qui part dans data/reviewed.jsonl avec la mesure de la tache.
+        entree = {"id": "x", "type": "vehicle", "label": "Véhicule", "detail": {}}
+        lecons = []
+        apply_review([entree], {}, "x", "accepted", "voiture", lecons)
+        self.assertEqual(entree["label"], "Voiture")
+        self.assertEqual(lecons[0]["truth"], "Voiture")
+        self.assertEqual(lecons[0]["guessed"], "Véhicule")
+
+    def test_the_history_only_keeps_what_the_model_read_by_itself(self):
+        """La coupure entre ce qui est publié et ce qui attend un avis.
+
+        Un nom trouvé par une règle de rattrapage — c'est long comme un bus,
+        donc c'est un bus — dit ce que la règle savait déjà, pas ce que la
+        veille a reconnu. Sur les 54 lectures relues jusqu'ici, les 53 démenties
+        sont toutes de cette sorte-là, et la seule juste du premier coup est du
+        côté où le modèle a lu seul. C'est la raison d'être de la coupure, et si
+        elle venait à s'inverser cette épreuve doit tomber.
+        """
+        root = Path(__file__).resolve().parents[1]
+        evenements = json.loads((root / "data/events.json").read_text(encoding="utf-8"))["events"]
+        seul = [e for e in evenements if (e.get("detail") or {}).get("autonomous") is True]
+        reste = [e for e in evenements if (e.get("detail") or {}).get("autonomous") is not True]
+
+        def fautes(groupe):
+            return [e for e in groupe if e.get("review") == "rejected"
+                    or (e.get("review") and (e.get("detail") or {}).get("correction"))]
+
+        self.assertTrue(seul and reste, "il faut des deux côtés pour juger la coupure")
+        self.assertGreater(len(fautes(reste)), len(fautes(seul)),
+                           "la coupure ne trie plus rien : les fautes sont des deux côtés")
+
+        script = (root / "site" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("function namedItself(event)", script)
+        self.assertIn("events.filter(namedItself)", script)
+        # Le score et les graphiques portent sur ce qui est publié, sinon ils
+        # mesureraient la file d'attente plutôt que la veille.
+        for bloc in ("function paintScore()", "function paintFigures()"):
+            depuis = script.index(bloc)
+            corps = script[depuis:depuis + 1400]
+            self.assertIn("namedItself(event)", corps, bloc)
+            self.assertNotIn("!namedItself", corps, bloc)
+
+    def test_everything_not_read_by_the_model_lands_on_the_judging_page(self):
+        """Rien ne doit tomber entre les deux.
+
+        Une entrée qui quitte l'historique sans arriver ici serait perdue pour
+        la relecture, et c'est justement d'elles qu'on apprend.
+        """
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "site" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("function paintDoubt()", script)
+        self.assertIn("events.filter((event) => !namedItself(event)", script)
+        # Les boutons existaient depuis la première relecture sans être posés
+        # nulle part : c'est la page à trancher qui les met enfin au travail.
+        self.assertIn("reviewControls(event, { naming: true })", script)
+        # Les cinq mots sont ceux du sol : proposer « voiture » sous un avion
+        # n'offrirait au relecteur aucune réponse vraie.
+        self.assertIn('const ground = event.type !== "plane";', script)
+        page = (root / "site" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="doubt-list"', page)
+        self.assertIn('href="#doubt"', page)
 
     def test_the_map_draws_the_aim_that_was_measured(self):
         """The cone on the map said 140° while the fit said 126,7°.

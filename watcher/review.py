@@ -19,6 +19,25 @@ CLASSES = {
 }
 
 
+# Les mots qui ne nomment rien de précis : ils disent qu'une chose est passée
+# sans dire laquelle. Confirmer « voiture » sur l'un d'eux affine une lecture,
+# cela ne la dément pas, et compter cela comme une faute punirait la prudence.
+VAGUE = {"véhicule", "mouvement sur la route", "mouvement"}
+
+
+def _named_something_else(label: str, truth: str) -> bool:
+    """La lecture publiée désignait-elle autre chose que ce qui était là ?
+
+    « Véhicule » pour une voiture n'est pas faux, c'est flou ; « voiture » pour
+    un camion est faux. La couleur, elle, est écrite après le mot et n'entre pas
+    dans la question : « voiture grise » reste une voiture.
+    """
+    mot = (label or "").strip().lower()
+    if not mot or mot in VAGUE:
+        return False
+    return not mot.startswith((truth or "").strip().lower())
+
+
 def parse_review(body: str, label: str) -> tuple[str, str, str] | None:
     match = re.search(r"^event_id:\s*(\S+)\s*$", body or "", re.MULTILINE)
     if not match:
@@ -73,10 +92,16 @@ def apply_review(events: list[dict], learning: dict, event_id: str, verdict: str
     if classe in CLASSES:
         kind, label = CLASSES[classe]
         detail = dict(target.get("detail") or {})
-        if target.get("type") != kind or target.get("label") != label or detail.get("correction") != label:
+        if target.get("type") != kind or target.get("label") != label:
+            # La marque de correction ne se pose que si la lecture publiée
+            # nommait autre chose. Depuis que la page à trancher propose les
+            # cinq mots sur chaque carte, confirmer « voiture » sur un
+            # « véhicule » est devenu courant : c'est un affinage, et le
+            # compter comme une faute ferait mentir le taux de justesse.
+            if _named_something_else(guessed, label):
+                detail["correction"] = label
             target["type"] = kind
             target["label"] = label
-            detail["correction"] = label
             target["detail"] = detail
             changed = True
     previous = target.get("review")

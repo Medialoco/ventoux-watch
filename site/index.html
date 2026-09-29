@@ -28,6 +28,7 @@
       <nav class="onpage" data-i18n-aria="sections" aria-label="Sections">
         <a href="#live" data-i18n="navLive">Live</a>
         <a href="#log" data-i18n="navHistory">History</a>
+        <a href="#doubt" data-i18n="navDoubt">To judge</a>
         <a href="#figures" data-i18n="navFigures">Dataviz</a>
         <a href="#view3d" data-i18n="navRelief">3D</a>
         <a href="#camera" data-i18n="navCamera">Camera</a>
@@ -95,6 +96,26 @@
     <nav class="pager" id="pager" data-i18n-aria="pages" aria-label="Pages" hidden>
       <button type="button" data-step="-1" data-i18n="prevPage">Previous</button>
       <span id="pager-where"></span>
+      <button type="button" data-step="1" data-i18n="nextPage">Next</button>
+    </nav>
+  </section>
+
+  <!-- Ce que la veille a vu sans le reconnaître elle-même. L'historique
+       au-dessus ne garde que les lectures que le modèle a faites seul ; tout le
+       reste atterrit ici, en attente d'un avis. Chaque verdict donné ici part
+       corriger l'entrée et laisse derrière lui une ligne dans data/reviewed.jsonl,
+       d'où viendra le prochain réglage. -->
+  <section class="block doubt" id="doubt" aria-labelledby="doubt-title">
+    <div class="head">
+      <h2 id="doubt-title" data-i18n="doubt">To judge</h2><a class="anchor" href="#doubt" aria-hidden="true" tabindex="-1">#</a>
+      <p class="sub" id="doubt-why"></p>
+      <p class="sub" id="doubt-count"></p>
+    </div>
+    <p id="doubt-empty" class="empty" data-i18n="doubtEmpty" hidden>Nothing waiting.</p>
+    <div class="cards" id="doubt-list"></div>
+    <nav class="pager" id="doubt-pager" data-i18n-aria="pages" aria-label="Pages" hidden>
+      <button type="button" data-step="-1" data-i18n="prevPage">Previous</button>
+      <span id="doubt-where"></span>
       <button type="button" data-step="1" data-i18n="nextPage">Next</button>
     </nav>
   </section>

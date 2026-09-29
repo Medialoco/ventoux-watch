@@ -477,6 +477,62 @@ tr.wrong .event { text-decoration: line-through; }
   background: var(--hair);
 }
 
+/* À trancher */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.card {
+  margin: 0;
+  border: 1px solid var(--hair);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.card img, .card .placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  display: block;
+  background: var(--hair);
+}
+
+.card figcaption {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px 10px;
+  font-size: 0.9rem;
+}
+
+.card .when, .card .place { color: var(--muted); }
+.card .guess { font-weight: 600; }
+
+/* Une carte déjà tranchée s'efface sans disparaître : on doit pouvoir revenir
+   sur un avis, et la retirer ôterait le moyen de se corriger. */
+.card.judged { opacity: 0.5; }
+
+.verdict {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0;
+}
+
+.verdict a {
+  border: 1px solid var(--hair);
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 0.85rem;
+  text-decoration: none;
+  color: var(--muted);
+}
+
+.verdict a:hover { color: var(--ink); border-color: var(--ink); }
+.verdict a.on { color: var(--ink); border-color: var(--ink); font-weight: 600; }
+
 /* Pipeline */
 
 .steps {

@@ -120,6 +120,12 @@ const COPY = {
     clip: "Clip",
     scoreLine: (all, read, right) =>
       `${all} published · ${read} reviewed · ${right} right as published`,
+    doubt: "To judge",
+    navDoubt: "To judge",
+    doubtEmpty: "Nothing waiting.",
+    doubtWhy: "The watcher saw these move but did not read them itself. "
+      + "Its guess is written under each picture; tell it what was really there.",
+    doubtCount: (all) => `${all} waiting`,
     cameraFixed: "Fixed, facing",
     cameraField: "field",
     right: "Right",
@@ -248,6 +254,12 @@ const COPY = {
     clip: "Extrait",
     scoreLine: (all, read, right) =>
       `${all} publications · ${read} relues · ${right} juste${right > 1 ? "s" : ""} du premier coup`,
+    doubt: "À trancher",
+    navDoubt: "À trancher",
+    doubtEmpty: "Rien en attente.",
+    doubtWhy: "La veille a vu bouger ces choses sans les lire elle-même. "
+      + "Sa supposition est écrite sous chaque photo ; dites-lui ce qu'il y avait vraiment.",
+    doubtCount: (all) => `${all} en attente`,
     cameraFixed: "Fixe, cap",
     cameraField: "champ",
     right: "Juste",
@@ -645,6 +657,14 @@ document.querySelectorAll(".filters button").forEach((button) => {
   });
 });
 
+document.querySelector("#doubt-pager")?.addEventListener("click", (hit) => {
+  const step = Number(hit.target?.dataset?.step || 0);
+  if (!step) return;
+  doubtPage += step;
+  paintDoubt();
+  document.querySelector("#doubt")?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
 document.querySelector("#pager")?.addEventListener("click", (hit) => {
   const step = hit.target.closest("button")?.dataset.step;
   if (!step) return;
@@ -718,8 +738,18 @@ function detail(event) {
   return "";
 }
 
+// Le modèle a-t-il lu de lui-même ce qui a été publié ? Un nom trouvé par une
+// règle de rattrapage — c'est long comme un bus, donc c'est un bus — dit ce que
+// la règle savait déjà, pas ce que la veille a reconnu. Seul le premier compte
+// ici, et sur les 54 lectures relues jusqu'ici les 53 démenties étaient toutes
+// de l'autre sorte. Les entrées antérieures à cette marque n'en portent pas et
+// ne peuvent rien revendiquer : elles vont à trancher elles aussi.
+function namedItself(event) {
+  return (event.detail || {}).autonomous === true;
+}
+
 function render() {
-  const shown = events.filter((event) => {
+  const shown = events.filter(namedItself).filter((event) => {
     if (filter === "all") return true;
     if (filter === "vehicle") return event.type === "vehicle" || event.type === "car";
     return event.type === filter;
@@ -765,6 +795,61 @@ function render() {
       + `<td class="place">${escapeHtml(place)}</td>`
       + `<td class="shot">${picture}</td></tr>`;
   }).join("");
+  paintDoubt();
+}
+
+let doubtPage = 0;
+
+// Tout ce que la veille a vu bouger sans le reconnaître elle-même : une carte
+// par passage, la photo en grand et la supposition écrite dessous. Les boutons
+// ouvrent un ticket qui corrige l'entrée et dépose une ligne dans
+// data/reviewed.jsonl ; c'est de là que viendra le prochain réglage, sinon un
+// verdict ne serait qu'un compteur de plus.
+function paintDoubt() {
+  const box = document.querySelector("#doubt-list");
+  if (!box) return;
+  const waiting = events.filter((event) => !namedItself(event)
+    && !(event.detail || {}).simulation);
+  const why = document.querySelector("#doubt-why");
+  if (why) why.textContent = t("doubtWhy");
+  const tally = document.querySelector("#doubt-count");
+  if (tally) tally.textContent = t("doubtCount")(waiting.length);
+  const nothing = document.querySelector("#doubt-empty");
+  if (nothing) nothing.hidden = waiting.length > 0;
+
+  const pages = Math.max(1, Math.ceil(waiting.length / PER_PAGE));
+  doubtPage = Math.min(Math.max(doubtPage, 0), pages - 1);
+  const pager = document.querySelector("#doubt-pager");
+  if (pager) {
+    pager.hidden = waiting.length <= PER_PAGE;
+    const where = pager.querySelector("#doubt-where");
+    const first = doubtPage * PER_PAGE + 1;
+    const last = Math.min((doubtPage + 1) * PER_PAGE, waiting.length);
+    if (where) where.textContent = t("pageOf")(first, last, waiting.length);
+    pager.querySelector('[data-step="-1"]').disabled = doubtPage === 0;
+    pager.querySelector('[data-step="1"]').disabled = doubtPage >= pages - 1;
+  }
+
+  box.innerHTML = waiting.slice(doubtPage * PER_PAGE, (doubtPage + 1) * PER_PAGE)
+    .map((event) => {
+      const moment = new Date(event.t);
+      const clock = moment.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Paris" });
+      const day = moment.toLocaleDateString(locale(), { day: "2-digit", month: "short", timeZone: "Europe/Paris" });
+      const picture = event.thumb
+        ? `<img src="${escapeHtml(event.thumb)}" alt="" loading="lazy" decoding="async">`
+        : `<span class="placeholder"></span>`;
+      const info = event.detail || {};
+      const place = t("places")[info.surface || event.zone] || "";
+      // Ce qui a déjà été tranché reste, avec son verdict visible : revenir sur
+      // un avis doit être possible, et une carte qui disparaît une fois jugée
+      // enlèverait le moyen de se corriger.
+      const done = event.review ? ` judged ${event.review}` : "";
+      return `<figure class="card${done}">${picture}`
+        + `<figcaption><span class="when">${clock} · ${day}</span>`
+        + `<span class="guess">${escapeHtml(showText(event.label))}</span>`
+        + `<span class="place">${escapeHtml(place)}</span>`
+        + `${reviewControls(event, { naming: true })}</figcaption></figure>`;
+    }).join("");
 }
 
 // The order the bars are stacked in, bottom first, and the order the legend
@@ -803,8 +888,11 @@ function paintFigures() {
   // A drawn fire is not a fire that happened. These figures are meant to say
   // what goes past this camera at which hour, and a simulation went past
   // nothing: the two on file were the only entries in the "fire" column and
-  // gave it 0.7 % of the whole.
-  const seen = events.filter((event) => !(event.detail || {}).simulation && event.review !== "rejected");
+  // gave it 0.7 % of the whole. Et les couleurs de ces barres sont les noms :
+  // un nom dont la veille n'est pas sûre fait une barre fausse, d'où les mêmes
+  // passages que l'historique, ceux que le modèle a lus lui-même.
+  const seen = events.filter((event) => namedItself(event)
+    && !(event.detail || {}).simulation && event.review !== "rejected");
   if (!seen.length) {
     span.textContent = t("figuresEmpty");
     hourBox.innerHTML = dayBox.innerHTML = legend.innerHTML = "";
@@ -863,8 +951,16 @@ const REVIEW_CLASSES = [
   ["velo", "cycleWord", "Vélo"],
 ];
 
-function reviewControls(event) {
-  if (event.type === "motion") {
+// La question posée à trancher n'est pas « est-ce juste ? » mais « qu'y
+// avait-il ? ». Un simple démenti laisse l'entrée sans nom et n'apprend rien au
+// modèle : le mot juste, lui, part dans data/reviewed.jsonl avec la mesure de
+// la tache, et c'est de ce couple que sortira le prochain réglage.
+function reviewControls(event, { naming = false } = {}) {
+  // Sauf pour ce qui vole : les cinq mots sont ceux du sol, et aucun ne
+  // convient à un avion. La règle est ici plutôt que chez l'appelant, pour
+  // qu'aucune page ne puisse la manquer.
+  const ground = event.type !== "plane";
+  if (ground && (event.type === "motion" || naming)) {
     const correction = (event.detail || {}).correction;
     const rejected = event.review === "rejected" ? " on" : "";
     const choices = REVIEW_CLASSES.map(([classe, word, label]) =>
@@ -912,7 +1008,11 @@ function paintScore() {
   // relu : une publication que personne n'a regardée n'est ni juste ni fausse.
   const box = document.querySelector("#score");
   if (!box) return;
-  const real = events.filter((event) => !(event.detail || {}).simulation);
+  // Le compte porte sur ce que le site publie, c'est-à-dire sur les lectures
+  // que le modèle a faites seul. Y mêler celles qui attendent un avis
+  // mesurerait la file d'attente plutôt que la veille.
+  const real = events.filter((event) => namedItself(event)
+    && !(event.detail || {}).simulation);
   const read = real.filter((event) => event.review);
   // Une entrée corrigée à la main porte aujourd'hui le bon mot, mais elle
   // était fausse quand elle a été publiée, et c'est cela qu'on compte. Sans
