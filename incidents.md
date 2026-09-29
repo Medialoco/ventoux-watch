@@ -71,6 +71,49 @@ Le même mode de lancement était utilisé les jours précédents. Les mêmes
 interruptions s'y sont donc très probablement produites, sans qu'on puisse
 aujourd'hui dire lesquelles ni combien de temps.
 
+## Les pannes du 29 septembre
+
+### Trente-huit minutes sans regarder, service au vert
+
+De 07:04 à 07:48 UTC, premier jour du Raspberry. Le service était actif depuis
+07:09 et n'a traité sa première image qu'à 07:48 : pendant trente-huit
+minutes, `systemctl status` affichait un veilleur en bonne santé qui ne
+regardait rien. C'est très exactement le cas vicieux pour lequel le battement
+de cœur avait été écrit.
+
+Il n'a pas mordu. Non parce qu'il était mal conçu — sa logique, éprouvée
+depuis sur un faux battement de dix minutes, relance bien — mais parce qu'il
+n'avait **jamais été armé** : `scripts/pi_install.sh` faisait
+`systemctl enable ventoux-battement.timer` sans `--now`. La minuterie était
+donc inscrite pour le prochain démarrage, et le Raspberry n'avait pas
+redémarré. Neuf heures durant, `systemctl is-enabled` répondait `enabled` et
+`is-active` répondait `inactive`, sans que rien ne signale l'écart.
+
+La leçon dépasse le `--now` manquant. **Un garde-fou installé n'est pas un
+garde-fou armé**, et l'installation rendait compte de ce qu'elle avait écrit
+sur le disque, pas de ce qui protégeait la machine à la fin. Elle affiche
+désormais l'état réel des deux filets — battement et chien de garde matériel —
+et le dit en toutes lettres quand l'un dort. Sur cent machines, cette
+distinction est la différence entre un parc surveillé et un parc qu'on croit
+surveillé.
+
+Le chien de garde matériel, lui, était bien armé : `/dev/watchdog` présent,
+`RuntimeWatchdogSec=15` pris en compte par systemd.
+
+### Deux veilleurs sur la même webcam
+
+Pendant un quart d'heure, le Mac et le Raspberry ont observé la même caméra et
+publié dans le même dépôt. Le passage de 06:33 au rond-point existe donc deux
+fois, vu par l'un à 06:33:31 et par l'autre à 06:33:33.
+
+Sans conséquence cette fois — les doublons du Mac ont été écartés, le dépôt
+n'a rien perdu — mais le verrou `data/watch.lock` ne protège que d'un second
+veilleur *sur la même machine*. Il ne dit rien de deux machines. Le compteur
+qui numérote les événements est lui aussi local : les deux veilleurs
+repartaient chacun de 1, et rien n'empêche deux identifiants de coïncider à la
+seconde près. À cent caméras, il faudra que l'identité d'un veilleur fasse
+partie de ce qu'il publie.
+
 ## Les pannes du 28 septembre
 
 ### Un tracteur publié comme départ de feu
