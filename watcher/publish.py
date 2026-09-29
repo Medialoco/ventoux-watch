@@ -29,9 +29,14 @@ def publish(repo: Path) -> bool:
         "data/observed.jsonl",
     ]
     try:
-        _git(repo, "pull", "--rebase", "origin", "main")
-    except subprocess.CalledProcessError:
-        log.warning("Historique distant non rapatrié")
+        # --autostash : la veille écrit dans data/ en permanence, et un rebase
+        # refuse de démarrer sur un arbre sale. Sans cela le rapatriement échoue
+        # à chaque tour, et le premier verdict rendu depuis le site — qui arrive
+        # par le dépôt, pas par cette machine — fait diverger les deux côtés et
+        # bloque toute publication ultérieure.
+        _git(repo, "pull", "--rebase", "--autostash", "origin", "main")
+    except subprocess.CalledProcessError as erreur:
+        log.warning("Historique distant non rapatrié : %s", (erreur.stderr or "").strip()[:200])
     status = _git(repo, "status", "--porcelain", "--", *paths)
     if not status.strip():
         return False
