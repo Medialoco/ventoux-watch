@@ -16,7 +16,8 @@ import numpy as np
 
 from watcher.geometry import assign_zone
 from watcher.gtfs import GtfsIndex, load_feed
-from watcher.main import _box_of_the_named, _crossed_sky, _might_be_bus, _note_interruption, _utc
+from watcher.main import (STREAM_RETRY_MAX_S, STREAM_RETRY_S, _box_of_the_named, _crossed_sky,
+                          _might_be_bus, _next_wait, _note_interruption, _published, _utc)
 from watcher.naming import Decision
 from watcher.motion import MotionDetector, Track
 from watcher.naming import Detection, Observation, Trip, choose_aircraft, decide, in_camera_view
@@ -2124,6 +2125,46 @@ class FogTests(unittest.TestCase):
         # that shows one is still named.
         real = self._lamp(hazy=True, smoke_ratio=0.42, rise=0.011)
         self.assertEqual(decide(real).type, "fire")
+
+    def test_a_refusing_stream_is_asked_less_and_less(self):
+        # On 29 September a stream that answered nothing was asked three
+        # thousand times in forty minutes, because a generator that ends
+        # without raising left no pause anywhere in the loop.
+        wait, asks = STREAM_RETRY_S, 0
+        for _ in range(40 * 60):          # forty minutes of refusal
+            asks += 1
+            wait = _next_wait(0, wait)
+        self.assertEqual(wait, STREAM_RETRY_MAX_S)
+        # Counted in seconds rather than in turns: the ceiling means one ask a
+        # minute once the wait has grown, not three thousand.
+        spent, turns = 0.0, 0
+        wait = STREAM_RETRY_S
+        while spent < 40 * 60:
+            spent += wait
+            turns += 1
+            wait = _next_wait(0, wait)
+        self.assertLess(turns, 50)
+
+    def test_a_stream_that_worked_is_reopened_at_once(self):
+        # A stream that gave pictures and stopped is not refusing, and the
+        # patience earned by a previous outage must not be held against it.
+        self.assertEqual(_next_wait(1, STREAM_RETRY_MAX_S), STREAM_RETRY_S)
+
+    def test_a_failed_publication_does_not_stop_the_watching(self):
+        # A rejected push used to throw out of the picture loop, which reopened
+        # the stream and threw away the background model with it — half a
+        # minute of learning about this scene, lost over a git error.
+        import watcher.main as main
+
+        def refuse(_root):
+            raise subprocess.CalledProcessError(1, ["git", "push"])
+
+        kept, main.publish = main.publish, refuse
+        try:
+            with self.assertLogs("ventoux", level="ERROR"):
+                self.assertFalse(_published(ROOT))
+        finally:
+            main.publish = kept
 
     def test_the_ridge_is_what_decides(self):
         # Every night in the archive reads 60 to 72 clear; the fogged night of

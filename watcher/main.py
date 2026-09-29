@@ -48,6 +48,14 @@ STREAM_SILENCE_S = 30
 # Below this, the gap is a restart caught in flight rather than a spell of
 # blindness worth a line of its own.
 INTERRUPTION_FLOOR_S = 30
+# How long to wait before opening the stream again, and how long that wait may
+# grow. A stream that refuses once will usually refuse the next second too:
+# ffmpeg gives up in under a second on an unreadable playlist, so a loop with
+# no pause in it asks the server three thousand times in forty minutes. That
+# is what happened on 29 September, and on a thousand cameras the same loop
+# would be an attack on the very provider we depend on.
+STREAM_RETRY_S = 2
+STREAM_RETRY_MAX_S = 60
 
 
 def _foot_walk(drift: float, span: float, duration_s: float) -> float:
@@ -124,6 +132,39 @@ def _note_interruption(journal: Path, stopped: float, now: float) -> float:
     return gap
 
 
+def _next_wait(seen: int, wait: float) -> float:
+    """How long to wait before asking the stream again.
+
+    A stream that gave pictures and then stopped deserves to be reopened at
+    once: it was working a second ago. One that gave nothing at all is
+    refusing, and asking faster will not make it answer — it only turns our
+    watch into a hammer on somebody else's server.
+    """
+    if seen:
+        return STREAM_RETRY_S
+    return min(wait * 2, STREAM_RETRY_MAX_S)
+
+
+def _published(root: Path) -> bool:
+    """Send the history out, and never let that failure stop the watching.
+
+    Publishing goes through git, which depends on a network, a remote and a
+    history that two machines may have touched. All three can fail, and none
+    of them is a reason to stop looking at the mountain. Before this, a
+    rejected push threw out of the picture loop: the stream was reopened and
+    the background model — half a minute of learning about this scene — was
+    thrown away with it, over a git error.
+
+    What is not published stays marked as owed, and goes out at the next turn.
+    """
+    try:
+        publish(root)
+        return True
+    except Exception:
+        log.exception("Publication impossible, la veille continue")
+        return False
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     log.info("Veilleur v%s", __version__)
@@ -177,9 +218,12 @@ def main() -> None:
     last_publish = 0.0
     last_view = 0.0
 
+    wait = STREAM_RETRY_S
     while True:
+        seen = 0
         try:
             for frame in _frames(cfg["stream_url"]):
+                seen += 1
                 now = time.time()
                 # A sign of life, once a second. Nothing reads it here: it is
                 # for the machine watching from outside. The watcher can hang
@@ -208,14 +252,17 @@ def main() -> None:
                 _flush_clips(pending, ring, now, drive, store)
                 due = store.urgent or now - last_publish >= cfg["publish_interval_s"]
                 if (store.dirty or view.dirty) and due:
-                    publish(root)
-                    store.dirty = False
-                    store.urgent = False
-                    view.dirty = False
+                    if _published(root):
+                        store.dirty = False
+                        store.urgent = False
+                        view.dirty = False
                     last_publish = now
         except Exception:
-            log.exception("Flux interrompu, nouvel essai dans 10 s")
-            time.sleep(10)
+            log.exception("Flux interrompu")
+        if not seen:
+            log.warning("Flux muet, nouvel essai dans %s s", wait)
+        time.sleep(wait)
+        wait = _next_wait(seen, wait)
 
 
 def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map=None) -> None:
