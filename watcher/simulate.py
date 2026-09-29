@@ -122,6 +122,93 @@ def _flame(out: np.ndarray, base_x: float, base_y: float, column: float, rng) ->
     out[:] = out * (1 - core) + paint * core
 
 
+CAR_WIDE_M = 1.8
+CAR_TALL_M = 1.5
+LAMP_M = 0.25
+# How far ahead of the bumper the headlights throw a pool of light on the road,
+# and how wide that pool is. Dipped beams reach about thirty metres and spill
+# wider than the car itself, which is the whole trouble: the lit tarmac is a
+# bigger, brighter shape than the car that carries it, and the background
+# subtractor has no reason to prefer the car.
+POOL_LONG_M = 30.0
+POOL_WIDE_M = 6.0
+# Warm, because that is what the picture shows. Blue-green-red, as OpenCV
+# counts it.
+LAMP_BGR = (170.0, 220.0, 245.0)
+
+
+def car(
+    frame: np.ndarray,
+    spot: tuple[float, float],
+    scale: tuple[float, float],
+    *,
+    lights: bool = False,
+    pool_to: tuple[float, float] | None = None,
+    body: int = 70,
+) -> np.ndarray:
+    """A car standing on the road at spot, drawn at its true size.
+
+    spot is where its wheels touch the ground, in the normalised frame, and
+    scale is how much of the picture one metre covers there, as the scene map
+    reads it. Nothing here is drawn in fractions of the image: a car at a
+    hundred and forty metres is eight pixels wide on this camera and a car at
+    forty is thirty, and a test that draws the same rectangle at both distances
+    is measuring its own framing rather than the watcher.
+
+    pool_to is where the pool of the headlights reaches on the tarmac, given as
+    another point of the picture. It is drawn between the bumper and there,
+    pale and wide. Without it a night-time car is a dark shape on dark ground,
+    which is not what this camera sees.
+    """
+    height, width = frame.shape[:2]
+    across, up = scale
+    if not (across > 0 and up > 0):
+        raise ValueError("Une voiture se dessine en mètres : il faut l'échelle du terrain sous elle")
+    wide_px, tall_px = across * width, up * height
+    base_x, base_y = spot[0] * width, spot[1] * height
+    out = frame.astype(np.float32)
+
+    if pool_to is not None:
+        glow = np.zeros((height, width), dtype=np.float32)
+        far_x, far_y = pool_to[0] * width, pool_to[1] * height
+        steps = 18
+        for index in range(steps):
+            along = (index + 1) / steps
+            x = base_x + (far_x - base_x) * along
+            y = base_y + (far_y - base_y) * along
+            # The pool widens as it goes and fades with the square of the way,
+            # as light does.
+            radius = max(1.0, (POOL_WIDE_M * 0.5) * wide_px * (0.4 + along))
+            cv2.circle(glow, (int(x), int(y)), int(radius), float((1.0 - along) ** 2), -1)
+        blur = max(3, int(POOL_WIDE_M * wide_px / 4) | 1)
+        glow = cv2.GaussianBlur(glow, (blur, blur), 0)
+        glow = np.clip(glow, 0, 1)[:, :, None]
+        out = out * (1 - glow * 0.8) + np.float32(215) * glow * 0.8
+
+    half = CAR_WIDE_M * wide_px / 2
+    tall = CAR_TALL_M * tall_px
+    cv2.rectangle(out, (int(base_x - half), int(base_y - tall)), (int(base_x + half), int(base_y)),
+                  (float(body), float(body), float(body)), -1)
+    if lights:
+        # The lamps and their glare, not the bodywork. At night this camera
+        # shows almost nothing of the car itself: what reads as a yellow car on
+        # the roundabout is the headlights, and the paint has no part in it. So
+        # the bright thing is drawn warm and bleeding into the air around it,
+        # which is what the sensor does with a light pointed at it.
+        lamp = max(1, int(LAMP_M * wide_px))
+        halo = np.zeros((height, width), dtype=np.float32)
+        for side in (-1, 1):
+            x, y = int(base_x + side * half * 0.7), int(base_y - tall * 0.45)
+            cv2.circle(halo, (x, y), max(lamp * 4, 3), 1.0, -1)
+        halo = cv2.GaussianBlur(halo, (max(3, lamp * 6 | 1), max(3, lamp * 6 | 1)), 0)
+        halo = np.clip(halo, 0, 1)[:, :, None]
+        out = out * (1 - halo) + np.float32(LAMP_BGR) * halo
+        for side in (-1, 1):
+            cv2.circle(out, (int(base_x + side * half * 0.7), int(base_y - tall * 0.45)), lamp,
+                       (250.0, 252.0, 252.0), -1)
+    return np.clip(out, 0, 255).astype(np.uint8)
+
+
 def trail(frame: np.ndarray, line: list[tuple[float, float]], lift: float = 6.0,
           across: float = 0.010, seed: int = 0) -> np.ndarray:
     """Lay a condensation trail along a path through the picture.

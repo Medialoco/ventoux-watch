@@ -29,6 +29,76 @@ ROOT = Path(__file__).resolve().parents[1]
 ZONES = json.loads((ROOT / "config" / "zones.json").read_text())
 
 
+def _road_run(far_m: float = 110.0, near_m: float = 40.0, steps: int = 9):
+    """Points of the picture where the road lies, walked towards the camera.
+
+    Read off the scene map rather than picked by eye, so the same test would
+    run on any camera whose surroundings are mapped: it asks where the road is
+    at a hundred and forty metres, then at a hundred and thirty, and so on.
+    """
+    from watcher.scenemap import DRIVABLE, SceneMap
+
+    scene = SceneMap.load(ROOT / "config" / "scene.json")
+    cells = []
+    for row in range(scene.height):
+        for col in range(scene.width):
+            x, y = (col + 0.5) / scene.width, (row + 0.5) / scene.height
+            if scene.surface_at(x, y) in DRIVABLE:
+                cells.append((scene.distance_at(x, y), x, y))
+    run, last = [], None
+    for index in range(steps):
+        want = far_m + (near_m - far_m) * index / (steps - 1)
+        near = [cell for cell in cells if abs(cell[0] - want) <= want * 0.06] or cells
+        if last is None:
+            # Start on the widest part of the road at that distance rather than
+            # at an edge of the picture.
+            spot = min(near, key=lambda cell: abs(cell[0] - want))[1:]
+        else:
+            # A car does not jump across the picture: of the road at the next
+            # distance, take the piece nearest where it just was.
+            spot = min(near, key=lambda cell: (cell[1] - last[0]) ** 2 + (cell[2] - last[1]) ** 2)[1:]
+        run.append(spot)
+        last = spot
+    return scene, run
+
+
+def _approach(scene, run):
+    """Frames of a car coming at the camera at night, and where it really is."""
+    from watcher.simulate import CAR_TALL_M, CAR_WIDE_M, car, sensor_noise
+
+    frames, boxes = [], []
+    for index, spot in enumerate(run):
+        # Tarmac at night, with the grain of the sensor so the subtractor has
+        # something to settle on.
+        base = sensor_noise(np.full((1080, 1920, 3), 38, dtype=np.uint8), seed=index)
+        scale = scene.share_per_metre(*spot)
+        # The beams point at the camera, so the lit tarmac lies between the
+        # bumper and us: nearer, lower in the picture and wider than the car.
+        # That is the shape which stole the rectangle on 29 September.
+        pool = run[min(len(run) - 1, index + 3)]
+        frames.append(car(base, spot, scale, lights=True, pool_to=pool))
+        across, up = scale
+        boxes.append((spot[0] - CAR_WIDE_M * across / 2, spot[1] - CAR_TALL_M * up,
+                      CAR_WIDE_M * across, CAR_TALL_M * up))
+    return frames, boxes
+
+
+def _empty_road(count: int):
+    from watcher.simulate import sensor_noise
+
+    return [sensor_noise(np.full((1080, 1920, 3), 38, dtype=np.uint8), seed=90 + index)
+            for index in range(count)]
+
+
+def _share_of(box, other) -> float:
+    """What share of other the box holds."""
+    ax, ay, aw, ah = box
+    bx, by, bw, bh = other
+    wide = max(0.0, min(ax + aw, bx + bw) - max(ax, bx))
+    tall = max(0.0, min(ay + ah, by + bh) - max(ay, by))
+    return (wide * tall) / max(1e-9, bw * bh)
+
+
 def _ahead(lat: float, lon: float, bearing: float, meters: float) -> tuple[float, float]:
     radius = 6_371_000
     br = math.radians(bearing)
@@ -1262,6 +1332,70 @@ class FogTests(unittest.TestCase):
         # The little box sits wholly inside the blob, and holds a hundredth of it.
         self.assertAlmostEqual(_overlap(corner, blob), 1.0, places=3)
         self.assertAlmostEqual(_covers(corner, blob), 0.01, places=3)
+
+    def test_a_car_coming_towards_us_is_not_called_almost_still(self):
+        """The fault of 29 September at 02:51, put in front of the watcher.
+
+        A car arrives head-on at the roundabout with its headlights on. It was
+        left unnamed and the rectangle went to the pool of light its own lamps
+        threw on the tarmac; the close-up kept beside the entry holds no car at
+        all.
+
+        Built from the scene map rather than from this framing: the car is
+        drawn at its true 1.8 m on ground the map says is road, from 110 m
+        down to 40 m, which on this camera is nineteen pixels wide growing to
+        fifty-five. What it settles is that an approach here does travel — 0.08
+        of the picture, well past the threshold — so being taken for still is
+        not what an approach costs on this road. Its growth, three and a half
+        times, is the half of the movement nothing was writing down.
+        """
+        scene, road = _road_run()
+        frames, boxes = _approach(scene, road)
+        detector = MotionDetector(ZONES, motion_width=640, min_track_frames=3, warmup_frames=4)
+        for index in range(6):
+            detector.step(frames[0], index)
+        ended = []
+        for index, frame in enumerate(frames):
+            ended.extend(detector.step(frame, 20 + index).ended)
+        # The car leaves: a track only closes once the thing has gone.
+        for index, empty in enumerate(_empty_road(4)):
+            ended.extend(detector.step(empty, 60 + index).ended)
+
+        self.assertTrue(ended, "rien n'a été suivi du tout")
+        track = max(ended, key=lambda item: item.frames)
+        # What the fault looks like in numbers, and why travel cannot see it.
+        self.assertLess(track.travel, 0.1, "une voiture de face ne traverse pas l'image")
+        self.assertGreater(track.area_grow, 1.5, "elle grossit, et c'est là qu'est le mouvement")
+
+    def test_the_rectangle_lands_on_the_car_and_not_on_its_light(self):
+        """The pool of light is the bigger shape; the car is the true one.
+
+        This passes today, and it is worth saying that it does not yet stand
+        for the fault of 29 September. Drawn here, the lit tarmac merges with
+        the car into one blob twice its size and the rectangle still holds
+        three quarters of it. On the real roundabout the beams swept far wider
+        and the rectangle landed hundreds of pixels away. The test guards what
+        it shows — a car kept, not swapped for its own light — and the harder
+        case needs the sweep itself, which is not drawn here.
+        """
+        scene, road = _road_run()
+        frames, boxes = _approach(scene, road)
+        detector = MotionDetector(ZONES, motion_width=640, min_track_frames=3, warmup_frames=4)
+        for index in range(6):
+            detector.step(frames[0], index)
+        ended = []
+        for index, frame in enumerate(frames):
+            ended.extend(detector.step(frames[index], 20 + index).ended)
+        # The car leaves: a track only closes once the thing has gone.
+        for index, empty in enumerate(_empty_road(4)):
+            ended.extend(detector.step(empty, 60 + index).ended)
+        self.assertTrue(ended)
+        track = max(ended, key=lambda item: item.frames)
+        height, width = frames[0].shape[:2]
+        x, y, w, h = track.best_bbox
+        drawn = (x / width, y / height, w / width, h / height)
+        self.assertGreater(_share_of(drawn, boxes[-1]), 0.25,
+                           f"le rectangle {drawn} ne tient pas la voiture {boxes[-1]}")
 
     def test_the_map_draws_the_aim_that_was_measured(self):
         """The cone on the map said 140° while the fit said 126,7°.
