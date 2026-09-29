@@ -32,6 +32,8 @@ class Track:
     base: float = 0.0
     first_foot_x: float = 0.0
     foot_x: float = 0.0
+    shade: float = 1.0
+    texture: float = 0.0
 
     @property
     def rise(self) -> float:
@@ -86,6 +88,26 @@ class Track:
         return abs(self.foot_x - self.first_foot_x)
 
     @property
+    def lighting(self) -> tuple[float, float]:
+        """Le niveau et la texture de la tache, comparés au fond mémorisé.
+
+        Le premier nombre est le rapport des clartés : au-dessous de un la
+        tache est plus sombre que le fond qu'elle recouvre, au-dessus elle est
+        plus claire. Le second dit ce qu'il est advenu du dessin en dessous.
+
+        C'est là qu'est la séparation. Une ombre qui passe et la flaque des
+        phares changent la clarté sans toucher au dessin : le muret reste le
+        muret, ses pierres sont à leur place, simplement plus sombres ou plus
+        claires. Une chose qui passe, elle, cache ce qu'il y a derrière, et le
+        dessin d'en dessous disparaît avec.
+
+        Pris sur la vue où la tache était la plus grande, faute de quoi une
+        voiture jugée sur l'image où elle n'était encore qu'un coin d'aile
+        ressemblerait à un changement de lumière.
+        """
+        return self.shade, self.texture
+
+    @property
     def travel(self) -> float:
         dx = self.centroid[0] - self.first_centroid[0]
         dy = self.centroid[1] - self.first_centroid[1]
@@ -134,8 +156,13 @@ class MotionDetector:
         ratio = float(cv2.countNonZero(mask)) / float(mask.size)
         if ratio > self.max_foreground_ratio:
             return MotionStep(global_change=True)
+        # Read before the model is taught this frame, so it still holds the
+        # scene as it was without the thing that just moved.
+        behind = self.bg.getBackgroundImage()
         self.bg.apply(small, learningRate=-1)
         blobs = _blobs(mask, scale)
+        for blob in blobs:
+            blob["shade"], blob["texture"] = _lighting(small, behind, blob["bbox"], scale)
         return self._update_tracks(blobs, frame, now)
 
     def _update_tracks(self, blobs: list[dict], frame: np.ndarray, now: float) -> MotionStep:
@@ -167,6 +194,8 @@ class MotionDetector:
                     base=blob["base"],
                     first_foot_x=blob["foot_x"],
                     foot_x=blob["foot_x"],
+                    shade=blob.get("shade", 1.0),
+                    texture=blob.get("texture", 0.0),
                 )
                 self._next_id += 1
                 track.best_jpeg = _jpeg(frame)
@@ -187,6 +216,11 @@ class MotionDetector:
                 track.best_area = blob["area_ratio"]
                 track.best_bbox = blob["bbox"]
                 track.best_jpeg = _jpeg(frame)
+                # Sur la vue où la tache est la plus grande : une voiture jugée
+                # sur l'image où elle n'était qu'un coin d'aile passerait pour
+                # un changement de lumière.
+                track.shade = blob.get("shade", 1.0)
+                track.texture = blob.get("texture", 0.0)
 
         ended: list[Track] = []
         kept: list[Track] = []
@@ -223,6 +257,38 @@ class MotionDetector:
             best_distance = distance
             best_index = index
         return best_index
+
+
+def _lighting(small, behind, bbox, scale: float) -> tuple[float, float]:
+    """Combien la tache a changé de clarté, et combien son dessin a survécu.
+
+    Le dessin est jugé par la corrélation des deux morceaux une fois leur
+    moyenne retirée : elle vaut un si le fond est intact sous une autre
+    lumière, et tombe vers zéro si quelque chose s'est mis devant. Retirer la
+    moyenne est ce qui rend la mesure aveugle au niveau, donc capable de
+    répondre à une question et une seule.
+    """
+    if behind is None or behind.size == 0:
+        return 1.0, 0.0
+    # Les boîtes sortent de _blobs en coordonnées pleine image ; le fond, lui,
+    # est à la taille réduite où le mouvement est cherché.
+    x, y, w, h = (int(round(value * scale)) for value in bbox)
+    height, width = small.shape[:2]
+    x0, y0 = max(0, x), max(0, y)
+    x1, y1 = min(width, x + max(w, 1)), min(height, y + max(h, 1))
+    if x1 - x0 < 3 or y1 - y0 < 3:
+        return 1.0, 0.0
+    now = cv2.cvtColor(small[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.float32)
+    was = cv2.cvtColor(behind[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.float32)
+    shade = float(now.mean() / max(1.0, was.mean()))
+    a, b = now - now.mean(), was - was.mean()
+    spread = float(np.sqrt((a * a).sum() * (b * b).sum()))
+    if spread < 1e-6:
+        # Un fond parfaitement uni n'a pas de dessin à conserver, et la
+        # question ne se pose pas : sans grain, rien ne distingue une ombre
+        # d'un objet mat de la même clarté.
+        return shade, 0.0
+    return shade, float((a * b).sum() / spread)
 
 
 def _resize_width(frame: np.ndarray, width: int) -> tuple[np.ndarray, float]:

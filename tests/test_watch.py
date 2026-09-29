@@ -1333,6 +1333,83 @@ class FogTests(unittest.TestCase):
         self.assertAlmostEqual(_overlap(corner, blob), 1.0, places=3)
         self.assertAlmostEqual(_covers(corner, blob), 0.01, places=3)
 
+    def test_a_shadow_keeps_the_drawing_underneath_and_a_car_hides_it(self):
+        """La mesure qui sépare un changement de lumière d'une chose qui passe.
+
+        Une ombre et la flaque des phares changent la clarté sans toucher au
+        dessin : le muret reste le muret, ses pierres sont à leur place. Une
+        chose qui passe cache ce qu'il y a derrière, et le dessin disparaît
+        avec. Éprouvé sur le même morceau de décor, changé de trois façons.
+        """
+        from watcher.motion import _lighting
+
+        rng = np.random.default_rng(7)
+        # Un mur de pierres : du grain, comme tout ce que cette caméra regarde.
+        wall = rng.integers(60, 190, size=(60, 90, 3), dtype=np.uint8)
+        box = (0.0, 0.0, 90.0, 60.0)
+
+        dark = (wall * 0.55).astype(np.uint8)
+        shade, texture = _lighting(dark, wall, box, 1.0)
+        self.assertLess(shade, 0.75, "une ombre assombrit")
+        self.assertGreater(texture, 0.9, "et laisse le dessin intact")
+
+        lit = np.clip(wall.astype(np.float32) * 1.45, 0, 255).astype(np.uint8)
+        shade, texture = _lighting(lit, wall, box, 1.0)
+        self.assertGreater(shade, 1.2, "la flaque des phares éclaircit")
+        self.assertGreater(texture, 0.9, "et laisse le dessin intact")
+
+        # Une carrosserie : une surface à elle, qui cache le mur.
+        car = wall.copy()
+        car[10:50, 15:75] = 80
+        shade, texture = _lighting(car, wall, box, 1.0)
+        self.assertLess(texture, 0.5, f"un objet efface le dessin, or {texture:.2f}")
+
+    def test_the_measure_survives_the_shrink_the_watcher_really_does(self):
+        """La même mesure, mais par le vrai chemin, sur une image pleine taille.
+
+        Le mouvement est cherché sur une image réduite et les boîtes en
+        ressortent aux dimensions d'origine : entre les deux il y a un facteur,
+        et se tromper de sens le fait lire à côté de la tache. L'épreuve à
+        l'échelle un ne dit rien de cela, celle-ci si.
+        """
+        rng = np.random.default_rng(11)
+        # Un grain à la taille des pierres, pas du bruit pixel à pixel : ce
+        # dernier ne survit pas à la réduction, et ne ressemble à rien de ce
+        # que cette caméra regarde.
+        coarse = rng.integers(70, 180, size=(108, 192, 3), dtype=np.uint8)
+        wall = cv2.resize(coarse, (1920, 1080), interpolation=cv2.INTER_NEAREST)
+        detector = MotionDetector(ZONES, motion_width=640, min_track_frames=2, warmup_frames=4)
+        for index in range(8):
+            detector.step(wall, index)
+        # Une ombre traverse : le même mur, en plus sombre, et rien d'autre.
+        seen = []
+        for index in range(4):
+            frame = wall.copy()
+            left = 500 + index * 90
+            patch = frame[400:700, left:left + 300].astype(np.float32) * 0.5
+            frame[400:700, left:left + 300] = patch.astype(np.uint8)
+            detector.step(frame, 20 + index)
+            seen.extend((track.shade, track.texture) for track in detector.tracks)
+
+        self.assertTrue(seen, "l'ombre devrait faire au moins une tache")
+        shade, texture = min(seen, key=lambda pair: pair[0])
+        self.assertLess(shade, 0.8, f"l'ombre devrait assombrir, or {shade:.2f}")
+        self.assertGreater(texture, 0.8, f"le mur devrait survivre, or {texture:.2f}")
+
+    def test_a_flat_background_cannot_answer_the_question(self):
+        """Sans grain, rien ne distingue une ombre d'un objet mat.
+
+        Dit plutôt que caché : la mesure rend zéro, ce qui veut dire « je ne
+        sais pas », et non une fausse certitude.
+        """
+        from watcher.motion import _lighting
+
+        plain = np.full((40, 40, 3), 120, dtype=np.uint8)
+        darker = np.full((40, 40, 3), 70, dtype=np.uint8)
+        shade, texture = _lighting(darker, plain, (0.0, 0.0, 40.0, 40.0), 1.0)
+        self.assertLess(shade, 0.7)
+        self.assertEqual(texture, 0.0)
+
     def test_a_car_coming_towards_us_is_not_called_almost_still(self):
         """The fault of 29 September at 02:51, put in front of the watcher.
 
