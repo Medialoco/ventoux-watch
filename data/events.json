@@ -2,6 +2,215 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-29T17-47-36Z-missed-23",
+      "t": "2026-09-29T17:47:36Z",
+      "type": "missed",
+      "label": "Voiture garée",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-29T17-47-36Z-missed-23.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur une aire de stationnement, et ça n'a pas bougé.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.129,
+          "kept": 1.0,
+          "area_ratio": 0.00089,
+          "duration_s": 0.6,
+          "frames": 4,
+          "width_m": 3.1,
+          "height_m": 2.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "parked",
+        "box": [
+          0.0,
+          0.7556,
+          0.0266,
+          0.0333
+        ]
+      },
+      "closeup": "data/closeups/2026-09-29T17-47-36Z-missed-23.jpg"
+    },
+    {
+      "id": "2026-09-29T17-47-28Z-motion-20",
+      "t": "2026-09-29T17:47:28Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-29T17-47-28Z-motion-20.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0788,
+          "area_grow": 4.39,
+          "clipped": true,
+          "shade": 1.101,
+          "kept": 0.982,
+          "area_ratio": 0.00453,
+          "duration_s": 7.0,
+          "frames": 3,
+          "width_m": 2.4,
+          "height_m": 0.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.131,
+          "seen_as": []
+        },
+        "box": [
+          0.5938,
+          0.95,
+          0.0906,
+          0.05
+        ]
+      },
+      "closeup": "data/closeups/2026-09-29T17-47-28Z-motion-20.jpg"
+    },
+    {
+      "id": "2026-09-29T17-47-28Z-missed-21",
+      "t": "2026-09-29T17:47:28Z",
+      "type": "missed",
+      "label": "Trop petit",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-29T17-47-28Z-missed-21.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 87 cm au sol. Une voiture en couvre deux mètres et demi ici.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0121,
+          "area_grow": 2.14,
+          "clipped": true,
+          "shade": 1.105,
+          "kept": 1.0,
+          "area_ratio": 0.00208,
+          "duration_s": 0.2,
+          "frames": 2,
+          "width_m": 0.9,
+          "height_m": 1.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 1.307,
+          "seen_as": []
+        },
+        "refused": "too_small",
+        "box": [
+          0.6781,
+          0.9333,
+          0.0312,
+          0.0667
+        ]
+      },
+      "closeup": "data/closeups/2026-09-29T17-47-28Z-missed-21.jpg"
+    },
+    {
+      "id": "2026-09-29T17-47-28Z-missed-22",
+      "t": "2026-09-29T17:47:28Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-29T17-47-28Z-missed-22.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 55 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0535,
+          "area_grow": 0.47,
+          "clipped": false,
+          "shade": 1.077,
+          "kept": 0.917,
+          "area_ratio": 0.00086,
+          "duration_s": 0.2,
+          "frames": 2,
+          "width_m": 1.6,
+          "height_m": 0.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 3.75,
+          "drift_rate": 0.978,
+          "seen_as": []
+        },
+        "refused": "tarmac",
+        "box": [
+          0.4078,
+          0.9028,
+          0.0547,
+          0.0333
+        ]
+      },
+      "closeup": "data/closeups/2026-09-29T17-47-28Z-missed-22.jpg"
+    },
+    {
+      "id": "2026-09-29T17-40-42Z-missed-19",
+      "t": "2026-09-29T17:40:42Z",
+      "type": "missed",
+      "label": "Presque immobile",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-29T17-40-42Z-missed-19.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Le mouvement est trop court pour une voiture ou un bus.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.071,
+          "kept": 0.667,
+          "area_ratio": 0.00052,
+          "duration_s": 0.1,
+          "frames": 2,
+          "width_m": 1.6,
+          "height_m": 2.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.355,
+          "seen_as": []
+        },
+        "refused": "static",
+        "box": [
+          0.7688,
+          0.6444,
+          0.0156,
+          0.0333
+        ]
+      },
+      "closeup": "data/closeups/2026-09-29T17-40-42Z-missed-19.jpg"
+    },
+    {
       "id": "2026-09-29T17-35-05Z-missed-18",
       "t": "2026-09-29T17:35:05Z",
       "type": "missed",
