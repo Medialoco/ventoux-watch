@@ -1744,6 +1744,36 @@ class FogTests(unittest.TestCase):
         style = (root / "site" / "styles.css").read_text(encoding="utf-8")
         self.assertIn("tr.wrong", style)
 
+    def test_what_hides_itself_stays_hidden_once_given_a_display(self):
+        """Poser « display » sur un identifiant annule l'attribut « hidden ».
+
+        La règle du navigateur, « [hidden] { display: none } », ne pèse presque
+        rien : le moindre sélecteur d'identifiant la bat. Un élément qui se
+        cache en JavaScript et à qui l'on donne un jour un « display » pour le
+        mettre en page s'ouvre alors une fois et ne se referme plus, alors que
+        le code, lui, fait exactement ce qu'on lui demande. C'est arrivé à la
+        loupe le jour où elle est passée en flex pour loger la découpe à côté
+        du cadre ; le test d'alors lisait la propriété « hidden », c'est-à-dire
+        l'intention, et non le style calculé, c'est-à-dire l'écran.
+
+        La règle vaut pour les treize éléments que la page écrit déjà cachés,
+        et non pour le seul qui a fauté.
+        """
+        root = Path(__file__).resolve().parents[1]
+        page = (root / "site" / "index.html").read_text(encoding="utf-8")
+        style = (root / "site" / "styles.css").read_text(encoding="utf-8")
+        caches = set(re.findall(r'id="([\w-]+)"[^>]*\shidden[\s>]', page))
+        self.assertGreater(len(caches), 5, "plus personne ne se cache : le test ne garde plus rien")
+        fautifs = []
+        for nom in sorted(caches):
+            # Une règle qui pose « display » sur cet identifiant, sans être
+            # elle-même la règle du cas caché.
+            pose = re.search(r"#%s\b(?![^{,]*\[hidden\])[^{]*\{[^}]*\bdisplay\s*:" % re.escape(nom), style)
+            if pose and not re.search(r"#%s\[hidden\][^{]*\{[^}]*display\s*:\s*none" % re.escape(nom), style):
+                fautifs.append(nom)
+        self.assertEqual(fautifs, [], "ces éléments ont un « display » qui écrase leur « hidden » : "
+                                      + ", ".join(fautifs))
+
     def test_what_was_thrown_away_keeps_its_rare_motives(self):
         """Un échantillon par motif, pas un échantillon en bloc.
 
