@@ -1,12 +1,26 @@
 name: pages
 
-# À la demande seulement. Le site partait à chaque poussée, donc toutes les
-# quinze minutes quand la veille publie, et il est lisible de tout le monde
-# alors que le dépôt est privé. Tant que la reconnaissance du quotidien n'est
-# pas fiable, rien ne sort tout seul : on le déclenche quand on décide de
-# montrer, avec « gh workflow run pages.yml ».
+# Le site partait à chaque poussée, donc toutes les quinze minutes quand la
+# veille publie, et il est lisible de tout le monde alors que le dépôt est
+# privé. On l'a donc mis à la demande : rien ne sort tout seul tant que la
+# reconnaissance du quotidien n'est pas fiable.
+#
+# Cela a eu une conséquence que personne n'avait voulue. Le seul déclencheur
+# automatique restant était la dernière étape du workflow de relecture, si
+# bien que la fraîcheur du site s'est mise à dépendre de quelqu'un en train de
+# juger une carte : le 30 septembre, aucun verdict de la journée, et la page
+# montrait encore trois heures du matin à dix-sept heures passées. Un jour
+# sans relecture était devenu un jour sans site.
+#
+# D'où une horloge, toutes les heures pendant qu'il fait jour — de cinq à dix-
+# neuf heures UTC, ce qui couvre le lever et le coucher du soleil sur ce
+# versant en toute saison. La nuit n'a rien à montrer que le lampadaire du
+# chalet. La prudence tient toujours : ce sont les heures qui publient, pas
+# les commits, et couper ces trois lignes refige le site aussitôt.
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 5-19 * * *"
 
 permissions:
   contents: read
