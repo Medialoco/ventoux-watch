@@ -1,5 +1,6 @@
 import json
 import math
+import os
 import re
 import subprocess
 import sys
@@ -1018,6 +1019,49 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(events[0]["detail"]["correction"], "Bus")
         self.assertTrue(apply_review(events, learning, "m1", "rejected", ""))
         self.assertEqual(events[0]["review"], "rejected")
+
+    def test_the_script_that_records_a_verdict_runs_on_its_own(self):
+        """Onze verdicts perdus parce qu'un script ne s'importait pas.
+
+        Celui-ci tourne dans une action GitHub, sans personne devant l'écran :
+        il a échoué onze fois de suite sur « No module named 'watcher' » et
+        chaque échec a emporté une validation — plus la reconstruction du site,
+        qui est la dernière étape du même travail. Les tests de la relecture
+        appelaient les fonctions directement et ne voyaient rien.
+
+        On l'appelle donc comme l'action l'appelle : un sous-processus, lancé
+        depuis un autre répertoire, sans la racine dans PYTHONPATH.
+        """
+        root = Path(__file__).resolve().parents[1]
+        env = dict(os.environ)
+        env.pop("PYTHONPATH", None)
+        env["ISSUE_BODY"] = "event_id: inexistant\nverdict: accepted\nlecture: Voiture\nclasse: voiture\n"
+        env["LABEL"] = "valide"
+        fait = subprocess.run(
+            [sys.executable, str(root / "scripts" / "apply_review.py")],
+            cwd=root, env=env, capture_output=True, text=True,
+        )
+        self.assertEqual(fait.returncode, 0, fait.stderr)
+        self.assertNotIn("ModuleNotFoundError", fait.stderr)
+
+    def test_every_script_can_find_the_watcher(self):
+        """La même faute vaut pour tous les scripts, pas seulement celui-là.
+
+        Sauf pour ceux qu'on lance en « -m scripts.machin » : cette forme-là
+        met la racine dans le chemin d'elle-même. Chaque script dit comment on
+        l'appelle dans sa propre première phrase, et c'est ce qu'on lui demande
+        ici plutôt que de tenir une liste à côté.
+        """
+        root = Path(__file__).resolve().parents[1]
+        aveugles = []
+        for script in sorted((root / "scripts").glob("*.py")):
+            source = script.read_text(encoding="utf-8")
+            if not re.search(r"^(from|import) watcher", source, re.M):
+                continue
+            if f"-m scripts.{script.stem}" in source or "sys.path.insert" in source:
+                continue
+            aveugles.append(script.name)
+        self.assertFalse(aveugles, f"importent watcher sans se donner la racine : {aveugles}")
 
 
 if __name__ == "__main__":
