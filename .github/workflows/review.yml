@@ -25,6 +25,12 @@ jobs:
       # la tache qui avait produit la faute, et la seule chose à partir de
       # laquelle un seuil peut se régler. Elle était écrite puis abandonnée ici,
       # ce qui réduisait chaque relecture à un compteur.
+      # Un verdict ne doit pas dépendre de qui a poussé en dernier. La veille
+      # pousse ses événements toutes les quinze minutes, et deux relectures
+      # tranchées coup sur coup partent en même temps : le « git push » nu
+      # tombait alors sur un refus et le verdict était perdu sans bruit. On se
+      # rebase et on réessaie, et si l'on n'y arrive toujours pas on échoue
+      # franchement plutôt que de laisser croire que c'est enregistré.
       - name: Commit the verdict
         run: |
           files="data/events.json data/learning.json data/reviewed.jsonl"
@@ -35,7 +41,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Enregistre la validation d'une déduction"
-          git push
+          for essai in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Poussée refusée, tentative $essai ; on se remet à jour."
+            sleep $((essai * 5))
+            git pull --rebase origin main
+          done
+          echo "Le verdict n'a pas pu être poussé après cinq tentatives."
+          exit 1
       - name: Close the review
         env:
           GH_TOKEN: ${{ github.token }}
