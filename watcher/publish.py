@@ -16,6 +16,14 @@ def publish(repo: Path) -> bool:
     paths = [
         "data/events.json",
         "data/thumbs",
+        # La découpe que le modèle a vue, gardée à la résolution de la source.
+        # La vignette fait 480 pixels de large pour une image de 1920 : une
+        # voiture au rond-point y tient sur trente pixels, de quoi voir qu'il
+        # s'est passé quelque chose, pas de quoi dire quoi — et c'est
+        # exactement ce qu'on demande à qui juge une carte. Douze mégaoctets
+        # pour huit cents découpes, contre soixante-cinq de vignettes déjà
+        # poussées, et « prune » les efface au même moment que la vignette.
+        "data/closeups",
         "data/learning.json",
         "data/view.json",
         "data/view.jpg",

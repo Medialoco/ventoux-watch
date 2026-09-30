@@ -576,15 +576,34 @@ tr.wrong .event { text-decoration: line-through; }
   pointer-events: none;
   background: var(--card);
   border: 1px solid var(--ink);
+  /* Le cadre entier et, contre lui, la découpe. Rien d'écrit entre les deux :
+     la ligne ou la carte au-dessous porte déjà l'heure, le mot et le lieu. */
+  display: flex;
+  align-items: flex-start;
+  gap: 1px;
 }
 
-#loupe img {
+#loupe img.frame {
   display: block;
-  width: min(560px, 72vw);
+  width: min(560px, 62vw);
   height: auto;
   max-height: 72vh;
   object-fit: contain;
 }
+
+/* La découpe fait deux cents pixels de côté : on lui en donne deux cent
+   quarante, un agrandissement modeste qui montre ce qu'elle a sans prétendre
+   à des détails qu'elle n'a pas. */
+#loupe img.near {
+  display: block;
+  width: min(240px, 26vw);
+  height: auto;
+  max-height: 72vh;
+  object-fit: contain;
+  background: var(--hair);
+}
+
+#loupe img.near[hidden] { display: none; }
 
 .relief .stage { position: relative; }
 

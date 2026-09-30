@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Assemble the exhibition
         run: |
-          mkdir -p _site/data/thumbs
+          mkdir -p _site/data/thumbs _site/data/closeups
           cp -R site/. _site/
           cp data/events.json _site/data/events.json
           cp config/relief.json _site/data/relief.json
@@ -52,6 +52,12 @@ jobs:
           if [ -f data/view.json ]; then cp data/view.json _site/data/view.json; fi
           if [ -f data/view.jpg ]; then cp data/view.jpg _site/data/view.jpg; fi
           if [ -d data/thumbs ]; then cp -R data/thumbs/. _site/data/thumbs/; fi
+          # La découpe que le modèle a vue, à la résolution de la source. La
+          # vignette fait 480 pixels de large pour une image de 1920 : le sujet
+          # y tient sur trente pixels, et juger une carte revient à deviner.
+          # Douze mégaoctets pour huit cents découpes, contre soixante-cinq de
+          # vignettes déjà publiées — le prix de pouvoir regarder.
+          if [ -d data/closeups ]; then cp -R data/closeups/. _site/data/closeups/; fi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

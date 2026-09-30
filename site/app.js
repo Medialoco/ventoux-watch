@@ -668,7 +668,8 @@ const PER_PAGE = 25;
 let page = 0;
 
 const loupe = document.querySelector("#loupe");
-const loupeImg = loupe.querySelector("img");
+const loupeImg = loupe.querySelector("img.frame");
+const loupeNear = loupe.querySelector("img.near");
 
 function moveLoupe(event) {
   const pad = 12;
@@ -682,18 +683,32 @@ function moveLoupe(event) {
   loupe.style.top = `${y}px`;
 }
 
-list.addEventListener("mouseover", (event) => {
-  const img = event.target.closest(".shot img");
+// Les trois listes de vues, et elles seules. La loupe n'écoutait que
+// l'historique, si bien que les cartes à juger — les seules où l'on ait
+// vraiment besoin de regarder de près, puisqu'on y répond — en étaient
+// privées. Nommer les conteneurs plutôt que les classes : « shot » est aussi
+// la vue en direct et « card » est aussi la fiche du relief, deux images qu'on
+// ne veut pas voir surgir au-dessus d'elles-mêmes. Écouté sur le document
+// parce que les listes sont réécrites à chaque page tournée.
+const AGRANDIR = "#list .shot img, #doubt-list img, #control-list img";
+
+document.addEventListener("mouseover", (event) => {
+  const img = event.target.closest?.(AGRANDIR);
   if (!img) return;
   loupeImg.src = img.src;
+  // Et la découpe à côté, quand il y en a une : agrandir la vignette ne fait
+  // pas apparaître les détails qu'elle n'a pas, la découpe les a gardés.
+  const near = img.dataset.big;
+  loupeNear.hidden = !near;
+  if (near) loupeNear.src = near;
   loupe.hidden = false;
   moveLoupe(event);
 });
-list.addEventListener("mousemove", (event) => {
-  if (!loupe.hidden && event.target.closest(".shot img")) moveLoupe(event);
+document.addEventListener("mousemove", (event) => {
+  if (!loupe.hidden && event.target.closest?.(AGRANDIR)) moveLoupe(event);
 });
-list.addEventListener("mouseout", (event) => {
-  if (event.target.closest(".shot img")) loupe.hidden = true;
+document.addEventListener("mouseout", (event) => {
+  if (event.target.closest?.(AGRANDIR)) loupe.hidden = true;
 });
 
 document.querySelectorAll(".filters button").forEach((button) => {
@@ -824,7 +839,7 @@ function render() {
     const clock = moment.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Paris" });
     const day = moment.toLocaleDateString(locale(), { day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/Paris" });
     const picture = event.thumb
-      ? `<img src="${escapeHtml(event.thumb)}" alt="" loading="lazy" decoding="async">`
+      ? `<img src="${escapeHtml(event.thumb)}" alt="" loading="lazy" decoding="async"${bigger(event)}>`
       : `<span class="placeholder"></span>`;
     const info = event.detail || {};
     const people = Number(info.persons || 0);
@@ -941,6 +956,16 @@ function paintDoubt() {
   paintControl();
 }
 
+// La découpe que le modèle a vue, gardée à la résolution de la source. La
+// vignette fait 480 pixels de large pour une image de 1920 : une voiture au
+// rond-point y tient sur trente pixels, assez pour voir que quelque chose est
+// passé, pas pour dire si c'est un fourgon ou un break. La découpe en a quatre
+// fois plus. Elle vient à côté du cadre entier et non à sa place : agrandie
+// seule, elle ne dit plus où l'on regarde, et sans le lieu on ne juge rien.
+function bigger(event) {
+  return event.closeup ? ` data-big="${escapeHtml(event.closeup)}"` : "";
+}
+
 // Une carte : la photo en grand, l'heure, la supposition et les mots à choisir.
 // La même pour le contrôle et pour ce qui attend un avis, sans quoi les deux
 // finiraient par ne plus poser tout à fait la même question.
@@ -949,7 +974,7 @@ function card(event) {
   const clock = moment.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Paris" });
   const day = moment.toLocaleDateString(locale(), { day: "2-digit", month: "short", timeZone: "Europe/Paris" });
   const picture = event.thumb
-    ? `<img src="${escapeHtml(event.thumb)}" alt="" loading="lazy" decoding="async">`
+    ? `<img src="${escapeHtml(event.thumb)}" alt="" loading="lazy" decoding="async"${bigger(event)}>`
     : `<span class="placeholder"></span>`;
   const info = event.detail || {};
   const place = t("places")[info.surface || event.zone] || "";
