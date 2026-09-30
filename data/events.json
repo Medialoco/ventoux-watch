@@ -2,6 +2,148 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-30T07-14-34Z-missed-89",
+      "t": "2026-09-30T07:14:34Z",
+      "type": "missed",
+      "label": "Rien de reconnu à cet endroit",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T07-14-34Z-missed-89.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Aucun avion à cet endroit de l'image. Ce n'est pas un avion.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1681,
+          "area_grow": 0.64,
+          "clipped": false,
+          "shade": 1.162,
+          "kept": 0.0,
+          "area_ratio": 8e-05,
+          "duration_s": 7.5,
+          "frames": 8,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.64,
+          "seen_as": []
+        },
+        "refused": "none_at_that_spot",
+        "box": [
+          0.3484,
+          0.2333,
+          0.0266,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T07-14-34Z-missed-89.jpg"
+    },
+    {
+      "id": "2026-09-30T07-12-48Z-plane-88",
+      "t": "2026-09-30T07:12:48Z",
+      "type": "plane",
+      "label": "JFA28M",
+      "zone": "sky",
+      "confidence": 0.9,
+      "thumb": "data/thumbs/2026-09-30T07-12-48Z-plane-88.jpg",
+      "clip_url": "",
+      "detail": {
+        "icao24": "4d02be",
+        "callsign": "JFA28M",
+        "altitude_m": 7269.48,
+        "operator": "",
+        "flight": "",
+        "country": "Luxembourg",
+        "speed_ms": 147.85,
+        "heading": 172.6,
+        "climb_ms": -7.48,
+        "distance_km": 20.5,
+        "gap": 0.089,
+        "seen": true,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0997,
+          "area_grow": 0.18,
+          "clipped": false,
+          "shade": 1.223,
+          "kept": 0.1,
+          "area_ratio": 7e-05,
+          "duration_s": 23.8,
+          "frames": 29,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.109,
+          "seen_as": []
+        },
+        "from": "LFLI",
+        "from_town": "Annemasse",
+        "surface": "sky",
+        "box": [
+          0.3797,
+          0.0361,
+          0.0344,
+          0.0306
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T07-12-48Z-plane-88.jpg"
+    },
+    {
+      "id": "2026-09-30T07-12-24Z-vehicle-87",
+      "t": "2026-09-30T07:12:24Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.893,
+      "thumb": "data/thumbs/2026-09-30T07-12-24Z-vehicle-87.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.8,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.3315,
+          "area_grow": 39.11,
+          "clipped": true,
+          "shade": 0.787,
+          "kept": 0.411,
+          "area_ratio": 0.02444,
+          "duration_s": 6.6,
+          "frames": 7,
+          "width_m": 3.8,
+          "height_m": 2.8,
+          "width_named_m": 3.7,
+          "height_named_m": 2.7,
+          "rise_ms": 0.0,
+          "drift_rate": 0.193,
+          "seen_as": [
+            "truck 0.89 sur 79%",
+            "person 0.26 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.1143,
+          0.7932,
+          0.16,
+          0.2062
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T07-12-24Z-vehicle-87.jpg"
+    },
+    {
       "id": "2026-09-30T07-02-51Z-motion-85",
       "t": "2026-09-30T07:02:51Z",
       "type": "vehicle",
