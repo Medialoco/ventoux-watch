@@ -2,6 +2,85 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-30T10-21-19Z-missed-167",
+      "t": "2026-09-30T10:21:19Z",
+      "type": "missed",
+      "label": "Immobile sur la pente",
+      "zone": "slope",
+      "confidence": 0.0,
+      "thumb": "data/thumbs/2026-09-30T10-21-19Z-missed-167.jpg",
+      "clip_url": "",
+      "detail": {
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0082,
+          "area_grow": 0.84,
+          "clipped": false,
+          "shade": 1.108,
+          "kept": 0.15,
+          "area_ratio": 0.00049,
+          "duration_s": 4.4,
+          "frames": 5,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.036,
+          "seen_as": []
+        },
+        "refused": "slope_still",
+        "box": [
+          0.4234,
+          0.1972,
+          0.0578,
+          0.0389
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T10-21-19Z-missed-167.jpg"
+    },
+    {
+      "id": "2026-09-30T10-20-35Z-motion-166",
+      "t": "2026-09-30T10:20:35Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T10-20-35Z-motion-166.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.011,
+          "area_grow": 0.89,
+          "clipped": false,
+          "shade": 0.93,
+          "kept": 0.167,
+          "area_ratio": 0.00042,
+          "duration_s": 6.9,
+          "frames": 6,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.09,
+          "seen_as": []
+        },
+        "box": [
+          0.0219,
+          0.2889,
+          0.0203,
+          0.025
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T10-20-35Z-motion-166.jpg"
+    },
+    {
       "id": "2026-09-30T10-17-24Z-vehicle-165",
       "t": "2026-09-30T10:17:24Z",
       "type": "vehicle",
