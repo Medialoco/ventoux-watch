@@ -2,46 +2,93 @@
   "version": "0.4.0",
   "events": [
     {
-      "id": "2026-09-30T09-02-47Z-missed-137",
-      "t": "2026-09-30T09:02:47Z",
+      "id": "2026-09-30T09-12-58Z-missed-143",
+      "t": "2026-09-30T09:12:58Z",
       "type": "missed",
-      "label": "Vu trop brièvement",
-      "zone": "road",
+      "label": "Rien de reconnu sur la découpe",
+      "zone": "slope",
       "confidence": 0.3,
-      "thumb": "data/thumbs/2026-09-30T09-02-47Z-missed-137.jpg",
+      "thumb": "data/thumbs/2026-09-30T09-12-58Z-missed-143.jpg",
       "clip_url": "",
       "detail": {
-        "reading": "0.0 s de piste : un passage ordinaire n'aurait pas eu le temps de traverser la distance qu'on lui demande. On ne sait pas si ça a bougé, et rien n'a été reconnu.",
+        "reading": "Un passage a été vu. La classe viendra quand cet endroit aura été revu.",
         "period": "day",
         "weather": "ciel dégagé",
         "context": "de jour, ciel dégagé",
         "autonomous": false,
         "measured": {
-          "travel": 0.0,
-          "area_grow": 1.0,
-          "clipped": true,
-          "shade": 1.048,
-          "kept": 0.317,
-          "area_ratio": 0.01431,
-          "duration_s": 0.0,
-          "frames": 1,
-          "width_m": 4.2,
-          "height_m": 1.3,
+          "travel": 0.082,
+          "area_grow": 0.82,
+          "clipped": false,
+          "shade": 1.106,
+          "kept": 0.111,
+          "area_ratio": 0.00054,
+          "duration_s": 8.4,
+          "frames": 17,
+          "width_m": 0.0,
+          "height_m": 0.0,
           "width_named_m": 0.0,
           "height_named_m": 0.0,
           "rise_ms": 0.0,
-          "drift_rate": 0.0,
+          "drift_rate": 0.26,
           "seen_as": []
         },
-        "refused": "too_brief",
+        "refused": "unclassified",
         "box": [
-          0.2734,
-          0.9111,
-          0.1609,
-          0.0889
+          0.3391,
+          0.2361,
+          0.0422,
+          0.0333
         ]
       },
-      "closeup": "data/closeups/2026-09-30T09-02-47Z-missed-137.jpg"
+      "closeup": "data/closeups/2026-09-30T09-12-58Z-missed-143.jpg"
+    },
+    {
+      "id": "2026-09-30T09-09-47Z-vehicle-140",
+      "t": "2026-09-30T09:09:47Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.863,
+      "thumb": "data/thumbs/2026-09-30T09-09-47Z-vehicle-140.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 5.3,
+        "height_m": 1.5,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 0.791,
+          "kept": 0.279,
+          "area_ratio": 0.01853,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 5.3,
+          "height_m": 1.5,
+          "width_named_m": 5.3,
+          "height_named_m": 1.5,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "truck 0.86 sur 96%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.5791,
+          0.8876,
+          0.2433,
+          0.1124
+        ],
+        "count": 3,
+        "since": "2026-09-30T09:09:47Z"
+      },
+      "closeup": "data/closeups/2026-09-30T09-09-47Z-vehicle-140.jpg"
     },
     {
       "id": "2026-09-30T09-02-40Z-vehicle-136",
@@ -89,6 +136,48 @@
         "since": "2026-09-30T09:02:40Z"
       },
       "closeup": "data/closeups/2026-09-30T09-02-40Z-vehicle-136.jpg"
+    },
+    {
+      "id": "2026-09-30T09-02-47Z-missed-137",
+      "t": "2026-09-30T09:02:47Z",
+      "type": "missed",
+      "label": "Vu trop brièvement",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T09-02-47Z-missed-137.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "0.0 s de piste : un passage ordinaire n'aurait pas eu le temps de traverser la distance qu'on lui demande. On ne sait pas si ça a bougé, et rien n'a été reconnu.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.048,
+          "kept": 0.317,
+          "area_ratio": 0.01431,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 4.2,
+          "height_m": 1.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "too_brief",
+        "box": [
+          0.2734,
+          0.9111,
+          0.1609,
+          0.0889
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T09-02-47Z-missed-137.jpg"
     },
     {
       "id": "2026-09-30T09-02-25Z-missed-135",
