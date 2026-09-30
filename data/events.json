@@ -2,6 +2,94 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-30T14-34-23Z-motion-261",
+      "t": "2026-09-30T14:34:23Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T14-34-23Z-motion-261.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.6613,
+          "area_grow": 0.1,
+          "clipped": false,
+          "shade": 0.957,
+          "kept": 0.325,
+          "area_ratio": 0.0014,
+          "duration_s": 8.2,
+          "frames": 8,
+          "width_m": 5.0,
+          "height_m": 2.4,
+          "width_named_m": 0.5,
+          "height_named_m": 0.5,
+          "rise_ms": 0.21,
+          "drift_rate": 0.41,
+          "seen_as": [
+            "car 0.31 sur 0%"
+          ]
+        },
+        "box": [
+          0.4359,
+          0.8222,
+          0.1906,
+          0.1639
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T14-34-23Z-motion-261.jpg"
+    },
+    {
+      "id": "2026-09-30T14-22-19Z-vehicle-260",
+      "t": "2026-09-30T14:22:19Z",
+      "type": "vehicle",
+      "label": "Voiture blanche",
+      "zone": "other",
+      "confidence": 0.825,
+      "thumb": "data/thumbs/2026-09-30T14-22-19Z-vehicle-260.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.3,
+        "height_m": 2.5,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.7135,
+          "area_grow": 3.31,
+          "clipped": false,
+          "shade": 0.934,
+          "kept": 0.327,
+          "area_ratio": 0.01049,
+          "duration_s": 14.7,
+          "frames": 18,
+          "width_m": 3.3,
+          "height_m": 2.5,
+          "width_named_m": 2.2,
+          "height_named_m": 1.5,
+          "rise_ms": 0.04,
+          "drift_rate": 0.427,
+          "seen_as": [
+            "truck 0.83 sur 39%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.1395,
+          0.8719,
+          0.096,
+          0.1126
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T14-22-19Z-vehicle-260.jpg"
+    },
+    {
       "id": "2026-09-30T14-17-12Z-missed-259",
       "t": "2026-09-30T14:17:12Z",
       "type": "missed",
