@@ -2,6 +2,175 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-30T15-14-57Z-vehicle-278",
+      "t": "2026-09-30T15:14:57Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.614,
+      "thumb": "data/thumbs/2026-09-30T15-14-57Z-vehicle-278.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.1475,
+          "area_grow": 8.4,
+          "clipped": false,
+          "shade": 0.915,
+          "kept": 0.2,
+          "area_ratio": 0.00474,
+          "duration_s": 14.0,
+          "frames": 9,
+          "width_m": 7.2,
+          "height_m": 4.5,
+          "width_named_m": 6.9,
+          "height_named_m": 5.6,
+          "rise_ms": 0.0,
+          "drift_rate": 0.002,
+          "seen_as": [
+            "truck 0.61 sur 88%",
+            "car 0.26 sur 0%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.0079,
+          0.6771,
+          0.08,
+          0.1161
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T15-14-57Z-vehicle-278.jpg"
+    },
+    {
+      "id": "2026-09-30T15-12-32Z-missed-277",
+      "t": "2026-09-30T15:12:32Z",
+      "type": "missed",
+      "label": "Décor connu",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T15-12-32Z-missed-277.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "bâtiment est fixé au sol. C'est une lumière qui a bougé, pas lui.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0032,
+          "area_grow": 1.44,
+          "clipped": false,
+          "shade": 0.966,
+          "kept": 0.222,
+          "area_ratio": 0.00063,
+          "duration_s": 6.9,
+          "frames": 4,
+          "width_m": 7.2,
+          "height_m": 7.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.048,
+          "seen_as": []
+        },
+        "refused": "landmark",
+        "box": [
+          0.0375,
+          0.6,
+          0.0187,
+          0.0333
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T15-12-32Z-missed-277.jpg"
+    },
+    {
+      "id": "2026-09-30T15-12-18Z-motion-276",
+      "t": "2026-09-30T15:12:18Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T15-12-18Z-motion-276.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0779,
+          "area_grow": 0.92,
+          "clipped": false,
+          "shade": 0.929,
+          "kept": 0.28,
+          "area_ratio": 0.00048,
+          "duration_s": 10.6,
+          "frames": 10,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.116,
+          "seen_as": []
+        },
+        "box": [
+          0.0094,
+          0.3528,
+          0.0344,
+          0.0556
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T15-12-18Z-motion-276.jpg"
+    },
+    {
+      "id": "2026-09-30T15-09-06Z-missed-275",
+      "t": "2026-09-30T15:09:06Z",
+      "type": "missed",
+      "label": "Au bord de l'image",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T15-09-06Z-missed-275.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La tache sort du cadre et le sol n'est pas relevé là : sa taille est inconnue, et rien n'a été reconnu assez sûrement pour la nommer sans elle.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.559,
+          "kept": 1.0,
+          "area_ratio": 0.00048,
+          "duration_s": 0.2,
+          "frames": 2,
+          "width_m": 6.0,
+          "height_m": 5.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "edge_of_frame",
+        "box": [
+          0.9812,
+          0.3722,
+          0.0172,
+          0.0278
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T15-09-06Z-missed-275.jpg"
+    },
+    {
       "id": "2026-09-30T15-01-30Z-motion-274",
       "t": "2026-09-30T15:01:30Z",
       "type": "motion",
