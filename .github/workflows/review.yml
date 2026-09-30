@@ -15,41 +15,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Record the verdict
-        env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          LABEL: ${{ github.event.label.name }}
-        run: python scripts/apply_review.py
       # data/reviewed.jsonl compte autant que les deux autres. C'est la ligne
       # que le verdict laisse derrière lui : le mot juste marié à la mesure de
       # la tache qui avait produit la faute, et la seule chose à partir de
       # laquelle un seuil peut se régler. Elle était écrite puis abandonnée ici,
       # ce qui réduisait chaque relecture à un compteur.
+      #
       # Un verdict ne doit pas dépendre de qui a poussé en dernier. La veille
       # pousse ses événements toutes les quinze minutes, et deux relectures
       # tranchées coup sur coup partent en même temps : le « git push » nu
-      # tombait alors sur un refus et le verdict était perdu sans bruit. On se
-      # rebase et on réessaie, et si l'on n'y arrive toujours pas on échoue
-      # franchement plutôt que de laisser croire que c'est enregistré.
-      - name: Commit the verdict
+      # tombait alors sur un refus et le verdict était perdu sans bruit.
+      #
+      # Se rebaser ne suffit pas non plus : deux verdicts ajoutent chacun leur
+      # ligne à la fin de reviewed.jsonl, au même endroit, et git n'a aucun
+      # moyen de choisir l'ordre — le 30 septembre un rebase est mort là-dessus
+      # en emportant le verdict. On ne rejoue donc pas le commit, on refait le
+      # travail : on repart de l'état frais du dépôt et on réapplique le
+      # verdict dessus. Relire une issue deux fois donne deux fois le même
+      # résultat, ce qui rend l'opération sans danger à répéter.
+      - name: Record and commit the verdict
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          LABEL: ${{ github.event.label.name }}
         run: |
           files="data/events.json data/learning.json data/reviewed.jsonl"
-          git add -- $files
-          if git diff --cached --quiet; then
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Enregistre la validation d'une déduction"
           for essai in 1 2 3 4 5; do
+            git fetch --quiet origin main
+            git reset --quiet --hard origin/main
+            python scripts/apply_review.py
+            git add -- $files
+            if git diff --cached --quiet; then
+              echo "Rien à écrire : ce verdict était déjà dans l'historique."
+              exit 0
+            fi
+            git commit --quiet -m "Enregistre la validation d'une déduction"
             if git push; then
               exit 0
             fi
-            echo "Poussée refusée, tentative $essai ; on se remet à jour."
+            echo "Poussée refusée, tentative $essai ; on refait le verdict sur l'état à jour."
             sleep $((essai * 5))
-            git pull --rebase origin main
           done
-          echo "Le verdict n'a pas pu être poussé après cinq tentatives."
+          echo "Le verdict n'a pas pu être écrit après cinq tentatives."
           exit 1
       - name: Close the review
         env:
