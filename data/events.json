@@ -2,6 +2,215 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-30T11-33-35Z-missed-192",
+      "t": "2026-09-30T11:33:35Z",
+      "type": "missed",
+      "label": "Décor connu",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T11-33-35Z-missed-192.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "bâtiment est fixé au sol. C'est une lumière qui a bougé, pas lui.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.862,
+          "kept": 0.167,
+          "area_ratio": 0.00042,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 5.3,
+          "height_m": 7.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "landmark",
+        "box": [
+          0.0375,
+          0.5806,
+          0.0125,
+          0.0333
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T11-33-35Z-missed-192.jpg"
+    },
+    {
+      "id": "2026-09-30T11-32-21Z-missed-191",
+      "t": "2026-09-30T11:32:21Z",
+      "type": "missed",
+      "label": "Décor de l'îlot",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T11-32-21Z-missed-191.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur l'îlot central du rond-point, et ça n'a pas bougé. Les pierres et les figures y sont plantées.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0076,
+          "area_grow": 0.47,
+          "clipped": false,
+          "shade": 0.951,
+          "kept": 0.4,
+          "area_ratio": 0.00043,
+          "duration_s": 0.7,
+          "frames": 2,
+          "width_m": 1.5,
+          "height_m": 0.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.496,
+          "seen_as": []
+        },
+        "refused": "island",
+        "box": [
+          0.3453,
+          0.8222,
+          0.0359,
+          0.025
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T11-32-21Z-missed-191.jpg"
+    },
+    {
+      "id": "2026-09-30T11-30-42Z-motion-190",
+      "t": "2026-09-30T11:30:42Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T11-30-42Z-motion-190.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0152,
+          "area_grow": 0.4,
+          "clipped": false,
+          "shade": 0.932,
+          "kept": 0.7,
+          "area_ratio": 0.00083,
+          "duration_s": 0.1,
+          "frames": 2,
+          "width_m": 3.2,
+          "height_m": 3.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 1.13,
+          "drift_rate": 1.975,
+          "seen_as": []
+        },
+        "box": [
+          0.7688,
+          0.6139,
+          0.0312,
+          0.0667
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T11-30-42Z-motion-190.jpg"
+    },
+    {
+      "id": "2026-09-30T11-26-36Z-missed-189",
+      "t": "2026-09-30T11:26:36Z",
+      "type": "missed",
+      "label": "Immobile sur la pente",
+      "zone": "slope",
+      "confidence": 0.0,
+      "thumb": "data/thumbs/2026-09-30T11-26-36Z-missed-189.jpg",
+      "clip_url": "",
+      "detail": {
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0079,
+          "area_grow": 1.63,
+          "clipped": false,
+          "shade": 1.169,
+          "kept": 0.25,
+          "area_ratio": 0.00069,
+          "duration_s": 0.8,
+          "frames": 5,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.255,
+          "seen_as": []
+        },
+        "refused": "slope_still",
+        "box": [
+          0.2547,
+          0.3528,
+          0.025,
+          0.0278
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T11-26-36Z-missed-189.jpg"
+    },
+    {
+      "id": "2026-09-30T11-20-54Z-vehicle-187",
+      "t": "2026-09-30T11:20:54Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.552,
+      "thumb": "data/thumbs/2026-09-30T11-20-54Z-vehicle-187.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.7,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.4437,
+          "area_grow": 18.1,
+          "clipped": false,
+          "shade": 0.915,
+          "kept": 0.505,
+          "area_ratio": 0.01319,
+          "duration_s": 8.8,
+          "frames": 8,
+          "width_m": 4.7,
+          "height_m": 4.0,
+          "width_named_m": 1.0,
+          "height_named_m": 1.7,
+          "rise_ms": 0.0,
+          "drift_rate": 0.22,
+          "seen_as": [
+            "car 0.55 sur 8%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.2078,
+          0.8447,
+          0.0427,
+          0.1244
+        ],
+        "count": 2,
+        "since": "2026-09-30T11:20:54Z"
+      },
+      "closeup": "data/closeups/2026-09-30T11-20-54Z-vehicle-187.jpg"
+    },
+    {
       "id": "2026-09-30T11-15-46Z-missed-186",
       "t": "2026-09-30T11:15:46Z",
       "type": "missed",
