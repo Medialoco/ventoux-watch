@@ -37,10 +37,19 @@ class Store:
         # what lets one event jump the queue.
         self.urgent = False
         self._seq = 0
+        # Ce que le dernier add_event a fait de la lecture qu'on lui donnait :
+        # l'a-t-il adoptée, ou seulement comptée derrière une lecture déjà en
+        # place ? L'appelant ne pouvait pas le savoir et gardait l'observation
+        # dans les deux cas, si bien que le fichier finissait par contenir
+        # l'observation d'une lecture que la carte ne montre pas. Neuf pour
+        # cent des lignes étaient dans ce cas le 30 septembre.
+        self.reading_kept = True
         self.events = self._load()
+        self._seen_ids = self._load_seen_ids()
 
     def add_event(self, when: datetime, type_: str, label: str, zone: str, confidence: float, jpeg: bytes, detail: dict) -> dict:
         self.events = self._load()
+        self.reading_kept = True
         if type_ in URGENT_TYPES:
             self.urgent = True
         stamp = when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
@@ -58,7 +67,14 @@ class Store:
         }
         host = open_passage(self.events, event)
         if host is not None:
+            # L'identifiant de l'hôte garde l'heure de la première vue du
+            # passage, tandis que « t » suit la vue qu'on montre. Les deux
+            # divergent donc dès qu'un passage est revu, et c'est voulu : la
+            # vignette, la découpe, l'observation et les tickets de relecture
+            # sont tous rangés sous l'identifiant, qui ne doit plus bouger. On
+            # lit l'heure dans « t », jamais dans le nom.
             if (host.get("detail") or {}).get("correction") or not better_reading(event, host):
+                self.reading_kept = False
                 _bump(host)
             else:
                 _copy_reading(host, event)
@@ -124,15 +140,39 @@ class Store:
 
         À part, parce que le site télécharge events.json à chaque visite et
         qu'il n'a que faire de la chaleur des pixels ni du partage des boîtes.
-        Ici, une ligne par publication, sous son identifiant : c'est ce qui
-        permettra de refaire tourner le raisonnement sur un cas dont on sait
-        aujourd'hui ce qu'il était vraiment.
+        Ici, une ligne par carte, sous son identifiant : c'est ce qui permettra
+        de refaire tourner le raisonnement sur un cas dont on sait aujourd'hui
+        ce qu'il était vraiment.
+
+        Une ligne par carte, et non par publication. Un passage revu dans la
+        minute rejoint la carte déjà ouverte, et la carte ne montre qu'une
+        lecture : celle qu'elle a retenue. Garder aussi les autres remplissait
+        le fichier d'observations qui n'expliquent rien de ce qu'on voit — et
+        pire, la dernière écrite pouvait être celle d'une lecture écartée, si
+        bien qu'un lecteur pressé rejouait le mauvais raisonnement. C'est ce
+        qui m'est arrivé le 30 septembre en enquêtant sur un piéton sous la
+        pluie : la première ligne de son identifiant n'avait aucune détection,
+        et j'en ai conclu que le disque perdait les lectures du modèle.
         """
+        if not self.reading_kept:
+            # La lecture n'a pas été retenue : la carte montre toujours celle
+            # d'avant, et c'est celle-là qui doit rester explicable.
+            return
         # habit dit que la mémoire du cadrage a repris la main après coup, sur
         # un compteur par cellule qui ne figure pas dans l'observation. Un tel
         # verdict ne peut pas être rejoué par decide() seul, et le rejeu doit
         # le savoir plutôt que de compter une fausse divergence.
         row = {"id": event_id, "seen": seen, "habit": habit}
+        if event_id in self._seen_ids:
+            # La carte a changé de lecture : l'ancienne observation n'explique
+            # plus ce qu'elle montre. On réécrit au lieu d'empiler, sans quoi
+            # « une ligne par carte » cesse d'être vrai. Le cas est rare —
+            # cinquante-quatre cartes sur six cent soixante-treize — donc cette
+            # relecture ne se paie pas à chaque passage.
+            gardees = [ligne for ligne in self.seen_path.read_text(encoding="utf-8").splitlines()
+                       if ligne.strip() and json.loads(ligne).get("id") != event_id]
+            self.seen_path.write_text("\n".join(gardees) + ("\n" if gardees else ""), encoding="utf-8")
+        self._seen_ids.add(event_id)
         with self.seen_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
@@ -174,6 +214,19 @@ class Store:
         gardees = [line for line in self.seen_path.read_text(encoding="utf-8").splitlines()
                    if line.strip() and json.loads(line).get("id") in alive]
         self.seen_path.write_text("\n".join(gardees) + ("\n" if gardees else ""), encoding="utf-8")
+        self._seen_ids = {json.loads(ligne)["id"] for ligne in gardees}
+
+    def _load_seen_ids(self) -> set:
+        """Quelles cartes ont déjà leur observation sur le disque.
+
+        Tenu en mémoire pour que le cas courant — une carte neuve — reste une
+        simple ligne ajoutée en fin de fichier, et que la réécriture ne
+        survienne que lorsqu'une carte change de lecture.
+        """
+        if not self.seen_path.is_file():
+            return set()
+        return {json.loads(ligne)["id"]
+                for ligne in self.seen_path.read_text(encoding="utf-8").splitlines() if ligne.strip()}
 
     def _load(self) -> list[dict]:
         if not self.events_path.is_file():
