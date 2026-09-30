@@ -583,6 +583,11 @@ tr.wrong .event { text-decoration: line-through; }
   gap: 1px;
 }
 
+/* Poser « display » ici oblige à redire comment on se cache : la règle du
+   navigateur pour l'attribut « hidden » ne pèse rien face à un identifiant, et
+   sans cette ligne la loupe s'ouvre une fois et ne se referme plus. */
+#loupe[hidden] { display: none; }
+
 #loupe img.frame {
   display: block;
   width: min(560px, 62vw);
