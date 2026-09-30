@@ -2,6 +2,305 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-30T11-47-21Z-motion-199",
+      "t": "2026-09-30T11:47:21Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T11-47-21Z-motion-199.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.241,
+          "area_grow": 17.85,
+          "clipped": false,
+          "shade": 0.745,
+          "kept": 0.275,
+          "area_ratio": 0.0093,
+          "duration_s": 8.0,
+          "frames": 7,
+          "width_m": 3.0,
+          "height_m": 2.5,
+          "width_named_m": 0.3,
+          "height_named_m": 0.6,
+          "rise_ms": 0.0,
+          "drift_rate": 0.182,
+          "seen_as": [
+            "person 0.38 sur 0%"
+          ]
+        },
+        "box": [
+          0.1172,
+          0.7861,
+          0.0797,
+          0.1167
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T11-47-21Z-motion-199.jpg"
+    },
+    {
+      "id": "2026-09-30T11-45-05Z-vehicle-197",
+      "t": "2026-09-30T11:45:05Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.889,
+      "thumb": "data/thumbs/2026-09-30T11-45-05Z-vehicle-197.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.5,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.4572,
+          "area_grow": 37.6,
+          "clipped": false,
+          "shade": 0.835,
+          "kept": 0.294,
+          "area_ratio": 0.01795,
+          "duration_s": 8.4,
+          "frames": 10,
+          "width_m": 4.5,
+          "height_m": 4.3,
+          "width_named_m": 1.4,
+          "height_named_m": 1.9,
+          "rise_ms": 0.0,
+          "drift_rate": 0.257,
+          "seen_as": [
+            "truck 0.89 sur 14%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.1879,
+          0.8199,
+          0.058,
+          0.1399
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T11-45-05Z-vehicle-197.jpg"
+    },
+    {
+      "id": "2026-09-30T11-45-05Z-missed-198",
+      "t": "2026-09-30T11:45:05Z",
+      "type": "missed",
+      "label": "Immobile dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T11-45-05Z-missed-198.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Ça n'a pas traversé le ciel. La balise et les étoiles fixes sont déjà écartées.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0008,
+          "area_grow": 0.83,
+          "clipped": false,
+          "shade": 0.862,
+          "kept": 0.0,
+          "area_ratio": 0.00011,
+          "duration_s": 0.5,
+          "frames": 4,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.277,
+          "seen_as": []
+        },
+        "refused": "sky_still",
+        "box": [
+          0.0781,
+          0.2639,
+          0.0094,
+          0.0139
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T11-45-05Z-missed-198.jpg"
+    },
+    {
+      "id": "2026-09-30T11-43-16Z-missed-196",
+      "t": "2026-09-30T11:43:16Z",
+      "type": "missed",
+      "label": "Rien de reconnu",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T11-43-16Z-missed-196.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Aucun avion visible dans l'image. Le secteur OpenSky ne suffit pas.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0948,
+          "area_grow": 0.43,
+          "clipped": false,
+          "shade": 1.16,
+          "kept": 0.182,
+          "area_ratio": 0.00016,
+          "duration_s": 15.0,
+          "frames": 14,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.149,
+          "seen_as": []
+        },
+        "refused": "none",
+        "box": [
+          0.8531,
+          0.0083,
+          0.0344,
+          0.0583
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T11-43-16Z-missed-196.jpg"
+    },
+    {
+      "id": "2026-09-30T11-40-14Z-motion-195",
+      "t": "2026-09-30T11:40:14Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T11-40-14Z-motion-195.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0156,
+          "area_grow": 0.06,
+          "clipped": false,
+          "shade": 1.04,
+          "kept": 0.542,
+          "area_ratio": 0.00052,
+          "duration_s": 0.1,
+          "frames": 2,
+          "width_m": 4.1,
+          "height_m": 2.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 5.76,
+          "seen_as": []
+        },
+        "box": [
+          0.2484,
+          0.7417,
+          0.0953,
+          0.0944
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T11-40-14Z-motion-195.jpg"
+    },
+    {
+      "id": "2026-09-30T11-34-59Z-vehicle-194",
+      "t": "2026-09-30T11:34:59Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "roundabout",
+      "confidence": 0.52,
+      "thumb": "data/thumbs/2026-09-30T11-34-59Z-vehicle-194.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.1,
+        "height_m": 2.0,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2414,
+          "area_grow": 5.03,
+          "clipped": true,
+          "shade": 0.816,
+          "kept": 0.353,
+          "area_ratio": 0.00917,
+          "duration_s": 6.7,
+          "frames": 7,
+          "width_m": 4.1,
+          "height_m": 2.0,
+          "width_named_m": 1.5,
+          "height_named_m": 1.4,
+          "rise_ms": 0.0,
+          "drift_rate": 0.166,
+          "seen_as": [
+            "truck 0.52 sur 25%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.2397,
+          0.898,
+          0.0707,
+          0.102
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T11-34-59Z-vehicle-194.jpg"
+    },
+    {
+      "id": "2026-09-30T11-34-45Z-missed-193",
+      "t": "2026-09-30T11:34:45Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T11-34-45Z-missed-193.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 49 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 0.87,
+          "kept": 0.643,
+          "area_ratio": 0.00256,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 2.9,
+          "height_m": 0.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "tarmac",
+        "box": [
+          0.8859,
+          0.9722,
+          0.0922,
+          0.0278
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T11-34-45Z-missed-193.jpg"
+    },
+    {
       "id": "2026-09-30T11-33-35Z-missed-192",
       "t": "2026-09-30T11:33:35Z",
       "type": "missed",
