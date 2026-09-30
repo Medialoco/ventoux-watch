@@ -2,6 +2,215 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-30T04-46-11Z-motion-41",
+      "t": "2026-09-30T04:46:11Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T04-46-11Z-motion-41.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1361,
+          "area_grow": 0.41,
+          "clipped": false,
+          "shade": 1.121,
+          "kept": 0.7,
+          "area_ratio": 0.00043,
+          "duration_s": 19.5,
+          "frames": 13,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.115,
+          "seen_as": []
+        },
+        "box": [
+          0.0516,
+          0.3333,
+          0.05,
+          0.0611
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T04-46-11Z-motion-41.jpg"
+    },
+    {
+      "id": "2026-09-30T04-45-51Z-missed-40",
+      "t": "2026-09-30T04:45:51Z",
+      "type": "missed",
+      "label": "Rien de reconnu sur la découpe",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T04-45-51Z-missed-40.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Un passage a été vu. La classe viendra quand cet endroit aura été revu.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1034,
+          "area_grow": 0.62,
+          "clipped": false,
+          "shade": 1.431,
+          "kept": 0.294,
+          "area_ratio": 0.00081,
+          "duration_s": 7.8,
+          "frames": 12,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.27,
+          "seen_as": []
+        },
+        "refused": "unclassified",
+        "box": [
+          0.3563,
+          0.2667,
+          0.0375,
+          0.0389
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T04-45-51Z-missed-40.jpg"
+    },
+    {
+      "id": "2026-09-30T04-42-13Z-missed-39",
+      "t": "2026-09-30T04:42:13Z",
+      "type": "missed",
+      "label": "Rien de reconnu",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T04-42-13Z-missed-39.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Aucun avion visible dans l'image. Le secteur OpenSky ne suffit pas.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0132,
+          "area_grow": 1.67,
+          "clipped": false,
+          "shade": 1.398,
+          "kept": 0.0,
+          "area_ratio": 0.00017,
+          "duration_s": 9.7,
+          "frames": 9,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.088,
+          "seen_as": []
+        },
+        "refused": "none",
+        "box": [
+          0.4078,
+          0.1639,
+          0.0156,
+          0.0111
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T04-42-13Z-missed-39.jpg"
+    },
+    {
+      "id": "2026-09-30T04-35-45Z-missed-38",
+      "t": "2026-09-30T04:35:45Z",
+      "type": "missed",
+      "label": "Immobile dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T04-35-45Z-missed-38.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Ça n'a pas traversé le ciel. La balise et les étoiles fixes sont déjà écartées.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 0.6,
+          "clipped": false,
+          "shade": 1.421,
+          "kept": 1.0,
+          "area_ratio": 8e-05,
+          "duration_s": 0.5,
+          "frames": 7,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.201,
+          "seen_as": []
+        },
+        "refused": "sky_still",
+        "box": [
+          0.3078,
+          0.0139,
+          0.0078,
+          0.0167
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T04-35-45Z-missed-38.jpg"
+    },
+    {
+      "id": "2026-09-30T04-34-23Z-missed-37",
+      "t": "2026-09-30T04:34:23Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T04-34-23Z-missed-37.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.221,
+          "kept": 0.333,
+          "area_ratio": 0.00078,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.4,
+          "height_m": 2.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.175,
+          0.6944,
+          0.0234,
+          0.0333
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T04-34-23Z-missed-37.jpg"
+    },
+    {
       "id": "2026-09-30T04-24-26Z-motion-36",
       "t": "2026-09-30T04:24:26Z",
       "type": "motion",
