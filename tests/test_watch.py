@@ -26,6 +26,7 @@ from watcher.review import apply_review, parse_review
 from watcher.opensky import SkyArchive
 from watcher.scene import Scene, ViewLog, moon_spot, read_sky, solar_period, weather_label
 from watcher.store import Store, fold_events, small_jpeg
+from watcher import stream
 
 ROOT = Path(__file__).resolve().parents[1]
 ZONES = json.loads((ROOT / "config" / "zones.json").read_text())
@@ -2487,3 +2488,86 @@ class FogTests(unittest.TestCase):
         self.assertFalse(arriving.fogged)
         self.assertTrue(soup.hazy)
         self.assertTrue(soup.fogged)
+
+
+class DiffusionTests(unittest.TestCase):
+    """La rediffusion en retard : ce qu'elle dessine et ce qu'elle fait entendre."""
+
+    def test_the_time_written_in_the_history_is_read_as_utc(self):
+        """Une heure sans fuseau lue comme locale déplace le rectangle.
+
+        L'historique date en UTC. Lue comme heure locale, une identification de
+        14 h 59 serait cherchée deux heures plus tôt l'été : le rectangle se
+        poserait sur une image où il n'y a rien, et le flux montrerait la veille
+        en train de se tromper alors qu'elle a eu raison.
+        """
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = Path(dossier) / "events.json"
+            chemin.write_text(json.dumps([{
+                "id": "x", "t": "2026-09-29T14:59:32Z", "label": "Camion",
+                "type": "car", "detail": {"box": [0.1, 0.2, 0.3, 0.4]},
+            }]), encoding="utf-8")
+            attendu = datetime(2026, 9, 29, 14, 59, 32, tzinfo=ZoneInfo("UTC")).timestamp()
+            vus = stream.identifications(chemin, attendu - 10)
+            self.assertEqual(len(vus), 1)
+            self.assertEqual(vus[0]["t"], attendu)
+
+    def test_an_identification_without_a_box_is_not_drawn(self):
+        # On ne sait pas où la poser ; un rectangle au hasard vaut moins que
+        # pas de rectangle.
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = Path(dossier) / "events.json"
+            chemin.write_text(json.dumps([
+                {"id": "a", "t": "2026-09-29T14:59:32Z", "label": "Avion", "detail": {}},
+                {"id": "b", "t": "2026-09-29T14:59:33Z", "label": "Voiture",
+                 "detail": {"box": [0.1, 0.2, 0.3, 0.4]}},
+            ]), encoding="utf-8")
+            vus = stream.identifications(chemin, 0)
+            self.assertEqual([vu["label"] for vu in vus], ["Voiture"])
+
+    def test_the_rectangle_lands_where_the_box_says(self):
+        image = np.zeros((1080, 1920, 3), np.uint8)
+        quand = 1000.0
+        vu = {"t": quand, "box": [0.5, 0.25, 0.1, 0.2], "label": "", "type": "car"}
+        self.assertEqual(stream.dessine(image, [vu], quand), 1)
+        rouges = np.argwhere(image[:, :, 2] > 100)
+        haut, gauche = rouges.min(axis=0)
+        bas, droite = rouges.max(axis=0)
+        # Le trait fait deux pixels, d'où la tolérance de deux.
+        self.assertAlmostEqual(gauche, 0.5 * 1920, delta=2)
+        self.assertAlmostEqual(droite, 0.6 * 1920, delta=2)
+        self.assertAlmostEqual(haut, 0.25 * 1080, delta=2)
+        self.assertAlmostEqual(bas, 0.45 * 1080, delta=2)
+
+    def test_a_name_stops_being_shown_once_its_moment_has_passed(self):
+        image = np.zeros((1080, 1920, 3), np.uint8)
+        vu = {"t": 1000.0, "box": [0.5, 0.25, 0.1, 0.2], "label": "", "type": "car"}
+        self.assertEqual(stream.dessine(image, [vu], 1000.0 + stream.TENUE_S - 0.1), 1)
+        self.assertEqual(stream.dessine(image, [vu], 1000.0 + stream.TENUE_S + 0.1), 0)
+        # Ni avant : le flux est en retard sur la veille, pas en avance sur elle.
+        self.assertEqual(stream.dessine(image, [vu], 999.0), 0)
+
+    def test_the_session_plays_every_track_before_repeating_one(self):
+        """Tirage sans remise tant qu'il reste des morceaux.
+
+        Entendre deux fois le même titre avant d'avoir entendu tous les autres
+        est ce qui fait qu'un flux sonne comme une boucle plutôt que comme une
+        soirée. La bibliothèque est petite au début : la faute s'entendrait.
+        """
+        with tempfile.TemporaryDirectory() as dossier:
+            racine = Path(dossier)
+            for nom in "abcdef":
+                subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+                                "-i", "sine=frequency=440:duration=3",
+                                str(racine / f"{nom}.mp3")], check=True)
+            session = stream.batir_session(racine, heures=0.02)
+            self.assertIsNotNone(session)
+            lignes = session.read_text(encoding="utf-8").splitlines()
+            premiers = [ligne.rsplit("/", 1)[1].rstrip("'") for ligne in lignes[:6]]
+            self.assertEqual(sorted(premiers), sorted(f"{n}.mp3" for n in "abcdef"))
+
+    def test_an_empty_library_does_not_stop_the_stream(self):
+        # Le silence vaut mieux que pas d'image : la veille est le produit.
+        with tempfile.TemporaryDirectory() as dossier:
+            self.assertIsNone(stream.batir_session(Path(dossier)))
+        self.assertIsNone(stream.batir_session(Path("/inexistant/nulle/part")))
