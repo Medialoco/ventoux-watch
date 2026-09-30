@@ -2,6 +2,85 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-09-30T05-24-29Z-missed-49",
+      "t": "2026-09-30T05:24:29Z",
+      "type": "missed",
+      "label": "Immobile sur la pente",
+      "zone": "slope",
+      "confidence": 0.0,
+      "thumb": "data/thumbs/2026-09-30T05-24-29Z-missed-49.jpg",
+      "clip_url": "",
+      "detail": {
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0093,
+          "area_grow": 0.98,
+          "clipped": false,
+          "shade": 1.17,
+          "kept": 0.0,
+          "area_ratio": 0.00042,
+          "duration_s": 7.5,
+          "frames": 6,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.017,
+          "seen_as": []
+        },
+        "refused": "slope_still",
+        "box": [
+          0.4031,
+          0.2278,
+          0.0234,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T05-24-29Z-missed-49.jpg"
+    },
+    {
+      "id": "2026-09-30T05-18-23Z-motion-48",
+      "t": "2026-09-30T05:18:23Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-09-30T05-18-23Z-motion-48.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0112,
+          "area_grow": 0.72,
+          "clipped": false,
+          "shade": 1.06,
+          "kept": 0.857,
+          "area_ratio": 0.00055,
+          "duration_s": 10.2,
+          "frames": 9,
+          "width_m": 1.2,
+          "height_m": 3.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.011,
+          "seen_as": []
+        },
+        "box": [
+          0.7375,
+          0.6389,
+          0.0141,
+          0.0806
+        ]
+      },
+      "closeup": "data/closeups/2026-09-30T05-18-23Z-motion-48.jpg"
+    },
+    {
       "id": "2026-09-30T05-15-50Z-missed-47",
       "t": "2026-09-30T05:15:50Z",
       "type": "missed",
