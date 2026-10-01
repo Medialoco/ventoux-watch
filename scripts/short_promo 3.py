@@ -33,10 +33,6 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-# Les mêmes fonctions que le direct, et non des imitations : un Short qui
-# promet une pixellisation doit montrer celle qu'on diffuse, au pixel près.
-from watcher.stream import applique_effet, pose_danseurs  # noqa: E402
-
 LARGEUR, HAUTEUR = 1080, 1920
 IMAGES_PAR_S = 30
 PARIS = ZoneInfo("Europe/Paris")
@@ -192,52 +188,27 @@ def carte_erreur(fiche: dict) -> np.ndarray:
     return image
 
 
-def enveloppe(piste: Path, points: int = 420) -> np.ndarray | None:
-    """Le relief sonore d'un morceau, en quelques centaines de valeurs.
-
-    Décodé à deux mille hertz : on ne cherche pas à entendre, on cherche à
-    voir où ça monte et où ça retombe, et un quart d'heure tient alors en
-    deux millions d'échantillons au lieu de quarante.
-    """
-    fini = subprocess.run(
-        ["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", str(piste),
-         "-ac", "1", "-ar", "2000", "-f", "s16le", "-"],
-        capture_output=True, check=False)
-    brut = np.frombuffer(fini.stdout, np.int16)
-    if brut.size < points:
-        return None
-    pas = brut.size // points
-    bloc = np.abs(brut[:pas * points].astype(np.float32)).reshape(points, pas)
-    crete = bloc.max(axis=1)
-    return crete / max(float(crete.max()), 1.0)
-
-
 def cartes_musique(racine: Path, combien: int, graine: int | None) -> list[np.ndarray]:
-    """Les morceaux qu'on a faits, nommés, avec leur forme.
+    """Les pochettes, les noms, les licences. Le sujet, c'est le fonds.
 
-    Plus de pochettes : il n'y a plus de disques derrière cette musique, elle
-    est calculée ici. Ce qu'on peut montrer d'un morceau qui n'a pas d'image,
-    c'est son relief — et il dit la vérité, puisqu'il est tracé à partir du
-    fichier qui sort sur l'antenne.
+    Montrer les pochettes plutôt que d'écrire « musique libre » : une phrase se
+    promet, une pile de disques se constate.
     """
     dossier = racine / "data" / "musique"
     fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
-    avec = [(nom, f) for nom, f in fiches.items() if (dossier / nom).is_file()]
+    avec = [f for f in fiches.values() if f.get("pochette")
+            and (dossier / f["pochette"]).is_file()]
     random.Random(graine).shuffle(avec)
     cartes = []
-    for nom, fiche in avec[:combien]:
+    for fiche in avec[:combien]:
         image = np.zeros((HAUTEUR, LARGEUR, 3), np.uint8)
-        _ecrit(image, "NOW PLAYING", 330, 1.0, VERT, 2)
-        trace = enveloppe(dossier / nom)
-        cote, haut, bord = LARGEUR - 140, 560, 70
-        if trace is not None:
-            milieu = haut + cote // 2
-            large = cote / trace.size
-            for i, v in enumerate(trace):
-                x = int(bord + i * large)
-                demi = max(1, int(v * cote * 0.42))
-                cv2.line(image, (x, milieu - demi), (x, milieu + demi), CYAN, 2)
-            cv2.line(image, (bord, milieu), (bord + cote, milieu), (50, 50, 50), 1)
+        pochette = cv2.imread(str(dossier / fiche["pochette"]))
+        cote = LARGEUR - 140
+        haut = 520
+        if pochette is not None:
+            image[haut:haut + cote, 70:70 + cote] = cv2.resize(
+                pochette, (cote, cote), interpolation=cv2.INTER_AREA)
+        y = _ecrit(image, "NOW PLAYING", 330, 1.0, VERT, 2)
         y = haut + cote + 120
         y = _ecrit(image, fiche["auteur"], y, 1.5, BLANC, 4)
         y = _ecrit(image, fiche["titre"], y + 30, 1.0, GRIS, 2)
@@ -246,81 +217,13 @@ def cartes_musique(racine: Path, combien: int, graine: int | None) -> list[np.nd
     return cartes
 
 
-# Ce qui arrive à l'image pendant la diffusion, et combien de temps chaque
-# chose reste à l'écran dans le Short. Trois secondes et non deux : un filtre
-# qui monte, tient et redescend a besoin d'un peu plus de place qu'une photo.
-ECRAN_S = 3.0
-ECRANS = [
-    ("pixel", "SOMETIMES THE PICTURE", "GOES PIXEL", "FOR TWENTY SECONDS"),
-    ("gris", "SOMETIMES IT DROPS TO", "GREY", "THEN COMES BACK"),
-    ("ondule", "SOMETIMES IT", "WAVES", "LIKE SOMETHING IN WATER"),
-    ("danse", "AND WHEN THE MUSIC PUSHES", "THEY DANCE", "IN THE CORNERS"),
-]
-
-
-def vue_de_la_camera(racine: Path) -> np.ndarray | None:
-    """Une image entière de la webcam, prise une fois et gardée.
-
-    Prise sur le direct et non choisie dans les archives : les archives sont
-    des découpes de deux cents pixels autour d'une voiture, et ce qu'il s'agit
-    de montrer ici est ce qu'un spectateur a devant les yeux, donc la vue.
-    """
-    cache = racine / "data" / "vue_short.jpg"
-    if not cache.is_file():
-        cfg = json.loads((racine / "config" / "config.json").read_text(encoding="utf-8"))
-        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-                        "-i", cfg["stream_url"], "-frames:v", "1", str(cache)],
-                       check=False)
-    return cv2.imread(str(cache)) if cache.is_file() else None
-
-
-def carte_ecran(vue: np.ndarray, quoi: str, haut: str, gros: str, bas: str):
-    """Une carte qui bouge : la vue, l'effet qui monte et retombe, le texte.
-
-    Rendue image par image et non figée une fois pour toutes, parce que la
-    moitié de ces effets n'existe que dans le temps — une ondulation arrêtée
-    n'est qu'une image de travers, et un pantin arrêté n'est pas un danseur.
-    """
-    cible_h = int(LARGEUR * vue.shape[0] / vue.shape[1])
-    fond = cv2.resize(vue, (LARGEUR, cible_h), interpolation=cv2.INTER_AREA)
-    sommet = (HAUTEUR - cible_h) // 2 + 60
-
-    def dessine(t: float) -> np.ndarray:
-        image = np.zeros((HAUTEUR, LARGEUR, 3), np.uint8)
-        vignette = fond.copy()
-        # L'effet monte en six dixièmes et redescend de même, comme à
-        # l'antenne : c'est l'arrivée qu'on remarque, pas l'état installé.
-        force = max(0.0, min(1.0, min(t, ECRAN_S - t) / 0.6))
-        if quoi == "danse":
-            pose_danseurs(vignette, t, 0.30)
-        else:
-            applique_effet(vignette, quoi, force, t)
-        image[sommet:sommet + cible_h] = vignette
-        cv2.rectangle(image, (0, sommet), (LARGEUR - 1, sommet + cible_h), (40, 40, 40), 3)
-        y = _ecrit(image, haut, sommet - 230, 1.0, VERT, 2)
-        _ecrit(image, gros, y + 30, 1.9, BLANC, 5)
-        _ecrit(image, bas, sommet + cible_h + 170, 1.1, AMBRE, 3)
-        return image
-
-    return dessine
-
-
-def cartes_ecran(racine: Path) -> list:
-    vue = vue_de_la_camera(racine)
-    if vue is None:
-        return []
-    return [carte_ecran(vue, *ligne) for ligne in ECRANS]
-
-
 def cartes_horloge(racine: Path) -> list[np.ndarray]:
     """Le sujet est la durée : ce que c'est que de regarder sans fin."""
     textes = [
         ("24 HOURS A DAY", "7 DAYS A WEEK", "NOBODY WATCHING"),
         ("MOST OF THE TIME", "NOTHING HAPPENS", "AT ALL"),
         ("BY DAY", "SHORT TRACKS", "SOMETHING CHANGES"),
-        # Plus de sets d'inconnus : la musique est faite ici, et un Short ne
-        # peut pas annoncer un programme qu'on ne diffuse plus.
-        ("AT NIGHT", "LONGER ONES", "AN EMPTY ROAD"),
+        ("AT NIGHT", "LONG DJ SETS", "AN EMPTY ROAD"),
     ]
     cartes = []
     for haut, milieu, bas in textes:
@@ -448,30 +351,24 @@ def plan_du_sujet(racine: Path, sujet: str, combien: int,
         fautes = erreurs(racine, combien, graine)
         return ([(carte_intro(), INTRO_S)]
                 + [(carte_erreur(f), CARTE_S) for f in fautes]
-                # Les méprises disent ce que fait la machine ; les écrans
-                # disent à quoi ça ressemble de la regarder faire. Sans eux le
-                # Short vend un tableur, et ce qu'on diffuse n'en est pas un.
-                + [(c, ECRAN_S) for c in cartes_ecran(racine)]
                 + [(carte_sortie(), SORTIE_S)])
     if sujet == "musique":
-        ouverture = carte_titre([("TECHNO", 1.9, VERT), ("24/7", 1.9, VERT),
-                                 ("WRITTEN BY THE STREAM ITSELF", 1.0, BLANC),
-                                 ("CC0 · NOTHING TO CLAIM", 1.0, CYAN)])
-        fin = carte_titre([("NO LABEL", 1.3, BLANC), ("NO SAMPLES", 1.3, BLANC),
-                           ("NOTHING BORROWED", 1.3, BLANC),
+        ouverture = carte_titre([("FREE TECHNO", 1.9, VERT), ("24/7", 1.9, VERT),
+                                 ("41 TRACKS", 1.1, BLANC),
+                                 ("CREATIVE COMMONS ONLY", 1.0, CYAN)])
+        fin = carte_titre([("EVERY ARTIST", 1.3, BLANC), ("NAMED ON SCREEN", 1.3, BLANC),
+                           ("WHILE THEY PLAY", 1.3, BLANC),
                            ("LIVE FROM A MOUNTAIN", 1.1, CYAN)])
         return ([(ouverture, INTRO_S)]
                 + [(c, CARTE_S + 0.5) for c in cartes_musique(racine, combien, graine)]
-                + [(c, ECRAN_S) for c in cartes_ecran(racine)[-1:]]
                 + [(fin, SORTIE_S)])
     if sujet == "nuit":
         ouverture = carte_titre([("ONE ROAD", 1.9, BLANC), ("ONE CAMERA", 1.9, BLANC),
                                  ("NO PRESENTER", 1.1, GRIS)])
-        fin = carte_titre([("TECHNO RADIO", 1.5, VERT), ("LIVE 24/7", 1.5, VERT),
+        fin = carte_titre([("FREE TECHNO RADIO", 1.5, VERT), ("LIVE 24/7", 1.5, VERT),
                            ("MONT VENTOUX", 1.0, CYAN)])
         return ([(ouverture, INTRO_S)]
                 + [(c, CARTE_S + 0.4) for c in cartes_horloge(racine)]
-                + [(c, ECRAN_S) for c in cartes_ecran(racine)]
                 + [(fin, SORTIE_S)])
     if sujet == "lieu":
         ouverture = carte_titre([("MONT SEREIN", 1.8, BLANC),
@@ -505,14 +402,10 @@ def fabrique(racine: Path, sortie: Path, combien: int, morceau: str | None,
                                    IMAGES_PAR_S, (LARGEUR, HAUTEUR))
         for index, (carte, tenue) in enumerate(plan):
             for i in range(int(tenue * IMAGES_PAR_S)):
-                # Une carte est soit une image, soit de quoi la calculer à
-                # cette seconde-là : ce qui ondule et ce qui danse n'existe
-                # que dans le temps et ne peut pas être posé une fois.
-                fond = carte(i / IMAGES_PAR_S) if callable(carte) else carte
                 # Les trois premières images de chaque carte sautent d'un
                 # pixel : c'est ce qui fait qu'une suite de photos fixes se
                 # regarde comme un montage plutôt que comme un diaporama.
-                ecrivain.write(_tremble(fond, 2 if i < 2 else (1 if i < 4 else 0)))
+                ecrivain.write(_tremble(carte, 2 if i < 2 else (1 if i < 4 else 0)))
             print(f"  {index + 1:2d}/{len(plan)}")
         ecrivain.release()
 
@@ -549,14 +442,10 @@ def main(argv: list[str] | None = None) -> int:
     parseur.add_argument("--sortie", default=None)
     args = parseur.parse_args(argv)
     sujets = ("erreurs", "musique", "nuit", "lieu") if args.sujet == "tous" else (args.sujet,)
-    for index, sujet in enumerate(sujets):
+    for sujet in sujets:
         cible = Path(args.sortie) if args.sortie else ROOT / "data" / f"short_{sujet}.mp4"
         print(f"\n=== {sujet} ===")
-        # Une graine par sujet et non la même pour tous : à graine commune, le
-        # tirage du morceau est le même quatre fois, et les quatre Shorts
-        # sortaient sur la même musique — ce qu'ils ont fait deux fois.
-        graine = None if args.graine is None else args.graine + index * 17
-        code = fabrique(ROOT, cible, args.combien, args.morceau, graine, sujet)
+        code = fabrique(ROOT, cible, args.combien, args.morceau, args.graine, sujet)
         if code:
             return code
     return 0
