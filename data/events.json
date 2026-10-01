@@ -2,6 +2,96 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T16-56-20Z-missed-8",
+      "t": "2026-10-01T16:56:20Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T16-56-20Z-missed-8.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "twilight",
+        "weather": "brouillard",
+        "context": "au crépuscule, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0143,
+          "area_grow": 1.37,
+          "clipped": false,
+          "shade": 1.485,
+          "kept": 0.833,
+          "area_ratio": 0.00068,
+          "duration_s": 7.0,
+          "frames": 6,
+          "width_m": 19.7,
+          "height_m": 14.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.75,
+          "drift_rate": 0.098,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.4984,
+          0.4056,
+          0.0234,
+          0.0306
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T16-56-20Z-missed-8.jpg"
+    },
+    {
+      "id": "2026-10-01T16-53-38Z-vehicle-5",
+      "t": "2026-10-01T16:53:38Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.773,
+      "thumb": "data/thumbs/2026-10-01T16-53-38Z-vehicle-5.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.4,
+        "height_m": 1.4,
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.023,
+          "kept": 0.256,
+          "area_ratio": 0.0121,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.4,
+          "height_m": 1.4,
+          "width_named_m": 3.3,
+          "height_named_m": 1.3,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.77 sur 91%",
+            "car 0.27 sur 1%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.523,
+          0.898,
+          0.1613,
+          0.102
+        ],
+        "count": 3,
+        "since": "2026-10-01T16:53:38Z"
+      },
+      "closeup": "data/closeups/2026-10-01T16-53-38Z-vehicle-5.jpg"
+    },
+    {
       "id": "2026-10-01T16-48-03Z-missed-4",
       "t": "2026-10-01T16:48:03Z",
       "type": "missed",
