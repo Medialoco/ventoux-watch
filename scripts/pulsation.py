@@ -136,9 +136,14 @@ def mesure(chemin: Path) -> dict:
             "duree": longueur}
 
 
-# Au-dessus, ça pousse. Le seuil n'est pas choisi au jugé : les quatre morceaux
-# que la maison tient pour dansants se tiennent au-dessus de 0,30 et les nappes
-# en dessous de 0,15, donc la frontière est large et personne n'est près.
+# Au-dessus, ça pousse. Le seuil vient de deux populations mesurées et non d'un
+# jugement : les seize morceaux de la maison, qui sont de la techno et rien
+# d'autre, se tiennent entre 0,788 et 0,925 ; les cent douze morceaux de la
+# médiathèque, tout-venant électronique, ont pour médiane 0,219 et un quart
+# d'entre eux sont sous 0,150. Rien ne se presse autour de 0,30, et c'est ce
+# vide qui fait la frontière. Elle garde quarante et un morceaux sur cent
+# douze, ce qui est la bonne proportion pour un mot qui veut dire « celui-ci
+# pousse » et non « celui-ci a une batterie ».
 FORCE_DANSANTE = 0.30
 
 
