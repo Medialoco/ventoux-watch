@@ -908,8 +908,19 @@ def morceaux_ruban(lieu: str, ciel: dict,
     temp = ciel.get("temp_c")
     if temp is not None:
         bouts += [("TEMPERATURE ", VERT), (f"{temp} °C", BLANC), (ECART_RUBAN, BLANC)]
+    # La prévision seulement quand la caméra n'a rien lu.
+    #
+    # Elle s'affichait au contraire quand les deux ne disaient pas la même
+    # chose, c'est-à-dire exactement quand le modèle a le plus de chances
+    # d'avoir tort : il interpole une grille sur un massif de mille neuf cents
+    # mètres, la caméra est posée à mille trois cent quatre-vingt-dix sur une
+    # pente, et elle, elle regarde le ciel. « FORECAST CLEAR » écrit pendant
+    # que le brouillard remonte ne corrige pas la caméra, il fait douter d'elle.
+    #
+    # Elle reste donc en réserve, pour les heures où la caméra ne voit rien —
+    # la nuit, surtout, où il n'y a rien à lire sur l'image.
     prevu = (ciel.get("api") or "").lower()
-    if prevu and prevu != mot:
+    if prevu and not mot:
         bouts += [("FORECAST ", AMBRE), (ANGLAIS.get(prevu, prevu).upper(), BLANC),
                   (ECART_RUBAN, BLANC)]
     # Le soleil en dernier : c'est la phrase la plus longue, et le ruban se lit

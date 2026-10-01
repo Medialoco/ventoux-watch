@@ -1914,6 +1914,14 @@ class FogTests(unittest.TestCase):
         "2026-09-29T10-57-18Z-motion-94 : attendu 'Piéton', obtenu 'Mouvement détecté'",
         # Un tracteur lu comme un camion : le modèle n'a pas la classe.
         "2026-09-29T07-56-22Z-motion-10 : attendu 'Tracteur', obtenu 'Camion'",
+        # Un camion refusé pour sa taille. C'est le même défaut que les trois
+        # premiers, pris par l'autre bout : là ils rétrogradaient un camion en
+        # voiture, ici la tache est si petite que la règle écarte le véhicule
+        # tout entier. Les deux disent la même chose — la tache de mouvement
+        # n'est pas la forme de ce qui a bougé — et les deux se répareront au
+        # même endroit.
+        "2026-09-30T12-56-22Z-person-225 : attendu 'Camion', obtenu "
+        "'Trop petit pour un véhicule'",
     ]
 
     def test_every_mistake_already_paid_for_stays_fixed(self):
@@ -2927,6 +2935,34 @@ class DiffusionTests(unittest.TestCase):
                       source)
         self.assertLess(stream.VUE3D_TENUE_S, stream.VUE3D_PAUSE_S / 4,
                         "le survol doit rester une respiration, pas un programme")
+
+    def test_a_verdict_survives_the_watch_writing_its_counters(self):
+        """Quatre-vingt-quatorze verdicts effac\u00e9s quelques secondes apr\u00e8s coup.
+
+        La veille r\u00e9\u00e9crivait le fichier entier \u00e0 chaque passage, comptes de
+        relecture compris, alors qu'elle ne les incr\u00e9mente jamais : elle y
+        remettait la valeur qu'ils avaient \u00e0 son d\u00e9marrage, c'est-\u00e0-dire z\u00e9ro,
+        puisque son \u00e9tat vient d'un autre fichier qui ne les porte pas.
+        """
+        from watcher.memory import Memory
+        with tempfile.TemporaryDirectory() as coin:
+            chemin = Path(coin) / "learning.json"
+            chemin.write_text(json.dumps({"seen": 10, "named": 2,
+                                          "accepted": 94, "rejected": 9}),
+                              encoding="utf-8")
+            memoire = Memory(chemin)
+            memoire.observe("road", (0.5, 0.5),
+                            Decision("publish", "vehicle", "Voiture", "car", {}, 0.8))
+            ecrit = json.loads(chemin.read_text(encoding="utf-8"))
+            self.assertEqual(ecrit["accepted"], 94)
+            self.assertEqual(ecrit["rejected"], 9)
+            self.assertEqual(ecrit["seen"], 11, "ses propres comptes avancent")
+            # Et un verdict rendu pendant que la veille tourne n'est pas perdu
+            # non plus : elle relit le disque, elle ne se souvient pas.
+            chemin.write_text(json.dumps({**ecrit, "accepted": 95}), encoding="utf-8")
+            memoire.observe("road", (0.5, 0.5),
+                            Decision("publish", "vehicle", "Voiture", "car", {}, 0.8))
+            self.assertEqual(json.loads(chemin.read_text(encoding="utf-8"))["accepted"], 95)
 
     def test_a_miss_is_never_celebrated_as_a_catch(self):
         """« Décor connu » est un raté rangé, pas une prise. Et le feu ne se fête pas."""
