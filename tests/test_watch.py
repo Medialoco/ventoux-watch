@@ -2890,6 +2890,44 @@ class DiffusionTests(unittest.TestCase):
         # Sans relief, on ne dit rien plut\u00f4t que d'inventer une heure.
         self.assertEqual(stream.morceaux_soleil({}, a(12)), [])
 
+    def test_the_terrain_flyover_loops_and_never_says_live(self):
+        """Un badge « LIVE » au-dessus d'un d\u00e9cor calcul\u00e9 serait un mensonge."""
+        with tempfile.TemporaryDirectory() as coin:
+            racine = Path(coin)
+            self.assertEqual(stream.charge_vue3d(racine), [],
+                             "sans dossier, le flux n'en parle pas")
+            dossier = racine / "data" / "vue3d"
+            dossier.mkdir(parents=True)
+            for i in range(4):
+                cv2.imwrite(str(dossier / f"{i:04d}.jpg"),
+                            np.full((72, 128, 3), 40 + i * 50, np.uint8))
+            images = stream.charge_vue3d(racine)
+            self.assertEqual(len(images), 4)
+            # La lecture reboucle : le survol est un aller-retour ferm\u00e9, donc
+            # la derni\u00e8re image et la premi\u00e8re sont le m\u00eame point de vue.
+            debut = stream.image_vue3d(images, 0.0, 6.0)
+            self.assertTrue(np.array_equal(debut, stream.image_vue3d(images, 4 / 6, 6.0)))
+            self.assertFalse(np.array_equal(debut, stream.image_vue3d(images, 1 / 6, 6.0)))
+            # Et un \u00e2ge n\u00e9gatif ne fait pas sortir du tableau.
+            self.assertIsNotNone(stream.image_vue3d(images, -5.0, 6.0))
+        self.assertIsNone(stream.image_vue3d([], 0.0, 6.0))
+
+        toile = np.zeros((420, 1600, 3), np.uint8)
+        stream.pose_horloge(toile, 1_790_000_000.0, direct=False, autre="3D MODEL")
+        direct = np.zeros((420, 1600, 3), np.uint8)
+        stream.pose_horloge(direct, 1_790_000_000.0, direct=True)
+        self.assertFalse(np.array_equal(toile, direct))
+
+    def test_the_flyover_never_covers_something_that_moves(self):
+        """On n'a pas pass\u00e9 des semaines \u00e0 ne pas rater une voiture pour la cacher."""
+        source = inspect.getsource(stream.diffuse)
+        # L'interruption est dans la m\u00eame condition que la fin du compte \u00e0
+        # rebours : s\u00e9par\u00e9es, l'une pourrait un jour \u00eatre d\u00e9plac\u00e9e sans l'autre.
+        self.assertIn("if survol is not None and (poses or quand - survol > VUE3D_TENUE_S):",
+                      source)
+        self.assertLess(stream.VUE3D_TENUE_S, stream.VUE3D_PAUSE_S / 4,
+                        "le survol doit rester une respiration, pas un programme")
+
     def test_a_miss_is_never_celebrated_as_a_catch(self):
         """« Décor connu » est un raté rangé, pas une prise. Et le feu ne se fête pas."""
         self.assertNotIn("missed", stream.PRISES)
@@ -2937,7 +2975,7 @@ class DiffusionTests(unittest.TestCase):
         effet à l'écran au lieu de l'absence d'une détection. C'est arrivé.
         """
         lignes = inspect.getsource(stream.diffuse).splitlines()
-        [i] = [i for i, l in enumerate(lignes) if l.strip().startswith("if dessine(")]
+        [i] = [i for i, l in enumerate(lignes) if l.strip() == "if poses:"]
         [j] = [j for j, l in enumerate(lignes) if l.strip().startswith("elif quand - dernier_vu")]
         entre = [l for l in lignes[i + 1:j] if l.strip() and not l.strip().startswith("#")]
         retrait = len(lignes[i]) - len(lignes[i].lstrip())
@@ -3304,7 +3342,7 @@ class DiffusionTests(unittest.TestCase):
         self.assertTrue(all("dernier_vu" not in l for l in declenchement), declenchement)
         # Et la remise à zéro de « dernier_mouvement » n'arrive qu'après une
         # vraie détection, jamais dans le bloc des rediffusions.
-        apres_dessine = source.split("if dessine(")[1].split("elif")[0]
+        apres_dessine = source.split("if poses:")[1].split("elif")[0]
         self.assertIn("dernier_mouvement = quand", apres_dessine)
 
     def test_the_credit_follows_the_music_from_one_track_to_the_next(self):

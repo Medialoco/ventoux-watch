@@ -841,6 +841,45 @@ def morceaux_soleil(heures: dict, quand: float) -> list[tuple[str, tuple[int, in
     return []
 
 
+# La vue 3D à la place de la caméra, de temps en temps.
+#
+# Deux minutes, une demi-heure entre deux, et seulement quand il ne se passe
+# rien : la webcam est ce qu'on vient voir, et un modèle de terrain par-dessus
+# une voiture qui passe serait un écran de veille posé sur l'évènement.
+VUE3D_TENUE_S = 120.0
+VUE3D_PAUSE_S = 1800.0
+
+
+def charge_vue3d(racine: Path) -> list[Path]:
+    """Les images du survol, s'il a été filmé.
+
+    Des images et non la vidéo : la machine n'a pas de puce graphique et ne
+    peut pas dessiner la scène, mais elle peut très bien ouvrir un JPEG par
+    image — quelques millisecondes, contre un décodeur vidéo de plus à faire
+    tourner en parallèle de celui qui encode déjà la diffusion.
+
+    Vide si le dossier n'est pas là, et alors le flux n'en parle plus. Le
+    survol est un agrément ; il ne doit pas pouvoir empêcher une webcam de
+    fonctionner.
+    """
+    dossier = racine / "data" / "vue3d"
+    if not dossier.is_dir():
+        return []
+    return sorted(dossier.glob("*.jpg"))
+
+
+def image_vue3d(images: list[Path], age: float, par_seconde: float) -> np.ndarray | None:
+    """L'image du survol à montrer après tant de secondes, en boucle.
+
+    Le survol est un aller-retour complet, donc il reboucle sans raccord : la
+    dernière image et la première sont le même point de vue.
+    """
+    if not images:
+        return None
+    rang = int(max(0.0, age) * par_seconde) % len(images)
+    return cv2.imread(str(images[rang]))
+
+
 def morceaux_ruban(lieu: str, ciel: dict,
                    soleil: list[tuple[str, tuple[int, int, int]]] | None = None,
                    ) -> list[tuple[str, tuple[int, int, int]]]:
@@ -1918,15 +1957,17 @@ def pose_bonjour(image: np.ndarray, nom: str, age: float) -> None:
     cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
 
 
-def pose_horloge(image: np.ndarray, quand: float, direct: bool = True) -> None:
+def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
+                 autre: str = "REPLAY") -> None:
     """L'heure qui tourne, en haut à droite, avec le point rouge des chaînes.
 
     Le point clignote à la seconde : c'est ce qui fait qu'un écran fixe a l'air
     vivant, et ici il ne ment pas, puisqu'il bat au rythme des images.
 
-    Il dit « REPLAY » pendant une rediffusion. Un badge « LIVE » au-dessus
-    d'une image vieille de cinq jours serait la seule faute que ce flux n'a pas
-    le droit de commettre.
+    Il dit « REPLAY » pendant une rediffusion, et « 3D MODEL » pendant le
+    survol du terrain. Un badge « LIVE » au-dessus d'une image vieille de cinq
+    jours, ou au-dessus d'un décor calculé, serait la seule faute que ce flux
+    n'a pas le droit de commettre.
     """
     largeur = image.shape[1]
     echelle = largeur / 1600
@@ -1941,7 +1982,7 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True) -> None:
     sommet = int(RUBAN_H * echelle)
     taille = 0.7 * echelle
     large = max(cv2.getTextSize(l, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] for l in lignes)
-    badge = "LIVE" if direct else "REPLAY"
+    badge = "LIVE" if direct else autre
     large = max(large, cv2.getTextSize(badge, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] + pas)
     gauche = largeur - large - 2 * marge
     coin = image[sommet:sommet + pas * (len(lignes) + 1) + marge, gauche:largeur]
@@ -2086,6 +2127,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # enterrait les prises du jour.
     montrees: set[str] = set()
     historique_lu = 0.0
+    images3d = charge_vue3d(racine)
+    survol: float | None = None
+    fin_survol = origine
+    if images3d:
+        log.info("Survol du terrain : %d images", len(images3d))
     tirage = random.Random()
     try:
         while True:
@@ -2153,7 +2199,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         musique.dis(tirage.choice(musique.felicitations))
                     log.info("Prise à l'écran : %s — %s", neuve["label"],
                              musique.voix_dit or "sans voix")
-            if dessine(image, vus, quand):
+            poses = dessine(image, vus, quand)
+            if poses:
                 dernier_vu = quand
                 # L'horloge de l'ennui est à part, et c'est tout l'intérêt :
                 # « dernier_vu » est remis à zéro par les rediffusions, donc
@@ -2211,8 +2258,28 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     a_poser = rediff[0]
                 else:
                     rediff, fin_rediff, dernier_vu = None, quand, quand
+            # Le survol du terrain, quand rien ne se passe et pas trop souvent.
+            #
+            # Il s'arrête net si la veille voit quelque chose : on a passé des
+            # semaines à ne pas rater une voiture, ce n'est pas pour la cacher
+            # derrière un décor calculé. Deux minutes interrompues valent mieux
+            # que deux minutes complètes par-dessus l'évènement.
+            if survol is not None and (poses or quand - survol > VUE3D_TENUE_S):
+                fin_survol, survol = quand, None
+            elif (survol is None and images3d and rediff is None and a_poser is None
+                  and quand - dernier_vu > CREUX_S
+                  and quand - fin_survol > VUE3D_PAUSE_S):
+                survol = quand
+                log.info("Survol du terrain pendant %.0f s", VUE3D_TENUE_S)
+            vue = image
+            if survol is not None:
+                dessus = image_vue3d(images3d, quand - survol, cfg["stream_fps"])
+                if dessus is None:
+                    fin_survol, survol = quand, None
+                else:
+                    vue = dessus
             # La webcam dans sa fenêtre, les encarts dans les bandes autour.
-            toile = cadre(image, largeur, hauteur)
+            toile = cadre(vue, largeur, hauteur)
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser)
             if musique.parle() and musique.dit_quoi() != "attrape":
@@ -2224,7 +2291,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # où data/voix est vide.
                 pose_ennui(toile, mot_gris, quand - origine)
             pose_ruban(toile, ruban, quand - origine)
-            pose_horloge(toile, quand, direct=rediff is None)
+            pose_horloge(toile, quand, direct=rediff is None and survol is None,
+                         autre="REPLAY" if rediff is not None else "3D MODEL")
             pose_machine(toile, machine)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             pose_bande_basse(toile, bande_du_moment(quand - origine))
