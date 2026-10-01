@@ -60,6 +60,7 @@ async function filme({ secondes, fps, sortie }) {
     headless: true,
     args: ["--hide-scrollbars", "--enable-unsafe-swiftshader", "--no-sandbox"],
   });
+  veille(navigateur);
   try {
     const page = await navigateur.newPage();
     await page.setViewport({ width: LARGEUR, height: HAUTEUR, deviceScaleFactor: 1 });
@@ -133,6 +134,25 @@ async function filme({ secondes, fps, sortie }) {
     await navigateur.close();
     serveur.close();
     await rm(atelier, { recursive: true, force: true });
+  }
+}
+
+/* Fermer le navigateur même quand c'est le script qu'on arrête.
+ *
+ * Un Chrome sans tête n'a pas de fenêtre : lancé en arrière-plan puis
+ * abandonné, il reste des heures en mémoire sans que rien ne le signale, et il
+ * empêche d'ouvrir un Chrome normal. C'est arrivé — quatre profils temporaires
+ * et deux cents mégaoctets oubliés dans /var/folders.
+ *
+ * Le « finally » plus haut ne suffit pas : il ne s'exécute que si le script
+ * reprend la main. Sur un signal, il faut fermer soi-même.
+ */
+function veille(navigateur) {
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+    process.once(signal, async () => {
+      await navigateur.close().catch(() => {});
+      process.exit(130);
+    });
   }
 }
 
