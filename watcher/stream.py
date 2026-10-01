@@ -758,7 +758,92 @@ VITESSE_RUBAN = 90.0  # pixels par seconde, à 1600 de large
 ECART_RUBAN = "      ·      "
 
 
-def morceaux_ruban(lieu: str, ciel: dict) -> list[tuple[str, tuple[int, int, int]]]:
+# Le pas du balayage qui cherche les heures du soleil. Une minute : l'astre
+# monte d'au plus un quart de degré en une minute sous nos latitudes, et la
+# crête en fait vingt-deux — chercher plus fin ne dirait rien de plus.
+PAS_SOLEIL_S = 60.0
+
+
+def heures_du_soleil(terrain, camera: dict, quand: float) -> dict:
+    """Les quatre heures du jour, ici et pas ailleurs.
+
+    Le lever et le coucher sont ceux de l'almanach : le bord haut du disque à
+    l'horizon théorique. Les deux autres sont propres à ce point de vue — le
+    moment où le soleil sort de derrière la crête le matin, et celui où il y
+    rentre le soir. Au Mont Serein l'écart est d'une heure et quart le soir :
+    la pente est dans l'ombre longtemps avant que le soleil se couche, et c'est
+    la chose la plus locale qu'on puisse dire de cette image.
+
+    Balayé minute par minute plutôt que résolu : l'horizon est un terrain, pas
+    une fonction, et on n'a pas de formule pour l'instant où une montagne passe
+    devant le soleil. Mille quatre cents comparaisons par jour, faites une fois
+    par jour, ne se sentent pas.
+
+    Rend un dictionnaire aux clés manquantes quand l'évènement n'a pas lieu —
+    au-dessus du cercle polaire, ou derrière une crête qui ne libère jamais le
+    soleil. On n'invente pas une heure pour faire joli.
+    """
+    from watcher.scene import solar_azimuth, solar_elevation
+    minuit = datetime.fromtimestamp(quand, PARIS).replace(
+        hour=0, minute=0, second=0, microsecond=0).timestamp()
+    oeil = float(camera.get("ele") or 0.0)
+    lat, lon = camera["lat"], camera["lon"]
+    heures: dict[str, float] = {}
+    avant_ciel: bool | None = None
+    avant_crete: bool | None = None
+    pas = 0
+    while pas * PAS_SOLEIL_S < 86400:
+        instant = minuit + pas * PAS_SOLEIL_S
+        pas += 1
+        moment = datetime.fromtimestamp(instant, timezone.utc)
+        haut = solar_elevation(moment, lat, lon)
+        sur_ciel = haut > HORIZON
+        if avant_ciel is not None and sur_ciel != avant_ciel:
+            heures["lever" if sur_ciel else "coucher"] = instant
+        avant_ciel = sur_ciel
+        if terrain is None:
+            continue
+        sur_crete = sur_ciel and haut > terrain.skyline(solar_azimuth(moment, lat, lon), oeil)
+        if avant_crete is not None and sur_crete != avant_crete:
+            heures["crete_matin" if sur_crete else "crete_soir"] = instant
+        avant_crete = sur_crete
+    return heures
+
+
+def _hhmm(instant: float) -> str:
+    return datetime.fromtimestamp(instant, PARIS).strftime("%H:%M")
+
+
+def morceaux_soleil(heures: dict, quand: float) -> list[tuple[str, tuple[int, int, int]]]:
+    """Ce que le ruban dit du soleil, selon l'heure qu'il est.
+
+    Une seule phrase à la fois, et celle qui est vraie maintenant : annoncer
+    le lever à dix-huit heures n'apprend rien à qui regarde, et quatre lignes
+    d'almanach feraient du ruban un calendrier.
+    """
+    matin, soir = heures.get("crete_matin"), heures.get("crete_soir")
+    coucher, lever = heures.get("coucher"), heures.get("lever")
+    if matin is not None and quand < matin:
+        tard = "" if lever is None else f" · SUNRISE {_hhmm(lever)}"
+        return [("SUN CLEARS THE RIDGE ", AMBRE), (_hhmm(matin) + tard, BLANC)]
+    if soir is not None and quand < soir:
+        tard = "" if coucher is None else f" · SUNSET {_hhmm(coucher)}"
+        return [("RIDGE SHADOW AT ", AMBRE), (_hhmm(soir) + tard, BLANC)]
+    if soir is not None and coucher is not None and soir <= quand < coucher:
+        # L'heure qui vaut le détour : la pente est à l'ombre, et le soleil est
+        # encore au-dessus de l'horizon pour tout le monde en bas. Après le
+        # coucher ce n'est plus l'ombre du Ventoux, c'est la nuit, et le dire
+        # serait s'attribuer l'obscurité de la Terre entière.
+        return [("IN THE SHADOW OF THE VENTOUX FOR ", AMBRE),
+                (f"{int((quand - soir) / 60)} MIN · SUN SETS AT {_hhmm(coucher)}", BLANC)]
+    if matin is not None:
+        return [("FIRST LIGHT ON THIS SLOPE ", AMBRE), (_hhmm(matin), BLANC)]
+    return []
+
+
+def morceaux_ruban(lieu: str, ciel: dict,
+                   soleil: list[tuple[str, tuple[int, int, int]]] | None = None,
+                   ) -> list[tuple[str, tuple[int, int, int]]]:
     """Le ruban du haut : le lieu et le temps qu'il fait, par morceaux colorés.
 
     L'étiquette en couleur, la valeur en blanc. Les chaînes d'information font
@@ -788,6 +873,10 @@ def morceaux_ruban(lieu: str, ciel: dict) -> list[tuple[str, tuple[int, int, int
     if prevu and prevu != mot:
         bouts += [("FORECAST ", AMBRE), (ANGLAIS.get(prevu, prevu).upper(), BLANC),
                   (ECART_RUBAN, BLANC)]
+    # Le soleil en dernier : c'est la phrase la plus longue, et le ruban se lit
+    # mieux quand ce qui change vite est devant.
+    if soleil:
+        bouts += list(soleil) + [(ECART_RUBAN, BLANC)]
     # Le séparateur à la fin aussi : sans lui, la copie qui entre par la droite
     # vient coller sa première lettre à la dernière de celle qui sort.
     return bouts or [("MONT SEREIN", CYAN), (ECART_RUBAN, BLANC)]
@@ -1980,6 +2069,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     hauteur_soleil: float | None = None
     soleil: tuple[float, float] | None = None
     relief = charge_relief(racine, cfg["camera"])
+    almanach: dict = {}
+    jour_calcule = None
     bonjour = origine - 10_000.0
     nom_du_lieu = (cfg.get("camera") or {}).get("nom") or "Ventoux"
     dernier_ennui = origine
@@ -2019,7 +2110,18 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     log.info("Lever du soleil : bonjour %s", nom_du_lieu)
                 hauteur_soleil = haut
                 ciel = lecture_du_ciel(racine / "data" / "view.json")
-                ruban = morceaux_ruban(lieu, ciel)
+                # Les heures du soleil ne bougent pas dans la journée : on les
+                # cherche au premier tour et au passage de minuit, pas toutes
+                # les deux secondes.
+                aujourdhui = datetime.fromtimestamp(quand, PARIS).date()
+                if aujourdhui != jour_calcule:
+                    jour_calcule = aujourdhui
+                    try:
+                        almanach = heures_du_soleil(relief, cfg["camera"], quand)
+                    except Exception:
+                        log.warning("Heures du soleil illisibles", exc_info=True)
+                        almanach = {}
+                ruban = morceaux_ruban(lieu, ciel, morceaux_soleil(almanach, quand))
                 # Ce que la veille lit sur l'image passe avant ce que dit le
                 # service : il arrive qu'il annonce « couvert » sur une vallée
                 # pendant qu'il fait grand soleil à mille quatre cents mètres.

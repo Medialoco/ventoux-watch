@@ -2841,6 +2841,55 @@ class DiffusionTests(unittest.TestCase):
         bande = avec[:300, :400]
         self.assertFalse(np.array_equal(bande, assombri[:300, :400]))
 
+    def test_the_ridge_puts_the_slope_in_shadow_before_sunset(self):
+        """Ici le soleil quitte la cr\u00eate une heure avant de se coucher.
+
+        C'est la chose la plus locale qu'on puisse dire de cette image, et elle
+        ne se calcule qu'avec le relief : l'almanach, lui, ne conna\u00eet que
+        l'horizon plat.
+        """
+        racine = Path(__file__).resolve().parents[1]
+        camera = json.loads((racine / "config" / "config.json").read_text(
+            encoding="utf-8"))["camera"]
+        relief = stream.charge_relief(racine, camera)
+        if relief is None:
+            self.skipTest("pas de mod\u00e8le de terrain")
+        quand = datetime(2026, 10, 1, 12, 0, tzinfo=timezone.utc).timestamp()
+        heures = stream.heures_du_soleil(relief, camera, quand)
+        for nom in ("lever", "crete_matin", "crete_soir", "coucher"):
+            self.assertIn(nom, heures, nom)
+        # L'ordre de la journ\u00e9e, qui ne peut pas s'inverser.
+        self.assertLess(heures["lever"], heures["crete_matin"])
+        self.assertLess(heures["crete_matin"], heures["crete_soir"])
+        self.assertLess(heures["crete_soir"], heures["coucher"])
+        # Et l'\u00e9cart du soir, qui est tout l'int\u00e9r\u00eat : la montagne passe devant
+        # le soleil bien avant l'horizon.
+        avance = (heures["coucher"] - heures["crete_soir"]) / 60
+        self.assertGreater(avance, 20, "sans relief, cet \u00e9cart serait nul")
+
+    def test_the_sun_line_says_only_what_is_true_now(self):
+        """Annoncer le lever \u00e0 dix-huit heures n'apprend rien \u00e0 qui regarde."""
+        jour = datetime(2026, 10, 1, tzinfo=stream.PARIS)
+
+        def a(heure, minute=0):
+            return (jour + timedelta(hours=heure, minutes=minute)).timestamp()
+
+        heures = {"lever": a(7, 35), "crete_matin": a(8, 16),
+                  "crete_soir": a(18, 27), "coucher": a(19, 22)}
+
+        def dit(heure, minute=0):
+            return "".join(t for t, _ in stream.morceaux_soleil(heures, a(heure, minute)))
+
+        self.assertIn("CLEARS THE RIDGE", dit(4))
+        self.assertIn("RIDGE SHADOW", dit(15))
+        self.assertIn("SHADOW OF THE VENTOUX", dit(18, 45))
+        # Une fois le soleil couch\u00e9, l'obscurit\u00e9 n'est plus celle du Ventoux :
+        # c'est la nuit, et se l'attribuer serait se vanter.
+        self.assertNotIn("SHADOW OF THE VENTOUX", dit(20))
+        self.assertIn("FIRST LIGHT", dit(23))
+        # Sans relief, on ne dit rien plut\u00f4t que d'inventer une heure.
+        self.assertEqual(stream.morceaux_soleil({}, a(12)), [])
+
     def test_a_miss_is_never_celebrated_as_a_catch(self):
         """« Décor connu » est un raté rangé, pas une prise. Et le feu ne se fête pas."""
         self.assertNotIn("missed", stream.PRISES)
