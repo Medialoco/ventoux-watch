@@ -292,10 +292,16 @@ class Musique:
     autre : un flux qui se tait est un flux que YouTube finit par couper.
     """
 
-    def __init__(self, dossier: Path, racine: Path | None = None) -> None:
+    def __init__(self, dossier: Path, racine: Path | None = None,
+                 muet: bool = False) -> None:
         self.dossier = dossier
         self.racine = racine or dossier.parent.parent
-        self.session = batir_session(dossier, nuit=est_nuit(self.racine))
+        # Un interrupteur, et non le retrait des fichiers : le jour où une
+        # réclamation tombe, il faut pouvoir se taire en une minute sans rien
+        # casser ni rien perdre, et rallumer aussi vite une fois le coupable
+        # trouvé.
+        self.muet = muet
+        self.session = None if muet else batir_session(dossier, nuit=est_nuit(self.racine))
         self.process: subprocess.Popen | None = None
         self.octets = 0
         self.suite: list[dict] = []
@@ -314,7 +320,7 @@ class Musique:
         self._ouvre()
 
     def _ouvre(self) -> None:
-        if self.session is None:
+        if self.muet or self.session is None:
             return
         self.octets = 0
         try:
@@ -381,8 +387,9 @@ class Musique:
             # La session suivante est bâtie pour l'heure qu'il sera, pas pour
             # celle qu'il était : une session de jour tirée à cinq heures du
             # matin jouerait au soleil levant une sélection faite pour la nuit.
-            self.session = batir_session(self.dossier, nuit=est_nuit(self.racine))
-            self._ouvre()
+            if not self.muet:
+                self.session = batir_session(self.dossier, nuit=est_nuit(self.racine))
+                self._ouvre()
             if self.process is not None and self.process.stdout is not None:
                 morceau += self.process.stdout.read(octets - len(morceau))
         self.octets += octets
@@ -1354,7 +1361,10 @@ def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
 
 
 def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: int) -> None:
-    musique = Musique(racine / "data" / "musique", racine)
+    muet = not cfg.get("stream_musique", True)
+    musique = Musique(racine / "data" / "musique", racine, muet=muet)
+    if muet:
+        log.warning("Musique coupée : le flux part en silence")
     if musique.session is None:
         log.warning("Aucune musique dans data/musique : le flux sortira muet")
     media = playlist_media(cfg["stream_url"])
@@ -1437,7 +1447,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     log.info("Lever du soleil : bonjour %s", nom_du_lieu)
                 hauteur_soleil = haut
                 ruban = morceaux_ruban(lieu, lecture_du_ciel(racine / "data" / "view.json"))
-                trio = musique.trio()
+                trio = (None, None, None) if muet else musique.trio()
                 relu = quand
             image = np.frombuffer(brut, np.uint8).reshape(hauteur, largeur, 3).copy()
             # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.

@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 import urllib.parse
 import urllib.request
@@ -51,11 +52,39 @@ EXTENSIONS = (".mp3", ".ogg")
 POIDS_MIN = 1_500_000
 POIDS_MAX = 25 * 1024 * 1024
 
+# Ce qu'on ne prend pas, quoi qu'en dise la licence déclarée.
+#
+# Un DJ set posé sous licence Creative Commons l'est pour le travail du DJ. Les
+# disques qu'il enchaîne, eux, appartiennent à des maisons de disques, et
+# Content ID les reconnaît sous le mixage. C'est ce qui a coupé le direct le
+# premier octobre au matin : un mix de quarante-neuf minutes, déclaré CC BY,
+# fait de morceaux commerciaux.
+#
+# « Original Mix » ne compte pas : en techno c'est la mention qui distingue le
+# morceau de l'artiste de ses remixes, donc exactement le contraire d'un
+# mélange. « Remix », en revanche, est bien un travail sur le disque d'un
+# autre, et on le laisse aussi.
+MELANGE = re.compile(r"\b(dj[\s_-]|djset|dj set|live at|liveset|podcast|radioshow|remix)", re.I)
+# Un morceau d'artiste dépasse rarement un quart d'heure ; au-delà, c'est un
+# enchaînement. Une durée, pas un mot-clé : les mix ne s'annoncent pas tous.
+DUREE_MAX_S = 900
+
 
 def _json(url: str) -> dict:
     requete = urllib.request.Request(url, headers={"User-Agent": "ventoux-watch/0.4"})
     with urllib.request.urlopen(requete, timeout=30) as reponse:
         return json.loads(reponse.read().decode("utf-8", "replace"))
+
+
+def _secondes(piste: Path) -> float:
+    """La durée réelle du fichier, en secondes, ou zéro si on ne sait pas."""
+    sortie = subprocess.run(
+        ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+         "-of", "default=nw=1:nk=1", str(piste)], capture_output=True, text=True)
+    try:
+        return float(sortie.stdout.strip())
+    except ValueError:
+        return 0.0
 
 
 def _courte(url: str) -> str:
@@ -141,6 +170,10 @@ def recolte(dossier: Path, genre: str, combien: int) -> None:
         # sonne comme un disque qu'on a laissé tourner. Dans l'ordre du
         # disque, pas la plus petite — la plus petite est une intro.
         piste = pistes[0]
+        titre = piste.get("title") or re.sub(r"\.\w+$", "", piste["name"])
+        if MELANGE.search(f"{identifiant} {titre_album} {titre} {auteur}"):
+            print(f"  {identifiant} : mélange, écarté")
+            continue
         nom = re.sub(r"[^\w.\-]", "_", f"{identifiant}-{piste['name']}")[-120:]
         cible = dossier / nom
         if cible.exists():
@@ -153,8 +186,13 @@ def recolte(dossier: Path, genre: str, combien: int) -> None:
         except Exception as erreur:  # noqa: BLE001
             print(f"  {identifiant} : téléchargement refusé ({erreur})")
             continue
+        if _secondes(cible) > DUREE_MAX_S:
+            # Vérifiée après coup, parce qu'archive.org annonce la durée d'une
+            # sortie et pas celle de la piste, et qu'il annonce souvent faux.
+            cible.unlink(missing_ok=True)
+            print(f"  {identifiant} : trop long pour un morceau, écarté")
+            continue
         pris += 1
-        titre = piste.get("title") or re.sub(r"\.\w+$", "", piste["name"])
         fiches[nom] = {"auteur": str(auteur), "titre": str(titre),
                         "licence": _courte(licence),
                         "url": f"https://archive.org/details/{identifiant}"}
