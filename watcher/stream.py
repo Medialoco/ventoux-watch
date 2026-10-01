@@ -958,7 +958,10 @@ BANDES = [
     "About 15 seconds behind — the time it takes to name what moves",
     "Wrong name? Tell us. Being corrected is the whole point",
     "All music is Creative Commons · artist, licence and source shown bottom left",
-    "The camera watches this road for the first smoke of a fire. Most days, nothing happens",
+    # Pas un mot sur le feu dans les bandeaux. Un flux qui répète qu'il guette
+    # un incendie se met à en promettre un, et le jour où il en voit vraiment
+    # un, plus personne ne distingue l'annonce de l'affiche.
+    "One mountain road, watched around the clock. Most days, nothing happens",
     "Names are guessed in about fifteen seconds. Sometimes they are wrong. Say so",
 ]
 BANDE_S = 11.0

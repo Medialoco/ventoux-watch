@@ -55,6 +55,9 @@ SORTIE_S = 3.4
 # Ce que la veille écrit, et ce que ça dit en anglais. Les étiquettes sont en
 # français dans toute la base ; les traduire ici plutôt que de les réécrire
 # là-bas garde intacte la trace de ce qui a réellement été publié.
+# Ce qu'on ne met pas dans un Short, quoi qu'en dise l'historique.
+INTERDITS = ("feu", "Feu", "Incendie", "Fumée", "Panache")
+
 NOMS = {
     "Véhicule": "VEHICLE", "Voiture": "CAR", "Camion": "TRUCK", "Bus": "BUS",
     # Le pluriel aussi : la veille écrit « Piétons » quand ils sont deux, et
@@ -62,8 +65,7 @@ NOMS = {
     # Short dont tout le reste est en anglais.
     "Piéton": "PEDESTRIAN", "Piétons": "PEDESTRIANS",
     "Véhicules": "VEHICLES", "Voitures": "CARS", "Camions": "TRUCKS",
-    "Départ de feu": "WILDFIRE STARTING",
-    "Incendie": "WILDFIRE", "Moto": "MOTORCYCLE", "Vélo": "BICYCLE",
+    "Moto": "MOTORCYCLE", "Vélo": "BICYCLE",
     "Tracteur": "TRACTOR", "Voiture blanche": "WHITE CAR",
     "Voiture bleue": "BLUE CAR", "Voiture jaune": "YELLOW CAR",
     "Voiture verte": "GREEN CAR", "Voiture rouge": "RED CAR",
@@ -112,7 +114,13 @@ def erreurs(racine: Path, combien: int, graine: int | None = None) -> list[dict]
         verite = en_anglais(str(fiche.get("note") or ""))
         if not verite or not photo.is_file():
             continue
-        gardees.append({"photo": photo, "dit": str(fiche.get("guessed") or ""),
+        dit = str(fiche.get("guessed") or "")
+        # Rien sur le feu dans un Short. Une vidéo de promotion qui affiche
+        # « WILDFIRE STARTING » au-dessus d'un lampadaire est une fausse
+        # alerte avec une bande-son, et c'est ce que celle-ci faisait.
+        if any(mot in dit for mot in INTERDITS):
+            continue
+        gardees.append({"photo": photo, "dit": dit,
                         "vrai": verite, "at": str(fiche.get("at") or "")})
     tirage = random.Random(graine)
     tirage.shuffle(gardees)
@@ -284,7 +292,7 @@ def carte_intro() -> np.ndarray:
     y = _ecrit(image, "A MACHINE HAS BEEN WATCHING", 620, 1.25, BLANC, 3)
     y = _ecrit(image, "ONE MOUNTAIN ROAD", y + 10, 1.25, BLANC, 3)
     y = _ecrit(image, "DAY AND NIGHT", y + 10, 1.25, BLANC, 3)
-    y = _ecrit(image, "LOOKING FOR WILDFIRE SMOKE", y + 90, 1.0, CYAN, 2)
+    y = _ecrit(image, "WATCHING ONE MOUNTAIN ROAD", y + 90, 1.0, CYAN, 2)
     _ecrit(image, "HERE IS WHAT IT THOUGHT IT SAW", y + 220, 1.15, AMBRE, 3)
     return image
 
@@ -366,7 +374,7 @@ def plan_du_sujet(racine: Path, sujet: str, combien: int,
         ouverture = carte_titre([("MONT SEREIN", 1.8, BLANC),
                                  ("NORTH FACE OF MONT VENTOUX", 1.0, CYAN),
                                  ("1389 m", 1.4, BLANC),
-                                 ("WATCHED FOR WILDFIRE SMOKE", 1.0, AMBRE)])
+                                 ("WATCHED AROUND THE CLOCK", 1.0, AMBRE)])
         fin = carte_titre([("IT GETS THINGS RIGHT TOO", 1.2, BLANC),
                            ("FREE TECHNO RADIO", 1.5, VERT), ("LIVE 24/7", 1.5, VERT)])
         return ([(ouverture, INTRO_S)]
