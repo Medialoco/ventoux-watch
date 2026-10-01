@@ -180,6 +180,19 @@ def sent_le_mix(titre: str, album: str, genres: str) -> bool:
     return any(mot in texte for mot in MOTS_DE_MIX)
 
 
+def sent_le_dj(auteur: str) -> bool:
+    """Le nom d'artiste annonce-t-il un platiniste ?
+
+    Par mots entiers et non par morceaux de mots, contrairement au titre :
+    « AlchimiX » contient « mix » et n'est pas un mix, alors que
+    « Dj Pauly Beatz » est exactement ce qu'on cherche à éviter — son
+    « Champion Sound » est passé par la première version de ce filtre, qui ne
+    regardait que le titre et l'album.
+    """
+    return bool(re.search(r"\b(dj|mix|mixtape|liveset|megamix|set)\b",
+                          (auteur or "").lower()))
+
+
 def morceaux_du_genre(genre: str, depuis: int = 0, combien: int = 50) -> list[dict]:
     """Une page de résultats pour un genre, lue telle quelle."""
     url = (f"{SITE}/search.php?type=song&action=search&rule_1=tag"
@@ -212,6 +225,8 @@ def retenu(fiche: dict) -> str:
         return f"licence « {fiche['licence'] or 'absente'} »"
     if sent_le_mix(fiche["titre"], fiche["album"], fiche["genres"]):
         return "sent le mix"
+    if sent_le_dj(fiche["auteur"]):
+        return "nom de platiniste"
     if not fiche["titre"] or not fiche["auteur"]:
         return "sans titre ou sans auteur"
     if fiche["duree"] < COURT_MIN_S:
