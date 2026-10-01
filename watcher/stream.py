@@ -341,6 +341,10 @@ ENNUI_S = 1200.0
 BROUILLARD_MOTS = {"brouillard": "FOOOOG", "brume": "MIIIIST"}
 BROUILLARD_PAUSE_S = 900.0
 BROUILLARD_TENUE_S = 3.0
+# Les mêmes trois secondes pour « BOOOOORING », et pour la même raison : un mot
+# doit rester assez longtemps pour être lu. Six dixièmes de seconde, ce que dure
+# la réplique, font quatre images à six par seconde.
+ENNUI_TENUE_S = 3.0
 
 
 def repliques(dossier: Path, quand: str = "ennui") -> list[Path]:
@@ -2195,7 +2199,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     jour_calcule = None
     bonjour = origine - 10_000.0
     nom_du_lieu = (cfg.get("camera") or {}).get("nom") or "Ventoux"
-    dernier_ennui = origine
+    # Loin en arrière, comme « bonjour » : à zéro, le flux s'ouvrirait sur
+    # « BOOOOORING » pendant trois secondes, ce qui est une drôle de carte de
+    # visite pour une veille qui vient de démarrer.
+    dernier_ennui = origine - 10_000.0
     # Un quart d'heure en arrière : si la vallée est déjà dans le brouillard au
     # moment où le flux démarre, on le dit tout de suite.
     gris_depuis = origine - BROUILLARD_PAUSE_S
@@ -2372,14 +2379,24 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             toile = cadre(vue, largeur, hauteur)
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser)
-            if musique.parle() and musique.dit_quoi() != "attrape":
-                pose_ennui(toile, mot_gris if musique.dit_quoi() == "brouillard"
-                           else "BOOOOORING", quand - origine)
+            # Le mot tient trois secondes, et non le temps que dure la voix.
+            #
+            # Il durait exactement la voix, ce qui semblait honnête et ne
+            # l'était pas : « Boooooooring » dit par une voix intelligible tient
+            # six dixièmes de seconde, soit quatre images à six par seconde, et
+            # un mot affiché quatre images ne se lit pas — il clignote. Le
+            # brouillard avait déjà sa tenue de trois secondes pour cette
+            # raison ; l'ennui l'a maintenant aussi. Tenir un sous-titre plus
+            # longtemps que la parole n'est pas mentir, c'est sous-titrer.
+            if musique.parle() and musique.dit_quoi() == "brouillard":
+                pose_ennui(toile, mot_gris, quand - origine)
             elif quand - gris_depuis <= BROUILLARD_TENUE_S:
                 # Sans voix enregistrée, le mot tient quand même trois
                 # secondes : il doit pouvoir dire le brouillard sur une machine
                 # où data/voix est vide.
                 pose_ennui(toile, mot_gris, quand - origine)
+            elif quand - dernier_ennui <= ENNUI_TENUE_S:
+                pose_ennui(toile, "BOOOOORING", quand - origine)
             pose_ruban(toile, ruban, quand - origine)
             pose_horloge(toile, quand, direct=rediff is None and survol is None,
                          autre="REPLAY" if rediff is not None else "3D MODEL")

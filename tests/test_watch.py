@@ -3720,3 +3720,40 @@ class CeQuOnMontreEtQuandOnLeMontre(unittest.TestCase):
         # Le survol s'arrête quand le jour tombe, et ne part pas sans lui.
         self.assertIn("or not fait_jour", source)
         self.assertIn("and fait_jour and quand - dernier_vu > CREUX_S", source)
+
+
+class LeMotSeLitOuNeSertARien(unittest.TestCase):
+    """« Boooooooring » clignotait quatre images, et personne ne lisait."""
+
+    def test_the_boredom_word_outlasts_the_voice(self):
+        """Six dixièmes de seconde font quatre images à six par seconde.
+
+        Le mot durait exactement la voix, ce qui semblait honnête et ne
+        l'était pas. Tenir un sous-titre plus longtemps que la parole n'est
+        pas mentir, c'est sous-titrer.
+        """
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("elif quand - dernier_ennui <= ENNUI_TENUE_S:", source)
+        self.assertNotIn('else "BOOOOORING"', source)
+        # Assez long pour être lu à la cadence du flux.
+        self.assertGreaterEqual(stream.ENNUI_TENUE_S * 6, 12)
+
+    def test_the_stream_does_not_open_on_boooooring(self):
+        """À zéro, le flux s'ouvrait trois secondes sur « BOOOOORING »."""
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("dernier_ennui = origine - 10_000.0", source)
+
+    def test_the_voices_can_be_understood(self):
+        """Bubbles parle sous l'eau, Boing rebondit, Bad News chante.
+
+        Une plaisanterie qu'on n'entend pas est un bruit, et un bruit sur un
+        flux de surveillance ressemble à une panne.
+        """
+        from scripts.voix_ennui import CADENCES, REPLIQUES
+        voix = {v for _, v, _ in REPLIQUES}
+        self.assertFalse(voix & {"Bubbles", "Boing", "Bad News"})
+        self.assertTrue(voix)
+        # Et l'ennui parle plus lentement que la prise : il traîne, elle claque.
+        self.assertLess(CADENCES["ennui"], CADENCES["attrape"])
+        for quand, _, _ in REPLIQUES:
+            self.assertIn(quand, CADENCES)

@@ -42,27 +42,40 @@ VOIES = 2
 # Deux occasions de parler, et deux tons. L'ennui traîne, la prise claque :
 # la même voix pour les deux ferait du « good catch » une remarque de plus
 # alors que c'est le seul moment où la machine a réussi quelque chose.
+#
+# Daniel et Samantha, et plus Bubbles, Boing ni Bad News. Les trois voix
+# fantaisistes de macOS déforment les mots par construction — Bubbles parle
+# sous l'eau, Boing rebondit, Bad News chante un enterrement — et à l'antenne
+# on n'y comprenait rien. Or une plaisanterie qu'on n'entend pas n'est pas une
+# plaisanterie, c'est un bruit, et un bruit sur un flux de surveillance
+# ressemble à une panne. Le comique doit être dans la phrase : « absolutely
+# nothing is happening » dit à plat par un Anglais est plus drôle que
+# « boooring » dit par une bulle, et ça s'entend.
+#
+# Les voyelles étirées restent, elles : elles passent le mot à l'écran et la
+# synthèse les allonge vraiment, donc le son suit ce qu'on lit.
+PLAT, CLAIRE = "Daniel", "Samantha"
 REPLIQUES = [
-    ("ennui", "Bubbles", "Boooooooring"),
-    ("ennui", "Bad News", "Still nothing"),
-    ("ennui", "Boing", "So boooring"),
-    ("ennui", "Bubbles", "Nothing. Again"),
-    ("ennui", "Bad News", "Absolutely nothing is happening"),
-    ("ennui", "Boing", "Boooooring"),
-    ("attrape", "Boing", "Good catch!"),
-    ("attrape", "Bubbles", "Good catch!"),
-    ("attrape", "Boing", "Got one!"),
-    ("attrape", "Bubbles", "Nice one!"),
-    ("matin", "Boing", "Goooood morning Ventoux!"),
-    ("matin", "Bubbles", "Goooood morning Ventoux!"),
+    ("ennui", PLAT, "Boooooooring"),
+    ("ennui", PLAT, "Still nothing"),
+    ("ennui", CLAIRE, "So boooring"),
+    ("ennui", CLAIRE, "Nothing. Again"),
+    ("ennui", PLAT, "Absolutely nothing is happening"),
+    ("ennui", PLAT, "Boooooring"),
+    ("attrape", CLAIRE, "Good catch!"),
+    ("attrape", PLAT, "Good catch!"),
+    ("attrape", CLAIRE, "Got one!"),
+    ("attrape", CLAIRE, "Nice one!"),
+    ("matin", CLAIRE, "Goooood morning Ventoux!"),
+    ("matin", PLAT, "Goooood morning Ventoux!"),
     # Le brouillard tient des demi-journées ici, et pendant ce temps l'image
     # est un mur gris. Le dire de temps en temps est la seule façon de faire
     # comprendre que la caméra n'est pas en panne — et c'est plus drôle que de
     # laisser croire qu'elle l'est.
-    ("brouillard", "Bubbles", "Foooooog"),
-    ("brouillard", "Bad News", "Fog. Again"),
-    ("brouillard", "Boing", "Just fooog"),
-    ("brouillard", "Bubbles", "I can see nothing at all"),
+    ("brouillard", CLAIRE, "Foooooog"),
+    ("brouillard", PLAT, "Fog. Again"),
+    ("brouillard", PLAT, "Just fooog"),
+    ("brouillard", CLAIRE, "I can see nothing at all"),
 ]
 
 
@@ -120,11 +133,24 @@ def _nom(voix: str, texte: str) -> str:
     return re.sub(r"[^\w]+", "_", f"{voix}-{texte}").strip("_").lower()[:60] + ".raw"
 
 
-def grave(voix: str, texte: str, cible: Path) -> float:
+# Le débit, en mots par minute, selon l'occasion. Ce n'est pas une coquetterie
+# de mise en scène : le mot à l'écran s'affiche exactement le temps que dure la
+# voix, parce que le compte des octets est la seule horloge qui ne décroche pas
+# du son. Dit au débit normal, « Boooooooring » tient cinq dixièmes de seconde,
+# soit trois images à six par seconde — on ne lit pas un mot en trois images.
+# Ralentir allonge donc l'affichage sans poser de minuterie à côté du son, et
+# ça tombe bien : une machine qui s'ennuie parle lentement.
+CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180}
+
+
+def grave(voix: str, texte: str, cible: Path, cadence: int | None = None) -> float:
     """Dit la phrase et la pose en PCM brut. Rend sa durée en secondes."""
     with tempfile.TemporaryDirectory() as dossier:
         brut = Path(dossier) / "dit.aiff"
-        subprocess.run(["say", "-v", voix, "-o", str(brut), texte], check=True)
+        commande = ["say", "-v", voix]
+        if cadence:
+            commande += ["-r", str(cadence)]
+        subprocess.run(commande + ["-o", str(brut), texte], check=True)
         subprocess.run(
             ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(brut),
              # Un peu de marge sous le maximum : la voix va s'additionner à la
@@ -143,7 +169,7 @@ def enregistre(dossier: Path, ecoute: bool = False) -> int:
     fiches = []
     for quand, voix, texte in REPLIQUES:
         cible = dossier / _nom(f"{quand}-{voix}", texte)
-        duree = grave(voix, texte, cible)
+        duree = grave(voix, texte, cible, CADENCES.get(quand))
         if quand == "attrape":
             # La cloche d'abord, la voix dans sa résonance. L'inverse ferait
             # une annonce suivie d'un bruit ; là, c'est un sourire.
