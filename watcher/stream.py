@@ -524,9 +524,14 @@ class Musique:
     def parle(self) -> bool:
         """Vrai tant qu'il reste de la voix à servir.
 
-        C'est ce qui commande le mot à l'écran. Le compte des octets est la
-        seule horloge honnête ici : une minuterie posée en parallèle finirait
-        par décrocher du son, et on verrait « boring » écrit en silence.
+        Le compte des octets est la seule horloge honnête pour savoir si la
+        voix parle encore : une minuterie posée en parallèle finirait par
+        décrocher du son.
+
+        Ce n'est plus ce qui commande la durée du mot à l'écran, qui tient
+        trois secondes de son côté. Une voix intelligible dit « boring » en six
+        dixièmes de seconde, et le mot clignotait quatre images. Le son dure ce
+        qu'il dure, le sous-titre dure ce qu'il faut pour être lu.
         """
         with self._verrou:
             return bool(self.voix)
