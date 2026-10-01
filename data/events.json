@@ -2,6 +2,136 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T07-22-39Z-missed-18",
+      "t": "2026-10-01T07:22:39Z",
+      "type": "missed",
+      "label": "Décor connu",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T07-22-39Z-missed-18.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "statue n'a pas bougé. Une lumière est passée dessus.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.98,
+          "kept": 0.404,
+          "area_ratio": 0.03299,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 4.1,
+          "height_m": 3.1,
+          "width_named_m": 3.4,
+          "height_named_m": 2.2,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "truck 0.78 sur 51%"
+          ]
+        },
+        "refused": "landmark",
+        "box": [
+          0.4219,
+          0.7833,
+          0.1562,
+          0.2111
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T07-22-39Z-missed-18.jpg"
+    },
+    {
+      "id": "2026-10-01T07-22-38Z-vehicle-17",
+      "t": "2026-10-01T07:22:38Z",
+      "type": "vehicle",
+      "label": "Camion",
+      "zone": "other",
+      "confidence": 0.531,
+      "thumb": "data/thumbs/2026-10-01T07-22-38Z-vehicle-17.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 6.7,
+        "height_m": 2.1,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.232,
+          "kept": 0.406,
+          "area_ratio": 0.03275,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 6.7,
+          "height_m": 2.1,
+          "width_named_m": 6.5,
+          "height_named_m": 2.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "truck 0.53 sur 91%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.6297,
+          0.8506,
+          0.3,
+          0.1494
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T07-22-38Z-vehicle-17.jpg"
+    },
+    {
+      "id": "2026-10-01T07-16-47Z-motion-16",
+      "t": "2026-10-01T07:16:47Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T07-16-47Z-motion-16.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.5752,
+          "area_grow": 1.33,
+          "clipped": true,
+          "shade": 0.716,
+          "kept": 0.203,
+          "area_ratio": 0.00353,
+          "duration_s": 9.8,
+          "frames": 9,
+          "width_m": 2.7,
+          "height_m": 2.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.4,
+          "drift_rate": 0.523,
+          "seen_as": []
+        },
+        "box": [
+          0.4797,
+          0.8639,
+          0.1016,
+          0.1361
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T07-16-47Z-motion-16.jpg"
+    },
+    {
       "id": "2026-10-01T07-11-19Z-vehicle-14",
       "t": "2026-10-01T07:11:19Z",
       "type": "vehicle",
