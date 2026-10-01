@@ -2,6 +2,86 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T03-35-26Z-missed-12",
+      "t": "2026-10-01T03:35:26Z",
+      "type": "missed",
+      "label": "Immobile sur la pente",
+      "zone": "slope",
+      "confidence": 0.0,
+      "thumb": "data/thumbs/2026-10-01T03-35-26Z-missed-12.jpg",
+      "clip_url": "",
+      "detail": {
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.594,
+          "kept": 0.333,
+          "area_ratio": 0.00045,
+          "duration_s": 1.2,
+          "frames": 4,
+          "width_m": 10.0,
+          "height_m": 16.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "slope_still",
+        "box": [
+          0.7875,
+          0.2444,
+          0.0125,
+          0.0361
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T03-35-26Z-missed-12.jpg"
+    },
+    {
+      "id": "2026-10-01T03-35-25Z-missed-11",
+      "t": "2026-10-01T03:35:25Z",
+      "type": "missed",
+      "label": "Immobile dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T03-35-25Z-missed-11.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Ça n'a pas traversé le ciel. La balise et les étoiles fixes sont déjà écartées.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.538,
+          "kept": 0.0,
+          "area_ratio": 0.0001,
+          "duration_s": 1.1,
+          "frames": 3,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "sky_still",
+        "box": [
+          0.0594,
+          0.1694,
+          0.0125,
+          0.0083
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T03-35-25Z-missed-11.jpg"
+    },
+    {
       "id": "2026-10-01T03-15-16Z-missed-10",
       "t": "2026-10-01T03:15:16Z",
       "type": "missed",
