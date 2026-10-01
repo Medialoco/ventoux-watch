@@ -2,6 +2,136 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T12-29-56Z-motion-89",
+      "t": "2026-10-01T12:29:56Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T12-29-56Z-motion-89.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0166,
+          "area_grow": 0.56,
+          "clipped": false,
+          "shade": 0.773,
+          "kept": 0.1,
+          "area_ratio": 0.00049,
+          "duration_s": 0.1,
+          "frames": 2,
+          "width_m": 0.8,
+          "height_m": 1.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 7.009,
+          "seen_as": []
+        },
+        "box": [
+          0.6719,
+          0.7111,
+          0.0156,
+          0.0556
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T12-29-56Z-motion-89.jpg"
+    },
+    {
+      "id": "2026-10-01T12-24-00Z-vehicle-87",
+      "t": "2026-10-01T12:24:00Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.703,
+      "thumb": "data/thumbs/2026-10-01T12-24-00Z-vehicle-87.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.8,
+        "height_m": 1.1,
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 0.811,
+          "kept": 0.303,
+          "area_ratio": 0.00955,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.8,
+          "height_m": 1.1,
+          "width_named_m": 3.7,
+          "height_named_m": 1.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "truck 0.70 sur 91%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.6308,
+          0.9233,
+          0.1707,
+          0.0767
+        ],
+        "count": 2,
+        "since": "2026-10-01T12:24:00Z"
+      },
+      "closeup": "data/closeups/2026-10-01T12-24-00Z-vehicle-87.jpg"
+    },
+    {
+      "id": "2026-10-01T12-17-54Z-missed-86",
+      "t": "2026-10-01T12:17:54Z",
+      "type": "missed",
+      "label": "machine",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T12-17-54Z-missed-86.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Le haut de la tache ne monte qu'à 0.5 m/s. La fumée d'un feu qui vient de prendre s'élève plusieurs fois plus vite : elle est portée par sa propre chaleur.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0108,
+          "area_grow": 3.8,
+          "clipped": false,
+          "shade": 1.53,
+          "kept": 0.8,
+          "area_ratio": 0.00165,
+          "duration_s": 9.6,
+          "frames": 14,
+          "width_m": 12.3,
+          "height_m": 11.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.51,
+          "drift_rate": 0.038,
+          "seen_as": []
+        },
+        "refused": "machine",
+        "box": [
+          0.9156,
+          0.3417,
+          0.0312,
+          0.0528
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T12-17-54Z-missed-86.jpg"
+    },
+    {
       "id": "2026-10-01T12-13-53Z-missed-85",
       "t": "2026-10-01T12:13:53Z",
       "type": "missed",
