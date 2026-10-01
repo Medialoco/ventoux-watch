@@ -2,6 +2,136 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T17-15-20Z-motion-12",
+      "t": "2026-10-01T17:15:20Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T17-15-20Z-motion-12.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0316,
+          "area_grow": 1.45,
+          "clipped": false,
+          "shade": 1.071,
+          "kept": 1.0,
+          "area_ratio": 0.00069,
+          "duration_s": 0.3,
+          "frames": 2,
+          "width_m": 3.7,
+          "height_m": 1.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 1.43,
+          "drift_rate": 3.729,
+          "seen_as": []
+        },
+        "box": [
+          0.9062,
+          0.6111,
+          0.0312,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T17-15-20Z-motion-12.jpg"
+    },
+    {
+      "id": "2026-10-01T17-09-21Z-missed-11",
+      "t": "2026-10-01T17:09:21Z",
+      "type": "missed",
+      "label": "Brume",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T17-09-21Z-missed-11.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête est noyée, on y voit mal. Une lueur chaude qui gonfle ne suffit pas ici, il faut un panache qui monte.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0102,
+          "area_grow": 0.92,
+          "clipped": false,
+          "shade": 0.806,
+          "kept": 0.444,
+          "area_ratio": 0.00057,
+          "duration_s": 10.3,
+          "frames": 12,
+          "width_m": 11.2,
+          "height_m": 13.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.05,
+          "seen_as": []
+        },
+        "refused": "haze",
+        "box": [
+          0.8063,
+          0.3,
+          0.0187,
+          0.0389
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T17-09-21Z-missed-11.jpg"
+    },
+    {
+      "id": "2026-10-01T17-09-00Z-vehicle-9",
+      "t": "2026-10-01T17:09:00Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.754,
+      "thumb": "data/thumbs/2026-10-01T17-09-00Z-vehicle-9.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 2.9,
+        "height_m": 1.6,
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.888,
+          "kept": 0.267,
+          "area_ratio": 0.00915,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 2.9,
+          "height_m": 1.6,
+          "width_named_m": 2.8,
+          "height_named_m": 1.4,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "truck 0.75 sur 85%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.394,
+          0.8385,
+          0.1213,
+          0.1055
+        ],
+        "count": 2,
+        "since": "2026-10-01T17:09:00Z"
+      },
+      "closeup": "data/closeups/2026-10-01T17-09-00Z-vehicle-9.jpg"
+    },
+    {
       "id": "2026-10-01T16-56-20Z-missed-8",
       "t": "2026-10-01T16:56:20Z",
       "type": "missed",
