@@ -845,6 +845,19 @@ NON_NOMS = ("Mouvement", "Rien", "Vu trop", "Tache", "Toujours", "Au bord",
 # et qu'une alerte ne se rejoue pas.
 JAMAIS_REDIFF = ("Incendie", "Départ de feu", "Feu", "Fumée", "Panache")
 
+# Ce qui mérite d'être fêté : un sujet nommé, qui bouge, et qui est bien là.
+# L'historique est surtout fait d'« avortés », ce que la veille a d'abord pris
+# pour quelque chose avant de le ranger au décor — elle en a plus que de vraies
+# prises. En fêter un dirait exactement l'inverse de la vérité, et c'est ce
+# qu'elle a fait au premier essai, avec « Décor connu ».
+#
+# Le feu n'y est pas non plus. Attraper un départ de feu est la raison d'être
+# de tout ce programme, mais une voix de dessin animé qui lance « good catch »
+# au-dessus d'une fumée qui monte pour de bon est la dernière chose à montrer
+# ce jour-là.
+PRISES = {"vehicle", "car", "truck", "bus", "person", "cycle", "plane",
+          "aircraft", "animal"}
+
 
 def archives(racine: Path, combien: int = 400) -> list[dict]:
     """Les prises anciennes qui valent d'être remontrées, photo comprise.
@@ -1391,7 +1404,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             images += 1
             if quand - relu >= 2.0:
                 vus = identifications(racine / "data" / "events.json", quand - TENUE_S - 60)
-                frais = max((v["t"] for v in vus), default=0.0)
+                prises = [v for v in vus if (v.get("type") or "") in PRISES]
+                frais = max((v["t"] for v in prises), default=0.0)
                 if plus_recent is None:
                     # Premier tour : l'historique est déjà plein de choses que
                     # personne n'a vues passer en direct. Les fêter toutes au
@@ -1404,8 +1418,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     attrape = quand
                     if musique.felicitations:
                         musique.dis(tirage.choice(musique.felicitations))
-                    log.info("Prise en direct : %s", next(
-                        (v["label"] for v in vus if v["t"] == frais), "?"))
+                    log.info("Prise en direct : %s — %s", next(
+                        (v["label"] for v in prises if v["t"] == frais), "?"),
+                        musique.voix_dit or "sans voix")
                 machine = etat_machine(racine)
                 # Le soleil est calculé, pas lu : aucun service à interroger,
                 # aucune panne de réseau ne peut faire rater le lever.
@@ -1454,7 +1469,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     and quand - dernier_ennui > ENNUI_S):
                 musique.dis(tirage.choice(musique.repliques))
                 dernier_ennui = quand
-                log.info("Rien depuis %.0f min : le flux le dit", (quand - dernier_mouvement) / 60)
+                log.info("Rien depuis %.0f min : le flux dit « %s »",
+                         (quand - dernier_mouvement) / 60, musique.voix_dit)
             a_poser = None
             if rediff is not None:
                 if quand - rediff[1] <= REDIFF_TENUE_S:

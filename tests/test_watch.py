@@ -2701,6 +2701,17 @@ class DiffusionTests(unittest.TestCase):
         self.assertNotIn("musique.dis(", avant)
         self.assertIn("musique.dis(", apres)
 
+    def test_a_miss_is_never_celebrated_as_a_catch(self):
+        """« Décor connu » est un raté rangé, pas une prise. Et le feu ne se fête pas."""
+        self.assertNotIn("missed", stream.PRISES)
+        self.assertNotIn("motion", stream.PRISES)
+        self.assertNotIn("fire", stream.PRISES)
+        for vrai in ("vehicle", "person", "truck", "cycle"):
+            self.assertIn(vrai, stream.PRISES)
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn('prises = [v for v in vus if (v.get("type") or "") in PRISES]', source)
+        self.assertIn("frais = max((v[\"t\"] for v in prises)", source)
+
     def test_the_catch_flash_fades_instead_of_veiling_the_view(self):
         """L'éclair doit retomber : une lumière qui reste cache la montagne."""
         fond = np.full((360, 640, 3), 40, np.uint8)
