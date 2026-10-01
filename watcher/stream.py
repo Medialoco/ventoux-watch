@@ -1447,13 +1447,20 @@ MOIS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
 
 
 def _quand_dit(iso: str) -> str:
-    """« 25 Sep 2026 · 08:20 UTC » : lisible dans les deux langues sans effort."""
+    """« 25 Sep 2026 · 08:20 PARIS » : lisible dans les deux langues sans effort.
+
+    « PARIS » et non « CEST », comme l'horloge du coin et pour la même raison :
+    le nom de la ville dit d'où vient l'heure, là où le sigle change deux fois
+    par an et ne se convertit mentalement nulle part. Le format ici écrivait
+    « %Z », donc tantôt CEST tantôt CET, et plus rien qui ressemble à l'horloge
+    affichée trois centimètres plus haut.
+    """
     try:
         moment = datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
     except ValueError:
         return iso
     ici = moment.astimezone(PARIS)
-    return f"{ici.day} {MOIS[ici.month - 1]} {ici.year} · {ici:%H:%M} {ici:%Z}"
+    return f"{ici.day} {MOIS[ici.month - 1]} {ici.year} · {ici:%H:%M} PARIS"
 
 
 def pose_rediffusion(image: np.ndarray, fiche: dict) -> bool:
@@ -2341,10 +2348,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # semaines à ne pas rater une voiture, ce n'est pas pour la cacher
             # derrière un décor calculé. Deux minutes interrompues valent mieux
             # que deux minutes complètes par-dessus l'évènement.
-            if survol is not None and (poses or quand - survol > VUE3D_TENUE_S):
+            # Et de jour seulement : le survol est un rendu en plein soleil, et
+            # le poser au milieu d'une nuit noire ne montre pas le relief, ça
+            # montre qu'on a collé une autre vidéo. Le soleil au-dessus de
+            # l'horizon est la condition physique, pas une plage horaire.
+            fait_jour = (hauteur_soleil or -90.0) > HORIZON
+            if survol is not None and (poses or not fait_jour
+                                       or quand - survol > VUE3D_TENUE_S):
                 fin_survol, survol = quand, None
             elif (survol is None and images3d and rediff is None and a_poser is None
-                  and quand - dernier_vu > CREUX_S
+                  and fait_jour and quand - dernier_vu > CREUX_S
                   and quand - fin_survol > VUE3D_PAUSE_S):
                 survol = quand
                 log.info("Survol du terrain pendant %.0f s", VUE3D_TENUE_S)

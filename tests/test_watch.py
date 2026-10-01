@@ -2,6 +2,7 @@ import inspect
 import json
 import math
 import os
+import inspect
 import re
 import io
 import subprocess
@@ -2939,8 +2940,8 @@ class DiffusionTests(unittest.TestCase):
         source = inspect.getsource(stream.diffuse)
         # L'interruption est dans la m\u00eame condition que la fin du compte \u00e0
         # rebours : s\u00e9par\u00e9es, l'une pourrait un jour \u00eatre d\u00e9plac\u00e9e sans l'autre.
-        self.assertIn("if survol is not None and (poses or quand - survol > VUE3D_TENUE_S):",
-                      source)
+        self.assertIn("if survol is not None and (poses or", source)
+        self.assertIn("or quand - survol > VUE3D_TENUE_S)", source)
         self.assertLess(stream.VUE3D_TENUE_S, stream.VUE3D_PAUSE_S / 4,
                         "le survol doit rester une respiration, pas un programme")
 
@@ -3687,3 +3688,35 @@ class LeRubanEtLeSoleilCouche(unittest.TestCase):
         self.assertIn("RIDGE SHADOW AT", midi)
         soir = "".join(b for b, _ in morceaux_soleil(self.HEURES, 8500.0, self.DEMAIN))
         self.assertIn("IN THE SHADOW OF THE VENTOUX", soir)
+
+
+class CeQuOnMontreEtQuandOnLeMontre(unittest.TestCase):
+    """Deux reproches de l'antenne, un soir d'octobre."""
+
+    def test_a_replay_says_paris_like_the_clock_does(self):
+        """« CEST » change de nom deux fois par an et ne se convertit pas.
+
+        L'horloge du coin dit « PARIS » et explique pourquoi ; la date des
+        rediffusions, trois centimètres plus bas, écrivait « %Z ».
+        """
+        dit = stream._quand_dit("2026-10-01T15:37:29Z")
+        self.assertIn("PARIS", dit)
+        self.assertNotIn("CEST", dit)
+        self.assertNotIn("CET", dit)
+        # L'heure reste celle de Paris, pas celle d'UTC : quinze heures
+        # trente-sept en UTC font dix-sept heures trente-sept ici.
+        self.assertIn("17:37", dit)
+        # Et une date illisible repart telle quelle plutôt que de disparaître.
+        self.assertEqual(stream._quand_dit("pas une date"), "pas une date")
+
+    def test_the_flyover_waits_for_daylight(self):
+        """Un rendu en plein soleil posé sur une nuit noire ne montre rien.
+
+        La condition est le soleil au-dessus de l'horizon, pas une plage
+        horaire : la même règle vaudra sur la caméra suivante.
+        """
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("fait_jour = (hauteur_soleil or -90.0) > HORIZON", source)
+        # Le survol s'arrête quand le jour tombe, et ne part pas sans lui.
+        self.assertIn("or not fait_jour", source)
+        self.assertIn("and fait_jour and quand - dernier_vu > CREUX_S", source)
