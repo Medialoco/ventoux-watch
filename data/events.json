@@ -2,6 +2,93 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T12-40-42Z-missed-91",
+      "t": "2026-10-01T12:40:42Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T12-40-42Z-missed-91.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 39 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 0.913,
+          "kept": 0.0,
+          "area_ratio": 0.00055,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 0.6,
+          "height_m": 0.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "tarmac",
+        "box": [
+          0.2422,
+          0.975,
+          0.0219,
+          0.025
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T12-40-42Z-missed-91.jpg"
+    },
+    {
+      "id": "2026-10-01T12-31-55Z-vehicle-90",
+      "t": "2026-10-01T12:31:55Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.768,
+      "thumb": "data/thumbs/2026-10-01T12-31-55Z-vehicle-90.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.3,
+        "height_m": 1.0,
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.256,
+          "kept": 0.3,
+          "area_ratio": 0.00945,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 4.3,
+          "height_m": 1.0,
+          "width_named_m": 4.3,
+          "height_named_m": 0.9,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.77 sur 94%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.6981,
+          0.9309,
+          0.1987,
+          0.0691
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T12-31-55Z-vehicle-90.jpg"
+    },
+    {
       "id": "2026-10-01T12-29-56Z-motion-89",
       "t": "2026-10-01T12:29:56Z",
       "type": "motion",
