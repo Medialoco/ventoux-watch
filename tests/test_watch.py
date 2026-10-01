@@ -2885,9 +2885,11 @@ class DiffusionTests(unittest.TestCase):
 
         heures = {"lever": a(7, 35), "crete_matin": a(8, 16),
                   "crete_soir": a(18, 27), "coucher": a(19, 22)}
+        lendemain = {"lever": a(31, 36), "crete_matin": a(32, 17)}
 
         def dit(heure, minute=0):
-            return "".join(t for t, _ in stream.morceaux_soleil(heures, a(heure, minute)))
+            return "".join(t for t, _ in stream.morceaux_soleil(
+                heures, a(heure, minute), lendemain))
 
         self.assertIn("CLEARS THE RIDGE", dit(4))
         self.assertIn("RIDGE SHADOW", dit(15))
@@ -2895,7 +2897,12 @@ class DiffusionTests(unittest.TestCase):
         # Une fois le soleil couch\u00e9, l'obscurit\u00e9 n'est plus celle du Ventoux :
         # c'est la nuit, et se l'attribuer serait se vanter.
         self.assertNotIn("SHADOW OF THE VENTOUX", dit(20))
-        self.assertIn("FIRST LIGHT", dit(23))
+        # Et c'est le matin de demain qu'on annonce la nuit, pas celui du jour
+        # qui vient de finir : le flux a donn\u00e9 pour imminent un 08:16 pass\u00e9
+        # depuis treize heures.
+        self.assertIn("FIRST LIGHT ON THIS SLOPE TOMORROW", dit(23))
+        self.assertIn("08:17", dit(23))
+        self.assertNotIn("08:16", dit(23))
         # Sans relief, on ne dit rien plut\u00f4t que d'inventer une heure.
         self.assertEqual(stream.morceaux_soleil({}, a(12)), [])
 
@@ -3647,3 +3654,36 @@ class LeSonNeTuePasLImage(unittest.TestCase):
             os.close(ecriture)
         # Il a survécu au premier accident et versé la tranche suivante.
         self.assertEqual(len(essais), 2)
+
+
+class LeRubanEtLeSoleilCouche(unittest.TestCase):
+    """Le ruban a donné pour imminente une heure passée depuis treize heures."""
+
+    HEURES = {"lever": 1000.0, "crete_matin": 2000.0,
+              "crete_soir": 8000.0, "coucher": 9000.0}
+    # Pas 2000 + 86400 : la même heure d'horloge à un jour d'écart rendait le
+    # test incapable de distinguer aujourd'hui de demain.
+    DEMAIN = {"lever": 87520.0, "crete_matin": 88520.0}
+
+    def test_after_sunset_the_ribbon_looks_at_tomorrow(self):
+        from watcher.stream import morceaux_soleil
+        dit = "".join(bout for bout, _ in
+                      morceaux_soleil(self.HEURES, 9500.0, self.DEMAIN))
+        self.assertIn("TOMORROW", dit)
+        from watcher.stream import _hhmm
+        self.assertIn(_hhmm(self.DEMAIN["crete_matin"]), dit)
+        self.assertNotIn(_hhmm(self.HEURES["crete_matin"]), dit)
+
+    def test_without_tomorrow_it_says_nothing_rather_than_something_false(self):
+        from watcher.stream import morceaux_soleil
+        self.assertEqual(morceaux_soleil(self.HEURES, 9500.0), [])
+        self.assertEqual(morceaux_soleil(self.HEURES, 9500.0, {}), [])
+
+    def test_the_daytime_lines_are_untouched(self):
+        from watcher.stream import morceaux_soleil
+        avant = "".join(b for b, _ in morceaux_soleil(self.HEURES, 500.0, self.DEMAIN))
+        self.assertIn("SUN CLEARS THE RIDGE", avant)
+        midi = "".join(b for b, _ in morceaux_soleil(self.HEURES, 5000.0, self.DEMAIN))
+        self.assertIn("RIDGE SHADOW AT", midi)
+        soir = "".join(b for b, _ in morceaux_soleil(self.HEURES, 8500.0, self.DEMAIN))
+        self.assertIn("IN THE SHADOW OF THE VENTOUX", soir)

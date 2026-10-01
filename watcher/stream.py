@@ -844,12 +844,19 @@ def _hhmm(instant: float) -> str:
     return datetime.fromtimestamp(instant, PARIS).strftime("%H:%M")
 
 
-def morceaux_soleil(heures: dict, quand: float) -> list[tuple[str, tuple[int, int, int]]]:
+def morceaux_soleil(heures: dict, quand: float,
+                    demain: dict | None = None) -> list[tuple[str, tuple[int, int, int]]]:
     """Ce que le ruban dit du soleil, selon l'heure qu'il est.
 
     Une seule phrase à la fois, et celle qui est vraie maintenant : annoncer
     le lever à dix-huit heures n'apprend rien à qui regarde, et quatre lignes
     d'almanach feraient du ruban un calendrier.
+
+    Après le coucher il faut les heures du lendemain, pas celles du jour : le
+    flux a annoncé « FIRST LIGHT ON THIS SLOPE 08:16 » à neuf heures du soir,
+    ce qui donnait pour imminente une heure passée depuis treize heures. Sans
+    les heures de demain on se taît, parce qu'une heure fausse au présent est
+    pire qu'une ligne en moins.
     """
     matin, soir = heures.get("crete_matin"), heures.get("crete_soir")
     coucher, lever = heures.get("coucher"), heures.get("lever")
@@ -866,8 +873,12 @@ def morceaux_soleil(heures: dict, quand: float) -> list[tuple[str, tuple[int, in
         # serait s'attribuer l'obscurité de la Terre entière.
         return [("IN THE SHADOW OF THE VENTOUX FOR ", AMBRE),
                 (f"{int((quand - soir) / 60)} MIN · SUN SETS AT {_hhmm(coucher)}", BLANC)]
-    if matin is not None:
-        return [("FIRST LIGHT ON THIS SLOPE ", AMBRE), (_hhmm(matin), BLANC)]
+    tot = (demain or {}).get("crete_matin")
+    if tot is not None:
+        lever_demain = (demain or {}).get("lever")
+        tard = "" if lever_demain is None else f" · SUNRISE {_hhmm(lever_demain)}"
+        return [("FIRST LIGHT ON THIS SLOPE TOMORROW ", AMBRE),
+                (_hhmm(tot) + tard, BLANC)]
     return []
 
 
@@ -2170,6 +2181,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     soleil: tuple[float, float] | None = None
     relief = charge_relief(racine, cfg["camera"])
     almanach: dict = {}
+    # Les heures de demain aussi : après le coucher, c'est d'elles que le ruban
+    # a besoin, et un balayage de soixante-dix millisecondes fait deux fois par
+    # jour ne se sent pas.
+    demain: dict = {}
     jour_calcule = None
     bonjour = origine - 10_000.0
     nom_du_lieu = (cfg.get("camera") or {}).get("nom") or "Ventoux"
@@ -2223,10 +2238,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     jour_calcule = aujourdhui
                     try:
                         almanach = heures_du_soleil(relief, cfg["camera"], quand)
+                        demain = heures_du_soleil(relief, cfg["camera"],
+                                                  quand + 86400)
                     except Exception:
                         log.warning("Heures du soleil illisibles", exc_info=True)
-                        almanach = {}
-                ruban = morceaux_ruban(lieu, ciel, morceaux_soleil(almanach, quand))
+                        almanach = demain = {}
+                ruban = morceaux_ruban(lieu, ciel,
+                                       morceaux_soleil(almanach, quand, demain))
                 # Ce que la veille lit sur l'image passe avant ce que dit le
                 # service : il arrive qu'il annonce « couvert » sur une vallée
                 # pendant qu'il fait grand soleil à mille quatre cents mètres.
