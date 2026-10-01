@@ -2,6 +2,93 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T15-32-33Z-motion-15",
+      "t": "2026-10-01T15:32:33Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T15-32-33Z-motion-15.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1348,
+          "area_grow": 0.97,
+          "clipped": false,
+          "shade": 1.187,
+          "kept": 0.667,
+          "area_ratio": 0.00042,
+          "duration_s": 6.5,
+          "frames": 7,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.643,
+          "seen_as": []
+        },
+        "box": [
+          0.2437,
+          0.3917,
+          0.0312,
+          0.0361
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T15-32-33Z-motion-15.jpg"
+    },
+    {
+      "id": "2026-10-01T15-25-13Z-vehicle-13",
+      "t": "2026-10-01T15:25:13Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.704,
+      "thumb": "data/thumbs/2026-10-01T15-25-13Z-vehicle-13.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 5.0,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.3393,
+          "area_grow": 39.46,
+          "clipped": true,
+          "shade": 0.906,
+          "kept": 0.41,
+          "area_ratio": 0.02672,
+          "duration_s": 8.9,
+          "frames": 10,
+          "width_m": 5.0,
+          "height_m": 2.6,
+          "width_named_m": 3.1,
+          "height_named_m": 2.6,
+          "rise_ms": 0.0,
+          "drift_rate": 0.121,
+          "seen_as": [
+            "car 0.70 sur 64%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.1411,
+          0.8054,
+          0.1433,
+          0.1946
+        ],
+        "count": 2,
+        "since": "2026-10-01T15:25:13Z"
+      },
+      "closeup": "data/closeups/2026-10-01T15-25-13Z-vehicle-13.jpg"
+    },
+    {
       "id": "2026-10-01T15-21-30Z-fire-12",
       "t": "2026-10-01T15:21:30Z",
       "type": "fire",
