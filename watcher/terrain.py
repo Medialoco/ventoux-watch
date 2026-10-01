@@ -138,6 +138,30 @@ class Terrain:
         bottom = patch[1, 0] * (1 - fc) + patch[1, 1] * fc
         return float(top * (1 - fr) + bottom * fr) + self.bias
 
+    def skyline(self, bearing_deg: float, eye_m: float, step_m: float = 60.0) -> float:
+        """How high the ground stands in that direction, in degrees above level.
+
+        Walked outward along the bearing, taking the largest angle met: a near
+        bank can hide a far summit, and only the largest matters. The walk
+        stops at the edge of the grid, so what it returns is the skyline we
+        have measured and not the real one — past the grid we claim nothing.
+
+        This is what answers "is the sun on the scene yet". At this latitude in
+        October the sun clears the horizon at half past seven and does not
+        clear the Ventoux ridge until well after; between the two the sky is
+        bright, the forecast says clear, and the slope is still in the dark.
+        """
+        east_step = math.sin(math.radians(bearing_deg)) * step_m
+        north_step = math.cos(math.radians(bearing_deg)) * step_m
+        highest = -90.0
+        distance = step_m
+        while distance <= self.reach_m:
+            part = distance / step_m
+            rise = self.height(east_step * part, north_step * part) - eye_m
+            highest = max(highest, math.degrees(math.atan2(rise, distance)))
+            distance += step_m
+        return highest
+
     def _read(self, path: Path) -> None:
         payload = json.loads(path.read_text(encoding="utf-8"))
         same = (

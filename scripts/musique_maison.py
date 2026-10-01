@@ -46,14 +46,28 @@ LICENCE = "CC0"
 SOURCE = "https://medialoco.github.io/ventoux-watch/"
 
 # Un tempo de marche. Plus vite, le flux pousse ; plus lentement, il endort.
+# Chaque morceau prend le sien dans cette fourchette : à tempo unique, seize
+# morceaux s'entendent comme un seul très long, et c'est ce qu'ils faisaient.
 TEMPO = 118.0
+TEMPOS = (108.0, 112.0, 116.0, 118.0, 122.0, 125.0)
+# Ce qui distingue un morceau d'un autre au-delà de la tonalité : combien la
+# pulsation pèse en face des nappes. « nuit » garde la percussion en retrait et
+# les nappes devant, « jour » fait l'inverse. Le flux joue les deux, et une
+# nuit de quatorze heures n'a pas besoin de la même chose qu'un midi.
+CARACTERES = {
+    "nuit": {"frappe": 0.62, "nappe": 1.25, "arpege": 0.55, "pompe": 0.42},
+    "calme": {"frappe": 0.80, "nappe": 1.10, "arpege": 0.75, "pompe": 0.50},
+    "franc": {"frappe": 1.00, "nappe": 0.92, "arpege": 1.00, "pompe": 0.58},
+    "poussé": {"frappe": 1.12, "nappe": 0.82, "arpege": 1.15, "pompe": 0.64},
+}
 # La mineure naturelle, en demi-tons depuis le la. C'est l'échelle qui sonne
 # juste sans avoir à choisir : aucune de ses notes ne jure avec une autre, donc
 # un tirage au hasard y reste musical, ce qui est exactement ce qu'il faut
 # quand c'est une machine qui tire.
 GAMME = [0, 2, 3, 5, 7, 8, 10]
 # Les degrés de la suite d'accords, en demi-tons depuis la tonique.
-SUITES = [[0, -4, -9, -2], [0, 3, -4, -2], [0, -5, -4, -7], [0, 5, 3, -2]]
+SUITES = [[0, -4, -9, -2], [0, 3, -4, -2], [0, -5, -4, -7], [0, 5, 3, -2],
+          [0, -2, -5, -4], [0, -9, -5, -2], [0, 7, 3, 5], [0, -4, 3, -2]]
 LA = 220.0
 
 
@@ -92,6 +106,47 @@ def charleston(n: int, ouvert: bool = False) -> np.ndarray:
     # un passe-haut qui ne coûte qu'une soustraction.
     aigu = np.diff(bruit)
     return aigu * _enveloppe(n, 0.0005, 0.12 if ouvert else 0.028)
+
+
+def claquement(n: int) -> np.ndarray:
+    """Un clap sur les deuxième et quatrième temps.
+
+    C'est lui qui manquait le plus. La grosse caisse dit où est le temps ; le
+    clap dit qu'il y a quelqu'un. Sans lui, la pulsation est un métronome.
+
+    Quatre bouffées de bruit espacées de dix millisecondes et non une seule :
+    un clap est un geste de plusieurs mains qui ne tombent pas ensemble, et
+    c'est ce léger étalement qu'on reconnaît. Une bouffée unique sonne comme
+    une porte qui claque.
+    """
+    tirage = np.random.default_rng(7)
+    t = np.arange(n, dtype=np.float32) / TAUX
+    onde = np.zeros(n, np.float32)
+    for retard, poids in ((0.0, 0.7), (0.010, 0.85), (0.019, 0.6), (0.028, 1.0)):
+        place = int(retard * TAUX)
+        if place >= n:
+            break
+        reste = n - place
+        bruit = np.diff(tirage.normal(0, 1, reste + 1).astype(np.float32))
+        onde[place:] += bruit * np.exp(-t[:reste] / (0.11 if poids == 1.0 else 0.012)) * poids
+    return onde * 0.45
+
+
+def pince(n: int, hauteur: float) -> np.ndarray:
+    """Une note pincée, courte et claire : la voix de l'arpège.
+
+    Une dent de scie adoucie — les harmoniques décroissent en un sur le rang —
+    sous une enveloppe très brève. Les rangs s'arrêtent avant la moitié du taux
+    d'échantillonnage, sinon ce qui dépasse revient se plier dans le grave et
+    s'entend comme une casserole.
+    """
+    t = np.arange(n, dtype=np.float32) / TAUX
+    onde = np.zeros(n, np.float32)
+    for rang in range(1, 13):
+        if hauteur * rang > TAUX * 0.45:
+            break
+        onde += np.sin(2 * np.pi * hauteur * rang * t) / rang
+    return onde * _enveloppe(n, 0.004, 0.17) * 0.3
 
 
 def cloche_note(n: int, hauteur: float, chute: float = 1.8) -> np.ndarray:
@@ -218,11 +273,21 @@ def intensite(avance: float) -> float:
     return max(0.0, montee * sortie * creux)
 
 
-def compose(minutes: float, graine: int) -> np.ndarray:
-    """Un morceau entier, en flottants mono entre -1 et 1."""
+def compose(minutes: float, graine: int) -> tuple[np.ndarray, np.ndarray, dict]:
+    """Un morceau, en deux couches : ce qui reste au centre, ce qui s'écarte.
+
+    Deux couches et non un mono qu'on élargit ensuite : si la grosse caisse et
+    la basse partent dans le retard stéréo avec le reste, le bas du spectre se
+    dédouble et le morceau perd son assise — il devient large et mou. Ce qui
+    porte le rythme reste donc exactement au milieu, et seules les nappes, les
+    cloches et l'arpège s'écartent.
+    """
     tirage = random.Random(graine)
     total = int(minutes * 60 * TAUX)
-    temps = 60.0 / TEMPO
+    nom_caractere = tirage.choice(list(CARACTERES))
+    trait = CARACTERES[nom_caractere]
+    allure = tirage.choice(TEMPOS)
+    temps = 60.0 / allure
     mesure = temps * 4
     suite = tirage.choice(SUITES)
     # Transposer la suite d'un morceau à l'autre tout en restant dans le même
@@ -233,6 +298,7 @@ def compose(minutes: float, graine: int) -> np.ndarray:
     melange = np.zeros(total, np.float32)
     percussion = np.zeros(total, np.float32)
     cristaux = np.zeros(total, np.float32)
+    basse = np.zeros(total, np.float32)
 
     # Les nappes, par segments de huit mesures, avec un recouvrement qui lie
     # un accord au suivant. Sans recouvrement, chaque changement d'accord fait
@@ -243,14 +309,22 @@ def compose(minutes: float, graine: int) -> np.ndarray:
     while debut < minutes * 60:
         indice = int(debut / segment) % len(suite)
         accord = suite[indice] + tonalite
-        notes = [_hauteur(accord + GAMME[d] - 12) for d in (0, 2, 4)]
+        # La septième en plus de la triade : trois notes font un accord juste,
+        # quatre font un accord qui a une couleur. C'est tout l'écart entre un
+        # exercice d'harmonie et quelque chose qu'on laisse tourner.
+        notes = [_hauteur(accord + GAMME[d] - 12) for d in (0, 2, 4, 6)]
         notes.append(_hauteur(accord - 24))
         n = min(int(segment * TAUX) + recouvre, total - int(debut * TAUX))
         if n <= 0:
             break
-        bout = nappe(n, notes, tirage)
-        bout[:recouvre] *= np.linspace(0, 1, recouvre, dtype=np.float32)
-        bout[-recouvre:] *= np.linspace(1, 0, recouvre, dtype=np.float32)
+        bout = nappe(n, notes, tirage) * trait["nappe"]
+        # Le dernier segment est tronqué par la fin du morceau et peut être
+        # plus court que son propre fondu — ce qui arrive d'autant plus que
+        # chaque morceau a maintenant son tempo, donc ses mesures à lui.
+        lisiere = min(recouvre, n // 2)
+        if lisiere:
+            bout[:lisiere] *= np.linspace(0, 1, lisiere, dtype=np.float32)
+            bout[-lisiere:] *= np.linspace(1, 0, lisiere, dtype=np.float32)
         melange[int(debut * TAUX):int(debut * TAUX) + n] += bout
         debut += segment
 
@@ -258,22 +332,32 @@ def compose(minutes: float, graine: int) -> np.ndarray:
     coup = grosse_caisse(int(0.45 * TAUX))
     chh = charleston(int(0.12 * TAUX))
     ohh = charleston(int(0.25 * TAUX), ouvert=True)
+    clap = claquement(int(0.22 * TAUX))
+    frappe = trait["frappe"]
     battement = 0
     while battement * temps < minutes * 60:
         place = int(battement * temps * TAUX)
         force = intensite(battement * temps / (minutes * 60))
         if force > 0.25:
             fin = min(place + len(coup), total)
-            percussion[place:fin] += coup[:fin - place] * (0.9 * force)
+            percussion[place:fin] += coup[:fin - place] * (0.9 * force * frappe)
+        # Le clap sur les temps faibles. Il arrive plus tôt que la charleston
+        # dans la montée : c'est lui qui installe la mesure, et une mesure
+        # sans deuxième et quatrième temps ne se compte pas.
+        if force > 0.38 and battement % 2 == 1:
+            fin = min(place + len(clap), total)
+            percussion[place:fin] += clap[:fin - place] * (0.42 * force * frappe)
         if force > 0.45:
             # Le contretemps : c'est lui qui fait avancer, pas la grosse caisse.
             demi = place + int(temps * TAUX / 2)
             fin = min(demi + len(chh), total)
             if demi < total:
-                percussion[demi:fin] += chh[:fin - demi] * (0.22 * force)
-        if force > 0.6 and battement % 8 == 6:
-            fin = min(place + len(ohh), total)
-            percussion[place:fin] += ohh[:fin - place] * 0.18
+                percussion[demi:fin] += chh[:fin - demi] * (0.22 * force * frappe)
+        if force > 0.6 and battement % 4 == 3:
+            demi = place + int(temps * TAUX / 2)
+            fin = min(demi + len(ohh), total)
+            if demi < total:
+                percussion[demi:fin] += ohh[:fin - demi] * (0.16 * frappe)
         battement += 1
 
     # La basse : la fondamentale de l'accord, en croches, gardée très ronde.
@@ -294,8 +378,32 @@ def compose(minutes: float, graine: int) -> np.ndarray:
             onde *= _enveloppe(n, 0.008, 0.16)
             place = int(instant * TAUX)
             fin = min(place + n, total)
-            melange[place:fin] += onde[:fin - place] * (0.5 * force)
+            basse[place:fin] += onde[:fin - place] * (0.5 * force)
         croche += 1
+
+    # L'arpège : les notes de l'accord égrenées en doubles-croches, montées
+    # puis descendues. C'est ce qui donne l'allure sans rien ajouter de fort —
+    # la pulsation dit l'heure, l'arpège dit qu'elle avance.
+    double = temps / 4
+    n_pince = int(double * 1.6 * TAUX)
+    marche = 0
+    while marche * double < minutes * 60:
+        instant = marche * double
+        force = intensite(instant / (minutes * 60))
+        # Trois doubles sur quatre : un arpège qui remplit toutes les cases
+        # devient un bourdon, et c'est le trou qui fait entendre le rythme.
+        if force > 0.42 and marche % 4 != 2:
+            indice = int(instant / segment) % len(suite)
+            montant = [0, 2, 4, 6, 4, 2]
+            degre = montant[marche % len(montant)]
+            octave = 12 if (marche // len(montant)) % 2 else 0
+            frequence = _hauteur(suite[indice] + tonalite + GAMME[degre] + octave)
+            place = int(instant * TAUX)
+            fin = min(place + n_pince, total)
+            if fin > place:
+                cristaux[place:fin] += (pince(n_pince, frequence)[:fin - place]
+                                        * (0.26 * force * trait["arpege"]))
+        marche += 1
 
     # Les cloches, posées sur la gamme, avec de l'écho. C'est ce qui donne
     # l'impression qu'il se passe quelque chose sans rien demander à personne.
@@ -346,33 +454,47 @@ def compose(minutes: float, graine: int) -> np.ndarray:
     cristaux = echos(cristaux, temps * 0.75, reprises=4, perte=0.42)
     # Tout ce qui tient recule à chaque coup, et revient. La percussion, elle,
     # n'est pas touchée : c'est elle qui donne l'ordre.
-    melange *= pompe(total, temps)
-    melange += percussion + cristaux * 0.8
+    respire = pompe(total, temps, trait["pompe"])
+    melange *= respire
+    melange += cristaux * 0.8
+    # La basse respire aussi, et reste au centre avec la percussion : c'est
+    # elle et la grosse caisse qui tiennent le morceau debout.
+    centre = percussion + basse * respire
 
     # Les dix dernières et les dix premières secondes s'ouvrent et se ferment.
     # Les morceaux s'enchaînent bout à bout dans le flux, sans fondu possible :
     # c'est donc au morceau de commencer et de finir dans le silence pour que
     # le raccord s'entende comme une respiration et non comme une coupure.
     bord = int(10 * TAUX)
-    melange[:bord] *= np.linspace(0, 1, bord, dtype=np.float32) ** 2
-    melange[-bord:] *= np.linspace(1, 0, bord, dtype=np.float32) ** 2
+    for piste in (melange, centre):
+        piste[:bord] *= np.linspace(0, 1, bord, dtype=np.float32) ** 2
+        piste[-bord:] *= np.linspace(1, 0, bord, dtype=np.float32) ** 2
 
-    # Un compresseur du pauvre : on écrase les crêtes à la tangente
-    # hyperbolique plutôt que de les couper. Couper fait claquer.
-    melange /= max(float(np.abs(melange).max()), 1e-6)
-    return np.tanh(melange * 1.6).astype(np.float32) * 0.82
+    fiche = {"caractere": nom_caractere, "tempo": allure}
+    return centre, melange, fiche
 
 
-def en_stereo(mono: np.ndarray) -> np.ndarray:
-    """Écarte les deux voies de douze millisecondes. La largeur, à ce prix-là.
+def en_stereo(centre: np.ndarray, large: np.ndarray) -> np.ndarray:
+    """Deux voies : le centre des deux côtés, le large décalé d'un côté.
 
-    Douze millisecondes : au-dessus de trente, l'oreille entend deux sons ; en
-    dessous de cinq, elle n'entend rien du tout.
+    Douze millisecondes de retard sur la droite pour ce qui s'écarte : au-delà
+    de trente l'oreille entend deux sons, en dessous de cinq elle n'entend
+    rien. Ce qui porte le rythme n'est pas décalé du tout — un grave dédoublé
+    perd son point d'appui, et le morceau avec.
+
+    La normalisation vient à la fin et sur les deux voies ensemble : les
+    normaliser séparément déplacerait l'image sonore à chaque crête.
     """
     decalage = int(0.012 * TAUX)
-    gauche = mono
-    droite = np.concatenate([np.zeros(decalage, np.float32), mono[:-decalage]])
-    return np.stack([gauche, droite * 0.97], axis=1).reshape(-1)
+    retard = np.concatenate([np.zeros(decalage, np.float32), large[:-decalage]])
+    gauche = centre + large
+    droite = centre + retard * 0.97
+    crete = max(float(np.abs(gauche).max()), float(np.abs(droite).max()), 1e-6)
+    # Un compresseur du pauvre : on écrase les crêtes à la tangente
+    # hyperbolique plutôt que de les couper. Couper fait claquer.
+    gauche = np.tanh(gauche / crete * 1.6) * 0.82
+    droite = np.tanh(droite / crete * 1.6) * 0.82
+    return np.stack([gauche, droite], axis=1).reshape(-1).astype(np.float32)
 
 
 def ecris(piste: np.ndarray, cible: Path) -> None:
@@ -393,11 +515,12 @@ def fabrique(dossier: Path, combien: int, minutes: float, graine: int) -> int:
     for numero in range(combien):
         nom = f"ventoux-{graine:03d}-{numero + 1:02d}.mp3"
         cible = dossier / nom
-        piste = en_stereo(compose(minutes, graine * 1000 + numero))
-        ecris(piste, cible)
+        centre, large, fiche = compose(minutes, graine * 1000 + numero)
+        ecris(en_stereo(centre, large), cible)
         fiches[nom] = {"auteur": AUTEUR, "titre": f"Mont Serein {graine:03d}.{numero + 1:02d}",
-                       "licence": LICENCE, "url": SOURCE}
+                       "licence": LICENCE, "url": SOURCE, **fiche}
         print(f"  {numero + 1:2d}/{combien}  {nom}  {minutes:.0f} min  "
+              f"{fiche['tempo']:.0f} bpm  {fiche['caractere']:6s}  "
               f"{cible.stat().st_size / 1e6:.1f} Mo")
     chemin.write_text(json.dumps(fiches, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"\n{combien} morceaux dans {dossier}, {AUTEUR}, {LICENCE}")

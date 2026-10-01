@@ -98,16 +98,24 @@ async function filme({ secondes, fps, sortie }) {
     // filme des polygones flottant dans le ciel. C'est ce qu'a donné le
     // premier essai.
     //
-    // Une sinusoïde, donc : elle revient exactement à son point de départ, ce
-    // qui fait boucler le film sans raccord, et elle ralentit aux extrémités
-    // au lieu de buter.
-    const AMPLEUR = 230;
+    // Un aller-retour d'un seul côté, et pas un balayage symétrique. La caméra
+    // tourne autour d'un point posé dans le vallon, en gardant son altitude de
+    // mille trois cent quatre-vingt-dix mètres ; du côté du Ventoux le sol
+    // monte à mille neuf cents, donc à quelques degrés seulement elle se
+    // retrouve dans la montagne et filme le dessous du maillage, les sapins
+    // pendus la tête en bas. C'est ce qu'ont donné les deux premiers essais.
+    // De l'autre côté le terrain redescend et la vue reste dégagée.
+    //
+    // Un cosinus relevé, donc : il part de zéro, va jusqu'à l'écart voulu et
+    // revient exactement à son point de départ — la boucle se referme sans
+    // raccord — en ralentissant aux deux bouts au lieu de buter.
+    const ECART = 105;
     const centre = LARGEUR / 2;
     await page.mouse.move(centre, milieu);
     await page.mouse.down();
     for (let i = 0; i < images; i += 1) {
-      await page.mouse.move(centre + AMPLEUR * Math.sin((2 * Math.PI * i) / images),
-                            milieu, { steps: 1 });
+      const avance = (1 - Math.cos((2 * Math.PI * i) / images)) / 2;
+      await page.mouse.move(centre + ECART * avance, milieu, { steps: 1 });
       await toile.screenshot({ path: join(atelier, String(i).padStart(5, "0") + ".png") });
       if (i % 60 === 0) process.stdout.write(`  ${i}/${images}\n`);
     }

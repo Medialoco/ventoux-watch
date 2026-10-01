@@ -28,8 +28,8 @@ from watcher.geometry import load_zones
 from watcher.gtfs import GtfsIndex, PARIS
 from watcher.memory import Memory
 from watcher.motion import MotionDetector, smoke_ratio, warm_ratio
-from watcher.naming import (Observation, decide, named_itself, refusal_words,
-                            write_observation)
+from watcher.naming import (RIEN_A_JUGER, Observation, decide, named_itself,
+                            refusal_words, write_observation)
 from watcher.opensky import SkyArchive
 from watcher.publish import publish
 from watcher.scene import SceneReader, ViewLog, solar_azimuth, solar_elevation
@@ -626,7 +626,12 @@ def _worth_keeping(reason: str, cfg: dict, seen: dict, now: float) -> bool:
     Par motif et non en bloc, sinon les motifs qui reviennent toutes les
     secondes mangeraient la place des rares, et ce sont justement les rares qui
     ont des chances d'être des fautes.
+
+    Sauf ceux dont le motif est qu'il n'y avait rien : on ne demande pas à un
+    humain de trancher une absence.
     """
+    if reason in RIEN_A_JUGER:
+        return False
     gap = float(cfg.get("sample_refused_s", SAMPLE_REFUSED_S) or 0)
     if not gap:
         return False

@@ -1167,6 +1167,25 @@ def refusal_words(reason: str) -> str:
     return REFUSAL_WORDS.get(reason, reason.replace("_", " "))
 
 
+# Les refus dont on ne garde pas de carte, parce qu'il n'y a rien à trancher.
+#
+# Un refus n'a d'intérêt que s'il dit quelque chose de faux. « Motif sur la
+# chaussée » en dit : si c'était une voiture, on l'apprend. « Immobile sur la
+# pente » n'en dit aucun — la réponse à « qu'est-ce que c'était ? » est
+# « rien », et personne n'apprend rien d'un rien. Ces motifs-là représentaient
+# les deux tiers des cartes à juger, c'est-à-dire que la file à trancher était
+# surtout faite de choses qui n'avaient pas eu lieu.
+#
+# Ils restent enregistrés comme candidats avec leur photo : c'est l'affichage
+# qu'on arrête, pas la mesure.
+RIEN_A_JUGER = {
+    "none", "unclassified", "none_at_that_spot",
+    "static", "sky_still", "slope_still",
+    "against_the_ground", "too_small", "too_brief",
+    "edge_of_frame", "repeated_spot",
+}
+
+
 def write_observation(obs: Observation) -> dict:
     """Tout ce que la décision a eu sous les yeux, en clair.
 

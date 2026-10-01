@@ -23,7 +23,7 @@ from watcher.main import (STREAM_RETRY_MAX_S, STREAM_RETRY_S, _box_of_the_named,
                           _might_be_bus, _next_wait, _note_interruption, _published, _utc)
 from watcher.naming import Decision
 from watcher.motion import MotionDetector, Track
-from watcher.naming import (SIZE_DOUBT_MAX, Detection, Observation, Trip, choose_aircraft,
+from watcher.naming import (RIEN_A_JUGER, SIZE_DOUBT_MAX, Detection, Observation, Trip, choose_aircraft,
                             decide, in_camera_view)
 from watcher.review import apply_review, parse_review
 from watcher.opensky import SkyArchive
@@ -1793,15 +1793,15 @@ class FogTests(unittest.TestCase):
 
         cfg = {"sample_refused_s": 600}
         vus, instant = {}, 1000.0
-        self.assertTrue(_worth_keeping("none", cfg, vus, instant))
+        self.assertTrue(_worth_keeping("tarmac", cfg, vus, instant))
         # Le motif bavard est muselé jusqu'à la prochaine fenêtre...
-        self.assertFalse(_worth_keeping("none", cfg, vus, instant + 5))
+        self.assertFalse(_worth_keeping("tarmac", cfg, vus, instant + 5))
         # ...mais il n'a pas pris la place du motif rare arrivé juste après.
         self.assertTrue(_worth_keeping("night_plume", cfg, vus, instant + 5))
-        self.assertTrue(_worth_keeping("none", cfg, vus, instant + 601))
+        self.assertTrue(_worth_keeping("tarmac", cfg, vus, instant + 601))
 
         # Et on doit pouvoir tout couper d'un seul réglage.
-        self.assertFalse(_worth_keeping("none", {"sample_refused_s": 0}, {}, instant))
+        self.assertFalse(_worth_keeping("tarmac", {"sample_refused_s": 0}, {}, instant))
 
     def test_a_refused_patch_never_takes_a_published_reading_s_place(self):
         """Un refus ne rejoint aucun passage.
@@ -2784,6 +2784,92 @@ class DiffusionTests(unittest.TestCase):
             stream.gris(image, 1.0)
         self.assertNotEqual(int(bleu[0, 0, 0]), int(vert[0, 0, 0]))
         self.assertGreater(int(vert[0, 0, 0]), int(bleu[0, 0, 0]))
+
+    def test_the_drawn_sun_is_always_on_the_side_the_real_one_is_on(self):
+        """Le dessin est naïf ; le côté, lui, est mesuré.
+
+        C'est le seul engagement du soleil au crayon : à l'est le matin, à
+        l'ouest le soir. S'il se trompe de côté, ce n'est plus de la candeur,
+        c'est une erreur d'orientation — et ce flux en publie en mètres.
+        """
+        camera = {"lat": 44.1835, "lon": 5.2621, "bearing": 140, "fov": 90, "pitch": 0}
+        paris = ZoneInfo("Europe/Paris")
+        matin = datetime(2026, 7, 15, 8, 0, tzinfo=paris).timestamp()
+        soir = datetime(2026, 7, 15, 18, 0, tzinfo=paris).timestamp()
+        gauche = stream.ou_est_le_soleil(camera, matin, 9 / 16)
+        droite = stream.ou_est_le_soleil(camera, soir, 9 / 16)
+        self.assertLess(gauche[0], 0.5)
+        self.assertGreater(droite[0], 0.5)
+
+    def test_the_drawn_sun_never_lands_on_the_mountain(self):
+        """Un soleil planté dans un versant est un dessin faux, pas un dessin d'enfant."""
+        camera = {"lat": 44.1835, "lon": 5.2621, "bearing": 140, "fov": 90, "pitch": 0}
+        paris = ZoneInfo("Europe/Paris")
+        for mois in range(1, 13):
+            for heure in range(5, 22):
+                quand = datetime(2026, mois, 10, heure, 0, tzinfo=paris).timestamp()
+                ou = stream.ou_est_le_soleil(camera, quand, 9 / 16)
+                if ou is None:
+                    continue
+                self.assertLess(ou[1], stream.SOLEIL_CIEL, (mois, heure))
+                self.assertTrue(0.05 < ou[0] < 0.95, (mois, heure))
+
+    def test_the_shadow_of_the_mountain_counts_as_having_no_sun(self):
+        """Levé n'est pas arrivé : le versant nord reste noir une heure de plus.
+
+        Le premier octobre, le soleil passe l'horizon à 7 h 35 et la crête du
+        Ventoux vers 8 h 30. Entre les deux, la météo dit « ciel dégagé » et
+        il n'y a pas de soleil sur la scène — c'est ce qui a été constaté à
+        l'écran, et c'est le relief, pas le bulletin, qui le sait.
+        """
+        camera = {"lat": 44.1835, "lon": 5.2621, "ele": 1390}
+        paris = ZoneInfo("Europe/Paris")
+
+        class Crete:
+            def skyline(self, azimut, oeil):
+                return 18.0
+
+        avant = datetime(2026, 10, 1, 8, 0, tzinfo=paris).timestamp()
+        apres = datetime(2026, 10, 1, 11, 0, tzinfo=paris).timestamp()
+        self.assertTrue(stream.soleil_absent(Crete(), camera, avant, "ciel dégagé"))
+        self.assertFalse(stream.soleil_absent(Crete(), camera, apres, "ciel dégagé"))
+        # Sous les nuages, il n'y est pour personne, crête ou pas.
+        self.assertTrue(stream.soleil_absent(Crete(), camera, apres, "couvert"))
+        # Et sans modèle de terrain le flux continue, il perd juste l'ombre.
+        self.assertFalse(stream.soleil_absent(None, camera, avant, "ciel dégagé"))
+
+    def test_a_refusal_never_gets_a_red_box_on_the_stream(self):
+        """Un rectangle rouge dit « j'ai vu ceci », pas « je n'ai rien su lire »."""
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = Path(dossier) / "events.json"
+            boite = {"box": [0.1, 0.1, 0.2, 0.2]}
+            chemin.write_text(json.dumps({"events": [
+                {"t": "2026-10-01T06:00:00Z", "type": "missed",
+                 "label": "Immobile sur la pente", "detail": boite},
+                {"t": "2026-10-01T06:00:02Z", "type": "car",
+                 "label": "Voiture blanche", "detail": boite},
+            ]}), encoding="utf-8")
+            vus = stream.identifications(chemin, 0.0)
+        self.assertEqual([v["label"] for v in vus], ["Voiture blanche"])
+
+    def test_an_absence_is_never_put_up_for_judgement(self):
+        """« Immobile sur la pente » ne demande rien à personne : rien n'y était."""
+        from watcher.main import _worth_keeping
+
+        for motif in ("none", "unclassified", "sky_still", "slope_still",
+                      "against_the_ground", "repeated_spot"):
+            self.assertIn(motif, RIEN_A_JUGER)
+            self.assertFalse(_worth_keeping(motif, {"sample_refused_s": 60}, {}, 0.0))
+        # Celui-là affirme quelque chose, et peut donc se tromper.
+        self.assertNotIn("tarmac", RIEN_A_JUGER)
+        self.assertTrue(_worth_keeping("tarmac", {"sample_refused_s": 60}, {}, 1e9))
+
+    def test_the_drawn_sun_stays_in_the_sky_and_leaves_the_road_alone(self):
+        """Il est dessiné dans le ciel : le bas de l'image ne doit pas bouger."""
+        image = np.full((360, 640, 3), 120, np.uint8)
+        stream.pose_soleil_dessine(image, (0.2, 0.15), 3.0)
+        self.assertTrue(np.any(image[:180] != 120))
+        self.assertTrue(np.all(image[250:] == 120))
 
     def test_a_replay_only_shows_what_a_human_confirmed(self):
         """Une rediffusion est présentée comme un fait : elle doit en être un."""

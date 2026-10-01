@@ -119,6 +119,13 @@ def identifications(chemin: Path, depuis: float) -> list[dict]:
     evenements = brut["events"] if isinstance(brut, dict) else brut
     gardes = []
     for event in evenements:
+        # Les refus ne sont pas des lectures. Un rectangle rouge dit « j'ai vu
+        # ceci » ; posé sur « Rien de reconnu » ou « Immobile sur la pente »,
+        # il annonce un embarras comme une trouvaille, et il y en avait deux
+        # fois plus que de vraies prises. Ils restent dans l'historique et dans
+        # la file à juger ; ils sortent de l'écran.
+        if event.get("type") == "missed":
+            continue
         detail = event.get("detail") or {}
         boite = detail.get("box")
         if not boite or len(boite) != 4:
@@ -1199,7 +1206,11 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float) -> None:
     force = min(1.0, (energie - DANSE_ARRET) / (DANSE_SEUIL - DANSE_ARRET))
     taille = hauteur * 0.22
     sol = int(hauteur * 0.93)
-    marge = int(largeur * 0.07)
+    # Un dixième de la largeur, et non un quatorzième : bras tendu, le pantin
+    # atteint six centièmes de la largeur depuis son axe, et à sept il sortait
+    # du cadre une fois sur trois — une main coupée par le bord ne se lit pas
+    # comme un parti pris, elle se lit comme un bogue.
+    marge = int(largeur * 0.10)
     # La cadence suit l'énergie : mou quand c'est calme, pressé quand ça tape.
     phase = seconde * DANSE_PAS_S * min(1.6, 0.5 + energie * 4)
     calque = image.copy()
@@ -1207,6 +1218,172 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float) -> None:
         _danseur(calque, x, sol, taille, phase + i * 2.1, BLANC)
     voile = DANSE_VOILE * force
     cv2.addWeighted(calque, voile, image, 1.0 - voile, 0.0, dst=image)
+
+
+# Les ciels où le soleil ne passe pas. « Peu nuageux » n'en est pas un.
+SANS_SOLEIL = {"nuageux", "couvert", "brouillard", "brume", "pluie", "neige", "orage"}
+# Il doit être assez haut pour être dans le ciel et non derrière la crête, et
+# assez loin du bord pour tenir entier dans l'image.
+SOLEIL_HAUT_MIN = 3.0
+SOLEIL_CIEL = 0.45
+# Le coin du ciel, pour les heures où le vrai soleil ne tient pas dans le cadre.
+SOLEIL_COIN = 0.13
+SOLEIL_COIN_HAUT = 0.19
+SOLEIL_TAILLE = 0.085
+SOLEIL_JAUNE = (70, 205, 248)
+RAYONS = 11
+
+
+def charge_relief(racine: Path, camera: dict):
+    """Le modèle de terrain, s'il est là. Le flux s'en passe s'il ne l'est pas.
+
+    Le direct n'a pas le droit de s'arrêter parce qu'un fichier manque : sans
+    relief, on perd l'heure de l'ombre et rien d'autre.
+    """
+    chemin = racine / "data" / "osm" / "terrain.json"
+    if not chemin.is_file():
+        return None
+    try:
+        from watcher.terrain import Terrain
+
+        return Terrain(float(camera["lat"]), float(camera["lon"]),
+                       2500.0, cache=chemin)
+    except Exception:
+        log.warning("Relief illisible : pas d'heure d'ombre", exc_info=True)
+        return None
+
+
+def soleil_absent(terrain, camera: dict, quand: float, temps: str) -> bool:
+    """Le soleil manque-t-il à la scène, à cette heure et par ce temps ?
+
+    Deux façons de manquer, et la première ne se lit sur aucun bulletin : être
+    levé mais encore derrière la montagne. Le premier octobre, le soleil passe
+    l'horizon à sept heures trente-cinq et ne franchit la crête du Ventoux qu'à
+    huit heures et demie ; entre les deux le ciel est clair, la météo dit
+    « dégagé », et le versant nord est dans le noir. C'est exactement l'heure
+    où il a été dit, en regardant l'écran, « pas encore de soleil ».
+
+    La crête est prise dans notre propre modèle de terrain, celui qui sert déjà
+    à poser les boîtes à la bonne distance. Aucune mesure nouvelle, aucun
+    service à interroger, et la même fonction donnera l'heure de l'ombre sur
+    n'importe quelle autre caméra dont on aura le relief.
+
+    La seconde façon est banale : sous les nuages, il n'y est pour personne.
+    """
+    if temps in SANS_SOLEIL:
+        return True
+    if terrain is None:
+        return False
+    from watcher.scene import solar_azimuth, solar_elevation
+
+    moment = datetime.fromtimestamp(quand, timezone.utc)
+    haut = solar_elevation(moment, camera["lat"], camera["lon"])
+    azimut = solar_azimuth(moment, camera["lat"], camera["lon"])
+    return haut < terrain.skyline(azimut, float(camera.get("ele") or 0.0))
+
+
+def ou_est_le_soleil(camera: dict, quand: float, rapport: float) -> tuple[float, float] | None:
+    """Où le soleil se trouve dans l'image, en parts de largeur et de hauteur.
+
+    Rien n'est lu ni deviné : l'azimut et la hauteur viennent du calcul solaire,
+    l'orientation et l'ouverture de l'objectif viennent de la fiche de la
+    caméra. La même fonction posera le soleil au bon endroit sur n'importe
+    quelle autre webcam dont on connaît le cap et le champ.
+
+    Il n'y a pas toujours de place : avec quatre-vingt-dix degrés d'ouverture
+    et ce cap, le vrai soleil ne traverse le ciel du cadre qu'entre neuf heures
+    et dix heures et demie en octobre. Le reste du temps il est trop haut, ou
+    derrière l'épaule. On le dessine quand même, dans le coin du ciel et du
+    côté où il se trouve vraiment — c'est exactement là qu'un enfant le met, et
+    personne n'a jamais pris un soleil au crayon pour une mesure. Ce qui reste
+    vrai dans ce cas, et c'est le seul engagement qu'on tienne, c'est le côté.
+    """
+    # Importé ici et pas en tête de fichier : c'est main() qui pose la racine
+    # du dépôt sur le chemin, et stream.py doit pouvoir être lancé comme un
+    # script depuis n'importe où.
+    from watcher.scene import solar_azimuth, solar_elevation
+
+    moment = datetime.fromtimestamp(quand, timezone.utc)
+    haut = solar_elevation(moment, camera["lat"], camera["lon"])
+    if haut < SOLEIL_HAUT_MIN:
+        return None
+    champ = float(camera.get("fov") or 90.0)
+    ecart = (solar_azimuth(moment, camera["lat"], camera["lon"])
+             - float(camera.get("bearing") or 0.0) + 180.0) % 360.0 - 180.0
+    coin = (SOLEIL_COIN if ecart < 0 else 1.0 - SOLEIL_COIN, SOLEIL_COIN_HAUT)
+    if abs(ecart) > champ / 2 - 4:
+        return coin
+    # Projection rectilinéaire : c'est une tangente et non une règle de trois,
+    # sinon le soleil dérive d'un bon dixième d'image vers les bords.
+    demi = math.tan(math.radians(champ / 2))
+    x = 0.5 + math.tan(math.radians(ecart)) / (2 * demi)
+    y = 0.5 - math.tan(math.radians(haut - float(camera.get("pitch") or 0.0))) / (2 * demi * rapport)
+    # Plus bas que la moitié de l'image, ce n'est plus le ciel, c'est la
+    # montagne : un soleil planté dans un versant est un dessin faux, pas un
+    # dessin d'enfant.
+    if not 0.08 < x < 0.92 or not 0.06 < y < SOLEIL_CIEL:
+        return coin
+    return x, y
+
+
+def _rond_tremble(centre: tuple[int, int], rayon: float, phase: float) -> np.ndarray:
+    """Un cercle qui n'en est pas un : la main d'un enfant ne ferme pas juste."""
+    angles = np.linspace(0, 2 * math.pi, 48, dtype=np.float32)
+    bosse = 1.0 + 0.055 * np.sin(3 * angles + phase) + 0.035 * np.sin(5 * angles - phase * 0.7)
+    points = np.stack([centre[0] + np.cos(angles) * rayon * bosse,
+                       centre[1] + np.sin(angles) * rayon * bosse], axis=1)
+    return points.astype(np.int32)
+
+
+def pose_soleil_dessine(image: np.ndarray, ou: tuple[float, float], seconde: float) -> None:
+    """Le soleil qui manque, dessiné comme à cinq ans : rond, rayons, sourire.
+
+    Rien de ce qui est à l'écran ne prétend qu'il fait beau — le bandeau dit
+    « overcast », et il a raison. Le dessin dit autre chose : qu'il est là
+    quand même, et où. C'est la seule chose du flux qui console au lieu de
+    constater, et elle a le droit d'être maladroite.
+
+    Elle respire lentement, à un tour en dix secondes environ, parce qu'un
+    dessin parfaitement immobile sur une image presque immobile ressemble à un
+    défaut d'affichage.
+    """
+    hauteur, largeur = image.shape[:2]
+    rayon = hauteur * SOLEIL_TAILLE
+    centre = (int(ou[0] * largeur), int(ou[1] * hauteur))
+    phase = seconde * 0.6
+    trait = max(2, int(rayon * 0.11))
+    ourlet = trait + max(2, trait // 2)
+    calque = image.copy()
+
+    def crayon(trace, ferme=False):
+        cv2.polylines(calque, [trace], ferme, (40, 40, 40), ourlet, cv2.LINE_AA)
+        cv2.polylines(calque, [trace], ferme, SOLEIL_JAUNE, trait, cv2.LINE_AA)
+
+    for i in range(RAYONS):
+        angle = 2 * math.pi * i / RAYONS + phase * 0.12
+        # Des rayons inégaux, et qui ne partent pas tous du même cercle : un
+        # soleil dont les rayons sont réguliers est un logo, pas un dessin.
+        depuis = rayon * (1.22 + 0.06 * math.sin(i * 2.3))
+        jusqua = rayon * (1.62 + 0.26 * math.sin(i * 1.7 + phase))
+        crayon(np.int32([[centre[0] + math.cos(angle) * depuis,
+                          centre[1] + math.sin(angle) * depuis],
+                         [centre[0] + math.cos(angle) * jusqua,
+                          centre[1] + math.sin(angle) * jusqua]]))
+    crayon(_rond_tremble(centre, rayon, phase), ferme=True)
+
+    oeil = max(2, int(rayon * 0.13))
+    for cote in (-1, 1):
+        yeux = (int(centre[0] + cote * rayon * 0.34), int(centre[1] - rayon * 0.26))
+        cv2.circle(calque, yeux, oeil + 2, (40, 40, 40), -1, cv2.LINE_AA)
+        cv2.circle(calque, yeux, oeil, SOLEIL_JAUNE, -1, cv2.LINE_AA)
+    bouche = np.int32([[centre[0] + math.cos(a) * rayon * 0.48,
+                        centre[1] + math.sin(a) * rayon * 0.48 + rayon * 0.08]
+                       for a in np.linspace(0.45, math.pi - 0.45, 12)])
+    crayon(bouche)
+
+    # Posé par transparence : il est dans le ciel du dessin, pas collé sur la
+    # vitre. À moitié, pour qu'on voie toujours le temps qu'il fait derrière.
+    cv2.addWeighted(calque, 0.62, image, 0.38, 0.0, dst=image)
 
 
 def pose_attrape(image: np.ndarray, age: float) -> None:
@@ -1521,6 +1698,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     from watcher.scene import solar_elevation
     machine = etat_machine(racine)
     hauteur_soleil: float | None = None
+    soleil: tuple[float, float] | None = None
+    relief = charge_relief(racine, cfg["camera"])
     bonjour = origine - 10_000.0
     nom_du_lieu = (cfg.get("camera") or {}).get("nom") or "Ventoux"
     dernier_ennui = origine
@@ -1567,12 +1746,23 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         musique.dis(tirage.choice(musique.matins))
                     log.info("Lever du soleil : bonjour %s", nom_du_lieu)
                 hauteur_soleil = haut
-                ruban = morceaux_ruban(lieu, lecture_du_ciel(racine / "data" / "view.json"))
+                ciel = lecture_du_ciel(racine / "data" / "view.json")
+                ruban = morceaux_ruban(lieu, ciel)
+                # Ce que la veille lit sur l'image passe avant ce que dit le
+                # service : il arrive qu'il annonce « couvert » sur une vallée
+                # pendant qu'il fait grand soleil à mille quatre cents mètres.
+                temps = str(ciel.get("webcam") or ciel.get("api") or "")
+                soleil = (ou_est_le_soleil(cfg["camera"], quand, hauteur / largeur)
+                          if soleil_absent(relief, cfg["camera"], quand, temps) else None)
                 trio = (None, None, None) if muet else musique.trio()
                 relu = quand
             image = np.frombuffer(brut, np.uint8).reshape(hauteur, largeur, 3).copy()
             # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.
             applique_teinte(image, *teinte_du_moment(quand - origine))
+            # Le soleil d'enfant avant les filtres : il fait partie de l'image
+            # du ciel, donc il se pixellise et il ondule avec elle.
+            if soleil is not None:
+                pose_soleil_dessine(image, soleil, quand - origine)
             # Le grain ne tombe jamais sur une prise. Tout l'intérêt d'un
             # rectangle rouge est qu'on puisse regarder ce qu'il entoure, et
             # une voiture en gros carrés n'est plus une voiture.
