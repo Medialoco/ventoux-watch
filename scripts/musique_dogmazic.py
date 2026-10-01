@@ -290,8 +290,16 @@ def moisson(minutes: float, par_genre: int = 150, journal=print,
 
 
 def rapatrie(fiche: dict, dossier: Path) -> Path | None:
-    """Le fichier lui-même. Rend None si le téléchargement n'aboutit pas."""
+    """Le fichier lui-même. Rend None si le téléchargement n'aboutit pas.
+
+    Note au passage si le fichier était déjà là. Ça n'a l'air de rien et c'est
+    la différence entre ajouter et détruire : une récolte retombe forcément sur
+    des morceaux déjà installés, et qui ne sait pas les reconnaître les traite
+    comme des candidats — donc les efface s'ils ne passent pas le tri du jour.
+    Sept morceaux en rotation sont partis comme ça.
+    """
     cible = dossier / f"dogmazic-{fiche['id']:06d}.mp3"
+    fiche["telecharge"] = False
     if cible.is_file() and cible.stat().st_size > 100_000:
         return cible
     url = f"{SITE}/stream.php?action=download&song_id={fiche['id']}"
@@ -306,21 +314,34 @@ def rapatrie(fiche: dict, dossier: Path) -> Path | None:
     if len(octets) < 100_000:
         return None
     cible.write_bytes(octets)
+    fiche["telecharge"] = True
     return cible
 
 
-def ecris_credits(dossier: Path, fiches: list[dict]) -> None:
+def ecris_credits(dossier: Path, fiches: list[dict],
+                  effaces: tuple[str, ...] | list[str] = ()) -> None:
     """Ajoute aux crédits sans effacer les nôtres.
 
     Le flux lit ce fichier pour afficher l'auteur, le titre et la licence du
     morceau en cours. C'est la contrepartie de la licence, et elle n'a de sens
     que si elle est juste : on n'écrit donc que ce que la page a dit.
+
+    Et on retire ce qu'on vient d'effacer. Les crédits servent aussi à écrire
+    la description de la chaîne, qui annoncerait sinon des morceaux qu'on ne
+    passe plus — un crédit faux par excès reste un crédit faux.
+
+    Nommément, et non en balayant le dossier : un balayage serait juste ici et
+    catastrophique sur le Mac, où « data/musique » ne tient que les seize
+    morceaux de la maison. Il y effacerait les cent douze autres crédits, et
+    la copie suivante emporterait le trou jusqu'au Pi.
     """
     chemin = dossier / "credits.json"
     try:
         tout = json.loads(chemin.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         tout = {}
+    for nom in effaces:
+        tout.pop(Path(nom).name, None)
     for fiche in fiches:
         if not fiche.get("fichier"):
             continue
@@ -378,15 +399,16 @@ def main() -> int:
             print(f"  {pris} morceaux sur le disque")
         time.sleep(0.5)
     gardes = [f for f in fiches if f.get("fichier")]
+    effaces: list[str] = []
     if args.garde:
-        gardes = ecoute(gardes, args.garde)
-    ecris_credits(dossier, gardes)
+        gardes, effaces = ecoute(gardes, args.garde)
+    ecris_credits(dossier, gardes, effaces)
     print(f"{len(gardes)} morceaux gardés, "
           f"{sum(f['duree'] for f in gardes) / 60:.0f} min de Dogmazic")
     return 0
 
 
-def ecoute(fiches: list[dict], combien: int) -> list[dict]:
+def ecoute(fiches: list[dict], combien: int) -> tuple[list[dict], list[str]]:
     """Écoute ce qu'on a téléchargé et ne garde que ce qui pousse vraiment.
 
     Trier sur l'étiquette de genre ne marche pas : elle est posée à la main par
@@ -394,11 +416,16 @@ def ecoute(fiches: list[dict], combien: int) -> list[dict]:
     trente temps et un drone de vingt minutes. On mesure donc la régularité de
     la grosse caisse, et c'est elle qui décide.
 
-    Les recalés sont effacés tout de suite. Les laisser sur le disque en se
-    contentant de ne pas les créditer ferait pire que rien : la diffusion
-    ramasse le dossier entier, elle les passerait quand même, et ils
+    Les recalés d'aujourd'hui sont effacés tout de suite. Les laisser sur le
+    disque en se contentant de ne pas les créditer ferait pire que rien : la
+    diffusion ramasse le dossier entier, elle les passerait quand même, et ils
     arriveraient à l'antenne sans attribution — ce qui est exactement ce que la
     licence interdit.
+
+    Mais seulement ceux d'aujourd'hui. Une récolte retombe forcément sur des
+    morceaux déjà installés, et les juger au tri du jour reviendrait à faire le
+    ménage dans la médiathèque sous couvert d'y ajouter. Sept morceaux en
+    rotation sont partis comme ça avant que cette ligne existe.
     """
     from scripts.pulsation import dansant, mesure
 
@@ -420,15 +447,20 @@ def ecoute(fiches: list[dict], combien: int) -> list[dict]:
         if len(gardes) >= combien:
             break
     tenus = {f["fichier"] for f in gardes}
+    effaces: list[str] = []
     for fiche in fiches:
-        marque = "gardé " if fiche["fichier"] in tenus else "effacé"
+        if fiche["fichier"] in tenus:
+            marque = "gardé "
+        else:
+            marque = "effacé" if fiche.get("telecharge") else "laissé"
         p = fiche["pulsation"]
         print(f"  {marque} force {p['force']:5.3f}  {p['bpm']:5.1f} bpm  "
               f"{p['duree'] / 60:4.1f} min  {fiche['auteur'][:20]:20s} · "
               f"{fiche['titre'][:30]}")
-        if fiche["fichier"] not in tenus:
+        if fiche["fichier"] not in tenus and fiche.get("telecharge"):
             Path(fiche["fichier"]).unlink(missing_ok=True)
-    return gardes
+            effaces.append(fiche["fichier"])
+    return gardes, effaces
 
 
 if __name__ == "__main__":

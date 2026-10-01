@@ -14,6 +14,8 @@ import threading
 import time
 import unittest
 from unittest import mock
+
+import scripts.musique_dogmazic as musique_dogmazic
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -3860,3 +3862,90 @@ class LaVoixPasseAuDessusDeLaMusique(unittest.TestCase):
         self.assertIn("config/local.json",
                       (ROOT / ".gitignore").read_text().splitlines())
         self.assertIsInstance(cle_openai(), str)
+
+
+class UneRecolteNEffacePasLaMediatheque(unittest.TestCase):
+    """Sept morceaux en rotation sont partis sous couvert d'en ajouter."""
+
+    @staticmethod
+    def _fiche(nom, auteur, force, telecharge):
+        return {"fichier": nom, "auteur": auteur, "titre": nom,
+                "telecharge": telecharge, "force_voulue": force}
+
+    def _ecoute(self, fiches, combien):
+        """« ecoute » mesure les fichiers ; ici on lui souffle la mesure."""
+        import scripts.pulsation as pulsation
+        forces = {f["fichier"]: f["force_voulue"] for f in fiches}
+        with mock.patch.object(
+                pulsation, "mesure",
+                lambda c: {"force": forces[str(c)], "bpm": 130.0,
+                           "grave": 0.1, "duree": 400.0}):
+            return musique_dogmazic.ecoute(fiches, combien)
+
+    def test_only_todays_candidates_can_be_deleted(self):
+        """Une récolte retombe forcément sur des morceaux déjà installés.
+
+        Les juger au tri du jour revient à faire le ménage dans la
+        médiathèque sous couvert d'y ajouter.
+        """
+        with tempfile.TemporaryDirectory() as dossier:
+            ancien = Path(dossier) / "deja-la.mp3"
+            neuf = Path(dossier) / "tout-neuf.mp3"
+            for p in (ancien, neuf):
+                p.write_bytes(b"x")
+            fiches = [self._fiche(str(ancien), "Un", 0.05, False),
+                      self._fiche(str(neuf), "Deux", 0.05, True)]
+            gardes, effaces = self._ecoute(fiches, 5)
+            self.assertEqual(gardes, [])
+            self.assertTrue(ancien.is_file(), "un morceau installé a disparu")
+            self.assertFalse(neuf.is_file())
+            self.assertEqual(effaces, [str(neuf)])
+
+    def test_one_artist_cannot_take_the_whole_harvest(self):
+        """Sur ce catalogue un seul nom fournit sept des trente candidats."""
+        with tempfile.TemporaryDirectory() as dossier:
+            fiches = []
+            for i in range(6):
+                p = Path(dossier) / f"m{i}.mp3"
+                p.write_bytes(b"x")
+                fiches.append(self._fiche(str(p), "AlchimiX", 0.9 - i / 100, True))
+            autre = Path(dossier) / "autre.mp3"
+            autre.write_bytes(b"x")
+            fiches.append(self._fiche(str(autre), "Blashko", 0.5, True))
+            gardes, _ = self._ecoute(fiches, 4)
+            auteurs = [f["auteur"] for f in gardes]
+            self.assertEqual(auteurs.count("AlchimiX"), 2)
+            self.assertIn("Blashko", auteurs)
+
+    def test_a_deleted_track_stops_being_credited(self):
+        """La description de la chaîne annoncerait des morceaux qu'on ne passe plus."""
+        from scripts.musique_dogmazic import ecris_credits
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = Path(dossier)
+            (chemin / "credits.json").write_text(json.dumps({
+                "parti.mp3": {"auteur": "Un", "titre": "Parti"},
+                "reste.mp3": {"auteur": "Deux", "titre": "Reste"}}),
+                encoding="utf-8")
+            ecris_credits(chemin, [], effaces=["/ailleurs/parti.mp3"])
+            tout = json.loads((chemin / "credits.json").read_text())
+            self.assertNotIn("parti.mp3", tout)
+            self.assertIn("reste.mp3", tout)
+
+    def test_the_pulse_of_a_beat_is_read_and_a_drone_is_not(self):
+        """Ce qui décide est la mesure, pas l'étiquette de genre."""
+        from scripts.pulsation import CADENCE, FORCE_DANSANTE, flux_du_grave
+        t = np.arange(int(CADENCE * 20)) / CADENCE
+        # Une grosse caisse à 130 temps : une enveloppe qui retombe, à 50 Hz.
+        periode = 60 / 130
+        coup = np.exp(-(t % periode) * 30) * np.sin(2 * np.pi * 50 * t)
+        nappe = np.sin(2 * np.pi * 50 * t) * 0.5
+
+        def force(x):
+            flux = flux_du_grave(x.astype(np.float32))
+            flux = flux - flux.mean()
+            auto = np.correlate(flux, flux, "full")[len(flux) - 1:]
+            auto /= auto[0]
+            return float(auto[int(100 * periode)])
+
+        self.assertGreater(force(coup), FORCE_DANSANTE)
+        self.assertLess(force(nappe), FORCE_DANSANTE)
