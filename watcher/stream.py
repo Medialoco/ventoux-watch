@@ -270,7 +270,7 @@ def _entree(url: str, recul: int) -> subprocess.Popen:
 
 
 def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
-            debit: str) -> tuple[subprocess.Popen, int]:
+            debit: str, sortie_par_s: int = 25) -> tuple[subprocess.Popen, int]:
     """La sortie, et le descripteur par lequel on lui donne le son.
 
     Deux tuyaux parce qu'un processus n'a qu'une entrée standard et qu'il faut
@@ -293,7 +293,15 @@ def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
         # manger les cœurs dont la veille a besoin.
         "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
         "-pix_fmt", "yuv420p", "-b:v", debit, "-maxrate", debit, "-bufsize", "4M",
-        "-g", str(images_par_s * 2),
+        # La source ne donne que six images par seconde et YouTube se méfie en
+        # dessous de vingt-cinq. On le laisse dupliquer lui-même plutôt que de
+        # pousser quatre fois plus d'octets dans le tuyau : une image répétée
+        # ne coûte presque rien à x264, et c'est exactement la configuration
+        # mesurée à 2,36 fois le temps réel sur ce Pi.
+        "-r", str(sortie_par_s),
+        # Une image-clé toutes les deux secondes, ce que YouTube demande pour
+        # découper le direct en segments.
+        "-g", str(sortie_par_s * 2),
         "-c:a", "aac", "-b:a", "128k",
     ]
     commande += ["-f", "flv", cible] if cible.startswith("rtmp") else [cible]
@@ -339,7 +347,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             dessine(image, vus, quand)
             if sortie is None:
                 sortie, son = _sortie(cible, largeur, hauteur, cfg["stream_fps"],
-                                      cfg["stream_bitrate"])
+                                      cfg["stream_bitrate"], cfg["stream_out_fps"])
                 assert sortie.stdin is not None
                 verseur = threading.Thread(target=_verse_le_son, args=(son, musique, coupe),
                                            daemon=True)
@@ -397,8 +405,9 @@ def main(argv: list[str] | None = None) -> int:
     from watcher.config import load_config  # noqa: E402
 
     parseur = argparse.ArgumentParser(description=__doc__)
-    parseur.add_argument("--sortie", default=str(racine / "data" / "diffusion.mp4"),
-                         help="fichier à écrire, ou adresse rtmp://")
+    parseur.add_argument("--sortie", default=None,
+                         help="fichier à écrire, ou adresse rtmp://. Par défaut, "
+                              "YouTube si une clé est posée, sinon un fichier.")
     parseur.add_argument("--duree", type=float, default=None, help="s'arrêter après tant de secondes")
     parseur.add_argument("--recul", type=int, default=SEGMENTS_EN_ARRIERE,
                          help="combien de segments de retard")
@@ -406,9 +415,29 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg = load_config(racine)
     cfg.setdefault("stream_fps", 6)
+    cfg.setdefault("stream_out_fps", 25)
     cfg.setdefault("stream_bitrate", "2500k")
-    diffuse(cfg, racine, args.sortie, args.duree, args.recul)
+    cible = args.sortie or cible_youtube(cfg) or str(racine / "data" / "diffusion.mp4")
+    # Jamais l'adresse complète dans le journal : la clé y est dedans, et les
+    # journaux se lisent par-dessus l'épaule et se collent dans des rapports.
+    log.info("Sortie : %s", "YouTube" if cible.startswith("rtmp") else cible)
+    diffuse(cfg, racine, cible, args.duree, args.recul)
     return 0
+
+
+def cible_youtube(cfg: dict) -> str | None:
+    """L'adresse d'ingestion, clé comprise, ou rien si la clé n'est pas posée.
+
+    La clé vit dans « config/local.json », ignoré par git et lisible du seul
+    veilleur, comme les identifiants OpenSky. Elle n'a rien à faire dans
+    « config/config.json », qui est versionné et public.
+    """
+    youtube = cfg.get("youtube") or {}
+    cle = youtube.get("key")
+    if not cle:
+        return None
+    ingestion = youtube.get("ingest") or "rtmp://a.rtmp.youtube.com/live2"
+    return f"{ingestion.rstrip('/')}/{cle}"
 
 
 if __name__ == "__main__":

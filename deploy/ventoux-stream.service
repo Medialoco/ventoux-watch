@@ -1,0 +1,26 @@
+[Unit]
+Description=Diffusion de la webcam avec les identifications
+After=network-online.target ventoux-watch.service
+Wants=network-online.target
+# La diffusion lit ce que la veille écrit. Elle peut tourner sans, mais sans
+# le disque elle ne trouverait ni l'historique ni la bibliothèque musicale.
+RequiresMountsFor=/opt/ventoux-watch/data
+
+[Service]
+Type=simple
+User=ventoux
+WorkingDirectory=/opt/ventoux-watch
+ExecStart=/opt/ventoux-watch/.venv/bin/python -m watcher.stream
+Restart=always
+RestartSec=10
+
+# La veille est le produit, la diffusion n'est que le spectacle. Quand les
+# quatre cœurs sont pris, c'est la diffusion qui cède : « Nice » la fait passer
+# après tout le reste, et le poids d'entrées-sorties l'empêche d'affamer les
+# écritures de la veille sur le disque.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+
+[Install]
+WantedBy=multi-user.target
