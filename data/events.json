@@ -2,6 +2,89 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T16-48-03Z-missed-4",
+      "t": "2026-10-01T16:48:03Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T16-48-03Z-missed-4.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2356,
+          "area_grow": 0.24,
+          "clipped": false,
+          "shade": 0.64,
+          "kept": 0.25,
+          "area_ratio": 0.00095,
+          "duration_s": 7.0,
+          "frames": 6,
+          "width_m": 5.9,
+          "height_m": 3.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.23,
+          "drift_rate": 0.383,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.0859,
+          0.7361,
+          0.0797,
+          0.0722
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T16-48-03Z-missed-4.jpg"
+    },
+    {
+      "id": "2026-10-01T16-47-56Z-motion-3",
+      "t": "2026-10-01T16:47:56Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T16-47-56Z-motion-3.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.6852,
+          "area_grow": 1.48,
+          "clipped": true,
+          "shade": 0.594,
+          "kept": 0.257,
+          "area_ratio": 0.00181,
+          "duration_s": 7.3,
+          "frames": 9,
+          "width_m": 3.2,
+          "height_m": 1.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.39,
+          "drift_rate": 0.764,
+          "seen_as": []
+        },
+        "box": [
+          0.4891,
+          0.8944,
+          0.1203,
+          0.1056
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T16-47-56Z-motion-3.jpg"
+    },
+    {
       "id": "2026-10-01T16-11-11Z-motion-2",
       "t": "2026-10-01T16:11:11Z",
       "type": "motion",
