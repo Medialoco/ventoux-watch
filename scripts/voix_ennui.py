@@ -55,6 +55,14 @@ REPLIQUES = [
     ("attrape", "Bubbles", "Nice one!"),
     ("matin", "Boing", "Goooood morning Ventoux!"),
     ("matin", "Bubbles", "Goooood morning Ventoux!"),
+    # Le brouillard tient des demi-journées ici, et pendant ce temps l'image
+    # est un mur gris. Le dire de temps en temps est la seule façon de faire
+    # comprendre que la caméra n'est pas en panne — et c'est plus drôle que de
+    # laisser croire qu'elle l'est.
+    ("brouillard", "Bubbles", "Foooooog"),
+    ("brouillard", "Bad News", "Fog. Again"),
+    ("brouillard", "Boing", "Just fooog"),
+    ("brouillard", "Bubbles", "I can see nothing at all"),
 ]
 
 

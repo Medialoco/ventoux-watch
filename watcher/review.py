@@ -27,7 +27,13 @@ CLASSES = {
 # Les mots qui ne nomment rien de précis : ils disent qu'une chose est passée
 # sans dire laquelle. Confirmer « voiture » sur l'un d'eux affine une lecture,
 # cela ne la dément pas, et compter cela comme une faute punirait la prudence.
-VAGUE = {"véhicule", "mouvement sur la route", "mouvement"}
+# Les lectures qui ne nommaient rien. Les préciser n'est pas les démentir, donc
+# elles ne comptent pas comme des fautes dans le taux de justesse.
+#
+# « Mouvement sur la route » y est resté après son remplacement : l'historique
+# en contient des centaines, et les relire comme des erreurs ferait chuter le
+# taux sur un changement de mot.
+VAGUE = {"véhicule", "mouvement sur la route", "mouvement", "mouvement détecté"}
 
 
 def _named_something_else(label: str, truth: str) -> bool:

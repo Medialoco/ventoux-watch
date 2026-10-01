@@ -277,6 +277,35 @@ def dessine(image: np.ndarray, vus: list[dict], quand: float) -> int:
     return poses
 
 
+def prise_a_feter(vus: list[dict], quand: float, fetes: set) -> dict | None:
+    """La prise qu'on peut fêter à cette image : celle qu'on est en train de montrer.
+
+    La veille travaille au bord du direct ; le flux, lui, le montre avec
+    quelques segments de retard. Fêter une prise à l'arrivée de sa fiche
+    lançait donc « GOOD CATCH » une vingtaine de secondes avant que le
+    rectangle n'apparaisse : la fête saluait une image vide, et la voiture
+    passait ensuite en silence. Dix-neuf secondes d'écart, mesurées sur la
+    voiture verte du premier octobre.
+
+    On attend donc que le sujet soit à l'écran. La fête et le rectangle
+    partagent alors la même fenêtre et ne peuvent plus se décaler, quel que
+    soit le retard, et sur n'importe quelle caméra.
+
+    Rien si la fenêtre est déjà passée : il n'y a plus rien à montrer du doigt.
+    C'est aussi ce qui fait qu'un flux qui s'allume ne fête pas tout son
+    historique — il est entièrement derrière la tête de lecture.
+    """
+    for vu in vus:
+        if (vu.get("type") or "") not in PRISES:
+            continue
+        if not 0.0 <= quand - vu["t"] <= TENUE_S:
+            continue
+        if vu["t"] in fetes:
+            continue
+        return vu
+    return None
+
+
 def duree_audio(chemin: Path) -> float:
     """La durée d'un morceau, demandée au fichier et non devinée du poids."""
     sortie = subprocess.run(
@@ -297,6 +326,21 @@ ATTENUATION = 0.35
 # autant entre deux. Sur cette route, vingt minutes de vide sont banales la
 # nuit et rares à midi : le mot arrive donc quand il est vrai.
 ENNUI_S = 1200.0
+
+# Le brouillard, dit de temps en temps et non en continu.
+#
+# Ici il tient des demi-journées, et pendant ce temps l'image est un mur gris :
+# quelqu'un qui arrive croit que la caméra est en panne. L'écrire en
+# permanence en ferait un décor, c'est-à-dire plus rien ; un quart d'heure
+# entre deux, quelques secondes à chaque fois, suffit à dire que ce gris est le
+# temps qu'il fait et pas un défaut.
+#
+# Deux mots pour deux lectures : la veille distingue le brouillard de la brume,
+# et afficher « fog » sur de la brume serait lui faire dire autre chose que ce
+# qu'elle a lu.
+BROUILLARD_MOTS = {"brouillard": "FOOOOG", "brume": "MIIIIST"}
+BROUILLARD_PAUSE_S = 900.0
+BROUILLARD_TENUE_S = 3.0
 
 
 def repliques(dossier: Path, quand: str = "ennui") -> list[Path]:
@@ -428,6 +472,7 @@ class Musique:
         self._verrou = threading.Lock()
         self.repliques = repliques(self.racine / "data" / "voix", "ennui")
         self.felicitations = repliques(self.racine / "data" / "voix", "attrape")
+        self.brouillards = repliques(self.racine / "data" / "voix", "brouillard")
         self.matins = repliques(self.racine / "data" / "voix", "matin")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
@@ -1127,6 +1172,91 @@ def archives(racine: Path, combien: int = 400) -> list[dict]:
     return gardees
 
 
+# Ce qu'on appelle une prise récente, et la demi-vie à l'intérieur de ce délai.
+#
+# Le tirage était uniforme et la réserve n'était relue qu'une fois vidée :
+# quatre-vingt-cinq fiches à une toutes les dix minutes, soit quatorze heures
+# avant qu'une voiture attrapée à midi ait sa chance. Le flux remontrait donc
+# surtout la semaine précédente, en se donnant l'air de n'avoir rien vu depuis.
+#
+# Un jour, en deux étages plutôt qu'en pente douce. Une simple pondération
+# laissait encore une rediffusion sur quatre tomber sur la semaine d'avant, ce
+# qui est beaucoup quand il n'en passe qu'une toutes les dix minutes : on peut
+# regarder une heure et ne voir que du vieux. Tant qu'il reste quelque chose
+# des dernières vingt-quatre heures, c'est cela qu'on remontre ; l'archive
+# ancienne attend que le récent soit épuisé, ce qui arrive les nuits creuses,
+# et elle sert alors exactement à ce pour quoi on la garde.
+#
+# Vingt-quatre heures glissantes et non « aujourd'hui » : un jour de calendrier
+# se vide à minuit, et le flux n'aurait plus rien à montrer de la nuit jusqu'au
+# premier passage du matin. La demi-vie de six heures fait le reste — à
+# l'intérieur de la journée, ce qui vient d'arriver passe avant ce matin.
+#
+# Rien là-dedans ne tient à cette caméra : c'est une façon de dire que la
+# dernière chose qui s'est passée est celle qui intéresse.
+REDIFF_FRAICHEUR_H = 24.0
+REDIFF_DEMI_VIE_H = 6.0
+
+
+def _age_heures(iso: str, maintenant: float) -> float:
+    """Depuis combien d'heures, ou zéro si la date ne se lit pas.
+
+    Zéro et non l'infini : une fiche sans date lisible est traitée comme
+    récente. Mieux vaut remontrer une fois de trop quelque chose qu'un humain a
+    confirmé que de l'enterrer pour un défaut de format.
+    """
+    try:
+        quand = datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc).timestamp()
+    except (TypeError, ValueError):
+        return 0.0
+    return max(0.0, (maintenant - quand) / 3600.0)
+
+
+def marque_historique(racine: Path) -> float:
+    """La date du fichier d'historique, pour savoir qu'il a bougé.
+
+    Sans elle, la réserve n'était relue qu'une fois vidée : une prise confirmée
+    à midi attendait le lendemain pour avoir le droit de repasser.
+    """
+    try:
+        return (racine / "data" / "events.json").stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def ordre_de_rediffusion(gardees: list[dict], tirage: random.Random,
+                         maintenant: float | None = None) -> list[dict]:
+    """La réserve rangée pour y puiser par la fin, la plus récente d'abord.
+
+    Deux étages : ce qui date de moins de deux jours passe avant tout le reste,
+    et à l'intérieur de chaque étage l'ordre est un hasard penché vers le
+    récent. L'archive ancienne n'est pas jetée, elle attend son tour — les
+    nuits où rien ne passe, elle est tout ce qu'on a.
+    """
+    maintenant = _maintenant() if maintenant is None else maintenant
+    etages: dict[bool, list] = {True: [], False: []}
+    for fiche in gardees:
+        age = _age_heures(str(fiche.get("t") or ""), maintenant)
+        # Le tirage pondéré sans remise, en logarithmes.
+        #
+        # La forme directe est « hasard puissance un sur le poids ». Écrite
+        # ainsi elle ne marche pas : une fiche d'il y a une semaine pèse un
+        # seize-millionième, l'exposant explose, et toutes les clés tombent à
+        # zéro par sous-dépassement. Elles deviennent alors égales, le tri est
+        # stable, et l'archive repasse éternellement dans le même ordre —
+        # c'est-à-dire que le hasard disparaît exactement là où on en a le plus
+        # besoin. Le logarithme garde la même loi sans jamais déborder.
+        poids = 2.0 ** (-age / REDIFF_DEMI_VIE_H)
+        cle = math.log(max(tirage.random(), 1e-12)) / max(poids, 1e-12)
+        etages[age <= REDIFF_FRAICHEUR_H].append((cle, fiche))
+    rangees = []
+    for frais in (False, True):
+        etages[frais].sort(key=lambda couple: couple[0])
+        rangees += [fiche for _, fiche in etages[frais]]
+    return rangees
+
+
 # L'heure de la montagne, pas celle de Greenwich. Les horodatages sont écrits
 # en UTC parce qu'une veille qui change d'heure deux fois par an se trompe deux
 # fois par an ; mais personne ne regarde une webcam du Ventoux en UTC.
@@ -1492,8 +1622,12 @@ def pose_soleil_dessine(image: np.ndarray, ou: tuple[float, float], seconde: flo
     cv2.addWeighted(calque, 0.62, image, 0.38, 0.0, dst=image)
 
 
-def pose_attrape(image: np.ndarray, age: float) -> None:
-    """« GOOD CATCH » en vert, avec un éclair qui retombe.
+def pose_attrape(image: np.ndarray, age: float, nom: str = "") -> None:
+    """« GOOD CATCH » en vert, avec un éclair qui retombe, et ce qu'on a pris.
+
+    Le nom sous le mot, parce que « good catch » tout seul félicite sans dire
+    de quoi. Le rectangle le porte déjà, mais il est petit, il est au bord, et
+    pendant une seconde et demie l'œil est au milieu de l'écran, pas sur lui.
 
     Vert et non ambre : le mot de l'ennui et celui de la réussite ne doivent
     pas se ressembler, sinon le flux a l'air de dire la même chose tout le
@@ -1522,6 +1656,16 @@ def pose_attrape(image: np.ndarray, age: float) -> None:
                 (0, 0, 0), epaisseur + max(3, int(7 * echelle)), cv2.LINE_AA)
     cv2.putText(calque, "GOOD CATCH!", (x, y), cv2.FONT_HERSHEY_DUPLEX, taille,
                 VERT, epaisseur, cv2.LINE_AA)
+    if nom:
+        petite = taille * 0.48
+        fin = max(2, int(epaisseur * 0.55))
+        (court, _), _ = cv2.getTextSize(nom, cv2.FONT_HERSHEY_DUPLEX, petite, fin)
+        bas = y + int(haut * 0.95)
+        cv2.putText(calque, nom, ((largeur - court) // 2, bas),
+                    cv2.FONT_HERSHEY_DUPLEX, petite, (0, 0, 0),
+                    fin + max(3, int(6 * echelle)), cv2.LINE_AA)
+        cv2.putText(calque, nom, ((largeur - court) // 2, bas),
+                    cv2.FONT_HERSHEY_DUPLEX, petite, BLANC, fin, cv2.LINE_AA)
     force = max(0.0, 1.0 - avance ** 2)
     cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
 
@@ -1799,8 +1943,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # la première seconde du direct donnerait l'impression que rien ne marche.
     dernier_vu = origine
     dernier_mouvement = origine
-    plus_recent: float | None = None
     attrape = origine - 1000.0
+    attrape_nom = ""
+    # Les prises déjà fêtées, pour ne pas les fêter à chaque image des quatre
+    # secondes où leur rectangle est à l'écran. Purgé à chaque fête.
+    fetes: set[float] = set()
     # Importé ici et pas en tête de fichier : c'est main() qui pose la racine
     # du dépôt sur le chemin, et stream.py doit pouvoir être lancé comme un
     # script depuis n'importe où.
@@ -1812,9 +1959,18 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     bonjour = origine - 10_000.0
     nom_du_lieu = (cfg.get("camera") or {}).get("nom") or "Ventoux"
     dernier_ennui = origine
+    # Un quart d'heure en arrière : si la vallée est déjà dans le brouillard au
+    # moment où le flux démarre, on le dit tout de suite.
+    gris_depuis = origine - BROUILLARD_PAUSE_S
+    mot_gris = ""
     rediff: tuple[dict, float] | None = None
     fin_rediff = origine
     reste: list[dict] = []
+    # Ce qu'on a déjà remontré ce soir, et la date de l'historique quand on a
+    # fait la réserve : relire à chaque fois serait inutile, ne relire jamais
+    # enterrait les prises du jour.
+    montrees: set[str] = set()
+    historique_lu = 0.0
     tirage = random.Random()
     try:
         while True:
@@ -1826,23 +1982,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             images += 1
             if quand - relu >= 2.0:
                 vus = identifications(racine / "data" / "events.json", quand - TENUE_S - 60)
-                prises = [v for v in vus if (v.get("type") or "") in PRISES]
-                frais = max((v["t"] for v in prises), default=0.0)
-                if plus_recent is None:
-                    # Premier tour : l'historique est déjà plein de choses que
-                    # personne n'a vues passer en direct. Les fêter toutes au
-                    # démarrage ferait dire « good catch » à un flux qui vient
-                    # d'allumer. On note où on en est, et on ne fête que la
-                    # suite.
-                    plus_recent = frais
-                elif frais > plus_recent:
-                    plus_recent = frais
-                    attrape = quand
-                    if musique.felicitations:
-                        musique.dis(tirage.choice(musique.felicitations))
-                    log.info("Prise en direct : %s — %s", next(
-                        (v["label"] for v in prises if v["t"] == frais), "?"),
-                        musique.voix_dit or "sans voix")
                 machine = etat_machine(racine)
                 # Le soleil est calculé, pas lu : aucun service à interroger,
                 # aucune panne de réseau ne peut faire rater le lever.
@@ -1863,6 +2002,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 temps = str(ciel.get("webcam") or ciel.get("api") or "")
                 soleil = (ou_est_le_soleil(cfg["camera"], quand, hauteur / largeur)
                           if soleil_absent(relief, cfg["camera"], quand, temps) else None)
+                mot_gris = BROUILLARD_MOTS.get(temps, "")
                 trio = (None, None, None) if muet else musique.trio()
                 relu = quand
             image = np.frombuffer(brut, np.uint8).reshape(hauteur, largeur, 3).copy()
@@ -1877,6 +2017,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # une voiture en gros carrés n'est plus une voiture.
             if quand - dernier_vu > TENUE_S:
                 applique_effet(image, *effet_du_moment(quand - origine), quand - origine)
+            # La fête suit le rectangle, pas l'arrivée de la fiche.
+            if quand - attrape > ATTRAPE_S:
+                neuve = prise_a_feter(vus, quand, fetes)
+                if neuve is not None:
+                    fetes = {t for t in fetes if t > quand - 3600} | {neuve["t"]}
+                    attrape, attrape_nom = quand, neuve["label"]
+                    if musique.felicitations:
+                        musique.dis(tirage.choice(musique.felicitations))
+                    log.info("Prise à l'écran : %s — %s", neuve["label"],
+                             musique.voix_dit or "sans voix")
             if dessine(image, vus, quand):
                 dernier_vu = quand
                 # L'horloge de l'ennui est à part, et c'est tout l'intérêt :
@@ -1891,18 +2041,38 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # déjà attrapé. Sans remise, pour ne pas remontrer le même
                 # camion toute la nuit.
                 if rediff is None and quand - fin_rediff > REDIFF_PAUSE_S:
-                    if not reste:
-                        reste = archives(racine)
-                        tirage.shuffle(reste)
-                    rediff = (reste.pop(), quand) if reste else None
+                    marque = marque_historique(racine)
+                    if not reste or marque != historique_lu:
+                        historique_lu = marque
+                        fonds = archives(racine)
+                        reste = [f for f in fonds if str(f["photo"]) not in montrees]
+                        if not reste:
+                            # Tout a déjà été montré : on repart pour un tour
+                            # plutôt que de se taire.
+                            montrees.clear()
+                            reste = fonds
+                        reste = ordre_de_rediffusion(reste, tirage)
+                    choisie = reste.pop() if reste else None
+                    if choisie is not None:
+                        montrees.add(str(choisie["photo"]))
+                        log.info("Rediffusion : %s du %s", choisie["label"], choisie["t"])
+                    rediff = (choisie, quand) if choisie is not None else None
                     dernier_vu = quand if rediff is None else dernier_vu
             if quand - attrape <= ATTRAPE_S:
-                pose_attrape(image, quand - attrape)
+                pose_attrape(image, quand - attrape, attrape_nom)
             # Les danseurs appartiennent à la vue, pas aux bandes : ils sont
             # posés sur l'image de la caméra, avant qu'elle entre dans sa
             # fenêtre. Et après les rectangles, pour qu'une détection ne passe
             # jamais derrière un pantin.
             pose_danseurs(image, quand - origine, musique.pouls())
+            # Le brouillard se dit entre deux prises et jamais par-dessus : une
+            # voiture qui passe est plus intéressante que le temps qu'il fait.
+            if (mot_gris and quand - gris_depuis > BROUILLARD_PAUSE_S
+                    and quand - attrape > ATTRAPE_S and not musique.parle()):
+                gris_depuis = quand
+                if musique.brouillards:
+                    musique.dis(tirage.choice(musique.brouillards))
+                log.info("Le flux dit « %s »", mot_gris)
             if (musique.repliques and quand - dernier_mouvement > ENNUI_S
                     and quand - dernier_ennui > ENNUI_S):
                 musique.dis(tirage.choice(musique.repliques))
@@ -1920,7 +2090,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser)
             if musique.parle() and musique.dit_quoi() != "attrape":
-                pose_ennui(toile, "BOOOOORING", quand - origine)
+                pose_ennui(toile, mot_gris if musique.dit_quoi() == "brouillard"
+                           else "BOOOOORING", quand - origine)
+            elif quand - gris_depuis <= BROUILLARD_TENUE_S:
+                # Sans voix enregistrée, le mot tient quand même trois
+                # secondes : il doit pouvoir dire le brouillard sur une machine
+                # où data/voix est vide.
+                pose_ennui(toile, mot_gris, quand - origine)
             pose_ruban(toile, ruban, quand - origine)
             pose_horloge(toile, quand, direct=rediff is None)
             pose_machine(toile, machine)

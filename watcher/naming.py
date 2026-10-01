@@ -20,6 +20,9 @@ CYCLE_WORD = {"bicycle": "Vélo", "motorcycle": "Moto"}
 # A scooter and a motorbike are one class to the model and one word here. The
 # difference matters to whoever rides it and to nobody reading this page.
 BEAST_WORD = {"dog": "Chien", "horse": "Cheval"}
+# Ce que dit le détecteur de mouvement quand il n'a pas de nom à donner : qu'il
+# a vu bouger, un point. Pas où, pas quoi — il ne le sait pas.
+MOUVEMENT = "Mouvement détecté"
 SURFACE_WORD = {"forest": "la forêt", "meadow": "la prairie", "scree": "la pierraille",
                 "building": "un bâtiment", "road": "la route", "roundabout": "le rond-point",
                 "parking": "le parking", "island": "l'îlot", "playground": "l'aire de jeux",
@@ -1085,12 +1088,24 @@ def decide(obs: Observation) -> Decision:
         # shape of the thing that moved: it swells with shadow, with whatever
         # the headlights wash over, with two walkers merging into one. Until
         # the blob is worth trusting, no rule reading its dimensions can be.
-        return _motion(obs, "unnamed_vehicle", "Mouvement sur la route", "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.")
+        # « Mouvement sur la route », et le piéton était près du trampoline.
+        #
+        # Le nom disait deux choses : qu'il y avait eu du mouvement, ce qui est
+        # vrai, et que c'était sur la chaussée, ce qu'on n'a pas vérifié. La
+        # zone vient d'un masque dessiné à la main sur l'image ; une tache de
+        # mouvement déborde du sujet, et il suffit qu'elle touche le masque
+        # pour que la route soit affirmée. Affirmer un lieu qu'on n'a pas
+        # mesuré est exactement ce que cette veille ne doit pas faire.
+        #
+        # Le détecteur de mouvement dit donc ce qu'il sait, et rien de plus :
+        # quelque chose a bougé. La zone reste dans le motif et dans la fiche,
+        # où elle sert à apprendre sans rien prétendre à l'écran.
+        return _motion(obs, "unnamed_vehicle", MOUVEMENT, "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.")
 
     if obs.zone == "slope" and obs.travel < max(obs.min_travel, 0.02):
         return Decision("hold", reason="slope_still")
 
-    return _motion(obs, "unclassified", "Mouvement", "Un passage a été vu. La classe viendra quand cet endroit aura été revu.")
+    return _motion(obs, "unclassified", MOUVEMENT, "Un passage a été vu. La classe viendra quand cet endroit aura été revu.")
 
 
 def _context(obs: Observation) -> str:

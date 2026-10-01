@@ -6,12 +6,13 @@ import re
 import subprocess
 import sys
 import tempfile
+import random
 import threading
 import time
 import unittest
 from unittest import mock
 from dataclasses import replace
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -974,7 +975,7 @@ class StoreTests(unittest.TestCase):
         events = [
             {"id": "a", "t": "2026-09-25T08:52:04Z", "type": "motion", "label": "Mouvement", "zone": "other", "confidence": 0.3, "thumb": "data/thumbs/a.jpg", "detail": {}},
             {"id": "b", "t": "2026-09-25T08:52:21Z", "type": "car", "label": "Voiture", "zone": "roundabout", "confidence": 0.75, "thumb": "data/thumbs/b.jpg", "review": "accepted", "detail": {"correction": "Estafette", "context": "de jour, ciel dégagé"}},
-            {"id": "c", "t": "2026-09-25T08:52:21Z", "type": "motion", "label": "Mouvement sur la route", "zone": "road", "confidence": 0.3, "thumb": "data/thumbs/c.jpg", "detail": {}},
+            {"id": "c", "t": "2026-09-25T08:52:21Z", "type": "motion", "label": "Mouvement détecté", "zone": "road", "confidence": 0.3, "thumb": "data/thumbs/c.jpg", "detail": {}},
         ]
         folded = fold_events(events)
         self.assertEqual(len(folded), 1)
@@ -1016,11 +1017,11 @@ class StoreTests(unittest.TestCase):
             store.record_seen(carte["id"], {"marque": marque})
             return carte
 
-        premiere = voir(0, "motion", "Mouvement sur la route", 0.3, "vague")
+        premiere = voir(0, "motion", "Mouvement détecté", 0.3, "vague")
         # Mieux lu dans la même minute : la carte adopte ce mot-là.
         meilleure = voir(12, "vehicle", "Voiture", 0.8, "nette")
         # Revu encore, sans rien de neuf à dire : la carte ne bouge pas.
-        pauvre = voir(24, "motion", "Mouvement sur la route", 0.3, "faible")
+        pauvre = voir(24, "motion", "Mouvement détecté", 0.3, "faible")
         self.assertEqual(meilleure["id"], premiere["id"], "les trois vues font une seule carte")
         self.assertEqual(pauvre["id"], premiere["id"])
         self.assertEqual(pauvre["label"], "Voiture", "la carte a gardé la meilleure lecture")
@@ -1910,7 +1911,7 @@ class FogTests(unittest.TestCase):
         # dit « je ne sais pas » se corrige ; une machine qui dit « Voiture »
         # pour avoir regardé ailleurs ne se corrige pas, elle a raison par
         # accident jusqu'au jour où elle a tort de la même façon.
-        "2026-09-29T10-57-18Z-motion-94 : attendu 'Piéton', obtenu 'Mouvement sur la route'",
+        "2026-09-29T10-57-18Z-motion-94 : attendu 'Piéton', obtenu 'Mouvement détecté'",
         # Un tracteur lu comme un camion : le modèle n'a pas la classe.
         "2026-09-29T07-56-22Z-motion-10 : attendu 'Tracteur', obtenu 'Camion'",
     ]
@@ -2026,7 +2027,7 @@ class FogTests(unittest.TestCase):
             return (entree.get("detail") or {}).get("correction")
 
         self.assertIsNone(juge("Véhicule", "voiture"), "affiner n'est pas démentir")
-        self.assertIsNone(juge("Mouvement sur la route", "voiture"))
+        self.assertIsNone(juge("Mouvement détecté", "voiture"))
         self.assertIsNone(juge("Voiture", "voiture"))
         self.assertIsNone(juge("Voiture grise", "voiture"), "la couleur reste une voiture")
         self.assertEqual(juge("Voiture", "camion"), "Camion", "nommer autre chose est une faute")
@@ -2171,14 +2172,14 @@ class FogTests(unittest.TestCase):
         """
         event = {
             "id": "m1", "at": "2026-09-28T12:52:16Z", "type": "motion",
-            "label": "Mouvement sur la route", "zone": "road", "photo": "thumbs/m1.jpg",
+            "label": "Mouvement détecté", "zone": "road", "photo": "thumbs/m1.jpg",
             "detail": {"measured": {"width_m": 2.1, "rise_ms": 0.4, "seen_as": []}},
         }
         lessons: list = []
         self.assertTrue(apply_review([event], {}, "m1", "accepted", "velo", lessons))
         self.assertEqual(len(lessons), 1)
         row = lessons[0]
-        self.assertEqual((row["truth"], row["guessed"]), ("Vélo", "Mouvement sur la route"))
+        self.assertEqual((row["truth"], row["guessed"]), ("Vélo", "Mouvement détecté"))
         self.assertEqual(row["measured"]["width_m"], 2.1)
         self.assertEqual(row["photo"], "thumbs/m1.jpg")
 
@@ -2202,7 +2203,7 @@ class FogTests(unittest.TestCase):
         from watcher.main import _worth_reviewing
 
         cfg = {"review_unnamed_s": 300}
-        crossing = Decision("publish", "motion", "Mouvement sur la route", "unnamed_vehicle", {}, 0.3)
+        crossing = Decision("publish", "motion", "Mouvement détecté", "unnamed_vehicle", {}, 0.3)
         seen: dict = {}
         self.assertTrue(_worth_reviewing(crossing, cfg, seen, 1_000.0))
         seen["unnamed"] = 1_000.0
@@ -2213,7 +2214,7 @@ class FogTests(unittest.TestCase):
         from watcher.main import _worth_reviewing
 
         fog = Decision("publish", "motion", "Brouillard", "fog", {}, 0.3)
-        crossing = Decision("publish", "motion", "Mouvement sur la route", "unnamed_vehicle", {}, 0.3)
+        crossing = Decision("publish", "motion", "Mouvement détecté", "unnamed_vehicle", {}, 0.3)
         self.assertFalse(_worth_reviewing(fog, {"review_unnamed_s": 300}, {}, 1_000.0))
         # Zero turns the queue off without touching the code.
         self.assertFalse(_worth_reviewing(crossing, {"review_unnamed_s": 0}, {}, 1_000.0))
@@ -2704,17 +2705,105 @@ class DiffusionTests(unittest.TestCase):
         self.assertEqual([p.name for p in stream.repliques(dossier, "attrape")],
                          ["attrape_b.raw"])
 
-    def test_the_catch_is_not_celebrated_at_startup(self):
-        """Un flux qui s'allume ne vient pas d'attraper tout son historique."""
-        source = inspect.getsource(stream.diffuse)
-        self.assertIn("plus_recent: float | None = None", source)
-        amorce = source.split("frais = max(")[1].split("ruban =")[0]
-        self.assertIn("if plus_recent is None:", amorce)
-        # La première lecture se contente de noter où on en est ; la voix n'est
-        # appelée que dans la branche du « sinon ».
-        avant, apres = amorce.split("elif frais > plus_recent:")
-        self.assertNotIn("musique.dis(", avant)
-        self.assertIn("musique.dis(", apres)
+    def test_the_catch_is_celebrated_while_its_box_is_on_screen(self):
+        """« GOOD CATCH » sur une image vide : la f\u00eate doit suivre le rectangle.
+
+        La veille travaille au bord du direct, le flux le montre avec du
+        retard. F\u00eater \u00e0 l'arriv\u00e9e de la fiche criait victoire dix-neuf secondes
+        avant que le rectangle n'apparaisse, et la voiture passait ensuite en
+        silence.
+        """
+        vu = {"t": 1000.0, "type": "vehicle", "label": "Voiture verte",
+              "box": [0.4, 0.8, 0.1, 0.1]}
+        # Trop t\u00f4t : la t\u00eate de lecture n'a pas encore atteint la voiture.
+        self.assertIsNone(stream.prise_a_feter([vu], 1000.0 - 5.0, set()))
+        # Pendant : le rectangle est \u00e0 l'\u00e9cran, donc la f\u00eate a quelque chose \u00e0
+        # montrer du doigt.
+        for age in (0.0, stream.TENUE_S / 2, stream.TENUE_S):
+            self.assertIs(stream.prise_a_feter([vu], 1000.0 + age, set()), vu)
+        # Trop tard : plus rien \u00e0 montrer, donc rien \u00e0 f\u00eater. C'est aussi ce qui
+        # emp\u00eache un flux qui s'allume de f\u00eater tout son historique.
+        self.assertIsNone(stream.prise_a_feter([vu], 1000.0 + stream.TENUE_S + 0.1, set()))
+        # Et jamais deux fois : quatre secondes \u00e0 six images par seconde font
+        # vingt-quatre occasions de crier pour une seule voiture.
+        self.assertIsNone(stream.prise_a_feter([vu], 1000.0 + 1.0, {1000.0}))
+
+    def test_a_replay_shows_today_before_last_week(self):
+        """La r\u00e9serve remontrait surtout le 25 septembre.
+
+        Tirage uniforme sur quatre-vingt-cinq fiches, \u00e0 une toutes les dix
+        minutes : quatorze heures avant qu'une voiture attrap\u00e9e \u00e0 midi ait sa
+        chance. Le flux avait l'air de n'avoir rien vu depuis une semaine.
+        """
+        maintenant = datetime(2026, 10, 1, 17, 0, tzinfo=timezone.utc).timestamp()
+
+        def fiche(iso, nom):
+            return {"photo": Path(f"/tmp/{nom}.jpg"), "label": nom, "t": iso,
+                    "contexte": ""}
+
+        vieilles = [fiche("2026-09-25T08:20:51Z", f"vieille{i}") for i in range(85)]
+        fraiches = [fiche("2026-10-01T14:35:30Z", "Voiture verte"),
+                    fiche("2026-10-01T13:28:35Z", "Voiture")]
+
+        # On puise par la fin : les deux derniers sortis sont les deux premiers
+        # montr\u00e9s. Sur vingt tirages, les fra\u00eeches doivent gagner \u00e0 tous les
+        # coups — elles p\u00e8sent deux cents fois plus qu'une fiche d'il y a une
+        # semaine.
+        for graine in range(20):
+            ordre = stream.ordre_de_rediffusion(
+                vieilles + fraiches, random.Random(graine), maintenant)
+            self.assertEqual(len(ordre), 87)
+            deux_premieres = {ordre[-1]["label"], ordre[-2]["label"]}
+            self.assertEqual(deux_premieres, {"Voiture verte", "Voiture"})
+
+    def test_an_old_catch_still_gets_its_turn(self):
+        """L'archive doit rester une archive : les nuits creuses n'ont qu'elle."""
+        maintenant = datetime(2026, 10, 1, 17, 0, tzinfo=timezone.utc).timestamp()
+        meme_age = [{"photo": Path(f"/tmp/{i}.jpg"), "label": f"Voiture {i}",
+                     "t": "2026-09-25T08:20:51Z", "contexte": ""} for i in range(12)]
+        premieres = set()
+        for graine in range(30):
+            ordre = stream.ordre_de_rediffusion(meme_age, random.Random(graine), maintenant)
+            self.assertEqual(len(ordre), 12, "rien n'est jet\u00e9")
+            premieres.add(ordre[-1]["label"])
+        self.assertGreater(len(premieres), 5, "\u00e0 \u00e2ge \u00e9gal, l'ordre reste du hasard")
+
+    def test_a_replay_pool_survives_a_date_it_cannot_read(self):
+        """Une date illisible ne doit pas enterrer une prise qu'un humain a confirm\u00e9e."""
+        maintenant = datetime(2026, 10, 1, 17, 0, tzinfo=timezone.utc).timestamp()
+        bancale = {"photo": Path("/tmp/x.jpg"), "label": "Bus", "t": "", "contexte": ""}
+        ordre = stream.ordre_de_rediffusion([bancale], random.Random(0), maintenant)
+        self.assertEqual(len(ordre), 1)
+        self.assertEqual(stream._age_heures("pas une date", maintenant), 0.0)
+
+    def test_fog_gets_said_in_the_words_the_watch_used(self):
+        """Un mur gris sans un mot ressemble \u00e0 une cam\u00e9ra en panne.
+
+        Mais « fog » sur de la brume ferait dire \u00e0 la veille autre chose que ce
+        qu'elle a lu, donc chaque lecture garde son mot.
+        """
+        self.assertEqual(stream.BROUILLARD_MOTS.get("brouillard"), "FOOOOG")
+        self.assertNotEqual(stream.BROUILLARD_MOTS.get("brume"),
+                            stream.BROUILLARD_MOTS.get("brouillard"))
+        # Les cl\u00e9s sont le vocabulaire de la veille, pas un vocabulaire \u00e0 nous :
+        # sans \u00e7a le mot ne sortirait jamais.
+        for lecture in stream.BROUILLARD_MOTS:
+            self.assertIn(lecture, stream.ANGLAIS)
+        # Et un ciel d\u00e9gag\u00e9 ne dit rien du tout.
+        for clair in ("ciel d\u00e9gag\u00e9", "peu nuageux", "nuageux", "couvert", ""):
+            self.assertEqual(stream.BROUILLARD_MOTS.get(clair, ""), "")
+
+    def test_fog_is_said_now_and_then_not_all_day(self):
+        """Il tient des demi-journ\u00e9es : \u00e9crit en continu, le mot devient un d\u00e9cor."""
+        self.assertGreaterEqual(stream.BROUILLARD_PAUSE_S, 600.0)
+        self.assertLess(stream.BROUILLARD_TENUE_S, stream.BROUILLARD_PAUSE_S / 100)
+        fond = np.full((360, 640, 3), 128, np.uint8)
+        dit = fond.copy()
+        stream.pose_ennui(dit, "FOOOOG", 1.0)
+        self.assertFalse(np.array_equal(dit, fond))
+        tait = fond.copy()
+        stream.pose_ennui(tait, "", 1.0)
+        self.assertTrue(np.array_equal(tait, fond), "pas de mot, pas de trace")
 
     def test_a_miss_is_never_celebrated_as_a_catch(self):
         """« Décor connu » est un raté rangé, pas une prise. Et le feu ne se fête pas."""
@@ -2723,9 +2812,23 @@ class DiffusionTests(unittest.TestCase):
         self.assertNotIn("fire", stream.PRISES)
         for vrai in ("vehicle", "person", "truck", "cycle"):
             self.assertIn(vrai, stream.PRISES)
-        source = inspect.getsource(stream.diffuse)
-        self.assertIn('prises = [v for v in vus if (v.get("type") or "") in PRISES]', source)
-        self.assertIn("frais = max((v[\"t\"] for v in prises)", source)
+        for refus in ("missed", "motion", "fire"):
+            fiche = {"t": 1000.0, "type": refus, "label": "Décor connu",
+                     "box": [0.4, 0.8, 0.1, 0.1]}
+            self.assertIsNone(stream.prise_a_feter([fiche], 1001.0, set()),
+                              f"{refus} ne se fête pas")
+
+    def test_the_catch_says_what_it_caught(self):
+        """« Good catch » tout seul félicite sans dire de quoi."""
+        fond = np.full((360, 640, 3), 40, np.uint8)
+        muet = fond.copy()
+        stream.pose_attrape(muet, 0.3)
+        nomme = fond.copy()
+        stream.pose_attrape(nomme, 0.3, "Voiture verte")
+        self.assertFalse(np.array_equal(muet, nomme),
+                         "le nom doit apparaître sous le mot")
+        # Et il reste dans le cadre, sans déborder sur les bandes.
+        self.assertTrue(np.array_equal(nomme[:, :40], muet[:, :40]))
 
     def test_the_catch_flash_fades_instead_of_veiling_the_view(self):
         """L'éclair doit retomber : une lumière qui reste cache la montagne."""
