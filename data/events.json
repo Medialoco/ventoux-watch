@@ -2,6 +2,90 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T02-14-21Z-missed-2",
+      "t": "2026-10-01T02:14:21Z",
+      "type": "missed",
+      "label": "Toujours au même endroit",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T02-14-21Z-missed-2.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Cet endroit a bougé plusieurs fois sans événement nouveau. Le cadrage le reconnaît maintenant.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.119,
+          "area_grow": 1.42,
+          "clipped": false,
+          "shade": 1.647,
+          "kept": 0.561,
+          "area_ratio": 0.00068,
+          "duration_s": 1.2,
+          "frames": 4,
+          "width_m": 34.5,
+          "height_m": 21.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 16.46,
+          "drift_rate": 0.144,
+          "seen_as": []
+        },
+        "refused": "repeated_spot",
+        "box": [
+          0.0031,
+          0.5389,
+          0.1141,
+          0.1278
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T02-14-21Z-missed-2.jpg"
+    },
+    {
+      "id": "2026-10-01T02-14-20Z-missed-1",
+      "t": "2026-10-01T02:14:20Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T02-14-20Z-missed-1.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.103,
+          "area_grow": 1.9,
+          "clipped": false,
+          "shade": 1.635,
+          "kept": 0.267,
+          "area_ratio": 0.00118,
+          "duration_s": 0.2,
+          "frames": 2,
+          "width_m": 8.0,
+          "height_m": 4.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 39.52,
+          "drift_rate": 13.692,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.475,
+          0.5833,
+          0.0328,
+          0.0361
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T02-14-20Z-missed-1.jpg"
+    },
+    {
       "id": "2026-10-01T01-55-33Z-missed-4",
       "t": "2026-10-01T01:55:33Z",
       "type": "missed",
