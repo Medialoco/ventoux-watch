@@ -2805,6 +2805,42 @@ class DiffusionTests(unittest.TestCase):
         stream.pose_ennui(tait, "", 1.0)
         self.assertTrue(np.array_equal(tait, fond), "pas de mot, pas de trace")
 
+    def test_the_machine_age_is_truncated_not_rounded(self):
+        """« UP 2d 24h » : un jour n'a pas vingt-quatre heures en plus de lui-m\u00eame.
+
+        La mise en forme arrondissait. \u00c0 quarante-sept heures et demie,
+        « heures / 24 » valait 1,98 et sortait « 2d » pendant que « heures % 24 »
+        valait 23,7 et sortait « 24h » : les deux faux \u00e0 la m\u00eame seconde.
+        """
+        def affiche(secondes):
+            toile = np.zeros((420, 1600, 3), np.uint8)
+            stream.pose_machine(toile, {"degres": 52.0, "charge": 0.4,
+                                        "debout": secondes, "libre": 800e9})
+            return toile
+
+        # Le cas qui a \u00e9t\u00e9 vu \u00e0 l'\u00e9cran : 47 h 42 doit se lire 1d 23h.
+        heure = 3600
+        for secondes in (47.7 * heure, 23.9 * heure, 24 * heure, 0.0):
+            toile = affiche(secondes)
+            self.assertTrue(toile.any(), "l'encart doit s'\u00e9crire")
+        # Deux dur\u00e9es qui diff\u00e8rent d'un jour entier ne peuvent pas s'afficher
+        # pareil ; avec l'arrondi, 47,7 h et 71,7 h donnaient toutes deux « 24h ».
+        self.assertFalse(np.array_equal(affiche(47.7 * heure), affiche(71.7 * heure)))
+        # Et une machine qui vient de d\u00e9marrer ne dit pas « 0h ».
+        self.assertFalse(np.array_equal(affiche(0.0), affiche(40 * 60)))
+
+    def test_the_machine_panel_has_an_edge(self):
+        """Assombri seul, l'encart flotte : ses limites bougent avec le ciel."""
+        fond = np.full((420, 1600, 3), 200, np.uint8)
+        avec = fond.copy()
+        stream.pose_machine(avec, {"degres": 52.0, "charge": 0.4,
+                                   "debout": 200000.0, "libre": 800e9})
+        # Le filet se voit sur le bord droit de l'encart, l\u00e0 o\u00f9 il n'y a aucun
+        # texte : une colonne au moins doit diff\u00e9rer du simple assombrissement.
+        assombri = (fond * 0.35).astype(np.uint8)
+        bande = avec[:300, :400]
+        self.assertFalse(np.array_equal(bande, assombri[:300, :400]))
+
     def test_a_miss_is_never_celebrated_as_a_catch(self):
         """« Décor connu » est un raté rangé, pas une prise. Et le feu ne se fête pas."""
         self.assertNotIn("missed", stream.PRISES)

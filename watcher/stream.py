@@ -1751,8 +1751,24 @@ def pose_machine(image: np.ndarray, etat: dict | None) -> None:
     echelle = largeur / 1600
     degres = etat["degres"]
     couleur = VERT if degres < TIEDE_C else (AMBRE if degres < CHAUD_C else ROUGE)
-    heures = etat["debout"] / 3600
-    debout = f"{heures / 24:.0f}d {heures % 24:02.0f}h" if heures >= 24 else f"{heures:.0f}h"
+    # « UP 2d 24h », qui ne veut rien dire : un jour n'a pas vingt-quatre
+    # heures en plus de lui-même.
+    #
+    # La mise en forme arrondissait au lieu de tronquer. À quarante-sept heures
+    # et demie, « heures / 24 » valait 1,98 et s'affichait « 2d », pendant que
+    # « heures % 24 » valait 23,7 et s'affichait « 24h » : les deux nombres
+    # faux à la même seconde, et la machine vieillie d'un jour entier. Une
+    # division entière ne peut pas se tromper ainsi.
+    jours, reste = divmod(int(max(0.0, etat["debout"])), 86400)
+    heures, minutes = divmod(reste // 60, 60)
+    if jours:
+        debout = f"{jours}d {heures:02d}h"
+    elif heures:
+        debout = f"{heures}h {minutes:02d}m"
+    else:
+        # Sinon la première heure après un redémarrage affiche « UP 0h », ce
+        # qui ressemble à une panne alors que c'est le contraire.
+        debout = f"{minutes}m"
     lignes = [("RASPBERRY PI 5", CYAN),
               (f"{degres:.1f} C", couleur),
               (f"LOAD {etat['charge'] * 100:.0f}%", BLANC),
@@ -1763,9 +1779,17 @@ def pose_machine(image: np.ndarray, etat: dict | None) -> None:
     sommet = int(RUBAN_H * echelle)
     taille = 0.56 * echelle
     large = max(cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] for t, _ in lignes)
-    panneau = image[sommet:sommet + pas * len(lignes) + marge, 0:large + 2 * marge]
+    bas = sommet + pas * len(lignes) + marge
+    droite = large + 2 * marge
+    panneau = image[sommet:bas, 0:droite]
     if panneau.size:
         panneau[:] = (panneau * 0.35).astype(np.uint8)
+        # Un trait léger pour que l'encart ait un bord. Assombri seul, il flotte
+        # sur l'image et ses limites bougent avec le ciel derrière ; un filet
+        # suffit à en faire un objet posé. Dans le cyan du titre, mais très
+        # baissé : on veut une arête, pas un cadre doré.
+        cv2.rectangle(image, (0, sommet), (droite - 1, bas - 1),
+                      tuple(int(c * 0.45) for c in CYAN), max(1, int(echelle)))
     for i, (texte, teinte) in enumerate(lignes):
         cv2.putText(image, texte, (marge, sommet + pas * (i + 1) - int(6 * echelle)),
                     cv2.FONT_HERSHEY_SIMPLEX, taille, teinte, 2, cv2.LINE_AA)
