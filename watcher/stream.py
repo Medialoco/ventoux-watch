@@ -21,8 +21,10 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 from datetime import datetime, timezone
@@ -53,6 +55,14 @@ BLANC = (245, 245, 245)
 # pas, et rebattue le lendemain.
 SESSION_H = 14.0
 EXTENSIONS = {".mp3", ".ogg", ".opus", ".flac", ".m4a", ".wav"}
+
+# Le son est tenu par ce programme et non par ffmpeg, pour qu'une voix puisse
+# un jour couper la musique. Le prix en est cette comptabilité : à chaque
+# battement, une image et exactement la tranche de son qui lui correspond. La
+# synchronisation devient une propriété de la construction au lieu d'un espoir.
+ECHANTILLONS_S = 44100
+VOIES = 2
+OCTETS_PAR_ECHANTILLON = 2
 
 
 def _lire(url: str) -> str:
@@ -197,6 +207,56 @@ def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None =
     return chemin
 
 
+class Musique:
+    """La session, décodée au fil de l'eau et servie par tranches.
+
+    Un seul ffmpeg tourne en fond et rend du son brut ; on y puise exactement
+    ce qu'il faut à chaque image. Quand la session s'achève, on en tire une
+    autre : un flux qui se tait est un flux que YouTube finit par couper.
+    """
+
+    def __init__(self, dossier: Path) -> None:
+        self.dossier = dossier
+        self.session = batir_session(dossier)
+        self.process: subprocess.Popen | None = None
+        self._ouvre()
+
+    def _ouvre(self) -> None:
+        if self.session is None:
+            return
+        self.process = subprocess.Popen(
+            ["ffmpeg", "-hide_banner", "-loglevel", "error",
+             "-f", "concat", "-safe", "0", "-i", str(self.session),
+             # Les morceaux d'une bibliothèque n'ont pas tous le même niveau,
+             # et six décibels d'écart entre deux titres font sursauter à trois
+             # heures du matin. « dynaudnorm » recale au fil de l'eau pour
+             # quelques pour cent de processeur, là où « loudnorm » demanderait
+             # une passe entière sur chaque fichier.
+             "-af", "dynaudnorm=f=250:g=15",
+             "-f", "s16le", "-ar", str(ECHANTILLONS_S), "-ac", str(VOIES), "-"],
+            stdout=subprocess.PIPE, bufsize=10 ** 7)
+
+    def tranche(self, octets: int) -> bytes:
+        """Le son des prochaines images, ou du silence si la musique manque."""
+        if self.process is None or self.process.stdout is None:
+            return b"\0" * octets
+        morceau = self.process.stdout.read(octets)
+        if len(morceau) < octets:
+            # La session est finie : on en rebat une et on complète la tranche,
+            # pour qu'aucun battement ne parte incomplet.
+            self.arrete()
+            self.session = batir_session(self.dossier)
+            self._ouvre()
+            if self.process is not None and self.process.stdout is not None:
+                morceau += self.process.stdout.read(octets - len(morceau))
+        return morceau.ljust(octets, b"\0")
+
+    def arrete(self) -> None:
+        if self.process is not None:
+            self.process.kill()
+            self.process = None
+
+
 def _entree(url: str, recul: int) -> subprocess.Popen:
     commande = [
         "ffmpeg", "-hide_banner", "-loglevel", "error",
@@ -209,48 +269,42 @@ def _entree(url: str, recul: int) -> subprocess.Popen:
     return subprocess.Popen(commande, stdout=subprocess.PIPE, bufsize=10 ** 8)
 
 
-def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int, debit: str,
-            session: Path | None) -> subprocess.Popen:
+def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
+            debit: str) -> tuple[subprocess.Popen, int]:
+    """La sortie, et le descripteur par lequel on lui donne le son.
+
+    Deux tuyaux parce qu'un processus n'a qu'une entrée standard et qu'il faut
+    en nourrir deux. L'image passe par elle, le son par un descripteur de plus
+    que ffmpeg sait lire sous le nom « pipe:N ».
+    """
+    lecture, ecriture = os.pipe()
     commande = [
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        # Des files d'attente généreuses des deux côtés : sans elles, un
+        # ffmpeg qui lit l'image pendant qu'on écrit le son peut s'arrêter en
+        # attendant l'autre tuyau, et les deux processus s'attendent à jamais.
+        "-thread_queue_size", "512",
         "-f", "rawvideo", "-pix_fmt", "bgr24",
-        "-s", f"{largeur}x{hauteur}", "-r", str(images_par_s), "-i", "-",
-    ]
-    if session is not None:
-        # « stream_loop » parce qu'une session finit toujours par finir, et
-        # qu'un flux qui se tait est un flux que YouTube coupe.
-        commande += ["-f", "concat", "-safe", "0", "-stream_loop", "-1", "-i", str(session)]
-    else:
-        # Même muette, YouTube veut une piste son : sans elle l'ingestion refuse.
-        commande += ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100"]
-    commande += [
+        "-s", f"{largeur}x{hauteur}", "-r", str(images_par_s), "-i", "pipe:0",
+        "-thread_queue_size", "512",
+        "-f", "s16le", "-ar", str(ECHANTILLONS_S), "-ac", str(VOIES), "-i", f"pipe:{lecture}",
         # Le Pi 5 n'a aucun encodeur matériel : il ne reste que le logiciel, et
         # « veryfast » est le compromis mesuré qui tient le temps réel sans
         # manger les cœurs dont la veille a besoin.
         "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
         "-pix_fmt", "yuv420p", "-b:v", debit, "-maxrate", debit, "-bufsize", "4M",
         "-g", str(images_par_s * 2),
-        "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2",
-        # Les morceaux d'une bibliothèque n'ont pas tous le même niveau, et un
-        # écart de six décibels entre deux titres fait sursauter à trois heures
-        # du matin. « dynaudnorm » recale au fil de l'eau, pour quelques pour
-        # cent de processeur, là où « loudnorm » demanderait une passe entière.
-        "-af", "dynaudnorm=f=250:g=15",
-        # La vidéo commande : quand le tuyau d'images se ferme, la sortie
-        # s'arrête au lieu d'attendre une musique qui boucle sans fin. Seul,
-        # « -shortest » ne suffit pas quand l'autre entrée boucle à l'infini :
-        # le multiplexeur garde de l'avance et la piste son dépasse la vidéo
-        # de trente secondes. Les deux drapeaux qui suivent lui retirent cette
-        # avance.
-        "-shortest", "-fflags", "+shortest", "-max_interleave_delta", "100000",
+        "-c:a", "aac", "-b:a", "128k",
     ]
     commande += ["-f", "flv", cible] if cible.startswith("rtmp") else [cible]
-    return subprocess.Popen(commande, stdin=subprocess.PIPE)
+    process = subprocess.Popen(commande, stdin=subprocess.PIPE, pass_fds=(lecture,))
+    os.close(lecture)
+    return process, ecriture
 
 
 def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: int) -> None:
-    session = batir_session(racine / "data" / "musique")
-    if session is None:
+    musique = Musique(racine / "data" / "musique")
+    if musique.session is None:
         log.warning("Aucune musique dans data/musique : le flux sortira muet")
     media = playlist_media(cfg["stream_url"])
     dernier, segment = bord_du_direct(media)
@@ -260,7 +314,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     assert entree.stdout is not None
     largeur, hauteur = 1920, 1080
     octets = largeur * hauteur * 3
-    sortie = None
+    sortie = son = None
+    verseur: threading.Thread | None = None
+    coupe = threading.Event()
     debut = _maintenant()
     # L'heure de la première image montrée : le bord du direct, moins ce qu'on
     # a reculé. Tout le reste s'en déduit par le compte des images.
@@ -282,18 +338,52 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             image = np.frombuffer(brut, np.uint8).reshape(hauteur, largeur, 3).copy()
             dessine(image, vus, quand)
             if sortie is None:
-                sortie = _sortie(cible, largeur, hauteur, cfg["stream_fps"],
-                                 cfg["stream_bitrate"], session)
+                sortie, son = _sortie(cible, largeur, hauteur, cfg["stream_fps"],
+                                      cfg["stream_bitrate"])
                 assert sortie.stdin is not None
+                verseur = threading.Thread(target=_verse_le_son, args=(son, musique, coupe),
+                                           daemon=True)
+                verseur.start()
             sortie.stdin.write(image.tobytes())
             if duree_s is not None and _maintenant() - debut >= duree_s:
                 break
     finally:
         entree.kill()
+        coupe.set()
+        musique.arrete()
+        if verseur is not None:
+            verseur.join(timeout=5)
+        if son is not None:
+            try:
+                os.close(son)
+            except OSError:
+                pass
         if sortie is not None and sortie.stdin is not None:
             sortie.stdin.close()
             sortie.wait(timeout=30)
     log.info("%d images diffusées", images)
+
+
+def _verse_le_son(descripteur: int, musique: Musique, coupe: threading.Event) -> None:
+    """Verse le son dans son tuyau, dans son propre fil.
+
+    Depuis le fil des images, les deux tuyaux se bloquent l'un l'autre : ffmpeg
+    attend l'image pendant qu'on attend que le tuyau du son se vide, et les
+    deux se regardent jusqu'au bout du monde. C'est arrivé au premier essai.
+
+    Dans son fil, l'écriture bloque sans gêner personne, et ce blocage est
+    justement la cadence : le tuyau ne se vide qu'au rythme où ffmpeg consomme,
+    lequel suit les images, lesquelles arrivent de la webcam en temps réel.
+    Rien ne règle le débit, il s'impose.
+    """
+    while not coupe.is_set():
+        morceau = musique.tranche(16384)
+        pose = 0
+        while pose < len(morceau) and not coupe.is_set():
+            try:
+                pose += os.write(descripteur, morceau[pose:])
+            except (BrokenPipeError, OSError):
+                return
 
 
 def _maintenant() -> float:
