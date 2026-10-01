@@ -2669,6 +2669,101 @@ class DiffusionTests(unittest.TestCase):
         musique._avec_la_voix(silence)
         self.assertFalse(musique.parle())
 
+    def test_each_occasion_draws_only_its_own_voices(self):
+        """Féliciter avec la voix de l'ennui dirait l'inverse de ce qu'on veut."""
+        temporaire = tempfile.TemporaryDirectory()
+        self.addCleanup(temporaire.cleanup)
+        dossier = Path(temporaire.name) / "voix"
+        dossier.mkdir()
+        fiches = [{"fichier": "ennui_a.raw", "quand": "ennui"},
+                  {"fichier": "attrape_b.raw", "quand": "attrape"},
+                  {"fichier": "vieux.raw"}]
+        for f in fiches:
+            (dossier / f["fichier"]).write_bytes(b"\0\0")
+        (dossier / "voix.json").write_text(json.dumps(fiches), encoding="utf-8")
+
+        # Une fiche sans « quand » date d'avant les félicitations : elle doit
+        # rester de l'ennui, pas devenir une prise.
+        ennui = [p.name for p in stream.repliques(dossier, "ennui")]
+        self.assertEqual(sorted(ennui), ["ennui_a.raw", "vieux.raw"])
+        self.assertEqual([p.name for p in stream.repliques(dossier, "attrape")],
+                         ["attrape_b.raw"])
+
+    def test_the_catch_is_not_celebrated_at_startup(self):
+        """Un flux qui s'allume ne vient pas d'attraper tout son historique."""
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("plus_recent: float | None = None", source)
+        amorce = source.split("frais = max(")[1].split("ruban =")[0]
+        self.assertIn("if plus_recent is None:", amorce)
+        # La première lecture se contente de noter où on en est ; la voix n'est
+        # appelée que dans la branche du « sinon ».
+        avant, apres = amorce.split("elif frais > plus_recent:")
+        self.assertNotIn("musique.dis(", avant)
+        self.assertIn("musique.dis(", apres)
+
+    def test_the_catch_flash_fades_instead_of_veiling_the_view(self):
+        """L'éclair doit retomber : une lumière qui reste cache la montagne."""
+        fond = np.full((360, 640, 3), 40, np.uint8)
+        debut = fond.copy()
+        stream.pose_attrape(debut, 0.0)
+        tard = fond.copy()
+        stream.pose_attrape(tard, stream.ATTRAPE_S * 0.95)
+        fini = fond.copy()
+        stream.pose_attrape(fini, stream.ATTRAPE_S + 0.1)
+
+        self.assertGreater(float(debut.mean()), float(fond.mean()) + 20)
+        self.assertLess(float(tard.mean()), float(debut.mean()))
+        self.assertTrue(np.array_equal(fini, fond))
+
+    def test_the_machine_panel_colours_the_heat_on_the_chip_s_own_limits(self):
+        """Vert, ambre, rouge : les seuils sont ceux du Pi, pas un goût à moi."""
+        self.assertLess(stream.TIEDE_C, stream.CHAUD_C)
+        self.assertLess(stream.CHAUD_C, 80.0)
+        for degres, attendu in ((48.0, stream.VERT), (70.0, stream.AMBRE), (82.0, stream.ROUGE)):
+            toile = np.zeros((300, 900, 3), np.uint8)
+            stream.pose_machine(toile, {"degres": degres, "charge": 0.3,
+                                        "debout": 90_000.0, "libre": 800e9})
+            pixels = toile.reshape(-1, 3)
+            vifs = pixels[pixels.max(axis=1) > 150]
+            self.assertTrue(any(tuple(p) == attendu for p in vifs), degres)
+
+    def test_the_machine_panel_stays_away_when_there_is_no_machine_to_read(self):
+        """Pas de /sys, pas d'encart : inventer une température serait mentir."""
+        toile = np.zeros((300, 900, 3), np.uint8)
+        stream.pose_machine(toile, None)
+        self.assertFalse(toile.any())
+
+    def test_good_morning_fires_once_when_the_sun_clears_the_horizon(self):
+        """Le lever est calculé, franchi vers le haut, et pas deux fois par jour."""
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("hauteur_soleil < HORIZON <= haut", source)
+        # Douze heures de garde : un soleil qui oscille autour de l'horizon
+        # une seconde sur deux ne doit pas dire bonjour une seconde sur deux.
+        self.assertIn("quand - bonjour > 12 * 3600", source)
+        self.assertAlmostEqual(stream.HORIZON, -0.833, places=3)
+
+    def test_good_morning_appears_and_leaves_without_blinking(self):
+        fond = np.full((360, 640, 3), 30, np.uint8)
+        milieu = fond.copy()
+        stream.pose_bonjour(milieu, "Ventoux", stream.BONJOUR_S / 2)
+        bord = fond.copy()
+        stream.pose_bonjour(bord, "Ventoux", 0.05)
+        fini = fond.copy()
+        stream.pose_bonjour(fini, "Ventoux", stream.BONJOUR_S + 0.1)
+
+        self.assertFalse(np.array_equal(milieu, fond))
+        self.assertLess(float(np.abs(bord.astype(int) - fond).mean()),
+                        float(np.abs(milieu.astype(int) - fond).mean()))
+        self.assertTrue(np.array_equal(fini, fond))
+
+    def test_the_clock_names_the_city_and_not_the_abbreviation(self):
+        """« CEST » ne dit rien à personne, et change de nom deux fois par an."""
+        toile = np.zeros((300, 900, 3), np.uint8)
+        stream.pose_horloge(toile, 1_760_000_000.0)
+        source = inspect.getsource(stream.pose_horloge)
+        self.assertIn('" PARIS"', source)
+        self.assertNotIn('strftime("%Z")', source)
+
     def test_boredom_is_measured_on_the_road_and_not_on_the_screen(self):
         """L'horloge de l'ennui ne doit pas être celle des rediffusions.
 

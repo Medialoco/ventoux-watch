@@ -37,13 +37,22 @@ VOIES = 2
 # Plusieurs phrases, et plusieurs voix. La même réplique toutes les vingt
 # minutes pendant une nuit entière cesse d'être une blague et devient une
 # alarme ; c'est la variation qui fait qu'on sourit encore à la cinquième.
+# Deux occasions de parler, et deux tons. L'ennui traîne, la prise claque :
+# la même voix pour les deux ferait du « good catch » une remarque de plus
+# alors que c'est le seul moment où la machine a réussi quelque chose.
 REPLIQUES = [
-    ("Bubbles", "Boooooooring"),
-    ("Bad News", "Still nothing"),
-    ("Boing", "So boooring"),
-    ("Bubbles", "Nothing. Again"),
-    ("Bad News", "Absolutely nothing is happening"),
-    ("Boing", "Boooooring"),
+    ("ennui", "Bubbles", "Boooooooring"),
+    ("ennui", "Bad News", "Still nothing"),
+    ("ennui", "Boing", "So boooring"),
+    ("ennui", "Bubbles", "Nothing. Again"),
+    ("ennui", "Bad News", "Absolutely nothing is happening"),
+    ("ennui", "Boing", "Boooooring"),
+    ("attrape", "Boing", "Good catch!"),
+    ("attrape", "Bubbles", "Good catch!"),
+    ("attrape", "Boing", "Got one!"),
+    ("attrape", "Bubbles", "Nice one!"),
+    ("matin", "Boing", "Goooood morning Ventoux!"),
+    ("matin", "Bubbles", "Goooood morning Ventoux!"),
 ]
 
 
@@ -72,12 +81,12 @@ def enregistre(dossier: Path, ecoute: bool = False) -> int:
         return 1
     dossier.mkdir(parents=True, exist_ok=True)
     fiches = []
-    for voix, texte in REPLIQUES:
-        cible = dossier / _nom(voix, texte)
+    for quand, voix, texte in REPLIQUES:
+        cible = dossier / _nom(f"{quand}-{voix}", texte)
         duree = grave(voix, texte, cible)
         fiches.append({"fichier": cible.name, "texte": texte, "voix": voix,
-                       "duree": round(duree, 3)})
-        print(f"  {duree:4.1f} s  {voix:10s} « {texte} »")
+                       "quand": quand, "duree": round(duree, 3)})
+        print(f"  {duree:4.1f} s  {quand:8s} {voix:10s} « {texte} »")
         if ecoute:
             subprocess.run(["ffplay", "-hide_banner", "-loglevel", "error", "-autoexit",
                             "-f", "s16le", "-ar", str(ECHANTILLONS_S), "-ac", str(VOIES),

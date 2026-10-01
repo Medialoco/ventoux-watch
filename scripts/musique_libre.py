@@ -218,7 +218,16 @@ def pochettes(dossier: Path) -> None:
                   # Les vignettes d'archive.org pèsent quelques kilooctets et
                   # sont illisibles en grand ; les scans de livret pèsent des
                   # mégaoctets pour un dos de boîtier.
-                  and 15_000 <= int(f.get("size") or 0) <= 4_000_000]
+                  and 15_000 <= int(f.get("size") or 0) <= 4_000_000
+                  # Et surtout : ce que dépose l'artiste, pas ce que fabrique
+                  # le site. Archive.org génère pour chaque piste un
+                  # spectrogramme en couleurs, qui passe tous les filtres de
+                  # taille et ne ressemble à une pochette que de loin — la
+                  # première récolte en a ramené trente au lieu de trente
+                  # pochettes.
+                  and f.get("source") == "original"
+                  and not re.search(r"spectrogram|waveform|thumb|_itemimage",
+                                    str(f.get("name", "")), re.I)]
         if not images:
             continue
         images.sort(key=lambda f: int(f.get("size") or 0))

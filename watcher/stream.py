@@ -185,13 +185,18 @@ ATTENUATION = 0.35
 ENNUI_S = 1200.0
 
 
-def repliques(dossier: Path) -> list[Path]:
-    """Les répliques gravées, s'il y en a. Leur absence n'empêche rien."""
+def repliques(dossier: Path, quand: str = "ennui") -> list[Path]:
+    """Les répliques gravées pour une occasion, s'il y en a.
+
+    Leur absence n'empêche rien : un flux sans voix est un flux, un flux qui
+    s'arrête parce qu'un fichier manque n'en est plus un.
+    """
     try:
         fiches = json.loads((dossier / "voix.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
-    return [dossier / f["fichier"] for f in fiches if (dossier / f["fichier"]).is_file()]
+    return [dossier / f["fichier"] for f in fiches
+            if f.get("quand", "ennui") == quand and (dossier / f["fichier"]).is_file()]
 
 
 # Personne ne reste dix minutes sur la même chose. Les sets de mix récoltés
@@ -297,7 +302,9 @@ class Musique:
         self.voix = b""
         self.voix_dit = ""
         self._verrou = threading.Lock()
-        self.repliques = repliques(self.racine / "data" / "voix")
+        self.repliques = repliques(self.racine / "data" / "voix", "ennui")
+        self.felicitations = repliques(self.racine / "data" / "voix", "attrape")
+        self.matins = repliques(self.racine / "data" / "voix", "matin")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -350,6 +357,15 @@ class Musique:
         """
         with self._verrou:
             return bool(self.voix)
+
+    def dit_quoi(self) -> str:
+        """L'occasion de la réplique en cours : « ennui », « attrape », ou rien.
+
+        Les deux voix ne veulent pas le même écran, et c'est le nom du clip qui
+        le dit — pas un drapeau de plus à tenir à jour en parallèle.
+        """
+        with self._verrou:
+            return (self.voix_dit or "").split("_")[0] if self.voix else ""
 
     def tranche(self, octets: int) -> bytes:
         """Le son des prochaines images, ou du silence si la musique manque."""
@@ -934,6 +950,43 @@ def pose_bande_basse(image: np.ndarray, texte: str) -> None:
                 cv2.FONT_HERSHEY_SIMPLEX, taille, BLANC, 2, cv2.LINE_AA)
 
 
+ATTRAPE_S = 1.6
+
+
+def pose_attrape(image: np.ndarray, age: float) -> None:
+    """« GOOD CATCH » en vert, avec un éclair qui retombe.
+
+    Vert et non ambre : le mot de l'ennui et celui de la réussite ne doivent
+    pas se ressembler, sinon le flux a l'air de dire la même chose tout le
+    temps. L'éclair décroît en une demi-seconde — une lumière qui reste n'est
+    plus un éclair, c'est un voile.
+    """
+    if age < 0 or age > ATTRAPE_S:
+        return
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    eclat = max(0.0, 1.0 - age / 0.45)
+    if eclat > 0.01:
+        cv2.addWeighted(image, 1.0, np.full_like(image, 255), 0.22 * eclat, 0.0, dst=image)
+    # Le mot monte un peu pendant qu'il s'efface : c'est ce qui le détache du
+    # fond sans avoir à l'écrire plus gros.
+    avance = age / ATTRAPE_S
+    taille = 2.2 * echelle
+    epaisseur = max(2, int(6 * echelle))
+    (large, haut), _ = cv2.getTextSize("GOOD CATCH!", cv2.FONT_HERSHEY_DUPLEX, taille, epaisseur)
+    x = (largeur - large) // 2
+    y = int(hauteur * 0.42 + haut / 2 - 70 * echelle * avance)
+    calque = image.copy()
+    # Un liseré noir d'abord : le vert seul disparaît sur un ciel de brouillard,
+    # et c'est exactement le fond qu'on a la moitié du temps ici.
+    cv2.putText(calque, "GOOD CATCH!", (x, y), cv2.FONT_HERSHEY_DUPLEX, taille,
+                (0, 0, 0), epaisseur + max(3, int(7 * echelle)), cv2.LINE_AA)
+    cv2.putText(calque, "GOOD CATCH!", (x, y), cv2.FONT_HERSHEY_DUPLEX, taille,
+                VERT, epaisseur, cv2.LINE_AA)
+    force = max(0.0, 1.0 - avance ** 2)
+    cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
+
+
 def pose_ennui(image: np.ndarray, mot: str, seconde: float) -> None:
     """Le mot en très grand, en travers de la fenêtre caméra.
 
@@ -963,6 +1016,112 @@ def pose_ennui(image: np.ndarray, mot: str, seconde: float) -> None:
     cv2.add(image, calque, dst=image)
 
 
+# Les seuils du Pi 5 lui-même : il réduit sa fréquence à 80 °C et se met à
+# l'abri à 85. On prévient donc avant, pas au moment où c'est fait.
+TIEDE_C = 65.0
+CHAUD_C = 75.0
+
+
+def etat_machine(racine: Path) -> dict | None:
+    """Température, charge, disque et âge de la machine qui tient le flux.
+
+    Lu dans /sys et /proc plutôt qu'en appelant vcgencmd : ce sont des fichiers,
+    donc la lecture ne coûte rien et ne peut pas rester bloquée sur un
+    sous-processus pendant qu'une image attend d'être poussée.
+
+    Rend None là où ces fichiers n'existent pas. Le flux se met au point sur un
+    portable, et un encart qui inventerait une température y serait pire que
+    pas d'encart du tout.
+    """
+    try:
+        degres = int(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000.0
+    except (OSError, ValueError):
+        return None
+    etat = {"degres": degres, "charge": 0.0, "debout": 0.0, "libre": 0}
+    try:
+        etat["charge"] = min(1.0, os.getloadavg()[0] / (os.cpu_count() or 4))
+    except OSError:
+        pass
+    try:
+        etat["debout"] = float(Path("/proc/uptime").read_text().split()[0])
+    except (OSError, ValueError, IndexError):
+        pass
+    try:
+        disque = os.statvfs(racine / "data")
+        etat["libre"] = disque.f_bavail * disque.f_frsize
+    except OSError:
+        pass
+    return etat
+
+
+def pose_machine(image: np.ndarray, etat: dict | None) -> None:
+    """L'encart machine, en haut à gauche, en face de l'horloge.
+
+    Une webcam qui tourne vingt-quatre heures sur vingt-quatre tient à une
+    chose : que la machine ne chauffe pas. Le dire à l'écran, c'est montrer
+    qu'on le surveille, et c'est aussi le seul moyen de s'en apercevoir sans
+    ouvrir un terminal.
+    """
+    if not etat:
+        return
+    largeur = image.shape[1]
+    echelle = largeur / 1600
+    degres = etat["degres"]
+    couleur = VERT if degres < TIEDE_C else (AMBRE if degres < CHAUD_C else ROUGE)
+    heures = etat["debout"] / 3600
+    debout = f"{heures / 24:.0f}d {heures % 24:02.0f}h" if heures >= 24 else f"{heures:.0f}h"
+    lignes = [("RASPBERRY PI 5", CYAN),
+              (f"{degres:.1f} C", couleur),
+              (f"LOAD {etat['charge'] * 100:.0f}%", BLANC),
+              (f"DISK {etat['libre'] / 1e9:.0f} GB", BLANC),
+              (f"UP {debout}", BLANC)]
+    pas = int(28 * echelle)
+    marge = int(14 * echelle)
+    sommet = int(RUBAN_H * echelle)
+    taille = 0.56 * echelle
+    large = max(cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] for t, _ in lignes)
+    panneau = image[sommet:sommet + pas * len(lignes) + marge, 0:large + 2 * marge]
+    if panneau.size:
+        panneau[:] = (panneau * 0.35).astype(np.uint8)
+    for i, (texte, teinte) in enumerate(lignes):
+        cv2.putText(image, texte, (marge, sommet + pas * (i + 1) - int(6 * echelle)),
+                    cv2.FONT_HERSHEY_SIMPLEX, taille, teinte, 2, cv2.LINE_AA)
+
+
+BONJOUR_S = 8.0
+# Le lever au sens où tout le monde l'entend : le bord haut du disque à
+# l'horizon, réfraction comprise. C'est la définition de la NOAA, elle ne doit
+# rien au cadrage de cette caméra-ci et vaudra pour la suivante.
+HORIZON = -0.833
+
+
+def pose_bonjour(image: np.ndarray, nom: str, age: float) -> None:
+    """« GOOD MORNING » au lever du soleil, en grand et en ambre.
+
+    Ambre et non vert : c'est la couleur de ce qu'on regarde à ce moment-là, et
+    le flux a déjà un vert, celui des prises.
+    """
+    if age < 0 or age > BONJOUR_S:
+        return
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    # Une apparition et une disparition d'une seconde : le mot reste lisible
+    # tout le milieu, au lieu de clignoter au passage.
+    force = min(1.0, age / 1.0, (BONJOUR_S - age) / 1.0)
+    calque = image.copy()
+    for i, (mot, taille) in enumerate((("GOOD MORNING", 1.5), (nom.upper() + " !", 2.4))):
+        echelle_mot = taille * echelle
+        epaisseur = max(2, int(5 * echelle))
+        (large, haut), _ = cv2.getTextSize(mot, cv2.FONT_HERSHEY_DUPLEX, echelle_mot, epaisseur)
+        x = (largeur - large) // 2
+        y = int(hauteur * 0.36) + i * int(110 * echelle) + haut // 2
+        cv2.putText(calque, mot, (x, y), cv2.FONT_HERSHEY_DUPLEX, echelle_mot,
+                    (0, 0, 0), epaisseur + max(3, int(7 * echelle)), cv2.LINE_AA)
+        cv2.putText(calque, mot, (x, y), cv2.FONT_HERSHEY_DUPLEX, echelle_mot,
+                    AMBRE, epaisseur, cv2.LINE_AA)
+    cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
+
+
 def pose_horloge(image: np.ndarray, quand: float, direct: bool = True) -> None:
     """L'heure qui tourne, en haut à droite, avec le point rouge des chaînes.
 
@@ -977,7 +1136,10 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True) -> None:
     echelle = largeur / 1600
     moment = datetime.fromtimestamp(quand, PARIS)
     lignes = [moment.strftime("%d %b %Y").upper(),
-              moment.strftime("%H:%M:%S ") + moment.strftime("%Z")]
+              # « PARIS » et non « CEST » : le fuseau dit au spectateur d'où
+              # vient l'heure, et personne ne convertit mentalement un sigle
+              # qui change de nom deux fois par an.
+              moment.strftime("%H:%M:%S") + " PARIS"]
     pas = int(34 * echelle)
     marge = int(14 * echelle)
     sommet = int(RUBAN_H * echelle)
@@ -1092,6 +1254,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # la première seconde du direct donnerait l'impression que rien ne marche.
     dernier_vu = origine
     dernier_mouvement = origine
+    plus_recent: float | None = None
+    attrape = origine - 1000.0
+    # Importé ici et pas en tête de fichier : c'est main() qui pose la racine
+    # du dépôt sur le chemin, et stream.py doit pouvoir être lancé comme un
+    # script depuis n'importe où.
+    from watcher.scene import solar_elevation
+    machine = etat_machine(racine)
+    hauteur_soleil: float | None = None
+    bonjour = origine - 10_000.0
+    nom_du_lieu = (cfg.get("camera") or {}).get("nom") or "Ventoux"
     dernier_ennui = origine
     rediff: tuple[dict, float] | None = None
     fin_rediff = origine
@@ -1107,6 +1279,33 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             images += 1
             if quand - relu >= 2.0:
                 vus = identifications(racine / "data" / "events.json", quand - TENUE_S - 60)
+                frais = max((v["t"] for v in vus), default=0.0)
+                if plus_recent is None:
+                    # Premier tour : l'historique est déjà plein de choses que
+                    # personne n'a vues passer en direct. Les fêter toutes au
+                    # démarrage ferait dire « good catch » à un flux qui vient
+                    # d'allumer. On note où on en est, et on ne fête que la
+                    # suite.
+                    plus_recent = frais
+                elif frais > plus_recent:
+                    plus_recent = frais
+                    attrape = quand
+                    if musique.felicitations:
+                        musique.dis(tirage.choice(musique.felicitations))
+                    log.info("Prise en direct : %s", next(
+                        (v["label"] for v in vus if v["t"] == frais), "?"))
+                machine = etat_machine(racine)
+                # Le soleil est calculé, pas lu : aucun service à interroger,
+                # aucune panne de réseau ne peut faire rater le lever.
+                haut = solar_elevation(datetime.fromtimestamp(quand, timezone.utc),
+                                       cfg["camera"]["lat"], cfg["camera"]["lon"])
+                if (hauteur_soleil is not None and hauteur_soleil < HORIZON <= haut
+                        and quand - bonjour > 12 * 3600):
+                    bonjour = quand
+                    if musique.matins:
+                        musique.dis(tirage.choice(musique.matins))
+                    log.info("Lever du soleil : bonjour %s", nom_du_lieu)
+                hauteur_soleil = haut
                 ruban = morceaux_ruban(lieu, lecture_du_ciel(racine / "data" / "view.json"))
                 trio = musique.trio()
                 relu = quand
@@ -1122,6 +1321,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # quelque chose à l'écran. Seule une vraie détection compte.
                 dernier_mouvement = quand
                 rediff = None
+            if quand - attrape <= ATTRAPE_S:
+                pose_attrape(image, quand - attrape)
             elif quand - dernier_vu > CREUX_S:
                 # Rien depuis deux minutes : on va chercher dans ce qu'on a
                 # déjà attrapé. Sans remise, pour ne pas remontrer le même
@@ -1147,10 +1348,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             toile = cadre(image, largeur, hauteur)
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser)
-            if musique.parle():
+            if musique.parle() and musique.dit_quoi() != "attrape":
                 pose_ennui(toile, "BOOOOORING", quand - origine)
             pose_ruban(toile, ruban, quand - origine)
             pose_horloge(toile, quand, direct=rediff is None)
+            pose_machine(toile, machine)
+            pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             pose_bande_basse(toile, bande_du_moment(quand - origine))
             # La musique en dernier : c'est elle qu'on vient écouter, et c'est
             # elle que la licence oblige à nommer.
@@ -1213,7 +1416,7 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     racine = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(racine))
-    from watcher.config import load_config  # noqa: E402
+    from watcher.config import load_config
 
     parseur = argparse.ArgumentParser(description=__doc__)
     parseur.add_argument("--sortie", default=None,

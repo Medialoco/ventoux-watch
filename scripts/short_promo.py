@@ -57,7 +57,12 @@ SORTIE_S = 3.4
 # là-bas garde intacte la trace de ce qui a réellement été publié.
 NOMS = {
     "Véhicule": "VEHICLE", "Voiture": "CAR", "Camion": "TRUCK", "Bus": "BUS",
-    "Piéton": "PEDESTRIAN", "Départ de feu": "WILDFIRE STARTING",
+    # Le pluriel aussi : la veille écrit « Piétons » quand ils sont deux, et
+    # un nom qui manque à cette table repart tel quel, en français, sur un
+    # Short dont tout le reste est en anglais.
+    "Piéton": "PEDESTRIAN", "Piétons": "PEDESTRIANS",
+    "Véhicules": "VEHICLES", "Voitures": "CARS", "Camions": "TRUCKS",
+    "Départ de feu": "WILDFIRE STARTING",
     "Incendie": "WILDFIRE", "Moto": "MOTORCYCLE", "Vélo": "BICYCLE",
     "Tracteur": "TRACTOR", "Voiture blanche": "WHITE CAR",
     "Voiture bleue": "BLUE CAR", "Voiture jaune": "YELLOW CAR",
@@ -175,6 +180,105 @@ def carte_erreur(fiche: dict) -> np.ndarray:
     return image
 
 
+def cartes_musique(racine: Path, combien: int, graine: int | None) -> list[np.ndarray]:
+    """Les pochettes, les noms, les licences. Le sujet, c'est le fonds.
+
+    Montrer les pochettes plutôt que d'écrire « musique libre » : une phrase se
+    promet, une pile de disques se constate.
+    """
+    dossier = racine / "data" / "musique"
+    fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
+    avec = [f for f in fiches.values() if f.get("pochette")
+            and (dossier / f["pochette"]).is_file()]
+    random.Random(graine).shuffle(avec)
+    cartes = []
+    for fiche in avec[:combien]:
+        image = np.zeros((HAUTEUR, LARGEUR, 3), np.uint8)
+        pochette = cv2.imread(str(dossier / fiche["pochette"]))
+        cote = LARGEUR - 140
+        haut = 520
+        if pochette is not None:
+            image[haut:haut + cote, 70:70 + cote] = cv2.resize(
+                pochette, (cote, cote), interpolation=cv2.INTER_AREA)
+        y = _ecrit(image, "NOW PLAYING", 330, 1.0, VERT, 2)
+        y = haut + cote + 120
+        y = _ecrit(image, fiche["auteur"], y, 1.5, BLANC, 4)
+        y = _ecrit(image, fiche["titre"], y + 30, 1.0, GRIS, 2)
+        _ecrit(image, fiche["licence"], y + 70, 1.1, CYAN, 3)
+        cartes.append(image)
+    return cartes
+
+
+def cartes_horloge(racine: Path) -> list[np.ndarray]:
+    """Le sujet est la durée : ce que c'est que de regarder sans fin."""
+    textes = [
+        ("24 HOURS A DAY", "7 DAYS A WEEK", "NOBODY WATCHING"),
+        ("MOST OF THE TIME", "NOTHING HAPPENS", "AT ALL"),
+        ("BY DAY", "SHORT TRACKS", "SOMETHING CHANGES"),
+        ("AT NIGHT", "LONG DJ SETS", "AN EMPTY ROAD"),
+    ]
+    cartes = []
+    for haut, milieu, bas in textes:
+        image = np.zeros((HAUTEUR, LARGEUR, 3), np.uint8)
+        y = _ecrit(image, haut, 700, 1.35, CYAN, 3)
+        y = _ecrit(image, milieu, y + 70, 1.9, BLANC, 5)
+        _ecrit(image, bas, y + 70, 1.35, GRIS, 3)
+        cartes.append(image)
+    ennui = np.zeros((HAUTEUR, LARGEUR, 3), np.uint8)
+    _ecrit(ennui, "BOOOOORING", 980, 2.1, AMBRE, 6)
+    _ecrit(ennui, "SAYS THE STREAM, OUT LOUD", 1180, 1.0, GRIS, 2)
+    cartes.append(ennui)
+    return cartes
+
+
+def cartes_lieu(racine: Path, combien: int, graine: int | None) -> list[np.ndarray]:
+    """Les prises justes, celles qu'un humain a confirmées."""
+    lignes = (racine / "data" / "reviewed.jsonl").read_text(encoding="utf-8").splitlines()
+    bonnes = []
+    for ligne in lignes:
+        if not ligne.strip():
+            continue
+        fiche = json.loads(ligne)
+        if fiche.get("verdict") != "accepted":
+            continue
+        photo = racine / str(fiche.get("photo") or "")
+        nom = str(fiche.get("truth") or fiche.get("guessed") or "")
+        if not nom or not photo.is_file():
+            continue
+        bonnes.append({"photo": photo, "nom": nom, "at": str(fiche.get("at") or "")})
+    tirage = random.Random(graine)
+    tirage.shuffle(bonnes)
+    vus: set[str] = set()
+    cartes = []
+    for fiche in bonnes:
+        if fiche["nom"] in vus:
+            continue
+        vus.add(fiche["nom"])
+        image = np.zeros((HAUTEUR, LARGEUR, 3), np.uint8)
+        photo = cv2.imread(str(fiche["photo"]))
+        y = _ecrit(image, "GOOD CATCH", 340, 1.4, VERT, 4)
+        if photo is not None:
+            cible_h = int(LARGEUR * photo.shape[0] / photo.shape[1])
+            image[y + 90:y + 90 + cible_h] = cv2.resize(
+                photo, (LARGEUR, cible_h), interpolation=cv2.INTER_CUBIC)
+            y = y + 90 + cible_h
+        nom = NOMS.get(fiche["nom"], fiche["nom"].upper())
+        _ecrit(image, nom, y + 150, 1.8, BLANC, 5)
+        cartes.append(image)
+        if len(cartes) >= combien:
+            break
+    return cartes
+
+
+def carte_titre(lignes: list[tuple[str, float, tuple[int, int, int]]]) -> np.ndarray:
+    image = np.zeros((HAUTEUR, LARGEUR, 3), np.uint8)
+    y = 640
+    for texte, taille, couleur in lignes:
+        y = _ecrit(image, texte, y + int(taille * 40), taille, couleur,
+                   3 if taille < 1.4 else 4)
+    return image
+
+
 def carte_intro() -> np.ndarray:
     image = np.zeros((HAUTEUR, LARGEUR, 3), np.uint8)
     y = _ecrit(image, "A MACHINE HAS BEEN WATCHING", 620, 1.25, BLANC, 3)
@@ -203,7 +307,8 @@ def _tremble(image: np.ndarray, force: int) -> np.ndarray:
     return cv2.warpAffine(image, matrice, (LARGEUR, HAUTEUR), borderMode=cv2.BORDER_REPLICATE)
 
 
-def bande_son(racine: Path, secondes: float, morceau: str | None) -> tuple[Path, dict] | None:
+def bande_son(racine: Path, secondes: float, morceau: str | None,
+              graine: int | None = None) -> tuple[Path, dict] | None:
     """Un morceau de la bibliothèque, et sa fiche pour le crédit."""
     dossier = racine / "data" / "musique"
     try:
@@ -215,18 +320,69 @@ def bande_son(racine: Path, secondes: float, morceau: str | None) -> tuple[Path,
              and (morceau is None or morceau.lower() in (f["auteur"] + f["titre"]).lower())]
     if not choix:
         return None
+    # Tiré au hasard et assez long, pas le premier de la liste : prendre le
+    # premier donnait de l'ambient à un Short qui annonce de la techno, et un
+    # morceau plus court que le montage laisserait la fin en silence.
+    random.Random(graine).shuffle(choix)
+    for nom, fiche in choix:
+        if (dossier / nom).stat().st_size / 16_000 >= secondes + 2:
+            return dossier / nom, fiche
     nom, fiche = choix[0]
     return dossier / nom, fiche
 
 
+def plan_du_sujet(racine: Path, sujet: str, combien: int,
+                  graine: int | None) -> list[tuple[np.ndarray, float]]:
+    """Les cartes d'un Short, ouverture et sortie comprises.
+
+    Quatre angles sur la même chose : ce que la machine rate, ce qu'elle
+    attrape, ce qu'on écoute pendant, et ce que c'est que de regarder sans fin.
+    Un seul Short qui dirait tout cela ne dirait rien.
+    """
+    if sujet == "erreurs":
+        fautes = erreurs(racine, combien, graine)
+        return ([(carte_intro(), INTRO_S)]
+                + [(carte_erreur(f), CARTE_S) for f in fautes]
+                + [(carte_sortie(), SORTIE_S)])
+    if sujet == "musique":
+        ouverture = carte_titre([("FREE TECHNO", 1.9, VERT), ("24/7", 1.9, VERT),
+                                 ("41 TRACKS", 1.1, BLANC),
+                                 ("CREATIVE COMMONS ONLY", 1.0, CYAN)])
+        fin = carte_titre([("EVERY ARTIST", 1.3, BLANC), ("NAMED ON SCREEN", 1.3, BLANC),
+                           ("WHILE THEY PLAY", 1.3, BLANC),
+                           ("LIVE FROM A MOUNTAIN", 1.1, CYAN)])
+        return ([(ouverture, INTRO_S)]
+                + [(c, CARTE_S + 0.5) for c in cartes_musique(racine, combien, graine)]
+                + [(fin, SORTIE_S)])
+    if sujet == "nuit":
+        ouverture = carte_titre([("ONE ROAD", 1.9, BLANC), ("ONE CAMERA", 1.9, BLANC),
+                                 ("NO PRESENTER", 1.1, GRIS)])
+        fin = carte_titre([("FREE TECHNO RADIO", 1.5, VERT), ("LIVE 24/7", 1.5, VERT),
+                           ("MONT VENTOUX", 1.0, CYAN)])
+        return ([(ouverture, INTRO_S)]
+                + [(c, CARTE_S + 0.4) for c in cartes_horloge(racine)]
+                + [(fin, SORTIE_S)])
+    if sujet == "lieu":
+        ouverture = carte_titre([("MONT SEREIN", 1.8, BLANC),
+                                 ("NORTH FACE OF MONT VENTOUX", 1.0, CYAN),
+                                 ("1389 m", 1.4, BLANC),
+                                 ("WATCHED FOR WILDFIRE SMOKE", 1.0, AMBRE)])
+        fin = carte_titre([("IT GETS THINGS RIGHT TOO", 1.2, BLANC),
+                           ("FREE TECHNO RADIO", 1.5, VERT), ("LIVE 24/7", 1.5, VERT)])
+        return ([(ouverture, INTRO_S)]
+                + [(c, CARTE_S) for c in cartes_lieu(racine, combien, graine)]
+                + [(fin, SORTIE_S)])
+    raise SystemExit(f"Sujet inconnu : {sujet}")
+
+
 def fabrique(racine: Path, sortie: Path, combien: int, morceau: str | None,
-             graine: int | None) -> int:
-    fautes = erreurs(racine, combien, graine)
-    if not fautes:
-        print("Aucune erreur relue avec photo et note traduisible.")
+             graine: int | None, sujet: str = "erreurs") -> int:
+    plan = plan_du_sujet(racine, sujet, combien, graine)
+    if len(plan) <= 2:
+        print(f"Rien à montrer pour « {sujet} ».")
         return 1
-    duree = INTRO_S + CARTE_S * len(fautes) + SORTIE_S
-    son = bande_son(racine, duree, morceau)
+    duree = sum(tenue for _, tenue in plan)
+    son = bande_son(racine, duree, morceau, graine)
     if son is None:
         print("Pas de musique dans data/musique.")
         return 1
@@ -236,9 +392,6 @@ def fabrique(racine: Path, sortie: Path, combien: int, morceau: str | None,
         brut = Path(dossier) / "images.mp4"
         ecrivain = cv2.VideoWriter(str(brut), cv2.VideoWriter_fourcc(*"mp4v"),
                                    IMAGES_PAR_S, (LARGEUR, HAUTEUR))
-        plan = ([(carte_intro(), INTRO_S)]
-                + [(carte_erreur(f), CARTE_S) for f in fautes]
-                + [(carte_sortie(), SORTIE_S)])
         for index, (carte, tenue) in enumerate(plan):
             for i in range(int(tenue * IMAGES_PAR_S)):
                 # Les trois premières images de chaque carte sautent d'un
@@ -266,7 +419,7 @@ def fabrique(racine: Path, sortie: Path, combien: int, morceau: str | None,
               f"{fiche['url']}\n")
     sortie.with_suffix(".credit.txt").write_text(credit, encoding="utf-8")
     poids = sortie.stat().st_size / 1_048_576
-    print(f"\n{sortie} · {duree:.0f} s · {poids:.1f} Mo · {len(fautes)} erreurs")
+    print(f"\n{sortie} · {duree:.0f} s · {poids:.1f} Mo · {len(plan) - 2} cartes")
     print(credit)
     return 0
 
@@ -276,9 +429,18 @@ def main(argv: list[str] | None = None) -> int:
     parseur.add_argument("--combien", type=int, default=11)
     parseur.add_argument("--morceau", default=None, help="filtre sur l'auteur ou le titre")
     parseur.add_argument("--graine", type=int, default=None)
-    parseur.add_argument("--sortie", default=str(ROOT / "data" / "short_promo.mp4"))
+    parseur.add_argument("--sujet", default="erreurs",
+                         choices=("erreurs", "musique", "nuit", "lieu", "tous"))
+    parseur.add_argument("--sortie", default=None)
     args = parseur.parse_args(argv)
-    return fabrique(ROOT, Path(args.sortie), args.combien, args.morceau, args.graine)
+    sujets = ("erreurs", "musique", "nuit", "lieu") if args.sujet == "tous" else (args.sujet,)
+    for sujet in sujets:
+        cible = Path(args.sortie) if args.sortie else ROOT / "data" / f"short_{sujet}.mp4"
+        print(f"\n=== {sujet} ===")
+        code = fabrique(ROOT, cible, args.combien, args.morceau, args.graine, sujet)
+        if code:
+            return code
+    return 0
 
 
 if __name__ == "__main__":
