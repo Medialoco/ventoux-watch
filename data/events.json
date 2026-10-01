@@ -2,6 +2,130 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T13-54-35Z-motion-120",
+      "t": "2026-10-01T13:54:35Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T13-54-35Z-motion-120.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2207,
+          "area_grow": 0.02,
+          "clipped": false,
+          "shade": 1.04,
+          "kept": 0.247,
+          "area_ratio": 0.00046,
+          "duration_s": 6.2,
+          "frames": 4,
+          "width_m": 4.2,
+          "height_m": 2.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.255,
+          "seen_as": []
+        },
+        "box": [
+          0.3922,
+          0.7917,
+          0.15,
+          0.1639
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T13-54-35Z-motion-120.jpg"
+    },
+    {
+      "id": "2026-10-01T13-47-50Z-motion-118",
+      "t": "2026-10-01T13:47:50Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T13-47-50Z-motion-118.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3615,
+          "area_grow": 6.3,
+          "clipped": false,
+          "shade": 0.796,
+          "kept": 0.409,
+          "area_ratio": 0.00301,
+          "duration_s": 13.2,
+          "frames": 12,
+          "width_m": 3.9,
+          "height_m": 4.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.102,
+          "seen_as": []
+        },
+        "box": [
+          0.075,
+          0.6889,
+          0.0984,
+          0.2028
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T13-47-50Z-motion-118.jpg"
+    },
+    {
+      "id": "2026-10-01T13-47-50Z-missed-119",
+      "t": "2026-10-01T13:47:50Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T13-47-50Z-missed-119.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 53 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.192,
+          "kept": 0.583,
+          "area_ratio": 0.00271,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 2.0,
+          "height_m": 0.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "tarmac",
+        "box": [
+          0.6344,
+          0.9639,
+          0.075,
+          0.0361
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T13-47-50Z-missed-119.jpg"
+    },
+    {
       "id": "2026-10-01T13-35-49Z-missed-117",
       "t": "2026-10-01T13:35:49Z",
       "type": "missed",
