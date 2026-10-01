@@ -37,9 +37,10 @@ function options(argv) {
 function sert(dossier) {
   return new Promise((pret) => {
     const serveur = createServer(async (demande, reponse) => {
-      const chemin = join(dossier, decodeURI(demande.url.split("?")[0]));
+      const voulu = decodeURI(demande.url.split("?")[0]);
+      const chemin = join(dossier, voulu.endsWith("/") ? voulu + "index.html" : voulu);
       try {
-        const corps = await readFile(chemin.endsWith("/") ? join(chemin, "index.html") : chemin);
+        const corps = await readFile(chemin);
         reponse.writeHead(200, { "content-type": TYPES[extname(chemin)] ?? "application/octet-stream" });
         reponse.end(corps);
       } catch { reponse.writeHead(404); reponse.end(); }
@@ -56,44 +57,58 @@ async function filme({ secondes, fps, sortie }) {
     executablePath: CHROME,
     // « new » et non l'ancien sans tête : seul celui-ci a un WebGL complet, et
     // sans lui la page se rabat sur rien et la scène reste noire.
-    headless: "new",
-    args: ["--enable-webgl", "--use-gl=angle", "--hide-scrollbars"],
+    headless: true,
+    args: ["--hide-scrollbars", "--enable-unsafe-swiftshader", "--no-sandbox"],
   });
   try {
     const page = await navigateur.newPage();
     await page.setViewport({ width: LARGEUR, height: HAUTEUR, deviceScaleFactor: 1 });
-    await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle2", timeout: 90000 });
+    await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.waitForSelector("#relief canvas", { timeout: 60000 });
     // La scène prend toute la fenêtre et le reste de la page disparaît : on
-    // filme le modèle, pas la page qui le contient.
-    await page.evaluate((h) => {
+    // filme le modèle, pas la page qui le contient. La largeur est posée sur
+    // « #relief » et non sur l'étage au-dessus, parce que c'est elle que le
+    // rendu lit pour se dimensionner — il se taille toujours en seize-neuvièmes
+    // de ce qu'on lui donne, ce qui tombe bien.
+    await page.evaluate((l) => {
       const scene = document.getElementById("relief-stage") || document.getElementById("relief");
       document.body.prepend(scene);
       for (const noeud of [...document.body.children]) if (noeud !== scene) noeud.remove();
       Object.assign(document.body.style, { margin: "0", background: "#000", overflow: "hidden" });
-      Object.assign(scene.style, { position: "fixed", inset: "0", width: "100vw", height: h + "px" });
       for (const bouton of scene.querySelectorAll("button")) bouton.style.display = "none";
+      const hote = document.getElementById("relief");
+      Object.assign(hote.style, { width: l + "px", maxWidth: "none", margin: "0" });
       window.dispatchEvent(new Event("resize"));
-    }, HAUTEUR);
+    }, LARGEUR);
     await new Promise((p) => setTimeout(p, 2500));
+    const toile = await page.$("#relief canvas");
 
     const images = Math.round(secondes * fps);
-    const milieu = { x: LARGEUR / 2, y: HAUTEUR / 2 };
-    // Réveiller les contrôles : la page les laisse endormis pour ne pas voler
-    // la molette au lecteur, et un canevas endormi ne tourne pas.
-    await page.mouse.click(milieu.x, milieu.y);
-    await page.mouse.move(milieu.x, milieu.y);
+    const milieu = HAUTEUR / 2;
+    // Réveiller d'abord, tirer ensuite, en deux gestes séparés. La page laisse
+    // les contrôles endormis pour ne pas voler la molette au lecteur, et le
+    // clic qui les réveille leur arrive alors qu'ils n'écoutent pas encore :
+    // tout glissement commencé dans ce même geste est perdu.
+    await page.mouse.click(LARGEUR / 2, milieu);
+    await new Promise((p) => setTimeout(p, 300));
+
+    // Un balayage qui va et revient, et non un tour complet. Les contrôles
+    // font tourner la caméra autour d'un point situé sept cents mètres devant
+    // elle : passé le quart de tour, elle se retrouve sous la montagne, et on
+    // filme des polygones flottant dans le ciel. C'est ce qu'a donné le
+    // premier essai.
+    //
+    // Une sinusoïde, donc : elle revient exactement à son point de départ, ce
+    // qui fait boucler le film sans raccord, et elle ralentit aux extrémités
+    // au lieu de buter.
+    const AMPLEUR = 230;
+    const centre = LARGEUR / 2;
+    await page.mouse.move(centre, milieu);
     await page.mouse.down();
-    // Un tour complet en « images » pas, donc la dernière image rejoint la
-    // première : le film boucle sans raccord visible.
-    const pas = LARGEUR / images;
     for (let i = 0; i < images; i += 1) {
-      await page.mouse.move(milieu.x + pas, milieu.y, { steps: 1 });
-      // La souris revient au centre sans bouton relâché n'aurait pas de sens ;
-      // on garde donc le curseur qui dérive et on le ramène d'un cran.
-      await page.mouse.move(milieu.x, milieu.y, { steps: 1 });
-      await page.mouse.move(milieu.x + pas, milieu.y, { steps: 1 });
-      await page.screenshot({ path: join(atelier, String(i).padStart(5, "0") + ".png") });
+      await page.mouse.move(centre + AMPLEUR * Math.sin((2 * Math.PI * i) / images),
+                            milieu, { steps: 1 });
+      await toile.screenshot({ path: join(atelier, String(i).padStart(5, "0") + ".png") });
       if (i % 60 === 0) process.stdout.write(`  ${i}/${images}\n`);
     }
     await page.mouse.up();

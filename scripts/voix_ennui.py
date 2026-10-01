@@ -28,6 +28,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import numpy as np
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
@@ -54,6 +56,56 @@ REPLIQUES = [
     ("matin", "Boing", "Goooood morning Ventoux!"),
     ("matin", "Bubbles", "Goooood morning Ventoux!"),
 ]
+
+
+# Les rapports de fréquence d'une cloche, qui n'ont rien d'harmonique : c'est
+# justement ce qui fait qu'une cloche sonne comme une cloche et pas comme une
+# flûte. Le « hum » en dessous de la fondamentale, la tierce mineure au-dessus,
+# puis la quinte, l'octave et ce qui traîne plus haut.
+PARTIELS = [(0.56, 0.9, 2.2), (0.92, 0.6, 1.8), (1.00, 1.0, 1.6), (1.19, 0.5, 1.1),
+            (1.71, 0.35, 0.8), (2.00, 0.3, 0.7), (2.74, 0.2, 0.45), (3.76, 0.12, 0.3)]
+# Un sol aigu. Plus bas, la cloche pèse et annonce un malheur ; plus haut, elle
+# tinte comme une notification de téléphone.
+CLOCHE_HZ = 784.0
+
+
+def cloche(duree: float = 1.9, hauteur: float = CLOCHE_HZ) -> np.ndarray:
+    """Une cloche, fabriquée ici. PCM entier signé, deux voies.
+
+    Faite et non trouvée : c'est trois lignes d'arithmétique, et le premier
+    octobre au matin un direct est tombé parce qu'un son venait d'ailleurs.
+    Celui-ci n'appartient à personne.
+
+    Chaque partiel s'éteint à son rythme — les aigus d'abord, le bourdon en
+    dernier. Une décroissance unique pour tous donnerait un accord d'orgue qu'on
+    coupe, pas une cloche qu'on frappe.
+    """
+    t = np.arange(int(duree * ECHANTILLONS_S), dtype=np.float32) / ECHANTILLONS_S
+    onde = np.zeros_like(t)
+    for rapport, poids, tenue in PARTIELS:
+        onde += poids * np.sin(2 * np.pi * hauteur * rapport * t) * np.exp(-t / tenue)
+    # Une attaque de trois millisecondes : sans elle le premier échantillon
+    # saute de zéro à pleine amplitude, et ce saut s'entend comme un clic.
+    attaque = min(len(onde), int(0.003 * ECHANTILLONS_S))
+    onde[:attaque] *= np.linspace(0.0, 1.0, attaque, dtype=np.float32)
+    onde *= 0.55 / max(float(np.abs(onde).max()), 1e-6)
+    return np.repeat((onde * 32767).astype(np.int16), VOIES)
+
+
+def _mele(cloche_pcm: np.ndarray, voix: bytes, retard_s: float) -> bytes:
+    """Pose la voix sur la cloche, un peu après le coup.
+
+    Ensemble dans un seul fichier plutôt qu'enchaînés par la diffusion : le
+    mélangeur du flux ne tient qu'une réplique à la fois, et lui en faire tenir
+    deux pour une plaisanterie serait beaucoup de risque pour peu de chose.
+    """
+    debut = int(retard_s * ECHANTILLONS_S) * VOIES
+    dessus = np.frombuffer(voix, np.int16)
+    total = max(len(cloche_pcm), debut + len(dessus))
+    melange = np.zeros(total, np.int32)
+    melange[:len(cloche_pcm)] += cloche_pcm
+    melange[debut:debut + len(dessus)] += dessus
+    return np.clip(melange, -32768, 32767).astype(np.int16).tobytes()
 
 
 def _nom(voix: str, texte: str) -> str:
@@ -84,6 +136,11 @@ def enregistre(dossier: Path, ecoute: bool = False) -> int:
     for quand, voix, texte in REPLIQUES:
         cible = dossier / _nom(f"{quand}-{voix}", texte)
         duree = grave(voix, texte, cible)
+        if quand == "attrape":
+            # La cloche d'abord, la voix dans sa résonance. L'inverse ferait
+            # une annonce suivie d'un bruit ; là, c'est un sourire.
+            cible.write_bytes(_mele(cloche(), cible.read_bytes(), 0.42))
+            duree = cible.stat().st_size / (ECHANTILLONS_S * VOIES * 2)
         fiches.append({"fichier": cible.name, "texte": texte, "voix": voix,
                        "quand": quand, "duree": round(duree, 3)})
         print(f"  {duree:4.1f} s  {quand:8s} {voix:10s} « {texte} »")
@@ -91,6 +148,16 @@ def enregistre(dossier: Path, ecoute: bool = False) -> int:
             subprocess.run(["ffplay", "-hide_banner", "-loglevel", "error", "-autoexit",
                             "-f", "s16le", "-ar", str(ECHANTILLONS_S), "-ac", str(VOIES),
                             str(cible)], check=False)
+    # Et la cloche seule, deux fois sur six environ : une prise sans commentaire
+    # est plus légère qu'une prise commentée, et c'est ce qu'on cherche.
+    for nom, hauteur in (("attrape_cloche", CLOCHE_HZ), ("attrape_cloche_haute", CLOCHE_HZ * 1.5)):
+        seule = dossier / f"{nom}.raw"
+        seule.write_bytes(cloche(hauteur=hauteur).tobytes())
+        duree = seule.stat().st_size / (ECHANTILLONS_S * VOIES * 2)
+        fiches.append({"fichier": seule.name, "texte": "(cloche)", "voix": "maison",
+                       "quand": "attrape", "duree": round(duree, 3)})
+        print(f"  {duree:4.1f} s  attrape  maison     « cloche {hauteur:.0f} Hz »")
+
     (dossier / "voix.json").write_text(
         json.dumps(fiches, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"\n{len(fiches)} répliques dans {dossier}")
