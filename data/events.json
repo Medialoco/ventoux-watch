@@ -2,6 +2,91 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T14-54-27Z-missed-133",
+      "t": "2026-10-01T14:54:27Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T14-54-27Z-missed-133.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 39 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.013,
+          "kept": 0.083,
+          "area_ratio": 0.00102,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 1.1,
+          "height_m": 0.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "tarmac",
+        "box": [
+          0.7656,
+          0.975,
+          0.0406,
+          0.025
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T14-54-27Z-missed-133.jpg"
+    },
+    {
+      "id": "2026-10-01T14-50-01Z-motion-132",
+      "t": "2026-10-01T14:50:01Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T14-50-01Z-motion-132.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1038,
+          "area_grow": 1.13,
+          "clipped": false,
+          "shade": 0.856,
+          "kept": 0.267,
+          "area_ratio": 0.00066,
+          "duration_s": 15.0,
+          "frames": 18,
+          "width_m": 1.1,
+          "height_m": 1.6,
+          "width_named_m": 0.9,
+          "height_named_m": 0.6,
+          "rise_ms": 0.0,
+          "drift_rate": 0.295,
+          "seen_as": [
+            "car 0.26 sur 0%"
+          ]
+        },
+        "box": [
+          0.6734,
+          0.7167,
+          0.0219,
+          0.0556
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T14-50-01Z-motion-132.jpg"
+    },
+    {
       "id": "2026-10-01T14-34-28Z-motion-129",
       "t": "2026-10-01T14:35:30Z",
       "type": "vehicle",
@@ -1899,7 +1984,8 @@
         "count": 2,
         "since": "2026-10-01T11:20:18Z"
       },
-      "closeup": "data/closeups/2026-10-01T11-20-18Z-vehicle-73.jpg"
+      "closeup": "data/closeups/2026-10-01T11-20-18Z-vehicle-73.jpg",
+      "review": "accepted"
     },
     {
       "id": "2026-10-01T11-20-18Z-missed-74",
@@ -2241,7 +2327,8 @@
         "count": 2,
         "since": "2026-10-01T10:29:58Z"
       },
-      "closeup": "data/closeups/2026-10-01T10-29-58Z-motion-65.jpg"
+      "closeup": "data/closeups/2026-10-01T10-29-58Z-motion-65.jpg",
+      "review": "accepted"
     },
     {
       "id": "2026-10-01T10-21-37Z-vehicle-63",
@@ -2285,7 +2372,8 @@
           0.0988
         ]
       },
-      "closeup": "data/closeups/2026-10-01T10-21-37Z-vehicle-63.jpg"
+      "closeup": "data/closeups/2026-10-01T10-21-37Z-vehicle-63.jpg",
+      "review": "accepted"
     },
     {
       "id": "2026-10-01T10-21-37Z-missed-64",
@@ -2371,7 +2459,8 @@
           0.1409
         ]
       },
-      "closeup": "data/closeups/2026-10-01T10-13-41Z-vehicle-62.jpg"
+      "closeup": "data/closeups/2026-10-01T10-13-41Z-vehicle-62.jpg",
+      "review": "accepted"
     },
     {
       "id": "2026-10-01T10-12-21Z-motion-60",
@@ -2416,7 +2505,8 @@
         "count": 2,
         "since": "2026-10-01T10:12:21Z"
       },
-      "closeup": "data/closeups/2026-10-01T10-12-21Z-motion-60.jpg"
+      "closeup": "data/closeups/2026-10-01T10-12-21Z-motion-60.jpg",
+      "review": "accepted"
     },
     {
       "id": "2026-10-01T10-03-25Z-missed-59",
