@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import os
 import random
 import subprocess
@@ -301,6 +302,7 @@ class Musique:
         self.fiches: dict[str, dict] = {}
         self.voix = b""
         self.voix_dit = ""
+        self.energie = 0.0
         self._verrou = threading.Lock()
         self.repliques = repliques(self.racine / "data" / "voix", "ennui")
         self.felicitations = repliques(self.racine / "data" / "voix", "attrape")
@@ -384,7 +386,34 @@ class Musique:
             if self.process is not None and self.process.stdout is not None:
                 morceau += self.process.stdout.read(octets - len(morceau))
         self.octets += octets
-        return self._avec_la_voix(morceau.ljust(octets, b"\0"))
+        servi = self._avec_la_voix(morceau.ljust(octets, b"\0"))
+        self._mesure(servi)
+        return servi
+
+    def _mesure(self, morceau: bytes) -> None:
+        """Garde l'énergie de ce qu'on vient de servir, pour ce qui danse dessus.
+
+        Mesurée ici et nulle part ailleurs : c'est le seul endroit du programme
+        qui tient les échantillons réellement envoyés. Un calcul fait à côté,
+        sur le fichier, danserait sur ce que la musique sera dans deux secondes.
+
+        Un échantillon sur huit suffit pour une moyenne quadratique — on ne
+        cherche pas une mesure d'ingénieur du son, seulement de quoi savoir si
+        ça bouge.
+        """
+        echantillons = np.frombuffer(morceau, np.int16)[::8]
+        if echantillons.size == 0:
+            return
+        niveau = float(np.sqrt(np.mean(echantillons.astype(np.float32) ** 2))) / 32768.0
+        with self._verrou:
+            # Lissé : sans ça les danseurs clignoteraient au rythme des silences
+            # entre deux coups de grosse caisse, ce qui n'est pas danser.
+            self.energie = 0.82 * self.energie + 0.18 * niveau
+
+    def pouls(self) -> float:
+        """L'énergie du son servi, de 0 à 1 environ."""
+        with self._verrou:
+            return self.energie
 
     def _avec_la_voix(self, morceau: bytes) -> bytes:
         """Baisse la musique et pose la voix par-dessus, le temps qu'elle dure.
@@ -952,6 +981,89 @@ def pose_bande_basse(image: np.ndarray, texte: str) -> None:
 
 ATTRAPE_S = 1.6
 
+# Des fractions de la pleine échelle du son, soit environ -18 dB et -21 dB.
+# Une mesure du signal, pas un réglage pour cette caméra : la même valeur
+# vaudra sur la suivante, avec la même bibliothèque de musique.
+DANSE_SEUIL = 0.13
+DANSE_ARRET = 0.09
+DANSE_VOILE = 0.5
+# Trois pas par seconde à pleine énergie : c'est à peu près cent quatre-vingts
+# battements par minute, le haut de ce que joue la sélection.
+DANSE_PAS_S = 3.0
+
+
+def _danseur(calque: np.ndarray, x: int, sol: int, taille: float,
+             phase: float, couleur: tuple[int, int, int]) -> None:
+    """Un bonhomme en tubes, volontairement décousu.
+
+    Les membres sont posés un peu à côté des articulations plutôt que soudés
+    dessus : un pantin bien assemblé a l'air d'un schéma, un pantin désarticulé
+    a l'air de danser. C'est le seul endroit du flux où l'approximation est le
+    but et non un défaut.
+    """
+    tube = max(2, int(taille * 0.045))
+    corps = taille * 0.46
+    hanche = (x, int(sol - corps))
+    epaule = (x + int(math.sin(phase) * taille * 0.07), int(sol - corps - taille * 0.3))
+    tete = int(taille * 0.09)
+
+    # Chaque trait est doublé d'un liseré sombre : le blanc seul s'évanouit sur
+    # un ciel de brouillard, et c'est le fond qu'on a la moitié du temps ici.
+    ourlet = tube + max(2, tube // 2)
+
+    def trait(a, b):
+        cv2.line(calque, a, b, (0, 0, 0), ourlet, cv2.LINE_AA)
+        cv2.line(calque, a, b, couleur, tube, cv2.LINE_AA)
+
+    def membre(depuis, angle, longueur, decalage):
+        bout = (int(depuis[0] + math.sin(angle) * longueur),
+                int(depuis[1] + math.cos(angle) * longueur))
+        trait((depuis[0] + decalage, depuis[1] + decalage), bout)
+        cv2.circle(calque, bout, tube // 2 + 1, couleur, -1, cv2.LINE_AA)
+        return bout
+
+    trait(hanche, epaule)
+    cv2.circle(calque, (epaule[0], epaule[1] - tete), tete, (0, 0, 0), ourlet, cv2.LINE_AA)
+    cv2.circle(calque, (epaule[0], epaule[1] - tete), tete, couleur, tube, cv2.LINE_AA)
+    ecart = max(1, tube)
+    # L'angle se compte depuis le bas : zéro descend, π monte. Les bras partent
+    # donc vers le haut et les jambes vers le sol, sans quoi le pantin marche
+    # sur les mains — ce qu'il a fait au premier essai.
+    coude_g = membre(epaule, 2.2 + math.sin(phase) * 0.8, taille * 0.22, -ecart)
+    membre(coude_g, 2.4 + math.sin(phase * 2 + 1) * 1.1, taille * 0.2, ecart)
+    coude_d = membre(epaule, -2.2 + math.sin(phase + 2) * 0.8, taille * 0.22, ecart)
+    membre(coude_d, -2.4 + math.sin(phase * 2) * 1.1, taille * 0.2, -ecart)
+    genou_g = membre(hanche, 0.35 + math.sin(phase + 1) * 0.45, taille * 0.26, ecart)
+    membre(genou_g, 0.2 + math.sin(phase * 2 + 2) * 0.5, taille * 0.24, -ecart)
+    genou_d = membre(hanche, -0.35 + math.sin(phase + 3) * 0.45, taille * 0.26, -ecart)
+    membre(genou_d, -0.2 + math.sin(phase * 2 + 4) * 0.5, taille * 0.24, ecart)
+
+
+def pose_danseurs(image: np.ndarray, seconde: float, energie: float) -> None:
+    """Des pantins dans les coins bas de la vue, quand la musique pousse.
+
+    Dans les coins et translucides : le flux existe pour regarder une montagne,
+    et rien de ce qu'on ajoute pour le plaisir n'a le droit de se mettre devant.
+    Ils sont posés sur l'image de la caméra et non sur la toile, donc ils
+    restent dans la fenêtre, du bon côté des bandes.
+    """
+    if energie < DANSE_ARRET:
+        return
+    hauteur, largeur = image.shape[:2]
+    # Entre le seuil d'arrêt et celui d'entrée, ils s'effacent au lieu de
+    # disparaître d'un coup : une coupure franche se verrait plus qu'eux.
+    force = min(1.0, (energie - DANSE_ARRET) / (DANSE_SEUIL - DANSE_ARRET))
+    taille = hauteur * 0.22
+    sol = int(hauteur * 0.93)
+    marge = int(largeur * 0.07)
+    # La cadence suit l'énergie : mou quand c'est calme, pressé quand ça tape.
+    phase = seconde * DANSE_PAS_S * min(1.6, 0.5 + energie * 4)
+    calque = image.copy()
+    for i, x in enumerate((marge, largeur - marge)):
+        _danseur(calque, x, sol, taille, phase + i * 2.1, BLANC)
+    voile = DANSE_VOILE * force
+    cv2.addWeighted(calque, voile, image, 1.0 - voile, 0.0, dst=image)
+
 
 def pose_attrape(image: np.ndarray, age: float) -> None:
     """« GOOD CATCH » en vert, avec un éclair qui retombe.
@@ -1321,8 +1433,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # quelque chose à l'écran. Seule une vraie détection compte.
                 dernier_mouvement = quand
                 rediff = None
-            if quand - attrape <= ATTRAPE_S:
-                pose_attrape(image, quand - attrape)
             elif quand - dernier_vu > CREUX_S:
                 # Rien depuis deux minutes : on va chercher dans ce qu'on a
                 # déjà attrapé. Sans remise, pour ne pas remontrer le même
@@ -1333,6 +1443,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         tirage.shuffle(reste)
                     rediff = (reste.pop(), quand) if reste else None
                     dernier_vu = quand if rediff is None else dernier_vu
+            if quand - attrape <= ATTRAPE_S:
+                pose_attrape(image, quand - attrape)
+            # Les danseurs appartiennent à la vue, pas aux bandes : ils sont
+            # posés sur l'image de la caméra, avant qu'elle entre dans sa
+            # fenêtre. Et après les rectangles, pour qu'une détection ne passe
+            # jamais derrière un pantin.
+            pose_danseurs(image, quand - origine, musique.pouls())
             if (musique.repliques and quand - dernier_mouvement > ENNUI_S
                     and quand - dernier_ennui > ENNUI_S):
                 musique.dis(tirage.choice(musique.repliques))

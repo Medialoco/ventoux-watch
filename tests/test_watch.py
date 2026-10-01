@@ -2715,6 +2715,62 @@ class DiffusionTests(unittest.TestCase):
         self.assertLess(float(tard.mean()), float(debut.mean()))
         self.assertTrue(np.array_equal(fini, fond))
 
+    def test_the_replay_branch_still_hangs_off_the_drawing(self):
+        """Le « elif » des rediffusions doit suivre « dessine », rien d'autre.
+
+        Glisser une ligne entre les deux rend le fichier parfaitement valide et
+        change tout : la rediffusion se déclenche alors sur l'absence d'un
+        effet à l'écran au lieu de l'absence d'une détection. C'est arrivé.
+        """
+        lignes = inspect.getsource(stream.diffuse).splitlines()
+        [i] = [i for i, l in enumerate(lignes) if l.strip().startswith("if dessine(")]
+        [j] = [j for j, l in enumerate(lignes) if l.strip().startswith("elif quand - dernier_vu")]
+        entre = [l for l in lignes[i + 1:j] if l.strip() and not l.strip().startswith("#")]
+        retrait = len(lignes[i]) - len(lignes[i].lstrip())
+        self.assertTrue(all(len(l) - len(l.lstrip()) > retrait for l in entre), entre)
+
+    def test_the_dancers_wait_for_the_music_to_push(self):
+        """Pas de pantins sur un morceau calme, et une entrée en fondu."""
+        self.assertLess(stream.DANSE_ARRET, stream.DANSE_SEUIL)
+        fond = np.full((400, 700, 3), 70, np.uint8)
+        calme = fond.copy()
+        stream.pose_danseurs(calme, 3.0, stream.DANSE_ARRET - 0.01)
+        self.assertTrue(np.array_equal(calme, fond))
+
+        entre = fond.copy()
+        stream.pose_danseurs(entre, 3.0, (stream.DANSE_ARRET + stream.DANSE_SEUIL) / 2)
+        fort = fond.copy()
+        stream.pose_danseurs(fort, 3.0, stream.DANSE_SEUIL + 0.2)
+        ecart = lambda im: float(np.abs(im.astype(int) - fond).mean())
+        self.assertGreater(ecart(entre), 0.0)
+        self.assertGreater(ecart(fort), ecart(entre))
+
+    def test_the_dancers_stay_in_the_corners_of_the_view(self):
+        """Le milieu de l'image appartient à la montagne, pas aux pantins."""
+        fond = np.full((400, 700, 3), 70, np.uint8)
+        dessus = fond.copy()
+        stream.pose_danseurs(dessus, 3.0, 0.3)
+        milieu = dessus[:, 230:470]
+        self.assertTrue(np.array_equal(milieu, fond[:, 230:470]))
+
+    def test_the_beat_is_measured_on_the_samples_actually_served(self):
+        """L'énergie vient du son servi, sinon elle danse deux secondes avant."""
+        musique = stream.Musique.__new__(stream.Musique)
+        musique._verrou = threading.Lock()
+        musique.energie = 0.0
+        silence = np.zeros(4000, np.int16).tobytes()
+        fort = (np.ones(4000, np.int16) * 16000).tobytes()
+
+        for _ in range(60):
+            musique._mesure(fort)
+        self.assertGreater(musique.pouls(), stream.DANSE_SEUIL)
+        for _ in range(60):
+            musique._mesure(silence)
+        self.assertLess(musique.pouls(), stream.DANSE_ARRET)
+
+        source = inspect.getsource(stream.Musique.tranche)
+        self.assertIn("self._mesure(servi)", source)
+
     def test_the_machine_panel_colours_the_heat_on_the_chip_s_own_limits(self):
         """Vert, ambre, rouge : les seuils sont ceux du Pi, pas un goût à moi."""
         self.assertLess(stream.TIEDE_C, stream.CHAUD_C)
