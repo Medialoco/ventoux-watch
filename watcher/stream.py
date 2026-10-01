@@ -1565,13 +1565,25 @@ def _danseur(calque: np.ndarray, x: int, sol: int, taille: float,
     membre(genou_d, -0.2 + math.sin(phase * 2 + 4) * 0.5, taille * 0.24, ecart)
 
 
-def pose_danseurs(image: np.ndarray, seconde: float, energie: float) -> None:
+def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
+                  sol: float = 0.93, marge: float = 0.10,
+                  voile: float = DANSE_VOILE, haut: float = 0.22) -> None:
     """Des pantins dans les coins bas de la vue, quand la musique pousse.
 
     Dans les coins et translucides : le flux existe pour regarder une montagne,
     et rien de ce qu'on ajoute pour le plaisir n'a le droit de se mettre devant.
     Ils sont posés sur l'image de la caméra et non sur la toile, donc ils
     restent dans la fenêtre, du bon côté des bandes.
+
+    Le sol, la marge, le voile et la taille se règlent parce que la même paire
+    doit tenir dans deux cadres très différents. Sur un Short, l'application
+    recouvre le bas de l'écran de son titre et le bord droit de ses boutons :
+    des pantins posés aux valeurs du direct y danseraient derrière l'interface,
+    c'est-à-dire nulle part. Et leur taille se compte en hauteur, donc un cadre
+    debout les grossit par rapport à sa largeur jusqu'à ce que les bras sortent
+    — d'où le réglage, qui n'est pas un goût mais une géométrie.
+
+    Les valeurs par défaut sont celles de l'antenne, qui ne bouge pas.
     """
     if energie < DANSE_ARRET:
         return
@@ -1579,20 +1591,26 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float) -> None:
     # Entre le seuil d'arrêt et celui d'entrée, ils s'effacent au lieu de
     # disparaître d'un coup : une coupure franche se verrait plus qu'eux.
     force = min(1.0, (energie - DANSE_ARRET) / (DANSE_SEUIL - DANSE_ARRET))
-    taille = hauteur * 0.22
-    sol = int(hauteur * 0.93)
+    taille = hauteur * haut
+    # Jambe tendue, le pied descend quatre centièmes de la taille sous la
+    # hanche, et le liseré sombre déborde encore du trait. « Sol » désigne donc
+    # le pixel le plus bas du pantin et non la hauteur de ses hanches : sans
+    # cela la garantie donnée à l'appelant est fausse d'une trentaine de pixels,
+    # ce qui est précisément la largeur de bande qu'on essaie d'éviter.
+    tube = max(2, int(taille * 0.045))
+    pied = int(hauteur * sol - taille * 0.04 - (tube + max(2, tube // 2)) / 2)
     # Un dixième de la largeur, et non un quatorzième : bras tendu, le pantin
     # atteint six centièmes de la largeur depuis son axe, et à sept il sortait
     # du cadre une fois sur trois — une main coupée par le bord ne se lit pas
     # comme un parti pris, elle se lit comme un bogue.
-    marge = int(largeur * 0.10)
+    bord = int(largeur * marge)
     # La cadence suit l'énergie : mou quand c'est calme, pressé quand ça tape.
     phase = seconde * DANSE_PAS_S * min(1.6, 0.5 + energie * 4)
     calque = image.copy()
-    for i, x in enumerate((marge, largeur - marge)):
-        _danseur(calque, x, sol, taille, phase + i * 2.1, BLANC)
-    voile = DANSE_VOILE * force
-    cv2.addWeighted(calque, voile, image, 1.0 - voile, 0.0, dst=image)
+    for i, x in enumerate((bord, largeur - bord)):
+        _danseur(calque, x, pied, taille, phase + i * 2.1, BLANC)
+    opacite = voile * force
+    cv2.addWeighted(calque, opacite, image, 1.0 - opacite, 0.0, dst=image)
 
 
 # Les ciels où le soleil ne passe pas. « Peu nuageux » n'en est pas un.

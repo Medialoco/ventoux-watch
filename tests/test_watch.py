@@ -3503,3 +3503,42 @@ class DescriptionDeChaine(unittest.TestCase):
         texte = description(self.CREDITS).lower()
         self.assertIn("not a monitoring service", texte)
         self.assertNotIn("fire", texte)
+
+
+class PantinsAilleurs(unittest.TestCase):
+    """Les deux danseurs, quand ils sortent du cadre de l'antenne."""
+
+    def _ou_dansent_ils(self, seconde: float = 4.0, **reglages):
+        from watcher.stream import pose_danseurs
+        image = np.zeros((1920, 1080, 3), np.uint8)
+        pose_danseurs(image, seconde, 0.20, **reglages)
+        dessine = np.argwhere(image.any(axis=2))
+        self.assertTrue(dessine.size, "rien n'a été dessiné")
+        return dessine[:, 0].max(), dessine[:, 1].max()
+
+    def test_the_dancers_stand_on_the_floor_they_are_given(self):
+        """Sur un Short, le bas de l'écran appartient à l'application.
+
+        Le titre de la vidéo et le nom de la chaîne couvrent le dernier
+        cinquième, et les boutons une colonne à droite : aux valeurs de
+        l'antenne les pantins dansent derrière l'interface, donc nulle part.
+        """
+        from scripts.short_danse import DANSE_HAUT, DANSE_MARGE, DANSE_SOL
+        pire_bas = pire_droite = 0
+        for pas in range(40):
+            bas, droite = self._ou_dansent_ils(
+                seconde=pas * 0.13, sol=DANSE_SOL, marge=DANSE_MARGE,
+                haut=DANSE_HAUT)
+            pire_bas, pire_droite = max(pire_bas, bas), max(pire_droite, droite)
+        self.assertLessEqual(pire_bas, 1920 * 0.80)
+        self.assertLess(pire_droite, 1080 * 0.85)
+        bas_antenne, _ = self._ou_dansent_ils()
+        self.assertGreater(bas_antenne, pire_bas)
+
+    def test_the_stream_keeps_its_own_placing(self):
+        """Les réglages par défaut sont ceux du direct, qui ne bouge pas."""
+        import inspect
+        from watcher.stream import pose_danseurs
+        defauts = inspect.signature(pose_danseurs).parameters
+        self.assertEqual(defauts["sol"].default, 0.93)
+        self.assertEqual(defauts["marge"].default, 0.10)
