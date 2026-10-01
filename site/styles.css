@@ -403,6 +403,9 @@ h2 {
 tr.wrong { opacity: 0.45; }
 
 tr.wrong .event { text-decoration: line-through; }
+/* Le nom barré, mais pas ce qu'il y avait vraiment : barrer la vérité avec
+   l'erreur rendrait la ligne illisible et la correction inutile. */
+tr.wrong .event .sub { text-decoration: none; display: block; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
 

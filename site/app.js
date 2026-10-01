@@ -853,8 +853,12 @@ function render() {
     // ferait une belle page et un mauvais registre : on ne peut pas viser le
     // zéro faute en effaçant les fautes, et c'est de celles-là qu'on apprend.
     const wrong = event.review === "rejected" ? ' class="wrong"' : "";
+    // Et ce que c'était. Une ligne barrée dit qu'on s'est trompé sans dire sur
+    // quoi, ce qui est la seule chose que le lecteur veut savoir et la seule
+    // que nous ayons apprise de la soirée.
+    const truth = info.truth ? `<span class="sub">${escapeHtml(info.truth)}</span>` : "";
     return `<tr${wrong}><td class="when"><time>${clock}</time><span>${day}</span></td>`
-      + `<td class="event">${escapeHtml(title)}${extra}</td>`
+      + `<td class="event">${escapeHtml(title)}${extra}${truth}</td>`
       + `<td class="place">${escapeHtml(place)}</td>`
       + `<td class="shot">${picture}</td></tr>`;
   }).join("");

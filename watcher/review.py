@@ -109,6 +109,20 @@ def apply_review(events: list[dict], learning: dict, event_id: str, verdict: str
             target["label"] = label
             target["detail"] = detail
             changed = True
+    # Ce que c'était vraiment, quand le relecteur a pris la peine de l'écrire.
+    #
+    # Une ligne barrée dit qu'on s'est trompé, elle ne dit pas sur quoi. Or
+    # c'est la seule chose que le lecteur veut savoir, et la seule que nous
+    # ayons apprise. « correction » est réservé au renommage par classe et ne
+    # se touche jamais deux fois ; celui-ci est un mot libre, qu'on ne pose
+    # qu'une fois lui aussi.
+    if verdict == "rejected" and note:
+        detail = dict(target.get("detail") or {})
+        if not detail.get("truth"):
+            detail["truth"] = note
+            target["detail"] = detail
+            changed = True
+
     previous = target.get("review")
     if previous != verdict:
         if previous in ("accepted", "rejected"):

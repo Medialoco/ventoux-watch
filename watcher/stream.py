@@ -204,7 +204,10 @@ def repliques(dossier: Path, quand: str = "ennui") -> list[Path]:
 # durent jusqu'à cinquante-quatre minutes : on ne les jette pas, on les sert
 # par tranches, et le flux change donc d'air au moins toutes les dix minutes
 # même quand il s'agit du même disque.
-TRANCHE_MAX_S = 600.0
+# Quinze minutes, soit un morceau entier : le découpage avait été fait pour
+# des DJ sets de cinquante minutes, qui ne sont plus dans la bibliothèque.
+# Couper un morceau de quinze en deux ferait annoncer deux fois le même titre.
+TRANCHE_MAX_S = 900.0
 # Et en dessous de quoi une tranche ne vaut plus la peine d'exister : couper un
 # set de 62 minutes donne six tranches et un bout de deux minutes, qu'on recolle
 # plutôt que de le laisser traîner.
@@ -705,6 +708,116 @@ def teinte_du_moment(seconde: float) -> tuple[float, float]:
     return dedans * vitesse * 12.0, force * max(0.0, min(1.0, montee))
 
 
+PIXEL_CYCLE_S = 420.0
+PIXEL_S = 20.0
+PIXEL_FONDU_S = 3.5
+# Le nombre de blocs en largeur au plus fort — et non le côté d'un bloc en
+# pixels, qui ferait dépendre l'effet de la résolution : le même réglage
+# donnerait deux images différentes sur une caméra en 1280 et une en 1920.
+# Vingt-six colonnes laissent la route et la crête reconnaissables, ce qui fait
+# la différence entre une image traitée et une image cassée.
+PIXEL_BLOCS = 26
+
+
+# Un seul effet de forme à la fois, tiré dans cette liste. Les empiler —
+# pixellisation sur ondulation sur gris — ne fait pas un effet plus fort, il
+# fait une image qu'on n'identifie plus, et ce flux doit rester une webcam.
+# Le vide y figure deux fois sur cinq : un effet qui revient à tous les coups
+# cesse d'être un effet et devient le rendu normal du flux.
+FORMES = ["", "", "pixel", "gris", "ondule"]
+
+
+def effet_du_moment(seconde: float) -> tuple[str, float]:
+    """L'effet de forme de ce créneau et sa force, déduits de l'heure seule.
+
+    Comme la teinte : rien à retenir d'une image sur l'autre, donc un
+    redémarrage au milieu d'un créneau reprend exactement où il en était.
+    """
+    bloc = int(seconde // PIXEL_CYCLE_S)
+    quoi = random.Random(bloc * 7919).choice(FORMES)
+    if not quoi:
+        return "", 0.0
+    dedans = seconde - bloc * PIXEL_CYCLE_S
+    if dedans > PIXEL_S:
+        return "", 0.0
+    # Il monte et redescend dans les vingt secondes : apparaître d'un coup
+    # ressemble à une panne d'encodeur, et c'est bien la dernière chose qu'on
+    # veuille faire croire sur un direct.
+    return quoi, max(0.0, min(1.0, min(dedans, PIXEL_S - dedans) / PIXEL_FONDU_S))
+
+
+# Le creux et la crête d'une onde, en fraction de la largeur. Trois pour cent,
+# c'est assez pour que la crête ondule et trop peu pour qu'on perde la route.
+ONDULE_PART = 0.03
+# Des bandes assez hautes pour qu'on voie l'onde et assez nombreuses pour
+# qu'elle soit lisse. Vingt-quatre reprises de numpy par image, ce qui est
+# négligeable là où un remap sur deux mégapixels ne le serait pas.
+ONDULE_BANDES = 28
+
+
+def ondule(image: np.ndarray, force: float, seconde: float) -> None:
+    """Fait glisser des bandes horizontales, comme une image dans l'eau.
+
+    Par bandes décalées et non par un remap pixel à pixel : un remap demande
+    deux cartes de deux millions de flottants à refaire à chaque image, ce que
+    cette machine n'a pas les moyens de payer pendant qu'elle encode. Vingt-huit
+    décalages de lignes donnent la même ondulation pour presque rien.
+    """
+    if force <= 0.01:
+        return
+    hauteur, largeur = image.shape[:2]
+    ampleur = largeur * ONDULE_PART * force
+    pas = max(1, hauteur // ONDULE_BANDES)
+    for haut in range(0, hauteur, pas):
+        bas = min(haut + pas, hauteur)
+        angle = (haut / hauteur) * 3.2 * math.pi + seconde * 1.6
+        combien = int(math.sin(angle) * ampleur)
+        if combien:
+            image[haut:bas] = np.roll(image[haut:bas], combien, axis=1)
+
+
+def gris(image: np.ndarray, force: float) -> None:
+    """Décolore, en partie ou tout à fait.
+
+    Les coefficients sont ceux de la luminance perçue, pas une moyenne des trois
+    voies : un ciel bleu et une prairie verte de même moyenne arithmétique n'ont
+    rien de la même clarté à l'œil, et une moyenne les rendrait identiques.
+    """
+    if force <= 0.01:
+        return
+    plat = cv2.cvtColor(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
+    cv2.addWeighted(plat, force, image, 1.0 - force, 0.0, dst=image)
+
+
+def applique_effet(image: np.ndarray, quoi: str, force: float, seconde: float) -> None:
+    """Pose l'effet de forme du moment, quel qu'il soit."""
+    if quoi == "pixel":
+        pixellise(image, force)
+    elif quoi == "gris":
+        gris(image, force)
+    elif quoi == "ondule":
+        ondule(image, force, seconde)
+
+
+def pixellise(image: np.ndarray, force: float) -> None:
+    """Réduit puis regrossit l'image, au plus proche, sur place.
+
+    Moins cher que de la laisser tranquille : on redimensionne deux fois une
+    image qu'on a déjà, et la descente fait l'essentiel du travail sur une
+    fraction des pixels. Sur une machine qui n'a pas de puce vidéo, c'est le
+    seul effet du fichier qui ne coûte rien.
+    """
+    if force <= 0.01:
+        return
+    hauteur, largeur = image.shape[:2]
+    colonnes = max(PIXEL_BLOCS, int(largeur - (largeur - PIXEL_BLOCS) * force))
+    lignes = max(2, round(colonnes * hauteur / largeur))
+    if colonnes >= largeur:
+        return
+    image[:] = cv2.resize(cv2.resize(image, (colonnes, lignes), interpolation=cv2.INTER_AREA),
+                          (largeur, hauteur), interpolation=cv2.INTER_NEAREST)
+
+
 def _matrice_teinte(angle_deg: float) -> np.ndarray:
     """La rotation des couleurs autour de l'axe des gris, en BGR.
 
@@ -869,8 +982,14 @@ PRISES = {"vehicle", "car", "truck", "bus", "person", "cycle", "plane",
 def archives(racine: Path, combien: int = 400) -> list[dict]:
     """Les prises anciennes qui valent d'être remontrées, photo comprise.
 
-    Seulement celles qui portent un vrai nom et dont la vignette existe encore :
-    une rediffusion sans image est une ligne de texte, et une rediffusion de
+    Seulement celles qu'un humain a confirmées. La veille se trompe — elle a
+    appelé « Piéton » le trampoline du village et « Voiture » un reflet sur la
+    chaussée mouillée — et une rediffusion est la seule chose du flux qu'on
+    présente comme un fait établi. Remontrer une erreur en grand, dix minutes
+    durant, c'est la republier.
+
+    Il faut aussi un vrai nom et une vignette encore sur le disque : une
+    rediffusion sans image est une ligne de texte, et une rediffusion de
     « Mouvement sur la route » n'apprend rien à personne.
     """
     try:
@@ -880,6 +999,8 @@ def archives(racine: Path, combien: int = 400) -> list[dict]:
     brut = brut if isinstance(brut, list) else brut.get("events", [])
     gardees = []
     for fiche in brut:
+        if fiche.get("review") != "accepted":
+            continue
         nom = str(fiche.get("label") or "")
         if not nom or nom.startswith(NON_NOMS) or nom.startswith(JAMAIS_REDIFF):
             continue
@@ -1452,6 +1573,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             image = np.frombuffer(brut, np.uint8).reshape(hauteur, largeur, 3).copy()
             # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.
             applique_teinte(image, *teinte_du_moment(quand - origine))
+            # Le grain ne tombe jamais sur une prise. Tout l'intérêt d'un
+            # rectangle rouge est qu'on puisse regarder ce qu'il entoure, et
+            # une voiture en gros carrés n'est plus une voiture.
+            if quand - dernier_vu > TENUE_S:
+                applique_effet(image, *effet_du_moment(quand - origine), quand - origine)
             if dessine(image, vus, quand):
                 dernier_vu = quand
                 # L'horloge de l'ennui est à part, et c'est tout l'intérêt :

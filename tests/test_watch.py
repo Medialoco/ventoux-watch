@@ -2508,6 +2508,11 @@ class FogTests(unittest.TestCase):
         self.assertTrue(soup.fogged)
 
 
+def _force(seconde):
+    """La force de l'effet du moment, quel qu'il soit."""
+    return stream.effet_du_moment(seconde)[1]
+
+
 class DiffusionTests(unittest.TestCase):
     """La rediffusion en retard : ce qu'elle dessine et ce qu'elle fait entendre."""
 
@@ -2615,11 +2620,20 @@ class DiffusionTests(unittest.TestCase):
             (racine / "data" / "thumbs").mkdir(parents=True)
             photo = "data/thumbs/x.jpg"
             (racine / photo).write_bytes(b"\xff\xd8\xff")
+            # Tous confirmés : c'est la règle du feu qu'on éprouve ici, pas
+            # celle du verdict, et un feu confirmé reste un feu à ne pas
+            # remontrer.
             (racine / "data" / "events.json").write_text(json.dumps([
-                {"t": "2026-09-29T14:59:32Z", "label": "Départ de feu", "thumb": photo},
-                {"t": "2026-09-29T15:00:00Z", "label": "Incendie", "thumb": photo},
-                {"t": "2026-09-29T15:01:00Z", "label": "Panache de nuit", "thumb": photo},
-                {"t": "2026-09-29T15:02:00Z", "label": "Camion", "thumb": photo},
+                {"t": "2026-09-29T14:59:32Z", "label": "Départ de feu", "thumb": photo,
+                 "review": "accepted"},
+                {"t": "2026-09-29T15:00:00Z", "label": "Incendie", "thumb": photo,
+                 "review": "accepted"},
+                {"t": "2026-09-29T15:01:00Z", "label": "Panache de nuit", "thumb": photo,
+                 "review": "accepted"},
+                {"t": "2026-09-29T15:02:00Z", "label": "Camion", "thumb": photo,
+                 "review": "accepted"},
+                # Et celui-ci n'a jamais été vérifié : il ne passe pas non plus.
+                {"t": "2026-09-29T15:03:00Z", "label": "Voiture", "thumb": photo},
             ]), encoding="utf-8")
             gardees = stream.archives(racine)
             self.assertEqual([f["label"] for f in gardees], ["Camion"])
@@ -2739,6 +2753,93 @@ class DiffusionTests(unittest.TestCase):
         entre = [l for l in lignes[i + 1:j] if l.strip() and not l.strip().startswith("#")]
         retrait = len(lignes[i]) - len(lignes[i].lstrip())
         self.assertTrue(all(len(l) - len(l.lstrip()) > retrait for l in entre), entre)
+
+    def test_every_shape_effect_is_offered_and_none_is_permanent(self):
+        """Un seul effet à la fois, et du net assez souvent pour que ça compte."""
+        from collections import Counter
+        vus = Counter(stream.effet_du_moment(b * stream.PIXEL_CYCLE_S + 10)[0]
+                      for b in range(400))
+        for effet in ("pixel", "gris", "ondule"):
+            self.assertGreater(vus[effet], 20, vus)
+        self.assertGreater(vus[""], 100, vus)
+
+    def test_the_wave_slides_the_picture_without_losing_any_of_it(self):
+        """Une bande décalée revient par l'autre bord : rien ne sort du cadre."""
+        image = np.random.default_rng(1).integers(0, 255, (360, 640, 3), dtype=np.uint8)
+        plie = image.copy()
+        stream.ondule(plie, 1.0, 3.0)
+        self.assertFalse(np.array_equal(plie, image))
+        self.assertEqual(sorted(plie.reshape(-1).tolist()), sorted(image.reshape(-1).tolist()))
+        rien = image.copy()
+        stream.ondule(rien, 0.0, 3.0)
+        self.assertTrue(np.array_equal(rien, image))
+
+    def test_grey_uses_perceived_brightness_and_not_an_average(self):
+        """Un ciel bleu et une prairie verte n'ont pas la même clarté à l'œil."""
+        bleu = np.zeros((8, 8, 3), np.uint8)
+        bleu[:, :, 0] = 160
+        vert = np.zeros((8, 8, 3), np.uint8)
+        vert[:, :, 1] = 160
+        for image in (bleu, vert):
+            stream.gris(image, 1.0)
+        self.assertNotEqual(int(bleu[0, 0, 0]), int(vert[0, 0, 0]))
+        self.assertGreater(int(vert[0, 0, 0]), int(bleu[0, 0, 0]))
+
+    def test_a_replay_only_shows_what_a_human_confirmed(self):
+        """Une rediffusion est présentée comme un fait : elle doit en être un."""
+        source = inspect.getsource(stream.archives)
+        self.assertIn('fiche.get("review") != "accepted"', source)
+
+    def test_the_pixels_never_last_more_than_twenty_seconds(self):
+        """Vingt secondes est une expérience, deux minutes est une panne."""
+        self.assertEqual(stream.PIXEL_S, 20.0)
+        for bloc in range(12):
+            debut = bloc * stream.PIXEL_CYCLE_S
+            dedans = [d / 2 for d in range(0, int(stream.PIXEL_CYCLE_S) * 2)
+                      if _force(debut + d / 2) > 0]
+            self.assertLessEqual(len(dedans) / 2, stream.PIXEL_S, bloc)
+
+    def test_the_pixels_come_and_go_instead_of_snapping(self):
+        """Un grain qui apparaît d'un coup se lit comme un encodeur qui lâche."""
+        actif = next(b for b in range(12)
+                     if _force(b * stream.PIXEL_CYCLE_S + 10) > 0)
+        debut = actif * stream.PIXEL_CYCLE_S
+        self.assertEqual(_force(debut), 0.0)
+        self.assertLess(_force(debut + 1), _force(debut + 10))
+        self.assertGreater(_force(debut + 10),
+                           _force(debut + stream.PIXEL_S - 1))
+        self.assertEqual(_force(debut + stream.PIXEL_S + 1), 0.0)
+        # Et pas à tous les créneaux, sinon c'est le rendu normal du flux.
+        self.assertTrue(any(_force(b * stream.PIXEL_CYCLE_S + 10) == 0
+                            for b in range(12)))
+
+    def test_the_pixels_keep_away_from_anything_caught(self):
+        """Un rectangle rouge sert à regarder ce qu'il entoure."""
+        source = inspect.getsource(stream.diffuse)
+        appel = [l for l in source.splitlines() if "applique_effet(" in l]
+        self.assertTrue(appel)
+        garde = source.split("applique_effet(")[0].splitlines()[-3:]
+        self.assertTrue(any("dernier_vu > TENUE_S" in l for l in garde), garde)
+
+    def test_the_pixels_keep_the_picture_readable(self):
+        """Gros carrés, mais la crête et la route restent des formes."""
+        # Deux résolutions, parce que le réglage se compte en blocs et doit
+        # donner la même image sur l'une et sur l'autre.
+        for largeur, hauteur in ((1920, 1080), (1280, 720)):
+            # Un dégradé, pas du bruit : du bruit moyenné sur un bloc donne
+            # toujours le même gris, et les blocs deviendraient indiscernables
+            # pour une raison qui ne doit rien à la fonction testée.
+            rampe = np.linspace(0, 255, largeur, dtype=np.uint8)
+            image = np.repeat(np.tile(rampe, (hauteur, 1))[:, :, None], 3, axis=2)
+            fort = image.copy()
+            stream.pixellise(fort, 1.0)
+            self.assertEqual(fort.shape, image.shape)
+            blocs = len(np.unique(fort[hauteur // 2], axis=0))
+            self.assertGreaterEqual(blocs, stream.PIXEL_BLOCS - 2, largeur)
+            self.assertLessEqual(blocs, stream.PIXEL_BLOCS + 2, largeur)
+        rien = image.copy()
+        stream.pixellise(rien, 0.0)
+        self.assertTrue(np.array_equal(rien, image))
 
     def test_the_dancers_wait_for_the_music_to_push(self):
         """Pas de pantins sur un morceau calme, et une entrée en fondu."""
