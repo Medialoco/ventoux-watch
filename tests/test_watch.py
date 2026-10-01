@@ -8,6 +8,7 @@ import io
 import subprocess
 import sys
 import tempfile
+import wave
 import random
 import threading
 import time
@@ -3733,10 +3734,21 @@ class LeMotSeLitOuNeSertARien(unittest.TestCase):
         pas mentir, c'est sous-titrer.
         """
         source = inspect.getsource(stream.diffuse)
-        self.assertIn("elif quand - dernier_ennui <= ENNUI_TENUE_S:", source)
+        self.assertIn('elif dit == "ennui" or quand - dernier_ennui <= ENNUI_TENUE_S:',
+                      source)
         self.assertNotIn('else "BOOOOORING"', source)
         # Assez long pour être lu à la cadence du flux.
         self.assertGreaterEqual(stream.ENNUI_TENUE_S * 6, 12)
+
+    def test_the_word_also_stays_as_long_as_the_voice_speaks(self):
+        """Le plancher seul effacerait le mot avant la fin de la phrase.
+
+        Une voix à qui on demande de traîner met près de quatre secondes à
+        dire « Boooooooring », soit plus que la tenue minimale.
+        """
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn('dit = musique.dit_quoi() if musique.parle() else ""', source)
+        self.assertIn('if dit == "brouillard" or quand - gris_depuis', source)
 
     def test_the_stream_does_not_open_on_boooooring(self):
         """À zéro, le flux s'ouvrait trois secondes sur « BOOOOORING »."""
@@ -3749,11 +3761,102 @@ class LeMotSeLitOuNeSertARien(unittest.TestCase):
         Une plaisanterie qu'on n'entend pas est un bruit, et un bruit sur un
         flux de surveillance ressemble à une panne.
         """
-        from scripts.voix_ennui import CADENCES, REPLIQUES
-        voix = {v for _, v, _ in REPLIQUES}
-        self.assertFalse(voix & {"Bubbles", "Boing", "Bad News"})
-        self.assertTrue(voix)
+        from scripts.voix_ennui import CADENCES, JEU, REPLIQUES, VOIX
+        roles = {v for _, v, _ in REPLIQUES}
+        self.assertTrue(roles)
+        for moteur, timbres in VOIX.items():
+            self.assertFalse(set(timbres.values()) & {"Bubbles", "Boing", "Bad News"},
+                             moteur)
+            # Chaque rôle a un timbre dans chaque moteur, sinon changer de
+            # moteur lève une KeyError au milieu d'une gravure.
+            self.assertFalse(roles - set(timbres), moteur)
+        # Et chaque occasion a sa consigne de jeu, qui est tout l'intérêt.
+        for quand, _, _ in REPLIQUES:
+            self.assertIn(quand, JEU)
         # Et l'ennui parle plus lentement que la prise : il traîne, elle claque.
         self.assertLess(CADENCES["ennui"], CADENCES["attrape"])
         for quand, _, _ in REPLIQUES:
             self.assertIn(quand, CADENCES)
+
+
+class LaVoixPasseAuDessusDeLaMusique(unittest.TestCase):
+    """On l'entendait parler sans comprendre : la pire des trois possibilités."""
+
+    @staticmethod
+    def _wav(niveau: float, secondes: float = 1.0, cadence: int = 24000) -> bytes:
+        t = np.arange(int(secondes * cadence)) / cadence
+        onde = (np.sin(2 * np.pi * 220 * t) * niveau * 32767).astype(np.int16)
+        tampon = io.BytesIO()
+        with wave.open(tampon, "wb") as f:
+            f.setnchannels(1)
+            f.setsampwidth(2)
+            f.setframerate(cadence)
+            f.writeframes(onde.tobytes())
+        return tampon.getvalue()
+
+    def test_speech_clears_the_ducked_music_by_six_decibels(self):
+        """Six décibels d'avance : c'est une donnée d'audition, pas un goût."""
+        from scripts.voix_ennui import CIBLE_RMS
+        # La valeur efficace mesurée sur les morceaux de la médiathèque.
+        fond = 0.22 * stream.ATTENUATION
+        self.assertGreaterEqual(20 * math.log10(CIBLE_RMS / fond), 6.0)
+
+    def test_the_music_is_still_there_under_the_joke(self):
+        """Une plaisanterie posée sur un morceau, pas une annonce de gare."""
+        self.assertGreater(stream.ATTENUATION, 0.15)
+
+    def test_the_sum_never_clips(self):
+        """Le mélangeur additionne : les deux crêtes doivent tenir dans un."""
+        from scripts.voix_ennui import PLAFOND
+        self.assertLess(PLAFOND + stream.ATTENUATION, 1.0)
+
+    def test_the_level_is_read_on_the_speech_not_on_the_silence(self):
+        """Une phrase précédée d'un blanc n'est pas une phrase plus faible.
+
+        La moyenne sur tout le fichier le croirait et remonterait trop.
+        """
+        from scripts.voix_ennui import mesure_pcm
+        son = np.frombuffer(self._wav(0.5, 1.0), np.int16)[22:]
+        blanc = np.zeros(24000 * 3, np.int16)
+        parole, _ = mesure_pcm(np.concatenate([blanc, son, blanc]).tobytes(),
+                               voies=1, cadence=24000)
+        self.assertAlmostEqual(parole, 0.5 / math.sqrt(2), delta=0.03)
+
+    def test_a_mute_answer_is_asked_again_and_then_refused(self):
+        """Le modèle rend parfois un fichier bien formé et parfaitement vide.
+
+        Livré tel quel, il ferait à l'antenne un mot affiché sur rien — la
+        panne même qu'on essaie d'éviter, et invisible à la relecture du code
+        puisque le code avait bien fonctionné.
+        """
+        from scripts import voix_ennui
+        essais = []
+
+        def muet(texte, voix, jeu):
+            essais.append(texte)
+            return self._wav(0.0)
+
+        with mock.patch.object(voix_ennui, "_demande", muet):
+            with self.assertRaises(SystemExit):
+                voix_ennui._parle_openai("Foooooog", "nova", "", essais=3)
+        self.assertEqual(len(essais), 3)
+
+        with mock.patch.object(voix_ennui, "_demande",
+                               lambda *_: self._wav(0.3)):
+            self.assertTrue(voix_ennui._parle_openai("Foooooog", "nova", ""))
+
+    def test_the_bell_and_the_voice_together_stay_under_the_ceiling(self):
+        """Un écrêtage sur une attaque de cloche s'entend comme un craquement."""
+        from scripts.voix_ennui import PLAFOND, cloche, _mele
+        forte = (np.ones(44100 * 2, np.int16) * int(0.6 * 32767)).tobytes()
+        melange = np.frombuffer(_mele(cloche(), forte, 0.42), np.int16)
+        self.assertLessEqual(float(np.abs(melange).max()) / 32768, PLAFOND + 1e-3)
+
+    def test_the_key_never_lands_in_the_tracked_config(self):
+        """config/config.json est suivi par git ; local.json ne l'est pas."""
+        from scripts.voix_ennui import cle_openai
+        suivi = json.loads((ROOT / "config" / "config.json").read_text())
+        self.assertNotIn("openai", suivi)
+        self.assertIn("config/local.json",
+                      (ROOT / ".gitignore").read_text().splitlines())
+        self.assertIsInstance(cle_openai(), str)

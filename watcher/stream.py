@@ -318,10 +318,18 @@ def duree_audio(chemin: Path) -> float:
         return 0.0
 
 
-# De combien on baisse la musique pendant que la voix parle. À 0,35 elle reste
-# présente — c'est une blague posée sur un morceau, pas une annonce de gare qui
-# coupe tout.
-ATTENUATION = 0.35
+# De combien on baisse la musique pendant que la voix parle.
+#
+# Pour qu'une phrase se comprenne par-dessus un fond, il lui faut environ six
+# décibels d'avance : c'est une donnée d'audition et non un goût de mixeur. Les
+# morceaux tournent autour de 0,22 efficace et les répliques sont gravées à
+# 0,12 ; à 0,35 la musique posait 0,077 et la voix ne passait qu'un décibel et
+# demi au-dessus — on l'entendait parler sans comprendre ce qu'elle disait, ce
+# qui est la pire des trois possibilités. À 0,25 l'avance est de sept décibels.
+#
+# Et pas moins : le morceau doit rester là. C'est une plaisanterie posée sur
+# une musique, pas une annonce de gare qui coupe tout.
+ATTENUATION = 0.25
 # Vingt minutes sans la moindre détection avant que le flux le dise, puis
 # autant entre deux. Sur cette route, vingt minutes de vide sont banales la
 # nuit et rares à midi : le mot arrive donc quand il est vrai.
@@ -2384,23 +2392,27 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             toile = cadre(vue, largeur, hauteur)
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser)
-            # Le mot tient trois secondes, et non le temps que dure la voix.
+            # Le mot tient au moins trois secondes, et tant que la voix parle.
             #
             # Il durait exactement la voix, ce qui semblait honnête et ne
-            # l'était pas : « Boooooooring » dit par une voix intelligible tient
-            # six dixièmes de seconde, soit quatre images à six par seconde, et
-            # un mot affiché quatre images ne se lit pas — il clignote. Le
-            # brouillard avait déjà sa tenue de trois secondes pour cette
-            # raison ; l'ennui l'a maintenant aussi. Tenir un sous-titre plus
-            # longtemps que la parole n'est pas mentir, c'est sous-titrer.
-            if musique.parle() and musique.dit_quoi() == "brouillard":
-                pose_ennui(toile, mot_gris, quand - origine)
-            elif quand - gris_depuis <= BROUILLARD_TENUE_S:
+            # l'était pas : dit platement, « Boooooooring » tenait six dixièmes
+            # de seconde, soit quatre images à six par seconde, et un mot
+            # affiché quatre images ne se lit pas — il clignote. D'où le
+            # plancher, que le brouillard avait déjà et pour la même raison.
+            #
+            # Mais un plancher seul ne suffit pas non plus : à qui sait traîner
+            # les voyelles, la même réplique prend près de quatre secondes, et
+            # le mot s'effacerait pendant qu'on l'entend encore. Les deux
+            # conditions ensemble, donc. Tenir un sous-titre plus longtemps que
+            # la parole n'est pas mentir, c'est sous-titrer ; le retirer avant
+            # la fin de la phrase, si.
+            dit = musique.dit_quoi() if musique.parle() else ""
+            if dit == "brouillard" or quand - gris_depuis <= BROUILLARD_TENUE_S:
                 # Sans voix enregistrée, le mot tient quand même trois
                 # secondes : il doit pouvoir dire le brouillard sur une machine
                 # où data/voix est vide.
                 pose_ennui(toile, mot_gris, quand - origine)
-            elif quand - dernier_ennui <= ENNUI_TENUE_S:
+            elif dit == "ennui" or quand - dernier_ennui <= ENNUI_TENUE_S:
                 pose_ennui(toile, "BOOOOORING", quand - origine)
             pose_ruban(toile, ruban, quand - origine)
             pose_horloge(toile, quand, direct=rediff is None and survol is None,

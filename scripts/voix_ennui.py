@@ -11,21 +11,34 @@ rien à convertir : seulement des octets à additionner.
 
     .venv/bin/python -m scripts.voix_ennui
     .venv/bin/python -m scripts.voix_ennui --ecoute
+    .venv/bin/python -m scripts.voix_ennui --moteur macos
 
-Les voix employées sont celles de macOS. Elles conviennent pour la mise au
-point ; si la chaîne doit vivre, enregistrer les mêmes phrases soi-même règle à
-la fois la question du droit et celle du ton.
+La synthèse est celle de medialoco-tube : le modèle parlant d'OpenAI, appelé une
+fois ici, jamais sur le Pi. Les voix de macOS restent en secours, pour une
+machine sans clé ou sans réseau.
+
+Deux raisons de préférer l'une à l'autre, et aucune n'est le timbre. La
+première est qu'on peut dire à ce modèle *comment* jouer la phrase : l'ennui se
+demande, là où macOS ne proposait qu'un choix entre des voix sérieuses et des
+voix de dessin animé. La seconde est que la question du droit tombe — les
+conditions d'OpenAI laissent la sortie à qui la commande, alors qu'une voix
+système sur une chaîne monétisée reste une zone grise.
 """
 
 from __future__ import annotations
 
 import argparse
+import io
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.request
+import wave
 from pathlib import Path
 
 import numpy as np
@@ -43,18 +56,21 @@ VOIES = 2
 # la même voix pour les deux ferait du « good catch » une remarque de plus
 # alors que c'est le seul moment où la machine a réussi quelque chose.
 #
-# Daniel et Samantha, et plus Bubbles, Boing ni Bad News. Les trois voix
-# fantaisistes de macOS déforment les mots par construction — Bubbles parle
-# sous l'eau, Boing rebondit, Bad News chante un enterrement — et à l'antenne
-# on n'y comprenait rien. Or une plaisanterie qu'on n'entend pas n'est pas une
-# plaisanterie, c'est un bruit, et un bruit sur un flux de surveillance
-# ressemble à une panne. Le comique doit être dans la phrase : « absolutely
-# nothing is happening » dit à plat par un Anglais est plus drôle que
-# « boooring » dit par une bulle, et ça s'entend.
+# Et plus Bubbles, Boing ni Bad News. Les trois voix fantaisistes de macOS
+# déforment les mots par construction — Bubbles parle sous l'eau, Boing
+# rebondit, Bad News chante un enterrement — et à l'antenne on n'y comprenait
+# rien. Or une plaisanterie qu'on n'entend pas n'est pas une plaisanterie,
+# c'est un bruit, et un bruit sur un flux de surveillance ressemble à une
+# panne. Le comique doit être dans la phrase : « absolutely nothing is
+# happening » dit à plat est plus drôle que « boooring » dit par une bulle.
 #
 # Les voyelles étirées restent, elles : elles passent le mot à l'écran et la
 # synthèse les allonge vraiment, donc le son suit ce qu'on lit.
-PLAT, CLAIRE = "Daniel", "Samantha"
+#
+# Un rôle et non une voix. Ce qui compte à l'écriture est qu'une réplique soit
+# traînée ou claquée ; quel timbre s'en charge est une affaire de moteur, et
+# changer de moteur ne doit renommer aucun fichier ni rien apprendre au flux.
+PLAT, CLAIRE = "plat", "claire"
 REPLIQUES = [
     ("ennui", PLAT, "Boooooooring"),
     ("ennui", PLAT, "Still nothing"),
@@ -123,9 +139,17 @@ def _mele(cloche_pcm: np.ndarray, voix: bytes, retard_s: float) -> bytes:
     debut = int(retard_s * ECHANTILLONS_S) * VOIES
     dessus = np.frombuffer(voix, np.int16)
     total = max(len(cloche_pcm), debut + len(dessus))
-    melange = np.zeros(total, np.int32)
+    melange = np.zeros(total, np.float32)
     melange[:len(cloche_pcm)] += cloche_pcm
     melange[debut:debut + len(dessus)] += dessus
+    # La somme dépasse le plafond que la voix seule respectait : une cloche à
+    # 0,55 plus une voix à 0,60 montent à 0,88, et la musique ajoutera encore
+    # la sienne par-dessus. On redescend l'ensemble plutôt que d'écrêter — un
+    # écrêtage sur une attaque de cloche s'entend comme un craquement, et un
+    # craquement sur un flux de surveillance ressemble à une panne.
+    crete = float(np.abs(melange).max()) / 32768
+    if crete > PLAFOND:
+        melange *= PLAFOND / crete
     return np.clip(melange, -32768, 32767).astype(np.int16).tobytes()
 
 
@@ -133,51 +157,235 @@ def _nom(voix: str, texte: str) -> str:
     return re.sub(r"[^\w]+", "_", f"{voix}-{texte}").strip("_").lower()[:60] + ".raw"
 
 
-# Le débit, en mots par minute, selon l'occasion. Ce n'est pas une coquetterie
-# de mise en scène : le mot à l'écran s'affiche exactement le temps que dure la
-# voix, parce que le compte des octets est la seule horloge qui ne décroche pas
-# du son. Dit au débit normal, « Boooooooring » tient cinq dixièmes de seconde,
-# soit trois images à six par seconde — on ne lit pas un mot en trois images.
-# Ralentir allonge donc l'affichage sans poser de minuterie à côté du son, et
-# ça tombe bien : une machine qui s'ennuie parle lentement.
+# Le débit, en mots par minute, pour le secours macOS. Une machine qui s'ennuie
+# parle lentement, une machine qui vient de repérer quelque chose claque sa
+# phrase. C'est le seul réglage de jeu que « say » accepte.
 CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180}
 
+# La consigne de jeu, envoyée avec chaque phrase. C'est ce qu'on ne pouvait pas
+# faire avec les voix système : le ton s'y choisissait en changeant de personne,
+# d'où les voix de dessin animé pour obtenir un peu de comique et des mots qu'on
+# ne comprenait plus. Ici le timbre reste sérieux et c'est le jeu qui porte la
+# plaisanterie, ce qui est la bonne répartition.
+JEU = {
+    "ennui": "Profoundly, terminally bored. Flat, deadpan, unhurried, almost "
+             "sighing. Drag the stretched vowels out slowly. You are a machine "
+             "that has watched an empty mountain for an hour and has given up "
+             "expecting anything. Never cheerful, never ironic — just tired.",
+    "brouillard": "Resigned and flat. There is nothing to see and there has "
+                  "been nothing to see for hours. Drag the stretched vowels. "
+                  "State it as a fact you have stopped minding.",
+    "attrape": "Genuinely delighted and a little surprised, quick and bright, "
+               "like finally spotting something after a long empty wait. Warm, "
+               "not loud, and over in a second.",
+    "matin": "Warm and welcoming, a radio host opening the morning. Stretch "
+             "the long vowel generously. Unhurried but awake.",
+}
 
-def grave(voix: str, texte: str, cible: Path, cadence: int | None = None) -> float:
+# Les voix, par rôle. « ash » est celle dont medialoco-tube se sert pour sa
+# narration ; « nova » est claire et vive, ce que la prise demande.
+VOIX = {
+    "openai": {PLAT: "ash", CLAIRE: "nova"},
+    "macos": {PLAT: "Daniel", CLAIRE: "Samantha"},
+}
+MODELE = "gpt-4o-mini-tts"
+PARLE_URL = "https://api.openai.com/v1/audio/speech"
+
+
+def cle_openai() -> str:
+    """La clé, prise dans le fichier des secrets ou dans l'environnement.
+
+    Jamais dans « config/config.json », qui est suivi par git. « local.json »
+    est en 600 et dans le .gitignore, et c'est déjà là que vivent les
+    identifiants OpenSky et la clé de diffusion.
+    """
+    fichier = ROOT / "config" / "local.json"
+    if fichier.exists():
+        cle = json.loads(fichier.read_text(encoding="utf-8")).get("openai", {}).get("cle")
+        if cle:
+            return str(cle)
+    return os.environ.get("OPENAI_API_KEY", "")
+
+
+def _explique(code: int, corps: str) -> str:
+    """Ce que veut dire le refus, en clair.
+
+    Le piège habituel est une clé parfaitement valide sur un compte sans
+    crédit : l'abonnement ChatGPT ne paie pas l'interface de programmation,
+    les deux se facturent séparément, et le 429 brut ne le dit pas.
+    """
+    if code == 429 and "insufficient_quota" in corps:
+        return ("Le compte OpenAI n'a plus de crédit d'interface.\n"
+                "  → en ajouter sur platform.openai.com/settings/organization/billing\n"
+                "  → un abonnement ChatGPT n'en donne pas, c'est facturé à part\n"
+                "  → ces seize répliques coûtent moins d'un centime")
+    if code == 401:
+        return ("OpenAI a refusé la clé. Vérifier « openai.cle » dans "
+                "config/local.json, espaces compris.")
+    return f"OpenAI a répondu {code} : {corps[:300]}"
+
+
+def _demande(texte: str, voix: str, jeu: str) -> bytes:
+    corps = json.dumps({"model": MODELE, "voice": voix, "input": texte,
+                        "instructions": jeu, "response_format": "wav"}).encode()
+    requete = urllib.request.Request(
+        PARLE_URL, data=corps,
+        headers={"Authorization": f"Bearer {cle_openai()}",
+                 "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(requete, timeout=120) as reponse:
+            return reponse.read()
+    except urllib.error.HTTPError as erreur:
+        raise SystemExit(_explique(erreur.code,
+                                   erreur.read().decode("utf-8", "replace")))
+
+
+def mesure(wav: bytes) -> tuple[float, float]:
+    """Le niveau de la parole et la crête du fichier, entre zéro et un.
+
+    La parole se mesure silences exclus : on découpe en tranches de cinquante
+    millisecondes et on prend le neuvième décile des valeurs efficaces. La
+    moyenne sur tout le fichier dirait autre chose — une phrase précédée d'une
+    seconde de blanc paraîtrait plus faible qu'elle n'est, et on la remonterait
+    trop. Le décile ignore les blancs sans se laisser emporter par un claquement
+    isolé, ce qu'un maximum ferait.
+    """
+    with wave.open(io.BytesIO(wav)) as f:
+        return mesure_pcm(f.readframes(f.getnframes()),
+                          f.getnchannels(), f.getframerate())
+
+
+def mesure_pcm(pcm: bytes, voies: int = VOIES,
+               cadence: int = ECHANTILLONS_S) -> tuple[float, float]:
+    """La même mesure, sur des octets déjà déballés."""
+    x = np.frombuffer(pcm, np.int16).astype(np.float32)
+    if not len(x):
+        return 0.0, 0.0
+    x /= 32768
+    pas = max(1, int(0.05 * cadence) * voies)
+    utile = x[:len(x) - len(x) % pas]
+    if not len(utile):
+        utile, pas = x, len(x)
+    efficaces = np.sqrt((utile.reshape(-1, pas) ** 2).mean(axis=1))
+    return float(np.percentile(efficaces, 90)), float(np.abs(x).max())
+
+
+# En dessous, il ne s'est rien dit. Ce n'est pas un seuil de goût : une voix,
+# même soufflée, passe largement au-dessus, et seul un fichier vide descend là.
+MUET = 0.005
+# Le niveau de parole visé, et le plafond.
+#
+# La cible est de l'arithmétique et non un goût. Pour qu'une phrase se
+# comprenne par-dessus un fond, il lui faut environ six décibels d'avance ;
+# c'est une donnée d'audition, pas un réglage de mixeur. Les morceaux tournent
+# autour de 0,22 efficace et le flux les baisse à 0,25 pendant qu'on parle,
+# donc le fond pose 0,055 : une parole à 0,12 passe sept décibels au-dessus.
+#
+# Le plafond vient du même calcul par l'autre bout : le mélangeur additionne,
+# une musique à fond pose 0,25 en crête, et 0,60 + 0,25 laisse encore de la
+# marge avant l'écrêtage.
+CIBLE_RMS, PLAFOND = 0.12, 0.60
+
+
+def gain(wav: bytes) -> float:
+    """De combien remonter ce fichier pour qu'il parle comme les autres.
+
+    Un gain unique pour toutes les répliques reconduisait les écarts de jeu : à
+    qui on demande d'être fatigué, le modèle chuchote, et « Boooooooring »
+    sortait six fois plus faible que « Good catch! ». Sous une musique
+    seulement baissée à 35 %, un murmure redevient inaudible — c'est la plainte
+    du départ par un autre chemin.
+
+    Calculé ici plutôt que confié à loudnorm, essayé d'abord : la norme R128
+    gèle ses mesures sur des fenêtres de trois secondes et nos répliques en
+    durent deux, silences compris. Elle rendait six fichiers sur seize *plus*
+    faibles qu'avant, sans rien signaler. Deux lignes d'arithmétique qu'on peut
+    vérifier valent mieux qu'un instrument de mesure hors de sa plage.
+    """
+    parole, crete = mesure(wav)
+    return min(CIBLE_RMS / max(parole, 1e-6), PLAFOND / max(crete, 1e-6))
+
+
+def _parle_openai(texte: str, voix: str, jeu: str, essais: int = 3) -> bytes:
+    """Un WAV dit par le modèle, et dont on a vérifié qu'il contient une voix.
+
+    Le modèle rend parfois un fichier bien formé et parfaitement silencieux :
+    « Foooooog » est revenu vide au premier jet, sans erreur et avec la bonne
+    durée. Livré tel quel il aurait fait, à l'antenne, un mot affiché sur rien
+    — exactement la panne qu'on essaie d'éviter, et invisible à la relecture du
+    code puisque le code avait bien fonctionné. On regarde donc ce qu'on a reçu
+    plutôt que de croire le code de retour, et on redemande.
+    """
+    for essai in range(essais):
+        wav = _demande(texte, voix, jeu)
+        if mesure(wav)[0] >= MUET:
+            return wav
+        print(f"    (réponse muette pour « {texte} », on redemande)")
+    raise SystemExit(f"OpenAI n'a rien dit pour « {texte} » en {essais} essais.")
+
+
+def grave(role: str, texte: str, cible: Path, quand: str,
+          moteur: str = "openai") -> float:
     """Dit la phrase et la pose en PCM brut. Rend sa durée en secondes."""
     with tempfile.TemporaryDirectory() as dossier:
-        brut = Path(dossier) / "dit.aiff"
-        commande = ["say", "-v", voix]
-        if cadence:
-            commande += ["-r", str(cadence)]
-        subprocess.run(commande + ["-o", str(brut), texte], check=True)
-        subprocess.run(
-            ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(brut),
-             # Un peu de marge sous le maximum : la voix va s'additionner à la
-             # musique, et deux signaux au plafond font un écrêtage.
-             "-af", f"volume=0.85,aresample={ECHANTILLONS_S}",
-             "-f", "s16le", "-ar", str(ECHANTILLONS_S), "-ac", str(VOIES), str(cible)],
-            check=True)
+        if moteur == "openai":
+            dit = Path(dossier) / "dit.wav"
+            dit.write_bytes(_parle_openai(texte, VOIX[moteur][role], JEU[quand]))
+        else:
+            aiff = Path(dossier) / "dit.aiff"
+            subprocess.run(["say", "-v", VOIX["macos"][role],
+                            "-r", str(CADENCES[quand]), "-o", str(aiff), texte],
+                           check=True)
+            dit = Path(dossier) / "dit.wav"
+            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                            "-i", str(aiff), str(dit)], check=True)
+        g = gain(dit.read_bytes())
+        _encode(dit, cible, g)
+        # Et on écoute ce qu'on vient d'écrire plutôt que de croire le calcul.
+        #
+        # Le gain était juste et la sortie arrivait pourtant trois décibels
+        # trop bas, à 0,085 pour 0,12 demandés : ffmpeg atténue d'un facteur
+        # racine de deux en passant la mono en stéréo. On pourrait écrire ce
+        # facteur ici — ce serait exact aujourd'hui, faux le jour où la voix
+        # arrive déjà en stéréo, et personne ne s'en apercevrait puisque rien
+        # ne casse. Mesurer le résultat se moque de savoir ce que fait ffmpeg.
+        parole, crete = mesure_pcm(cible.read_bytes())
+        if parole > MUET and abs(parole - CIBLE_RMS) > 0.05 * CIBLE_RMS:
+            _encode(dit, cible,
+                    g * min(CIBLE_RMS / parole, PLAFOND / max(crete, 1e-6)))
     return cible.stat().st_size / (ECHANTILLONS_S * VOIES * 2)
 
 
-def enregistre(dossier: Path, ecoute: bool = False) -> int:
-    if shutil.which("say") is None:
+def _encode(source: Path, cible: Path, g: float) -> None:
+    subprocess.run(
+        ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(source),
+         "-af", f"volume={g:.4f},aresample={ECHANTILLONS_S}",
+         "-f", "s16le", "-ar", str(ECHANTILLONS_S), "-ac", str(VOIES), str(cible)],
+        check=True)
+
+
+def enregistre(dossier: Path, ecoute: bool = False, moteur: str = "openai") -> int:
+    if moteur == "openai" and not cle_openai():
+        print("Pas de clé OpenAI : poser « openai.cle » dans config/local.json,\n"
+              "ou bien --moteur macos pour les voix du système.")
+        return 1
+    if moteur == "macos" and shutil.which("say") is None:
         print("« say » n'existe que sur macOS : à lancer depuis le Mac, pas depuis le Pi.")
         return 1
     dossier.mkdir(parents=True, exist_ok=True)
     fiches = []
     for quand, voix, texte in REPLIQUES:
         cible = dossier / _nom(f"{quand}-{voix}", texte)
-        duree = grave(voix, texte, cible, CADENCES.get(quand))
+        duree = grave(voix, texte, cible, quand, moteur)
         if quand == "attrape":
             # La cloche d'abord, la voix dans sa résonance. L'inverse ferait
             # une annonce suivie d'un bruit ; là, c'est un sourire.
             cible.write_bytes(_mele(cloche(), cible.read_bytes(), 0.42))
             duree = cible.stat().st_size / (ECHANTILLONS_S * VOIES * 2)
         fiches.append({"fichier": cible.name, "texte": texte, "voix": voix,
-                       "quand": quand, "duree": round(duree, 3)})
-        print(f"  {duree:4.1f} s  {quand:8s} {voix:10s} « {texte} »")
+                       "quand": quand, "duree": round(duree, 3),
+                       "timbre": VOIX[moteur][voix]})
+        print(f"  {duree:4.1f} s  {quand:10s} {VOIX[moteur][voix]:9s} « {texte} »")
         if ecoute:
             subprocess.run(["ffplay", "-hide_banner", "-loglevel", "error", "-autoexit",
                             "-f", "s16le", "-ar", str(ECHANTILLONS_S), "-ac", str(VOIES),
@@ -202,8 +410,9 @@ def main(argv: list[str] | None = None) -> int:
     parseur = argparse.ArgumentParser(description=__doc__)
     parseur.add_argument("--dossier", default=str(ROOT / "data" / "voix"))
     parseur.add_argument("--ecoute", action="store_true", help="les jouer en les gravant")
+    parseur.add_argument("--moteur", choices=sorted(VOIX), default="openai")
     args = parseur.parse_args(argv)
-    return enregistre(Path(args.dossier), args.ecoute)
+    return enregistre(Path(args.dossier), args.ecoute, args.moteur)
 
 
 if __name__ == "__main__":
