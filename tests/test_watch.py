@@ -3454,3 +3454,52 @@ class RecouvrementTests(unittest.TestCase):
                            distance_doubt=SIZE_DOUBT_MAX + 0.4, travel=0.135)
         faux = Detection("person", 0.56, share=0.0)
         self.assertNotEqual(decide(Observation(**loin, detections=[faux])).type, "person")
+
+
+class DescriptionDeChaine(unittest.TestCase):
+    """Ce qu'on écrit sous la vidéo, et ce que YouTube en fait."""
+
+    CREDITS = {
+        "a.mp3": {"auteur": "#NarNaöud#", "titre": "Bongo Jazzy",
+                  "licence": "Licence Art Libre", "source": "Dogmazic",
+                  "url": "https://play.dogmazic.net/song.php?song_id=1"},
+        "b.mp3": {"auteur": "Aloges", "titre": "Solitude", "source": "Dogmazic",
+                  "licence": "Creative Commons - by 3.0", "url": ""},
+        "c.mp3": {"auteur": "thepriben", "titre": "Mont Serein 002.01",
+                  "licence": "CC0"},
+    }
+
+    def test_every_artist_is_named_and_their_licence_given(self):
+        from scripts.description_youtube import description
+        texte = description(self.CREDITS)
+        for fiche in self.CREDITS.values():
+            self.assertIn(fiche["auteur"], texte)
+        self.assertIn("Licence Art Libre", texte)
+        self.assertIn("CC BY 3.0", texte)
+
+    def test_an_artist_name_cannot_cancel_the_hashtags(self):
+        """« #NarNaöud# » est un nom, mais YouTube y lit un mot-dièse.
+
+        Au-delà de quinze il les ignore tous, les nôtres compris : un nom
+        propre pouvait donc effacer la liste entière.
+        """
+        from scripts.description_youtube import MAX_DIESE, description
+        texte = description(self.CREDITS)
+        self.assertLessEqual(len(re.findall(r"#\w", texte)), MAX_DIESE)
+        self.assertIn("#MontVentoux", texte)
+
+    def test_a_long_list_is_cut_between_artists_and_says_so(self):
+        gros = {f"{i}.mp3": {"auteur": f"Artiste numéro {i}", "titre": "x" * 60,
+                             "licence": "CC0", "source": "Dogmazic", "url": ""}
+                for i in range(400)}
+        from scripts.description_youtube import description
+        texte = description(gros, limite=5000)
+        self.assertLessEqual(len(texte), 5000)
+        self.assertIn("more tracks", texte)
+
+    def test_the_watch_never_promises_to_watch_for_anything(self):
+        """La chaîne est une caméra, pas un service d'alerte. On le dit."""
+        from scripts.description_youtube import description
+        texte = description(self.CREDITS).lower()
+        self.assertIn("not a monitoring service", texte)
+        self.assertNotIn("fire", texte)

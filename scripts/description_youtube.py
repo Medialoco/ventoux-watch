@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -54,13 +55,40 @@ from Dogmazic, a French free-music library running since 2004; the rest is
 written for this channel and released under CC0.
 """
 
+# Quinze et pas un de plus : YouTube n'affiche que les trois premiers au-dessus
+# du titre, et au-delà de quinze il cesse d'en tenir compte — tous, pas
+# seulement les derniers. « Nombreux » s'arrête donc là où ils comptent encore.
+MOTS_DIESE = (
+    "#MontVentoux #SlowTV #LiveCam #Provence #France #Mountain #Webcam #Nature "
+    "#ComputerVision #RaspberryPi #OpenSource #CreativeCommons #FreeMusic "
+    "#Ambient #Relaxing"
+)
+
+MAX_DIESE = 15
+
+
+def mots_diese(corps: str, choisis: str = "") -> str:
+    """Nos mots-dièse, moins ceux que les noms d'artistes ont déjà consommés.
+
+    « #NarNaöud# » est un nom d'artiste, mais YouTube y lit un mot-dièse comme
+    dans n'importe quel texte. Au-delà de quinze il cesse de tous les prendre
+    en compte, les nôtres compris — un nom propre peut donc annuler la liste
+    entière. On compte ce que le corps a déjà pris et on s'arrête avant.
+    """
+    deja = len(re.findall(r"#\w", corps))
+    mots = (choisis or MOTS_DIESE).split()
+    return " ".join(mots[:max(0, MAX_DIESE - deja)])
+
+
 PIED = """\
 Webcam: Vision Environnement, Mont Serein.
 Terrain and place names: OpenStreetMap contributors and public elevation data.
 Aircraft: the OpenSky Network.
 Weather: Open-Meteo.
 
-No fire, no emergency, no alert is ever announced on this stream.
+This channel is a camera and a curiosity. It is not a monitoring service, it
+raises no alarm of any kind, and nothing it says should be acted upon.
+
 """
 
 
@@ -93,13 +121,17 @@ def _licence_courte(nom: str) -> str:
 
 
 def lignes_musique(credits: dict) -> list[str]:
-    """Un artiste par bloc, ses titres en ligne, sa licence, un lien.
+    """Un artiste par ligne, ses titres, sa licence. Pas de lien par morceau.
 
-    Un lien par titre aurait été plus confortable, mais cent quatorze adresses
-    de soixante caractères font sept mille signes à elles seules, et YouTube
-    coupe à cinq mille : la liste se serait arrêtée au quart, ce qui aurait
-    laissé quatre-vingt-dix artistes sans crédit du tout. Mieux vaut un lien
-    par artiste et tout le monde nommé.
+    Cent vingt-neuf adresses de soixante caractères font huit mille signes à
+    elles seules, et YouTube coupe à cinq mille : la liste s'arrêtait au quart
+    et quatre-vingt-dix artistes n'avaient aucun crédit du tout. Un lien par
+    artiste coûtait encore mille sept cents signes, et huit restaient dehors.
+
+    L'obligation est de nommer l'auteur, le titre et la licence, et de lier
+    « quand c'est raisonnablement possible ». Nommer tout le monde avec
+    l'adresse de la médiathèque, où l'on cherche par artiste, remplit mieux
+    cette obligation que lier vingt personnes en en taisant huit.
     """
     lignes: list[str] = []
     dogmazic = par_artiste(credits, "Dogmazic")
@@ -109,16 +141,13 @@ def lignes_musique(credits: dict) -> list[str]:
     if dogmazic:
         total = sum(len(f) for f in dogmazic.values())
         lignes.append(f"FROM DOGMAZIC — {total} tracks by {len(dogmazic)} artists")
-        lignes.append("https://play.dogmazic.net")
+        lignes.append("Search any name below at https://play.dogmazic.net")
         lignes.append("")
         for nom, fiches in dogmazic.items():
             rangees = sorted(fiches, key=lambda f: (f.get("titre") or "").lower())
             licences = sorted({_licence_courte(f.get("licence", "")) for f in rangees})
             lignes.append(f"{nom} — {', '.join(licences)}")
             lignes.append("  " + ", ".join(f.get("titre", "?") for f in rangees))
-            lien = next((f["url"] for f in rangees if f.get("url")), "")
-            if lien:
-                lignes.append(f"  {lien}")
             lignes.append("")
     if maison:
         lignes.append("WRITTEN FOR THIS CHANNEL")
@@ -133,7 +162,8 @@ def lignes_musique(credits: dict) -> list[str]:
 
 def description(credits: dict, limite: int = LIMITE) -> str:
     corps = lignes_musique(credits)
-    texte = ENTETE + "\n" + "\n".join(corps) + "\n" + PIED
+    tronc = ENTETE + "\n" + "\n".join(corps) + "\n" + PIED
+    texte = tronc + "\n" + mots_diese(tronc) + "\n"
     if len(texte) <= limite:
         return texte
     # Trop long : on coupe à l'artiste, jamais au milieu d'un nom, et on dit
@@ -147,7 +177,8 @@ def description(credits: dict, limite: int = LIMITE) -> str:
     restants = len(credits) - sum(1 for l in gardees if l.startswith("  · "))
     gardees += ["", f"… and {restants} more tracks, all free-licensed, each one",
                 "credited on screen while it plays."]
-    return ENTETE + "\n" + "\n".join(gardees) + "\n" + PIED
+    tronc = ENTETE + "\n" + "\n".join(gardees) + "\n" + PIED
+    return tronc + "\n" + mots_diese(tronc) + "\n"
 
 
 def main() -> int:
