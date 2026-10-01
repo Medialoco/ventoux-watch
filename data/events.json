@@ -2,6 +2,90 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T04-54-07Z-missed-30",
+      "t": "2026-10-01T04:54:07Z",
+      "type": "missed",
+      "label": "Devant le relief",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T04-54-07Z-missed-30.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Ça se détache sur la forêt, pas sur le ciel. Un avion ne passe pas devant.",
+        "period": "night",
+        "weather": "pluie",
+        "context": "de nuit, pluie",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0149,
+          "area_grow": 3.0,
+          "clipped": true,
+          "shade": 1.294,
+          "kept": 0.231,
+          "area_ratio": 0.00143,
+          "duration_s": 6.8,
+          "frames": 3,
+          "width_m": 58.7,
+          "height_m": 21.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.29,
+          "drift_rate": 0.058,
+          "seen_as": []
+        },
+        "refused": "against_the_ground",
+        "box": [
+          0.9531,
+          0.0806,
+          0.0469,
+          0.0306
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T04-54-07Z-missed-30.jpg"
+    },
+    {
+      "id": "2026-10-01T04-52-46Z-missed-29",
+      "t": "2026-10-01T04:52:46Z",
+      "type": "missed",
+      "label": "Immobile dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T04-52-46Z-missed-29.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Ça n'a pas traversé le ciel. La balise et les étoiles fixes sont déjà écartées.",
+        "period": "night",
+        "weather": "pluie",
+        "context": "de nuit, pluie",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.197,
+          "kept": 0.75,
+          "area_ratio": 0.00035,
+          "duration_s": 2.2,
+          "frames": 3,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "sky_still",
+        "box": [
+          0.2125,
+          0.2,
+          0.0125,
+          0.0278
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T04-52-46Z-missed-29.jpg"
+    },
+    {
       "id": "2026-10-01T04-38-20Z-missed-28",
       "t": "2026-10-01T04:38:20Z",
       "type": "missed",
