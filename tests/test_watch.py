@@ -9,6 +9,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -2837,6 +2838,40 @@ class DiffusionTests(unittest.TestCase):
         self.assertTrue(stream.soleil_absent(Crete(), camera, apres, "couvert"))
         # Et sans modèle de terrain le flux continue, il perd juste l'ombre.
         self.assertFalse(stream.soleil_absent(None, camera, avant, "ciel dégagé"))
+
+    def test_a_missing_webcam_never_takes_the_broadcast_down_with_it(self):
+        """Deux minutes de 404 ont coûté le direct : on attend, on ne ressort pas.
+
+        Chaque redémarrage rouvrait puis refermait la connexion vers YouTube, et
+        une arrivée qui clignote huit fois en deux minutes est une diffusion que
+        YouTube termine. La panne venait d'ailleurs ; c'est notre façon d'y
+        répondre qui a coûté quelque chose.
+        """
+        essais = []
+
+        def capricieuse(url):
+            essais.append(url)
+            if len(essais) < 3:
+                raise OSError("HTTP Error 404: Not Found")
+            return "media.m3u8"
+
+        with mock.patch.object(stream, "playlist_media", capricieuse), \
+                mock.patch.object(stream, "bord_du_direct", lambda _: (1000.0, 7.0)), \
+                mock.patch.object(stream.time, "sleep", lambda _: None):
+            media, dernier, segment = stream.attends_la_webcam("http://camera/x.m3u8")
+        self.assertEqual((media, dernier, segment), ("media.m3u8", 1000.0, 7.0))
+        self.assertEqual(len(essais), 3)
+
+    def test_the_wait_for_the_webcam_gives_up_eventually(self):
+        """Passé une demi-heure ce n'est plus une absence, c'est une panne."""
+        horloge = iter([0.0] + [i * 60.0 for i in range(1, 60)])
+
+        with mock.patch.object(stream, "playlist_media",
+                               mock.Mock(side_effect=OSError("muette"))), \
+                mock.patch.object(stream, "_maintenant", lambda: next(horloge)), \
+                mock.patch.object(stream.time, "sleep", lambda _: None):
+            with self.assertRaises(RuntimeError):
+                stream.attends_la_webcam("http://camera/x.m3u8")
 
     def test_a_refusal_never_gets_a_red_box_on_the_stream(self):
         """Un rectangle rouge dit « j'ai vu ceci », pas « je n'ai rien su lire »."""

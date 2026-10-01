@@ -105,6 +105,47 @@ def bord_du_direct(media_url: str) -> tuple[float, float]:
     return dates[-1], duree
 
 
+# Combien de temps on insiste quand la webcam ne répond pas, et à quel rythme.
+# Une demi-heure : au-delà, ce n'est plus une absence, c'est une panne, et il
+# vaut mieux que le service redémarre pour repartir de zéro.
+ATTENTE_WEBCAM_S = 1800.0
+ATTENTE_PAS_S = 20.0
+
+
+def attends_la_webcam(url: str) -> tuple[str, float, float]:
+    """La playlist, en insistant tant qu'elle n'est pas là.
+
+    Et surtout : sans quitter le processus. La webcam a renvoyé un 404 pendant
+    deux minutes ce matin ; le flux est sorti en erreur, systemd l'a relancé
+    dix secondes plus tard, qui est ressorti, huit fois de suite. Chacun de ces
+    départs avait ouvert puis fermé la connexion RTMP vers YouTube, et une
+    diffusion dont l'arrivée clignote huit fois en deux minutes est une
+    diffusion que YouTube termine.
+
+    La panne durait deux minutes et venait d'ailleurs. Ce qui a coûté le direct,
+    ce n'est pas elle, c'est notre façon d'y répondre : on repartait de zéro
+    quand il suffisait d'attendre. On attend, donc, et la connexion vers
+    YouTube n'est même pas ouverte tant qu'on n'a rien à y mettre.
+    """
+    debut = _maintenant()
+    souci: Exception | None = None
+    while _maintenant() - debut < ATTENTE_WEBCAM_S:
+        try:
+            media = playlist_media(url)
+            dernier, segment = bord_du_direct(media)
+            if souci is not None:
+                log.info("La webcam répond de nouveau après %.0f s",
+                         _maintenant() - debut)
+            return media, dernier, segment
+        except Exception as erreur:  # réseau, 404, playlist vide, date absente
+            if souci is None:
+                log.warning("Webcam indisponible (%s) : on attend sans couper "
+                            "la diffusion", erreur)
+            souci = erreur
+            time.sleep(ATTENTE_PAS_S)
+    raise RuntimeError(f"webcam muette depuis {ATTENTE_WEBCAM_S:.0f} s : {souci}")
+
+
 def identifications(chemin: Path, depuis: float) -> list[dict]:
     """Ce que la veille a nommé, avec son heure et son rectangle.
 
@@ -1665,8 +1706,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         log.warning("Musique coupée : le flux part en silence")
     if musique.session is None:
         log.warning("Aucune musique dans data/musique : le flux sortira muet")
-    media = playlist_media(cfg["stream_url"])
-    dernier, segment = bord_du_direct(media)
+    media, dernier, segment = attends_la_webcam(cfg["stream_url"])
     log.info("Segments de %.1f s, dernier publié il y a %.1f s", segment, _maintenant() - dernier)
 
     entree = _entree(cfg["stream_url"], recul)
