@@ -1890,7 +1890,15 @@ class FogTests(unittest.TestCase):
         # rattraper quatre. Les mesures ne séparent pas les deux familles — une
         # berline de la planche fait 4,4 × 2,9 m et ce fourgon 4,7 × 2,7 —, donc
         # la réparation est en amont, dans la tache de mouvement, pas ici.
+        # Trois fois le même défaut, et c'est maintenant le premier de la
+        # liste : la porte entre « Voiture » et « Camion » est une largeur de
+        # 5,5 m, mesurée sur une tache que l'ombre gonfle et que le bord du
+        # cadre coupe. Elle avait raison quatorze fois sur quinze ; à trois
+        # fautes du même genre, ce n'est plus du bruit, c'est une règle à
+        # refaire — sur la mesure, pas sur le seuil.
         "2026-09-29T14-59-32Z-motion-222 : attendu 'Camion', obtenu 'Voiture'",
+        "2026-09-30T08-40-56Z-vehicle-126 : attendu 'Camion', obtenu 'Voiture'",
+        "2026-09-30T15-41-10Z-vehicle-287 : attendu 'Camion', obtenu 'Voiture'",
         # Un piéton lu comme une voiture.
         # Était « Voiture », un faux nom tiré d'une lecture qui ne recouvrait
         # rien de ce qui bougeait. La règle du recouvrement nul l'a ramené à un

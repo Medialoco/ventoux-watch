@@ -270,7 +270,8 @@ def _entree(url: str, recul: int) -> subprocess.Popen:
 
 
 def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
-            debit: str, sortie_par_s: int = 25) -> tuple[subprocess.Popen, int]:
+            debit: str, sortie_par_s: int = 25,
+            vitesse: str = "veryfast") -> tuple[subprocess.Popen, int]:
     """La sortie, et le descripteur par lequel on lui donne le son.
 
     Deux tuyaux parce qu'un processus n'a qu'une entrée standard et qu'il faut
@@ -291,7 +292,13 @@ def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
         # Le Pi 5 n'a aucun encodeur matériel : il ne reste que le logiciel, et
         # « veryfast » est le compromis mesuré qui tient le temps réel sans
         # manger les cœurs dont la veille a besoin.
-        "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
+        # Le Pi 5 n'a aucun encodeur matériel et il n'a pas de ventilateur : à
+        # vingt-cinq images par seconde en continu, avec la veille à côté, il a
+        # touché quatre-vingt-trois degrés et le bridage thermique s'est
+        # allumé. Ces deux réglages sont là pour qu'on puisse redescendre sans
+        # toucher au code, et pour qu'on puisse remonter le jour où la machine
+        # saura se refroidir.
+        "-c:v", "libx264", "-preset", vitesse, "-tune", "zerolatency",
         "-pix_fmt", "yuv420p", "-b:v", debit, "-maxrate", debit, "-bufsize", "4M",
         # La source ne donne que six images par seconde et YouTube se méfie en
         # dessous de vingt-cinq. On le laisse dupliquer lui-même plutôt que de
@@ -347,7 +354,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             dessine(image, vus, quand)
             if sortie is None:
                 sortie, son = _sortie(cible, largeur, hauteur, cfg["stream_fps"],
-                                      cfg["stream_bitrate"], cfg["stream_out_fps"])
+                                      cfg["stream_bitrate"], cfg["stream_out_fps"],
+                                      cfg["stream_preset"])
                 assert sortie.stdin is not None
                 verseur = threading.Thread(target=_verse_le_son, args=(son, musique, coupe),
                                            daemon=True)
@@ -415,7 +423,8 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg = load_config(racine)
     cfg.setdefault("stream_fps", 6)
-    cfg.setdefault("stream_out_fps", 25)
+    cfg.setdefault("stream_out_fps", 15)
+    cfg.setdefault("stream_preset", "veryfast")
     cfg.setdefault("stream_bitrate", "2500k")
     cible = args.sortie or cible_youtube(cfg) or str(racine / "data" / "diffusion.mp4")
     # Jamais l'adresse complète dans le journal : la clé y est dedans, et les
