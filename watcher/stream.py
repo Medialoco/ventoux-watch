@@ -537,22 +537,41 @@ class Musique:
             return (self.voix_dit or "").split("_")[0] if self.voix else ""
 
     def tranche(self, octets: int) -> bytes:
-        """Le son des prochaines images, ou du silence si la musique manque."""
+        """Le son des prochaines images, ou du silence si la musique manque.
+
+        Rien de ce qui arrive ici ne peut faire tomber le flux. La musique est
+        l'agrément, l'image est le sujet : un fichier effacé sous les pieds du
+        lecteur doit faire du silence, pas une antenne noire. C'est pourtant ce
+        qui est arrivé le premier octobre, et ça a coûté la diffusion.
+        """
         if self.process is None or self.process.stdout is None:
             return self._avec_la_voix(b"\0" * octets)
-        morceau = self.process.stdout.read(octets)
+        try:
+            morceau = self.process.stdout.read(octets)
+        except OSError:
+            morceau = b""
         if len(morceau) < octets:
-            # La session est finie : on en rebat une et on complète la tranche,
-            # pour qu'aucun battement ne parte incomplet.
-            self.arrete()
-            # La session suivante est bâtie pour l'heure qu'il sera, pas pour
-            # celle qu'il était : une session de jour tirée à cinq heures du
-            # matin jouerait au soleil levant une sélection faite pour la nuit.
-            if not self.muet:
-                self.session = batir_session(self.dossier, nuit=est_nuit(self.racine))
-                self._ouvre()
-            if self.process is not None and self.process.stdout is not None:
-                morceau += self.process.stdout.read(octets - len(morceau))
+            # Soit la session est finie, soit un de ses fichiers a disparu
+            # pendant qu'on jouait — ce qui se produit dès qu'on nettoie la
+            # bibliothèque sans redémarrer. Dans les deux cas on en rebat une
+            # et on complète la tranche, pour qu'aucun battement ne parte
+            # incomplet.
+            try:
+                self.arrete()
+                # La session suivante est bâtie pour l'heure qu'il sera, pas
+                # pour celle qu'il était : une session de jour tirée à cinq
+                # heures du matin jouerait au soleil levant une sélection
+                # faite pour la nuit.
+                if not self.muet:
+                    self.session = batir_session(self.dossier,
+                                                 nuit=est_nuit(self.racine))
+                    self._ouvre()
+                if self.process is not None and self.process.stdout is not None:
+                    morceau += self.process.stdout.read(octets - len(morceau))
+            except Exception:
+                log.warning("La musique s'est tue, le flux continue",
+                            exc_info=True)
+                self.process = None
         self.octets += octets
         servi = self._avec_la_voix(morceau.ljust(octets, b"\0"))
         self._mesure(servi)
@@ -665,6 +684,22 @@ class Musique:
         """
         return qui_passe(self.suite, self.fiches, self._seconde())
 
+    def arrete(self) -> None:
+        """Ferme le lecteur de musique, s'il y en a un.
+
+        Cette méthode avait disparu de la classe : elle était échouée à
+        l'intérieur de « qui_passe », après le return, donc inaccessible et
+        absente d'ici. Les deux appels la cherchaient pourtant — celui de la
+        fin de session et celui de l'arrêt du programme — et tous deux
+        levaient une AttributeError. C'est ce qui a terminé la diffusion du
+        premier octobre à vingt heures : le fil du son est mort sur le chemin
+        censé le réparer, l'écriture vidéo s'est fermée derrière lui, et
+        YouTube a clos la diffusion.
+        """
+        if self.process is not None:
+            self.process.kill()
+            self.process = None
+
 
 def qui_passe(suite: list[dict], fiches: dict[str, dict], seconde: float) -> str:
     """Le morceau à cette seconde de la session, nommé comme la licence l'exige."""
@@ -676,11 +711,6 @@ def qui_passe(suite: list[dict], fiches: dict[str, dict], seconde: float) -> str
             return f"♪ {fiche['auteur']} — {fiche['titre']} · {fiche['licence']}"
         seconde -= piste["d"]
     return ""
-
-    def arrete(self) -> None:
-        if self.process is not None:
-            self.process.kill()
-            self.process = None
 
 
 def est_nuit(racine: Path) -> bool:
@@ -2367,9 +2397,19 @@ def _verse_le_son(descripteur: int, musique: Musique, coupe: threading.Event) ->
     justement la cadence : le tuyau ne se vide qu'au rythme où ffmpeg consomme,
     lequel suit les images, lesquelles arrivent de la webcam en temps réel.
     Rien ne règle le débit, il s'impose.
+
+    Ce fil ne meurt que sur ordre. Une exception non rattrapée ici ferme le
+    tuyau du son, ffmpeg s'arrête, l'écriture de l'image casse derrière et
+    YouTube clôt la diffusion : c'est la chaîne exacte du premier octobre à
+    vingt heures. Du silence vaut toujours mieux qu'un écran noir, donc on
+    verse du silence et on continue.
     """
     while not coupe.is_set():
-        morceau = musique.tranche(16384)
+        try:
+            morceau = musique.tranche(16384)
+        except Exception:
+            log.warning("Le son a trébuché, on verse du silence", exc_info=True)
+            morceau = b"\0" * 16384
         pose = 0
         while pose < len(morceau) and not coupe.is_set():
             try:

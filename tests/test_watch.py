@@ -3,6 +3,7 @@ import json
 import math
 import os
 import re
+import io
 import subprocess
 import sys
 import tempfile
@@ -3584,3 +3585,65 @@ class DeploiementSansCouper(unittest.TestCase):
              mock.patch.object(deploie.subprocess, "run"):
             deploie.main(["--flux", "--quand-meme"])
         self.assertIn("sudo systemctl restart ventoux-stream", appels)
+
+
+class LeSonNeTuePasLImage(unittest.TestCase):
+    """Le premier octobre à vingt heures, la musique a emporté la diffusion."""
+
+    def _musique(self):
+        from watcher.stream import Musique
+        with tempfile.TemporaryDirectory() as dossier:
+            yield Musique(Path(dossier), Path(dossier), muet=True)
+
+    def test_the_music_knows_how_to_stop(self):
+        """« arrete » était échouée dans qui_passe, après son return.
+
+        Inaccessible, et donc absente de la classe : les deux appels — la fin
+        de session et l'arrêt du programme — levaient une AttributeError.
+        """
+        from watcher.stream import Musique, qui_passe
+        self.assertTrue(callable(getattr(Musique, "arrete", None)))
+        self.assertFalse(hasattr(qui_passe, "arrete"))
+
+    def test_a_track_deleted_under_the_player_only_costs_silence(self):
+        """Nettoyer la bibliothèque sans redémarrer ne doit rien coûter.
+
+        Un fichier effacé pendant qu'on joue fait une lecture courte, donc le
+        chemin de bascule ; si ce chemin lève, le fil du son meurt, l'écriture
+        de l'image casse derrière et la diffusion se termine.
+        """
+        from watcher.stream import Musique
+        with tempfile.TemporaryDirectory() as dossier:
+            musique = Musique(Path(dossier), Path(dossier), muet=True)
+
+            class Tari:
+                stdout = io.BytesIO(b"\x01\x02")
+
+                def kill(self):
+                    raise RuntimeError("le lecteur a déjà disparu")
+
+            musique.process = Tari()
+            morceau = musique.tranche(4096)
+        self.assertEqual(len(morceau), 4096)
+
+    def test_the_audio_thread_never_takes_the_picture_down_with_it(self):
+        from watcher.stream import _verse_le_son
+        lecture, ecriture = os.pipe()
+        coupe = threading.Event()
+        essais = []
+
+        class Cassee:
+            def tranche(self, octets):
+                essais.append(octets)
+                if len(essais) == 1:
+                    raise RuntimeError("plus de musique du tout")
+                coupe.set()
+                return b"\0" * octets
+
+        try:
+            _verse_le_son(ecriture, Cassee(), coupe)
+        finally:
+            os.close(lecture)
+            os.close(ecriture)
+        # Il a survécu au premier accident et versé la tranche suivante.
+        self.assertEqual(len(essais), 2)
