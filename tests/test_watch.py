@@ -1,3 +1,4 @@
+import inspect
 import json
 import math
 import os
@@ -5,6 +6,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from dataclasses import replace
@@ -2578,9 +2580,135 @@ class DiffusionTests(unittest.TestCase):
                                 str(racine / f"{nom}.mp3")], check=True)
             session = stream.batir_session(racine, heures=0.02)
             self.assertIsNotNone(session)
-            lignes = session.read_text(encoding="utf-8").splitlines()
+            # Une entrée tient en trois lignes depuis qu'on sert les longs sets
+            # par tranches : le fichier, puis son entrée et sa sortie.
+            lignes = [l for l in session.read_text(encoding="utf-8").splitlines()
+                      if l.startswith("file ")]
             premiers = [ligne.rsplit("/", 1)[1].rstrip("'") for ligne in lignes[:6]]
             self.assertEqual(sorted(premiers), sorted(f"{n}.mp3" for n in "abcdef"))
+
+    def test_no_track_holds_the_stream_for_more_than_ten_minutes(self):
+        """Un set de cinquante minutes se sert par tranches, pas d'un bloc.
+
+        Personne ne reste dix minutes sur la même chose, et la bibliothèque
+        contient des mixes qui durent près d'une heure : les jeter serait
+        perdre le meilleur du fonds, les passer entiers serait perdre l'auditeur.
+        """
+        bouts = stream._tranches(Path("/x/mix.mp3"), 54 * 60.0)
+        self.assertGreater(len(bouts), 1)
+        self.assertLessEqual(max(b["d"] for b in bouts), stream.TRANCHE_MAX_S)
+        # Rien ne se perd : les tranches bout à bout font le morceau entier.
+        self.assertAlmostEqual(sum(b["d"] for b in bouts), 54 * 60.0, places=3)
+        self.assertEqual(bouts[0]["debut"], 0.0)
+        # Et un morceau ordinaire n'est pas découpé pour rien.
+        self.assertEqual(len(stream._tranches(Path("/x/court.mp3"), 240.0)), 1)
+
+    def test_a_fire_is_never_replayed(self):
+        """Une image de feu remontrée ferait croire que la montagne brûle.
+
+        C'est la seule sortie du flux qui puisse causer un tort réel, et le
+        bandeau « replay » n'y change rien : personne ne lit un bandeau quand
+        il voit de la fumée.
+        """
+        with tempfile.TemporaryDirectory() as dossier:
+            racine = Path(dossier)
+            (racine / "data" / "thumbs").mkdir(parents=True)
+            photo = "data/thumbs/x.jpg"
+            (racine / photo).write_bytes(b"\xff\xd8\xff")
+            (racine / "data" / "events.json").write_text(json.dumps([
+                {"t": "2026-09-29T14:59:32Z", "label": "Départ de feu", "thumb": photo},
+                {"t": "2026-09-29T15:00:00Z", "label": "Incendie", "thumb": photo},
+                {"t": "2026-09-29T15:01:00Z", "label": "Panache de nuit", "thumb": photo},
+                {"t": "2026-09-29T15:02:00Z", "label": "Camion", "thumb": photo},
+            ]), encoding="utf-8")
+            gardees = stream.archives(racine)
+            self.assertEqual([f["label"] for f in gardees], ["Camion"])
+
+    def test_a_voice_ducks_the_music_without_clipping_it(self):
+        """La voix se pose sur la musique, elle ne la remplace pas.
+
+        Deux signaux forts additionnés en seize bits ne saturent pas : ils
+        rebouclent, et un dépassement en audio ne s'entend pas comme un son
+        trop fort mais comme un claquement. D'où la somme en entiers larges.
+        """
+        musique = stream.Musique.__new__(stream.Musique)
+        musique.voix = b""
+        musique.voix_dit = ""
+        musique._verrou = threading.Lock()
+
+        plein = np.full(400, 30000, np.int16)
+        fond = plein.tobytes()
+        musique.voix = plein.tobytes()
+        melange = np.frombuffer(musique._avec_la_voix(fond), np.int16)
+
+        self.assertEqual(len(melange), 400)
+        # Rien n'a rebouclé : une somme qui déborde aurait produit du négatif.
+        self.assertTrue((melange > 0).all())
+        self.assertLessEqual(int(melange.max()), 32767)
+        # Et la musique est bien passée dessous, pas effacée : 30000 de voix
+        # plus 35 % de 30000 de musique dépasse la voix seule, donc écrête.
+        self.assertEqual(int(melange[0]), 32767)
+
+        # Une fois la réplique servie, le son repart intact et la voix se tait.
+        self.assertFalse(musique.parle())
+        self.assertEqual(musique._avec_la_voix(fond), fond)
+
+    def test_the_voice_stops_exactly_when_the_clip_runs_out(self):
+        """Le mot à l'écran suit le compte des octets, pas une minuterie."""
+        musique = stream.Musique.__new__(stream.Musique)
+        musique.voix_dit = ""
+        musique._verrou = threading.Lock()
+        # Une réplique d'un dixième de seconde, servie en deux tranches.
+        echantillons = stream.ECHANTILLONS_S // 10 * stream.VOIES
+        musique.voix = np.zeros(echantillons, np.int16).tobytes()
+        moitie = len(musique.voix) // 2
+        silence = b"\0" * moitie
+
+        musique._avec_la_voix(silence)
+        self.assertTrue(musique.parle())
+        musique._avec_la_voix(silence)
+        self.assertFalse(musique.parle())
+
+    def test_boredom_is_measured_on_the_road_and_not_on_the_screen(self):
+        """L'horloge de l'ennui ne doit pas être celle des rediffusions.
+
+        « dernier_vu » est remis à zéro quand une rediffusion s'achève, pour
+        espacer les suivantes. S'en servir pour l'ennui ferait dire « boring »
+        vingt minutes après une rediffusion, c'est-à-dire juste après qu'il
+        s'est passé quelque chose à l'écran. Ce test fige la séparation.
+        """
+        source = inspect.getsource(stream.diffuse)
+        # Les deux horloges existent et sont distinctes.
+        self.assertIn("dernier_mouvement", source)
+        self.assertIn("dernier_vu", source)
+        # L'ennui se décide sur la seule horloge que les rediffusions ne
+        # touchent pas.
+        declenchement = [l for l in source.splitlines() if "ENNUI_S" in l and "quand -" in l]
+        self.assertTrue(declenchement)
+        self.assertTrue(all("dernier_vu" not in l for l in declenchement), declenchement)
+        # Et la remise à zéro de « dernier_mouvement » n'arrive qu'après une
+        # vraie détection, jamais dans le bloc des rediffusions.
+        apres_dessine = source.split("if dessine(")[1].split("elif")[0]
+        self.assertIn("dernier_mouvement = quand", apres_dessine)
+
+    def test_the_credit_follows_the_music_from_one_track_to_the_next(self):
+        """CC-BY se paie à l'écran, sur le morceau qui passe.
+
+        Le compte se fait sur les octets versés, donc une erreur d'une seconde
+        au passage d'un titre créditerait le mauvais auteur. On vérifie les
+        deux bords.
+        """
+        suite = [{"f": "a.mp3", "d": 120.0}, {"f": "b.mp3", "d": 90.0}]
+        fiches = {"a.mp3": {"auteur": "Nemeton", "titre": "01nocti27", "licence": "CC BY 4.0"},
+                  "b.mp3": {"auteur": "Naxar", "titre": "Night Sky", "licence": "CC BY-SA 3.0"}}
+        self.assertIn("Nemeton", stream.qui_passe(suite, fiches, 0.0))
+        self.assertIn("Nemeton", stream.qui_passe(suite, fiches, 119.9))
+        self.assertIn("Naxar", stream.qui_passe(suite, fiches, 120.1))
+        self.assertIn("CC BY-SA 3.0", stream.qui_passe(suite, fiches, 200.0))
+        # Passé la session, et pour un morceau sans fiche, on se tait plutôt
+        # que de créditer au hasard : un faux crédit est pire que pas de crédit.
+        self.assertEqual(stream.qui_passe(suite, fiches, 400.0), "")
+        self.assertEqual(stream.qui_passe(suite, {}, 10.0), "")
 
     def test_an_empty_library_does_not_stop_the_stream(self):
         # Le silence vaut mieux que pas d'image : la veille est le produit.

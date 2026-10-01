@@ -401,6 +401,11 @@ class ViewLog:
             "moon_at": moon,
             "api": api_label or "",
             "temp_c": None if temp_c is None else round(float(temp_c)),
+            # La mesure qui décide, et pas seulement le mot qu'elle produit.
+            # Un flux qui affiche « brouillard » demande qu'on le croie ; un
+            # flux qui affiche « brouillard, crête à 9 au lieu de 70 » montre
+            # ce qu'il a regardé, et se laisse contredire.
+            "ridge": round(skyline_edge(frame), 1) if frame is not None and frame.size else None,
             "photo": "data/view.jpg",
         }
         self._last_commit = stamp

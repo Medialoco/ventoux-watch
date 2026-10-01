@@ -22,12 +22,14 @@ import argparse
 import json
 import logging
 import os
+import random
 import subprocess
 import sys
 import threading
 import time
 import urllib.request
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 import cv2
@@ -46,6 +48,9 @@ SEGMENTS_EN_ARRIERE = 2
 TENUE_S = 4.0
 
 ROUGE = (60, 60, 220)
+VERT = (120, 230, 130)
+AMBRE = (60, 190, 250)
+CYAN = (235, 215, 70)
 BLANC = (245, 245, 245)
 
 # Une session, et non une liste de morceaux. Un flux qui tourne jour et nuit
@@ -170,15 +175,63 @@ def duree_audio(chemin: Path) -> float:
         return 0.0
 
 
-def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None = None) -> Path | None:
+# De combien on baisse la musique pendant que la voix parle. À 0,35 elle reste
+# présente — c'est une blague posée sur un morceau, pas une annonce de gare qui
+# coupe tout.
+ATTENUATION = 0.35
+# Vingt minutes sans la moindre détection avant que le flux le dise, puis
+# autant entre deux. Sur cette route, vingt minutes de vide sont banales la
+# nuit et rares à midi : le mot arrive donc quand il est vrai.
+ENNUI_S = 1200.0
+
+
+def repliques(dossier: Path) -> list[Path]:
+    """Les répliques gravées, s'il y en a. Leur absence n'empêche rien."""
+    try:
+        fiches = json.loads((dossier / "voix.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return [dossier / f["fichier"] for f in fiches if (dossier / f["fichier"]).is_file()]
+
+
+# Personne ne reste dix minutes sur la même chose. Les sets de mix récoltés
+# durent jusqu'à cinquante-quatre minutes : on ne les jette pas, on les sert
+# par tranches, et le flux change donc d'air au moins toutes les dix minutes
+# même quand il s'agit du même disque.
+TRANCHE_MAX_S = 600.0
+# Et en dessous de quoi une tranche ne vaut plus la peine d'exister : couper un
+# set de 62 minutes donne six tranches et un bout de deux minutes, qu'on recolle
+# plutôt que de le laisser traîner.
+TRANCHE_MIN_S = 150.0
+# La frontière entre un morceau et un set. La nuit tire d'abord dans les sets,
+# le jour d'abord dans les morceaux : une route déserte à quatre heures du
+# matin demande de la durée, et la même route à midi demande du changement.
+LONG_S = 600.0
+
+
+def _tranches(piste: Path, duree: float) -> list[dict]:
+    """Un morceau, découpé en tranches d'au plus dix minutes."""
+    if duree <= TRANCHE_MAX_S:
+        return [{"f": piste.name, "chemin": piste, "debut": 0.0, "d": duree}]
+    bouts = []
+    debut = 0.0
+    while debut < duree:
+        fin = min(debut + TRANCHE_MAX_S, duree)
+        if duree - fin < TRANCHE_MIN_S:
+            fin = duree
+        bouts.append({"f": piste.name, "chemin": piste, "debut": debut, "d": fin - debut})
+        debut = fin
+    return bouts
+
+
+def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None = None,
+                  nuit: bool = False) -> Path | None:
     """Tire une session dans la bibliothèque et l'écrit pour ffmpeg.
 
     Tirée sans remise tant qu'il reste des morceaux : entendre deux fois le
     même titre avant d'avoir entendu tous les autres est ce qui fait qu'un flux
     sonne comme une boucle plutôt que comme une soirée.
     """
-    import random
-
     if not dossier.is_dir():
         return None
     morceaux = sorted(p for p in dossier.iterdir() if p.suffix.lower() in EXTENSIONS)
@@ -189,21 +242,39 @@ def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None =
     if not morceaux:
         return None
     tirage = random.Random(graine)
-    suite: list[Path] = []
+    # Deux paquets : les sets et les morceaux. La nuit on commence par les
+    # sets, le jour par les morceaux ; l'autre paquet vient ensuite, car une
+    # nuit qui ne passerait que des mixes finirait par n'être qu'un seul mixe.
+    sets = [p for p in morceaux if durees[p] > LONG_S]
+    courts = [p for p in morceaux if durees[p] <= LONG_S]
+    premier, second = (sets, courts) if nuit else (courts, sets)
+    suite: list[dict] = []
     total = 0.0
     while total < heures * 3600:
-        tour = morceaux[:]
-        tirage.shuffle(tour)
+        tour: list[Path] = []
+        for paquet in (premier, second):
+            lot = paquet[:]
+            tirage.shuffle(lot)
+            tour += lot
+        if not tour:
+            break
         for piste in tour:
-            suite.append(piste)
-            total += durees[piste]
+            for bout in _tranches(piste, durees[piste]):
+                suite.append(bout)
+                total += bout["d"]
             if total >= heures * 3600:
                 break
     chemin = dossier / "session.txt"
-    chemin.write_text(
-        "".join("file '%s'\n" % str(p.resolve()).replace("'", "'\\''") for p in suite),
-        encoding="utf-8")
-    log.info("Session de %.1f h tirée dans %d morceaux", total / 3600, len(morceaux))
+    chemin.write_text("".join(
+        "file '%s'\ninpoint %.3f\noutpoint %.3f\n"
+        % (str(b["chemin"].resolve()).replace("'", "'\\''"), b["debut"], b["debut"] + b["d"])
+        for b in suite), encoding="utf-8")
+    # L'ordre et les durées à côté de la liste : c'est ce qui permettra de dire
+    # à l'écran quel morceau passe, sans redemander quoi que ce soit à ffmpeg.
+    (dossier / "session.json").write_text(
+        json.dumps([{"f": b["f"], "d": b["d"]} for b in suite]), encoding="utf-8")
+    log.info("Session %s de %.1f h : %d tranches, %d sets et %d morceaux",
+             "de nuit" if nuit else "de jour", total / 3600, len(suite), len(sets), len(courts))
     return chemin
 
 
@@ -215,15 +286,32 @@ class Musique:
     autre : un flux qui se tait est un flux que YouTube finit par couper.
     """
 
-    def __init__(self, dossier: Path) -> None:
+    def __init__(self, dossier: Path, racine: Path | None = None) -> None:
         self.dossier = dossier
-        self.session = batir_session(dossier)
+        self.racine = racine or dossier.parent.parent
+        self.session = batir_session(dossier, nuit=est_nuit(self.racine))
         self.process: subprocess.Popen | None = None
+        self.octets = 0
+        self.suite: list[dict] = []
+        self.fiches: dict[str, dict] = {}
+        self.voix = b""
+        self.voix_dit = ""
+        self._verrou = threading.Lock()
+        self.repliques = repliques(self.racine / "data" / "voix")
+        try:
+            self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            pass
         self._ouvre()
 
     def _ouvre(self) -> None:
         if self.session is None:
             return
+        self.octets = 0
+        try:
+            self.suite = json.loads((self.dossier / "session.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            self.suite = []
         self.process = subprocess.Popen(
             ["ffmpeg", "-hide_banner", "-loglevel", "error",
              "-f", "concat", "-safe", "0", "-i", str(self.session),
@@ -236,25 +324,683 @@ class Musique:
              "-f", "s16le", "-ar", str(ECHANTILLONS_S), "-ac", str(VOIES), "-"],
             stdout=subprocess.PIPE, bufsize=10 ** 7)
 
+    def dis(self, clip: Path) -> bool:
+        """Met une réplique en attente : elle partira avec la prochaine tranche.
+
+        Appelée depuis le fil des images alors que le son se sert dans un autre
+        fil, d'où le verrou. Il ne protège que deux affectations, mais sans lui
+        une tranche pourrait emporter la moitié d'un clip et la moitié du
+        suivant.
+        """
+        try:
+            brut = clip.read_bytes()
+        except OSError:
+            return False
+        with self._verrou:
+            self.voix = brut
+            self.voix_dit = clip.stem
+        return True
+
+    def parle(self) -> bool:
+        """Vrai tant qu'il reste de la voix à servir.
+
+        C'est ce qui commande le mot à l'écran. Le compte des octets est la
+        seule horloge honnête ici : une minuterie posée en parallèle finirait
+        par décrocher du son, et on verrait « boring » écrit en silence.
+        """
+        with self._verrou:
+            return bool(self.voix)
+
     def tranche(self, octets: int) -> bytes:
         """Le son des prochaines images, ou du silence si la musique manque."""
         if self.process is None or self.process.stdout is None:
-            return b"\0" * octets
+            return self._avec_la_voix(b"\0" * octets)
         morceau = self.process.stdout.read(octets)
         if len(morceau) < octets:
             # La session est finie : on en rebat une et on complète la tranche,
             # pour qu'aucun battement ne parte incomplet.
             self.arrete()
-            self.session = batir_session(self.dossier)
+            # La session suivante est bâtie pour l'heure qu'il sera, pas pour
+            # celle qu'il était : une session de jour tirée à cinq heures du
+            # matin jouerait au soleil levant une sélection faite pour la nuit.
+            self.session = batir_session(self.dossier, nuit=est_nuit(self.racine))
             self._ouvre()
             if self.process is not None and self.process.stdout is not None:
                 morceau += self.process.stdout.read(octets - len(morceau))
-        return morceau.ljust(octets, b"\0")
+        self.octets += octets
+        return self._avec_la_voix(morceau.ljust(octets, b"\0"))
+
+    def _avec_la_voix(self, morceau: bytes) -> bytes:
+        """Baisse la musique et pose la voix par-dessus, le temps qu'elle dure.
+
+        La somme se fait en entiers larges avant d'être ramenée à seize bits :
+        additionner deux signaux forts directement en seize bits ne sature pas,
+        il reboucle, et un dépassement en audio ne s'entend pas comme un son
+        trop fort mais comme un claquement.
+        """
+        with self._verrou:
+            reste = self.voix
+        if not reste:
+            return morceau
+        combien = min(len(reste), len(morceau))
+        combien -= combien % (VOIES * OCTETS_PAR_ECHANTILLON)
+        if combien <= 0:
+            with self._verrou:
+                self.voix = b""
+            return morceau
+        fond = np.frombuffer(morceau[:combien], np.int16).astype(np.int32)
+        dessus = np.frombuffer(reste[:combien], np.int16).astype(np.int32)
+        melange = np.clip((fond * ATTENUATION).astype(np.int32) + dessus, -32768, 32767)
+        with self._verrou:
+            self.voix = reste[combien:]
+        return melange.astype(np.int16).tobytes() + morceau[combien:]
+
+    def _seconde(self) -> float:
+        return self.octets / (ECHANTILLONS_S * VOIES * OCTETS_PAR_ECHANTILLON)
+
+    def a_suivre(self) -> str:
+        """Le morceau d'après, pour qui aime savoir ce qui arrive."""
+        seconde = self._seconde()
+        for i, piste in enumerate(self.suite):
+            if seconde < piste["d"]:
+                if i + 1 >= len(self.suite):
+                    return ""
+                fiche = self.fiches.get(self.suite[i + 1]["f"])
+                return "" if not fiche else f"{fiche['auteur']} — {fiche['titre']}"
+            seconde -= piste["d"]
+        return ""
+
+    def trio(self) -> tuple[dict | None, dict | None, dict | None]:
+        """Ce qui vient de passer, ce qui passe, ce qui suit.
+
+        Trois blocs posés et lisibles valent mieux qu'un titre qui défile : on
+        ne peut pas demander à quelqu'un d'attendre qu'un ruban repasse pour
+        savoir ce qu'il écoute, et c'est précisément ce qu'on lui demande de
+        noter s'il veut retrouver le morceau.
+        """
+        seconde = self._seconde()
+        for i, piste in enumerate(self.suite):
+            if seconde < piste["d"]:
+                def fiche(j: int) -> dict | None:
+                    if j < 0 or j >= len(self.suite):
+                        return None
+                    # Deux tranches du même set ne sont pas deux morceaux : on
+                    # remonte jusqu'à un fichier différent, sinon le bloc
+                    # « avant » affiche ce qui joue encore.
+                    pas = 1 if j > i else -1
+                    while 0 <= j < len(self.suite) and self.suite[j]["f"] == piste["f"]:
+                        j += pas
+                    if not 0 <= j < len(self.suite):
+                        return None
+                    return self.fiches.get(self.suite[j]["f"])
+                return fiche(i - 1), self.fiches.get(piste["f"]), fiche(i + 1)
+            seconde -= piste["d"]
+        return None, None, None
+
+    def credit(self) -> str:
+        """Qui on est en train de diffuser, en toutes lettres.
+
+        CC-BY demande de nommer l'auteur, l'œuvre et la licence. Une liste dans
+        la description ne le fait pas vraiment : la session est tirée au hasard
+        et change toutes les quatorze heures, donc celui qui regarde à trois
+        heures du matin n'a aucun moyen de savoir laquelle des quarante lignes
+        le concerne. L'écrire sur l'image pendant que ça joue, si.
+
+        On sait où on en est sans rien demander à personne : le son est servi
+        par tranches, donc le nombre d'octets versés divisé par le débit donne
+        les secondes écoulées, et les durées de la session disent lequel c'est.
+        """
+        return qui_passe(self.suite, self.fiches, self._seconde())
+
+
+def qui_passe(suite: list[dict], fiches: dict[str, dict], seconde: float) -> str:
+    """Le morceau à cette seconde de la session, nommé comme la licence l'exige."""
+    for piste in suite:
+        if seconde < piste["d"]:
+            fiche = fiches.get(piste["f"])
+            if not fiche:
+                return ""
+            return f"♪ {fiche['auteur']} — {fiche['titre']} · {fiche['licence']}"
+        seconde -= piste["d"]
+    return ""
 
     def arrete(self) -> None:
         if self.process is not None:
             self.process.kill()
             self.process = None
+
+
+def est_nuit(racine: Path) -> bool:
+    """Ce que la veille vient d'écrire du moment de la journée.
+
+    Le crépuscule compte pour la nuit : c'est l'heure où la route se vide, et
+    c'est de la durée qu'il faut alors, pas du changement.
+    """
+    moment = (lecture_du_ciel(racine / "data" / "view.json").get("period") or "").lower()
+    return moment in {"night", "twilight", "dusk", "dawn"}
+
+
+def lecture_du_ciel(chemin: Path) -> dict:
+    """Ce que la veille lit du temps qu'il fait, tel qu'elle vient de l'écrire."""
+    try:
+        return (json.loads(chemin.read_text(encoding="utf-8")).get("last") or {})
+    except (OSError, ValueError):
+        return {}
+
+
+# Les mots que la veille emploie, et leur équivalent anglais. Le flux s'adresse
+# à qui passe, et ce qui passe sur un direct de webcam ne parle pas français.
+ANGLAIS = {
+    "ciel dégagé": "clear", "peu nuageux": "fair", "nuageux": "cloudy",
+    "couvert": "overcast", "brouillard": "fog", "brume": "mist",
+    "pluie": "rain", "neige": "snow", "orage": "storm",
+    "nuit": "night", "jour": "day",
+}
+
+
+COULEURS = {
+    "ciel dégagé": (235, 215, 70), "peu nuageux": (225, 225, 225),
+    "nuageux": (190, 190, 190), "couvert": (160, 160, 160),
+    "brouillard": (200, 200, 200), "brume": (210, 210, 210),
+    "pluie": (240, 180, 90), "neige": (245, 245, 245),
+    "orage": (90, 90, 245), "nuit": (200, 170, 120),
+}
+
+
+def altitude_camera(racine: Path) -> float | None:
+    """L'altitude du point de vue, prise dans notre propre modèle de terrain.
+
+    Pas dans un almanach : le relief qu'on affiche doit être celui qui sert à
+    mesurer les distances, sinon le flux raconte une montagne et la veille en
+    mesure une autre. Le centre de la grille est le point de la caméra.
+    """
+    try:
+        grille = json.loads((racine / "data" / "osm" / "terrain.json")
+                            .read_text(encoding="utf-8"))["grid"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if not grille:
+        return None
+    ligne = grille[len(grille) // 2]
+    return float(ligne[len(ligne) // 2])
+
+
+def ligne_lieu(camera: dict, altitude: float | None) -> str:
+    """« MONT SEREIN · 44.1835 N 5.2621 E · 1 389 m »."""
+    lat = camera.get("lat")
+    lon = camera.get("lon")
+    bouts = ["MONT SEREIN · MONT VENTOUX"]
+    if lat is not None and lon is not None:
+        bouts.append(f"{abs(float(lat)):.4f} {'N' if float(lat) >= 0 else 'S'}"
+                     f" {abs(float(lon)):.4f} {'E' if float(lon) >= 0 else 'W'}")
+    if altitude is not None:
+        bouts.append(f"{altitude:.0f} m")
+    return " · ".join(bouts)
+
+
+# Le ruban du haut, en anglais : c'est la bande-son qu'il annonce, et la
+# musique libre se parle en anglais d'un bout à l'autre du monde.
+RUBAN_H = 44
+VITESSE_RUBAN = 90.0  # pixels par seconde, à 1600 de large
+ECART_RUBAN = "      ·      "
+
+
+def morceaux_ruban(lieu: str, ciel: dict) -> list[tuple[str, tuple[int, int, int]]]:
+    """Le ruban du haut : le lieu et le temps qu'il fait, par morceaux colorés.
+
+    L'étiquette en couleur, la valeur en blanc. Les chaînes d'information font
+    toutes cela, et pour une bonne raison : l'œil attrape la couleur, trouve
+    l'étiquette, et sait quoi lire ensuite. Tout en blanc, un ruban n'est qu'une
+    ligne qui bouge.
+
+    La météo défile et la musique ne défile pas : on ne peut pas demander à
+    quelqu'un d'attendre qu'un ruban repasse pour savoir ce qu'il écoute, alors
+    qu'on peut très bien lui demander d'attendre pour savoir la température.
+    """
+    bouts: list[tuple[str, tuple[int, int, int]]] = []
+    if lieu:
+        bouts += [(lieu, CYAN), (ECART_RUBAN, BLANC)]
+    mot = (ciel.get("webcam") or "").lower()
+    if mot:
+        bouts += [("CAMERA SEES ", VERT), (ANGLAIS.get(mot, mot).upper(), COULEURS.get(mot, BLANC)),
+                  (ECART_RUBAN, BLANC)]
+    crete = ciel.get("ridge")
+    if crete is not None:
+        bouts += [("VISIBILITY ", VERT), (f"{max(0, min(100, round(crete)))}/100", BLANC),
+                  (ECART_RUBAN, BLANC)]
+    temp = ciel.get("temp_c")
+    if temp is not None:
+        bouts += [("TEMPERATURE ", VERT), (f"{temp} °C", BLANC), (ECART_RUBAN, BLANC)]
+    prevu = (ciel.get("api") or "").lower()
+    if prevu and prevu != mot:
+        bouts += [("FORECAST ", AMBRE), (ANGLAIS.get(prevu, prevu).upper(), BLANC),
+                  (ECART_RUBAN, BLANC)]
+    # Le séparateur à la fin aussi : sans lui, la copie qui entre par la droite
+    # vient coller sa première lettre à la dernière de celle qui sort.
+    return bouts or [("MONT SEREIN", CYAN), (ECART_RUBAN, BLANC)]
+
+
+def pose_ruban(image: np.ndarray, morceaux: list[tuple[str, tuple[int, int, int]]],
+               seconde: float) -> None:
+    """Le ruban défile de droite à gauche, sans couture.
+
+    Écrit deux fois à la file : quand la première copie sort par la gauche, la
+    seconde est déjà entrée par la droite, et le texte tourne sans trou. C'est
+    moins cher que de fabriquer une image longue et d'y découper une fenêtre.
+    """
+    if not morceaux:
+        return
+    largeur = image.shape[1]
+    echelle = largeur / 1600
+    haut = int(RUBAN_H * echelle)
+    bande = image[0:haut, :]
+    bande[:] = (bande * 0.22).astype(np.uint8)
+    taille = 0.66 * echelle
+    larges = [cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] for t, _ in morceaux]
+    long_px = sum(larges)
+    if long_px <= 0:
+        return
+    decalage = int(seconde * VITESSE_RUBAN * echelle) % long_px
+    base = haut - int(14 * echelle)
+    for depart in (-decalage, -decalage + long_px):
+        x = depart
+        for (texte, couleur), large in zip(morceaux, larges):
+            if -large < x < largeur:
+                cv2.putText(image, texte, (x, base), cv2.FONT_HERSHEY_SIMPLEX,
+                            taille, couleur, 2, cv2.LINE_AA)
+            x += large
+
+
+# Les teintes du spectacle. Elles ne touchent que l'image diffusée, posées
+# avant les rectangles : la veille ne les voit jamais, et le rouge qui désigne
+# ce qui a bougé reste le même rouge d'un bout à l'autre de la nuit.
+#
+# La moitié des créneaux ne teinte rien. Une webcam qui change de couleur sans
+# arrêt cesse d'être une webcam ; c'est l'écart qui se remarque, pas l'effet.
+# Cinq créneaux sur sept teintent. La première version n'en teintait que trois
+# sur dix et l'effet passait inaperçu : sur un direct qu'on regarde par
+# tranches de deux minutes, un effet qui n'arrive qu'une fois sur trois
+# n'arrive jamais. Il reste deux créneaux sobres sur sept, assez pour que la
+# webcam se rappelle qu'elle est une webcam.
+TEINTES = [("", 0.0, 0.0)] * 2 + [
+    ("psyche", 1.0, 0.55),
+    ("psyche", 0.6, 0.45),
+    ("lent", 0.25, 0.60),
+    ("lent", 0.15, 0.50),
+    ("vif", 1.8, 0.45),
+]
+TEINTE_S = 150.0
+FONDU_S = 6.0
+
+
+def teinte_du_moment(seconde: float) -> tuple[float, float]:
+    """Le tour de couleur de ce créneau et sa force, déduits de l'heure seule.
+
+    Rien à retenir d'une image sur l'autre : le numéro du créneau sert de
+    graine, donc deux images du même créneau tombent sur le même effet même
+    après un redémarrage. Un fondu aux deux bouts évite que la couleur claque.
+
+    La teinte tourne pendant le créneau au lieu de rester posée : une couleur
+    fixe est un filtre, une couleur qui tourne est une lumière, et c'est une
+    lumière qu'on veut sur de la musique.
+    """
+    bloc = int(seconde // TEINTE_S)
+    _, vitesse, force = random.Random(bloc).choice(TEINTES)
+    if force <= 0:
+        return 0.0, 0.0
+    dedans = seconde - bloc * TEINTE_S
+    montee = min(dedans, TEINTE_S - dedans) / FONDU_S
+    return dedans * vitesse * 12.0, force * max(0.0, min(1.0, montee))
+
+
+def _matrice_teinte(angle_deg: float) -> np.ndarray:
+    """La rotation des couleurs autour de l'axe des gris, en BGR.
+
+    Une vraie rotation de teinte demanderait de passer en TSV et d'en revenir,
+    soit deux conversions de deux mégapixels par image sur une machine qui
+    touche déjà sa limite thermique. Une matrice trois par trois fait presque
+    la même chose en une passe, et « presque » suffit à un effet de lumière.
+    """
+    rad = np.deg2rad(angle_deg % 360.0)
+    cos, sin = float(np.cos(rad)), float(np.sin(rad))
+    un, deux = 1.0 / 3.0, float(np.sqrt(1.0 / 3.0))
+    a = cos + (1.0 - cos) * un
+    b = un * (1.0 - cos) - deux * sin
+    c = un * (1.0 - cos) + deux * sin
+    # En RVB, puis retournée deux fois pour l'ordre BGR d'OpenCV.
+    rvb = np.array([[a, b, c], [c, a, b], [b, c, a]], np.float32)
+    return rvb[::-1, ::-1].copy()
+
+
+def applique_teinte(image: np.ndarray, angle: float, force: float) -> None:
+    """Fait tourner les couleurs et mélange au naturel, sur place."""
+    if force <= 0.001:
+        return
+    tourne = cv2.transform(image, _matrice_teinte(angle))
+    cv2.addWeighted(tourne, force, image, 1.0 - force, 0.0, dst=image)
+
+
+# Les bandes au-dessus et au-dessous de la caméra, en pixels à 1600 de large.
+# Tout écrire par-dessus l'image marchait, mais chaque ajout se disputait une
+# place avec un autre et finissait par cacher la route. En posant la webcam
+# dans une fenêtre et les encarts autour, plus rien ne peut entrer en conflit :
+# ce qui est à la caméra reste à la caméra.
+BORD_HAUT = 46
+# La bande du bas tient le bloc musique entier plus le bandeau : mesurée à
+# 124, le bloc dépassait d'une centaine de pixels sur l'image, ce qui est
+# exactement ce qu'on cherchait à éviter.
+BORD_BAS = 202
+
+
+def cadre(cam: np.ndarray, largeur: int, hauteur: int) -> np.ndarray:
+    """Pose l'image de la caméra dans une fenêtre, et rend la toile entière.
+
+    La fenêtre garde les proportions de la webcam : une image étirée pour
+    remplir un trou est une image qui ment sur les formes, et ce flux passe son
+    temps à dire qu'il mesure des largeurs en mètres.
+    """
+    echelle = largeur / 1600
+    haut = int(BORD_HAUT * echelle)
+    libre = hauteur - haut - int(BORD_BAS * echelle)
+    cible_l = min(largeur, int(libre * cam.shape[1] / cam.shape[0]))
+    cible_h = int(cible_l * cam.shape[0] / cam.shape[1])
+    toile = np.zeros((hauteur, largeur, 3), np.uint8)
+    gauche = (largeur - cible_l) // 2
+    toile[haut:haut + cible_h, gauche:gauche + cible_l] = cv2.resize(
+        cam, (cible_l, cible_h), interpolation=cv2.INTER_AREA)
+    return toile
+
+
+def _coupe(texte: str, combien: int) -> str:
+    return texte if len(texte) <= combien else texte[:combien - 1] + "…"
+
+
+def pose_bloc_musique(image: np.ndarray, trio: tuple[dict | None, dict | None, dict | None],
+                      dossier: Path) -> None:
+    """Le bloc fixe de la musique : la pochette, et avant / pendant / après.
+
+    Fixe, et en bas à gauche, parce que c'est la seule chose du flux qu'on
+    puisse avoir envie de noter. Le lien y figure en toutes lettres : CC-BY
+    demande de nommer l'auteur, l'œuvre, la licence et de renvoyer à la source,
+    et une adresse qu'on ne peut pas recopier ne renvoie nulle part.
+    """
+    avant, en_cours, apres = trio
+    if en_cours is None:
+        return
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    marge = int(16 * echelle)
+    pas = int(25 * echelle)
+    cote = int(104 * echelle)
+    lignes: list[tuple[str, tuple[int, int, int], float]] = [
+        ("NOW PLAYING", VERT, 0.52),
+        (_coupe(f"{en_cours['auteur']} — {en_cours['titre']}", 44), BLANC, 0.60),
+        (f"{en_cours['licence']} · {en_cours['url'].replace('https://', '')}", CYAN, 0.55),
+    ]
+    if apres:
+        lignes.append(("UP NEXT  " + _coupe(f"{apres['auteur']} — {apres['titre']}", 44),
+                       AMBRE, 0.55))
+    if avant:
+        lignes.append(("JUST PLAYED  " + _coupe(f"{avant['auteur']} — {avant['titre']}", 40),
+                       (170, 170, 170), 0.55))
+    bloc_h = max(cote, pas * len(lignes)) + 2 * marge
+    larges = [cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, s * echelle, 2)[0][0]
+              for t, _, s in lignes]
+    bloc_l = cote + 3 * marge + max(larges)
+    # Au-dessus du bandeau du bas, jamais dessus : la dernière ligne du bloc
+    # était avalée par la phrase qui défile, et c'était celle du morceau d'avant.
+    bas = hauteur - int(BANDE_H * echelle)
+    haut = bas - bloc_h
+    fond = image[haut:bas, 0:min(largeur, bloc_l)]
+    if fond.size:
+        fond[:] = (fond * 0.22).astype(np.uint8)
+    cv2.rectangle(image, (0, haut), (int(6 * echelle), bas), VERT, -1)
+    gauche = marge
+    pochette = en_cours.get("pochette")
+    if pochette:
+        vignette = cv2.imread(str(dossier / pochette))
+        if vignette is not None:
+            vignette = cv2.resize(vignette, (cote, cote), interpolation=cv2.INTER_AREA)
+            image[haut + marge:haut + marge + cote, gauche:gauche + cote] = vignette
+            gauche += cote + marge
+    for i, (texte, couleur, taille) in enumerate(lignes):
+        cv2.putText(image, texte, (gauche + marge, haut + marge + pas * (i + 1) - int(8 * echelle)),
+                    cv2.FONT_HERSHEY_SIMPLEX, taille * echelle, couleur, 2, cv2.LINE_AA)
+
+
+# Le silence qu'il faut avant d'aller chercher dans les archives, et le temps
+# qu'une ancienne prise reste à l'écran. Deux minutes sans rien, sur cette
+# route, c'est banal la nuit et rare à midi : la rediffusion vient donc d'elle-
+# même quand il n'y a rien, et se tait quand il se passe quelque chose.
+CREUX_S = 300.0
+REDIFF_TENUE_S = 10.0
+# La part de la largeur que prend le médaillon. Essayé à quatre-vingts pour
+# cent : la rediffusion mangeait l'écran et on ne voyait plus le direct, ce qui
+# est le contraire du but — le direct doit rester lisible pendant qu'on montre
+# l'archive, sinon autant diffuser un diaporama.
+REDIFF_PART = 0.42
+# Et jamais deux coup sur coup : « pas en abuser » veut dire que la rediffusion
+# est une respiration, pas un programme. Dix minutes de direct entre deux.
+REDIFF_PAUSE_S = 600.0
+# Les noms qui ne sont pas des noms : ce que la veille écrit quand elle n'a
+# justement rien reconnu. Les rediffuser serait rediffuser son embarras.
+NON_NOMS = ("Mouvement", "Rien", "Vu trop", "Tache", "Toujours", "Au bord",
+            "Devant", "Brouillard", "Brume", "Décor", "Lueur", "Immobile",
+            "Trop ", "Sans ", "Hors ", "Aucun")
+# Jamais de feu en rediffusion, à aucune condition.
+#
+# Tout le reste de ce fichier peut se tromper sans conséquence : un camion pris
+# pour une voiture fait sourire. Une image de départ de feu remontrée au milieu
+# d'un direct fait croire que la montagne brûle en ce moment. Le bandeau dit
+# bien « replay », mais personne ne lit un bandeau quand il voit de la fumée —
+# et ce serait notre faute, pas la leur.
+#
+# C'est aussi le seul endroit où l'on efface volontairement du travail de la
+# veille : c'est que le flux est un spectacle et que la veille est une alerte,
+# et qu'une alerte ne se rejoue pas.
+JAMAIS_REDIFF = ("Incendie", "Départ de feu", "Feu", "Fumée", "Panache")
+
+
+def archives(racine: Path, combien: int = 400) -> list[dict]:
+    """Les prises anciennes qui valent d'être remontrées, photo comprise.
+
+    Seulement celles qui portent un vrai nom et dont la vignette existe encore :
+    une rediffusion sans image est une ligne de texte, et une rediffusion de
+    « Mouvement sur la route » n'apprend rien à personne.
+    """
+    try:
+        brut = json.loads((racine / "data" / "events.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    brut = brut if isinstance(brut, list) else brut.get("events", [])
+    gardees = []
+    for fiche in brut:
+        nom = str(fiche.get("label") or "")
+        if not nom or nom.startswith(NON_NOMS) or nom.startswith(JAMAIS_REDIFF):
+            continue
+        photo = racine / str(fiche.get("thumb") or "")
+        if not str(fiche.get("thumb") or "") or not photo.is_file():
+            continue
+        gardees.append({"photo": photo, "label": nom, "t": str(fiche.get("t") or ""),
+                        "contexte": str((fiche.get("detail") or {}).get("context") or "")})
+        if len(gardees) >= combien:
+            break
+    return gardees
+
+
+# L'heure de la montagne, pas celle de Greenwich. Les horodatages sont écrits
+# en UTC parce qu'une veille qui change d'heure deux fois par an se trompe deux
+# fois par an ; mais personne ne regarde une webcam du Ventoux en UTC.
+PARIS = ZoneInfo("Europe/Paris")
+
+MOIS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def _quand_dit(iso: str) -> str:
+    """« 25 Sep 2026 · 08:20 UTC » : lisible dans les deux langues sans effort."""
+    try:
+        moment = datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return iso
+    ici = moment.astimezone(PARIS)
+    return f"{ici.day} {MOIS[ici.month - 1]} {ici.year} · {ici:%H:%M} {ici:%Z}"
+
+
+def pose_rediffusion(image: np.ndarray, fiche: dict) -> bool:
+    """Une ancienne prise en grand, au milieu, datée.
+
+    Datée surtout : sans la date, un spectateur croit voir la route en ce
+    moment, et le flux se met à mentir — ce qui est la seule chose qu'il n'a
+    pas le droit de faire. D'où la date au-dessus de l'image et non dessous,
+    et le mot « replay » avant tout le reste.
+    """
+    vignette = cv2.imread(str(fiche["photo"]))
+    if vignette is None:
+        return False
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    cible_l = int(largeur * REDIFF_PART)
+    cible_h = int(vignette.shape[0] * cible_l / vignette.shape[1])
+    # Les archives sont enregistrées en petit ; agrandies autant, elles sont
+    # douces. « cubic » vaut mieux que « linear » pour ce qu'on en fait, et on
+    # ne prétend pas retrouver ce qui n'a pas été gardé.
+    vignette = cv2.resize(vignette, (cible_l, cible_h), interpolation=cv2.INTER_CUBIC)
+    pas = int(38 * echelle)
+    marge = int(18 * echelle)
+    # La légende sous l'image et non au-dessus : le haut de l'écran appartient
+    # au ruban et à la météo, et deux textes superposés ne se lisent pas.
+    pied = pas * 2
+    carte_h = min(hauteur - 2 * marge, cible_h + pied + marge)
+    cible_h = min(cible_h, carte_h - pied - marge)
+    vignette = vignette[:cible_h]
+    haut = (hauteur - carte_h) // 2
+    # À droite : le rond-point et la route occupent la gauche de l'image,
+    # et c'est d'eux qu'il s'agit quand quelque chose se passe.
+    gauche = largeur - cible_l - int(40 * echelle)
+    fond = image[haut:haut + carte_h, max(0, gauche - marge):min(largeur, gauche + cible_l + marge)]
+    if fond.size:
+        fond[:] = (fond * 0.25).astype(np.uint8)
+    image[haut:haut + cible_h, gauche:gauche + cible_l] = vignette
+    bas = haut + cible_h + marge
+    cv2.putText(image, "REPLAY · REDIFFUSION", (gauche, bas + pas - int(12 * echelle)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.72 * echelle, ROUGE, 2, cv2.LINE_AA)
+    cv2.putText(image, f"{_quand_dit(fiche['t'])}  —  {fiche['label']}",
+                (gauche, bas + pas * 2 - int(14 * echelle)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.72 * echelle, BLANC, 2, cv2.LINE_AA)
+    return True
+
+
+# Le bandeau du bas, qui tourne. Anglais et français en alternance plutôt que
+# côte à côte : deux langues sur la même ligne tiennent en quatre mots, pas en
+# une phrase, et ce qu'il y a à dire ici tient mal en quatre mots.
+BANDES = [
+    "LIVE from Mont Serein · north face of Mont Ventoux · Vaucluse, France",
+    "Every red box was drawn by a machine that decided, on its own, that something moved",
+    "About 15 seconds behind — the time it takes to name what moves",
+    "Wrong name? Tell us. Being corrected is the whole point",
+    "All music is Creative Commons · artist, licence and source shown bottom left",
+    "The camera watches this road for the first smoke of a fire. Most days, nothing happens",
+    "Names are guessed in about fifteen seconds. Sometimes they are wrong. Say so",
+]
+BANDE_S = 11.0
+# La hauteur du bandeau du bas, que le bloc musique doit savoir éviter.
+BANDE_H = 42
+
+
+def bande_du_moment(seconde: float) -> str:
+    """Une phrase à la fois, dans l'ordre : anglais, français, anglais…"""
+    return BANDES[int(seconde // BANDE_S) % len(BANDES)]
+
+
+def pose_bande_basse(image: np.ndarray, texte: str) -> None:
+    """Le tiers inférieur des chaînes d'information, en une ligne."""
+    if not texte:
+        return
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    pas = int(BANDE_H * echelle)
+    marge = int(16 * echelle)
+    taille = 0.72 * echelle
+    long_px = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
+    bande = image[hauteur - pas:hauteur, 0:min(largeur, long_px + 3 * marge)]
+    if bande.size:
+        bande[:] = (bande * 0.25).astype(np.uint8)
+    # Le filet rouge à gauche, comme les chaînes en mettent : il dit où la
+    # ligne commence, et c'est le seul rouge que le flux s'autorise en dehors
+    # des rectangles.
+    cv2.rectangle(image, (0, hauteur - pas), (int(6 * echelle), hauteur), ROUGE, -1)
+    cv2.putText(image, texte, (2 * marge, hauteur - int(13 * echelle)),
+                cv2.FONT_HERSHEY_SIMPLEX, taille, BLANC, 2, cv2.LINE_AA)
+
+
+def pose_ennui(image: np.ndarray, mot: str, seconde: float) -> None:
+    """Le mot en très grand, en travers de la fenêtre caméra.
+
+    Écrit tant que la voix parle et pas une image de plus : le texte et le son
+    sortent du même compteur d'octets, donc ils ne peuvent pas se décaler.
+
+    Il penche et il tremble. Un mot posé droit au milieu d'une webcam ressemble
+    à un message d'erreur ; penché de quelques degrés, il ressemble à ce qu'il
+    est, c'est-à-dire à quelqu'un qui s'ennuie.
+    """
+    if not mot:
+        return
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    taille = 3.4 * echelle
+    epaisseur = max(2, int(9 * echelle))
+    (large, haut), _ = cv2.getTextSize(mot, cv2.FONT_HERSHEY_DUPLEX, taille, epaisseur)
+    calque = np.zeros_like(image)
+    x = (largeur - large) // 2
+    y = (hauteur + haut) // 2
+    cv2.putText(calque, mot, (x, y), cv2.FONT_HERSHEY_DUPLEX, taille, AMBRE,
+                epaisseur, cv2.LINE_AA)
+    # Quelques degrés de travers, et un frémissement au rythme de la voix.
+    angle = 7.0 + 1.5 * float(np.sin(seconde * 9.0))
+    rotation = cv2.getRotationMatrix2D((largeur / 2, hauteur / 2), angle, 1.0)
+    calque = cv2.warpAffine(calque, rotation, (largeur, hauteur))
+    cv2.add(image, calque, dst=image)
+
+
+def pose_horloge(image: np.ndarray, quand: float, direct: bool = True) -> None:
+    """L'heure qui tourne, en haut à droite, avec le point rouge des chaînes.
+
+    Le point clignote à la seconde : c'est ce qui fait qu'un écran fixe a l'air
+    vivant, et ici il ne ment pas, puisqu'il bat au rythme des images.
+
+    Il dit « REPLAY » pendant une rediffusion. Un badge « LIVE » au-dessus
+    d'une image vieille de cinq jours serait la seule faute que ce flux n'a pas
+    le droit de commettre.
+    """
+    largeur = image.shape[1]
+    echelle = largeur / 1600
+    moment = datetime.fromtimestamp(quand, PARIS)
+    lignes = [moment.strftime("%d %b %Y").upper(),
+              moment.strftime("%H:%M:%S ") + moment.strftime("%Z")]
+    pas = int(34 * echelle)
+    marge = int(14 * echelle)
+    sommet = int(RUBAN_H * echelle)
+    taille = 0.7 * echelle
+    large = max(cv2.getTextSize(l, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] for l in lignes)
+    badge = "LIVE" if direct else "REPLAY"
+    large = max(large, cv2.getTextSize(badge, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] + pas)
+    gauche = largeur - large - 2 * marge
+    coin = image[sommet:sommet + pas * (len(lignes) + 1) + marge, gauche:largeur]
+    if coin.size:
+        coin[:] = (coin * 0.35).astype(np.uint8)
+    rayon = int(7 * echelle)
+    x = gauche + marge
+    y = sommet + pas - int(6 * echelle)
+    if direct and int(quand) % 2 == 0:
+        cv2.circle(image, (x + rayon, y - rayon), rayon, ROUGE, -1)
+    elif not direct:
+        cv2.circle(image, (x + rayon, y - rayon), rayon, ROUGE, -1)
+    cv2.putText(image, badge, (x + pas, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
+                BLANC if direct else ROUGE, 2, cv2.LINE_AA)
+    for i, ligne in enumerate(lignes):
+        cv2.putText(image, ligne, (x, sommet + pas * (i + 2) - int(6 * echelle)),
+                    cv2.FONT_HERSHEY_SIMPLEX, taille, BLANC, 2, cv2.LINE_AA)
 
 
 def _entree(url: str, recul: int) -> subprocess.Popen:
@@ -318,7 +1064,7 @@ def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
 
 
 def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: int) -> None:
-    musique = Musique(racine / "data" / "musique")
+    musique = Musique(racine / "data" / "musique", racine)
     if musique.session is None:
         log.warning("Aucune musique dans data/musique : le flux sortira muet")
     media = playlist_media(cfg["stream_url"])
@@ -338,7 +1084,19 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     origine = dernier - (recul - 1) * segment
     images = 0
     vus: list[dict] = []
+    ruban: list[tuple[str, tuple[int, int, int]]] = []
+    trio: tuple[dict | None, dict | None, dict | None] = (None, None, None)
+    lieu = ligne_lieu(cfg.get("camera") or {}, altitude_camera(racine))
     relu = 0.0
+    # On démarre comme si on venait de voir quelque chose : une rediffusion à
+    # la première seconde du direct donnerait l'impression que rien ne marche.
+    dernier_vu = origine
+    dernier_mouvement = origine
+    dernier_ennui = origine
+    rediff: tuple[dict, float] | None = None
+    fin_rediff = origine
+    reste: list[dict] = []
+    tirage = random.Random()
     try:
         while True:
             brut = entree.stdout.read(octets)
@@ -349,9 +1107,54 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             images += 1
             if quand - relu >= 2.0:
                 vus = identifications(racine / "data" / "events.json", quand - TENUE_S - 60)
+                ruban = morceaux_ruban(lieu, lecture_du_ciel(racine / "data" / "view.json"))
+                trio = musique.trio()
                 relu = quand
             image = np.frombuffer(brut, np.uint8).reshape(hauteur, largeur, 3).copy()
-            dessine(image, vus, quand)
+            # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.
+            applique_teinte(image, *teinte_du_moment(quand - origine))
+            if dessine(image, vus, quand):
+                dernier_vu = quand
+                # L'horloge de l'ennui est à part, et c'est tout l'intérêt :
+                # « dernier_vu » est remis à zéro par les rediffusions, donc
+                # s'en servir ferait dire « boring » vingt minutes après une
+                # rediffusion, c'est-à-dire juste après qu'il s'est passé
+                # quelque chose à l'écran. Seule une vraie détection compte.
+                dernier_mouvement = quand
+                rediff = None
+            elif quand - dernier_vu > CREUX_S:
+                # Rien depuis deux minutes : on va chercher dans ce qu'on a
+                # déjà attrapé. Sans remise, pour ne pas remontrer le même
+                # camion toute la nuit.
+                if rediff is None and quand - fin_rediff > REDIFF_PAUSE_S:
+                    if not reste:
+                        reste = archives(racine)
+                        tirage.shuffle(reste)
+                    rediff = (reste.pop(), quand) if reste else None
+                    dernier_vu = quand if rediff is None else dernier_vu
+            if (musique.repliques and quand - dernier_mouvement > ENNUI_S
+                    and quand - dernier_ennui > ENNUI_S):
+                musique.dis(tirage.choice(musique.repliques))
+                dernier_ennui = quand
+                log.info("Rien depuis %.0f min : le flux le dit", (quand - dernier_mouvement) / 60)
+            a_poser = None
+            if rediff is not None:
+                if quand - rediff[1] <= REDIFF_TENUE_S:
+                    a_poser = rediff[0]
+                else:
+                    rediff, fin_rediff, dernier_vu = None, quand, quand
+            # La webcam dans sa fenêtre, les encarts dans les bandes autour.
+            toile = cadre(image, largeur, hauteur)
+            if a_poser is not None:
+                pose_rediffusion(toile, a_poser)
+            if musique.parle():
+                pose_ennui(toile, "BOOOOORING", quand - origine)
+            pose_ruban(toile, ruban, quand - origine)
+            pose_horloge(toile, quand, direct=rediff is None)
+            pose_bande_basse(toile, bande_du_moment(quand - origine))
+            # La musique en dernier : c'est elle qu'on vient écouter, et c'est
+            # elle que la licence oblige à nommer.
+            pose_bloc_musique(toile, trio, racine / "data" / "musique")
             if sortie is None:
                 sortie, son = _sortie(cible, largeur, hauteur, cfg["stream_fps"],
                                       cfg["stream_bitrate"], cfg["stream_out_fps"],
@@ -360,7 +1163,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 verseur = threading.Thread(target=_verse_le_son, args=(son, musique, coupe),
                                            daemon=True)
                 verseur.start()
-            sortie.stdin.write(image.tobytes())
+            sortie.stdin.write(toile.tobytes())
             if duree_s is not None and _maintenant() - debut >= duree_s:
                 break
     finally:
