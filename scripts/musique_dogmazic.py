@@ -219,7 +219,15 @@ def morceaux_du_genre(genre: str, depuis: int = 0, combien: int = 50) -> list[di
     return trouves
 
 
-def retenu(fiche: dict) -> str:
+# Les genres où l'on danse, parmi ceux que le site connaît. Ils servent à
+# chercher moins loin, pas à décider : ce qui décide est la mesure. L'étiquette
+# est posée à la main par qui dépose le fichier, et le même mot « Techno »
+# couvre une transe à cent trente temps et un drone de vingt minutes.
+GENRES_DANSE = ["Techno", "House", "Deep techno", "Trance", "Drum n Bass",
+                "Big Beat", "Electro", "Electronic", "electronica"]
+
+
+def retenu(fiche: dict, mini: float = COURT_MIN_S) -> str:
     """Vide si on le garde, sinon la raison du refus — pour pouvoir la lire."""
     if not licence_libre(fiche["licence"], fiche["url_licence"]):
         return f"licence « {fiche['licence'] or 'absente'} »"
@@ -229,14 +237,16 @@ def retenu(fiche: dict) -> str:
         return "nom de platiniste"
     if not fiche["titre"] or not fiche["auteur"]:
         return "sans titre ou sans auteur"
-    if fiche["duree"] < COURT_MIN_S:
-        return f"{fiche['duree']:.0f} s, trop court"
+    if fiche["duree"] < mini:
+        return f"{fiche['duree'] / 60:.0f} min, trop court"
     if fiche["duree"] > LONG_MAX_S:
         return f"{fiche['duree'] / 60:.0f} min, trop long"
     return ""
 
 
-def moisson(minutes: float, par_genre: int = 150, journal=print) -> list[dict]:
+def moisson(minutes: float, par_genre: int = 150, journal=print,
+            genres: list[str] | None = None,
+            mini: float = COURT_MIN_S) -> list[dict]:
     """Parcourt les genres jusqu'à tenir la durée demandée.
 
     Un genre après l'autre et non tout le catalogue d'un coup : ça donne un
@@ -247,7 +257,7 @@ def moisson(minutes: float, par_genre: int = 150, journal=print) -> list[dict]:
     vus: set[int] = set()
     refus: dict[str, int] = {}
     total = 0.0
-    for genre in GENRES:
+    for genre in (genres or GENRES):
         if total >= minutes * 60:
             break
         pris_ici = 0
@@ -265,7 +275,7 @@ def moisson(minutes: float, par_genre: int = 150, journal=print) -> list[dict]:
                 if fiche["id"] in vus:
                     continue
                 vus.add(fiche["id"])
-                pourquoi = retenu(fiche)
+                pourquoi = retenu(fiche, mini)
                 if pourquoi:
                     refus[pourquoi.split(" «")[0]] = refus.get(pourquoi.split(" «")[0], 0) + 1
                     continue
@@ -334,12 +344,19 @@ def main() -> int:
     partie.add_argument("--essai", action="store_true",
                         help="lire et trier sans rien télécharger")
     partie.add_argument("--graine", type=int, default=None)
+    partie.add_argument("--danse", action="store_true",
+                        help="ne chercher que dans les genres où l'on danse")
+    partie.add_argument("--mini-min", type=float, default=COURT_MIN_S / 60,
+                        help="durée minimale d'un morceau, en minutes")
+    partie.add_argument("--garde", type=int, default=0,
+                        help="ne garder que les N plus pulsés, mesure à l'appui")
     args = partie.parse_args()
 
     dossier = ROOT / args.dossier
     dossier.mkdir(parents=True, exist_ok=True)
     print(f"Lecture du catalogue pour {args.minutes:.0f} min de musique")
-    fiches = moisson(args.minutes)
+    fiches = moisson(args.minutes, genres=GENRES_DANSE if args.danse else None,
+                     mini=args.mini_min * 60)
     random.Random(args.graine).shuffle(fiches)
     duree = sum(f["duree"] for f in fiches)
     print(f"{len(fiches)} morceaux retenus, {duree / 60:.0f} min")
@@ -360,11 +377,58 @@ def main() -> int:
         if pris % 10 == 0:
             print(f"  {pris} morceaux sur le disque")
         time.sleep(0.5)
-    ecris_credits(dossier, fiches)
     gardes = [f for f in fiches if f.get("fichier")]
-    print(f"{pris} morceaux téléchargés, "
+    if args.garde:
+        gardes = ecoute(gardes, args.garde)
+    ecris_credits(dossier, gardes)
+    print(f"{len(gardes)} morceaux gardés, "
           f"{sum(f['duree'] for f in gardes) / 60:.0f} min de Dogmazic")
     return 0
+
+
+def ecoute(fiches: list[dict], combien: int) -> list[dict]:
+    """Écoute ce qu'on a téléchargé et ne garde que ce qui pousse vraiment.
+
+    Trier sur l'étiquette de genre ne marche pas : elle est posée à la main par
+    qui dépose le fichier, et le même mot « Techno » couvre une transe à cent
+    trente temps et un drone de vingt minutes. On mesure donc la régularité de
+    la grosse caisse, et c'est elle qui décide.
+
+    Les recalés sont effacés tout de suite. Les laisser sur le disque en se
+    contentant de ne pas les créditer ferait pire que rien : la diffusion
+    ramasse le dossier entier, elle les passerait quand même, et ils
+    arriveraient à l'antenne sans attribution — ce qui est exactement ce que la
+    licence interdit.
+    """
+    from scripts.pulsation import dansant, mesure
+
+    for fiche in fiches:
+        fiche["pulsation"] = mesure(Path(fiche["fichier"]))
+    classe = sorted((f for f in fiches if dansant(f["pulsation"])),
+                    key=lambda f: -f["pulsation"]["force"])
+    # Deux par artiste au plus. Sur ce catalogue un seul nom fournit sept des
+    # trente candidats du genre, et pris au mérite seul il raflerait la moitié
+    # de ce qu'on garde : le flux sonnerait alors comme un album en boucle,
+    # ce qui est le défaut qu'on passe son temps à éviter ailleurs.
+    gardes, par_auteur = [], {}
+    for fiche in classe:
+        nom = fiche["auteur"].strip().lower()
+        if par_auteur.get(nom, 0) >= 2:
+            continue
+        par_auteur[nom] = par_auteur.get(nom, 0) + 1
+        gardes.append(fiche)
+        if len(gardes) >= combien:
+            break
+    tenus = {f["fichier"] for f in gardes}
+    for fiche in fiches:
+        marque = "gardé " if fiche["fichier"] in tenus else "effacé"
+        p = fiche["pulsation"]
+        print(f"  {marque} force {p['force']:5.3f}  {p['bpm']:5.1f} bpm  "
+              f"{p['duree'] / 60:4.1f} min  {fiche['auteur'][:20]:20s} · "
+              f"{fiche['titre'][:30]}")
+        if fiche["fichier"] not in tenus:
+            Path(fiche["fichier"]).unlink(missing_ok=True)
+    return gardes
 
 
 if __name__ == "__main__":
