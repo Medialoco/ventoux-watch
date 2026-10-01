@@ -58,18 +58,24 @@ DANSE_MARGE = 0.28
 DANSE_HAUT = 0.16
 
 
-def recadre(source: Path, dest: Path, secondes: float, debut: float) -> None:
-    """La source, recadrée au neuf-seizièmes par le centre, sans son.
+def recadre(source: Path, dest: Path, secondes: float, debut: float,
+            pan: tuple[float, float] = (0.5, 0.5)) -> None:
+    """La source, recadrée au neuf-seizièmes, sans son.
 
-    Par le centre et non par un bord : sur un chemin filmé dans l'axe, le
-    sujet est au milieu par construction. Un recadrage malin qui suivrait le
-    mouvement serait un autre programme, et celui-ci n'a rien à suivre.
+    La fenêtre peut dériver pendant le plan, de la première position vers la
+    seconde, exprimées en fraction de ce qui dépasse à gauche et à droite.
+    C'est le seul mouvement disponible quand la source n'en a aucun : une
+    webcam fixe braquée sur une route vide est une photographie, et cinquante
+    secondes de photographie ne se regardent pas. Panoramiquer dans une image
+    qu'on possède déjà ne fabrique aucune information — on montre simplement
+    tout le lieu au lieu d'en montrer un tiers.
     """
+    tranche = f"(iw-ih*9/16)*({pan[0]}+({pan[1]}-{pan[0]})*t/{secondes:.2f})"
     subprocess.run(
         ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
          "-ss", f"{debut:.2f}", "-i", str(source), "-t", f"{secondes:.2f}",
          "-an", "-vf",
-         f"crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale={LARGEUR}:{HAUTEUR}:flags=lanczos,"
+         f"crop=ih*9/16:ih:'{tranche}':0,scale={LARGEUR}:{HAUTEUR}:flags=lanczos,"
          f"fps={IMAGES_PAR_S}",
          "-c:v", "libx264", "-preset", "veryfast", "-crf", "16",
          "-pix_fmt", "yuv420p", str(dest)],
@@ -104,7 +110,21 @@ def energie_par_image(piste: Path, debut: float, secondes: float) -> np.ndarray:
     return sortie
 
 
-def pose_appel(image: np.ndarray, force: float) -> None:
+# Ce que dit la fin, selon d'où viennent les images. Un Short tourné ailleurs
+# annonce que les pantins viennent d'un direct ; un Short pris sur la caméra
+# elle-même n'a pas à l'annoncer, il le montre — et prétendre le contraire
+# serait la seule contrevérité du fichier.
+APPELS = {
+    "ailleurs": [("THE SAME TWO DANCERS", 1.0, CYAN),
+                 ("ARE ON A LIVE STREAM", 1.0, CYAN),
+                 ("RIGHT NOW", 1.9, BLANC)],
+    "ici": [("THIS IS THE LIVE VIEW", 1.0, CYAN),
+            ("NOBODY IS WATCHING IT", 1.0, CYAN),
+            ("EXCEPT A MACHINE", 1.9, BLANC)],
+}
+
+
+def pose_appel(image: np.ndarray, force: float, appel: str = "ailleurs") -> None:
     """L'annonce du direct, par-dessus l'image qui continue.
 
     Dans le tiers haut et non en bas, où le titre de la vidéo passerait par
@@ -119,13 +139,27 @@ def pose_appel(image: np.ndarray, force: float) -> None:
     cv2.rectangle(calque, (0, haut), (LARGEUR, bas), (0, 0, 0), -1)
     cv2.addWeighted(calque, 0.62 * force, image, 1.0 - 0.62 * force, 0.0, dst=image)
     calque = image.copy()
-    y = _ecrit(calque, "THE SAME TWO DANCERS", haut + 90, 1.0, CYAN, 2)
-    y = _ecrit(calque, "ARE ON A LIVE STREAM", y + 6, 1.0, CYAN, 2)
-    y = _ecrit(calque, "RIGHT NOW", y + 64, 1.9, BLANC, 5)
+    y = haut + 90
+    for texte, taille, couleur in APPELS[appel]:
+        y = _ecrit(calque, texte, y + (64 if taille > 1.5 else 6), taille, couleur,
+                   5 if taille > 1.5 else 2)
     y = _ecrit(calque, "FREE TECHNO RADIO", y + 84, 1.45, VERT, 4)
     y = _ecrit(calque, "LIVE 24/7", y + 14, 1.45, VERT, 4)
     _ecrit(calque, "MONT VENTOUX · 1389 m", y + 72, 1.0, AMBRE, 3)
     cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
+
+
+def pose_entete(image: np.ndarray, texte: str) -> None:
+    """Le lieu et l'heure, discrets, tout en haut.
+
+    Sans eux « capture du direct » est une affirmation que rien n'appuie ; avec
+    eux c'est une date que n'importe qui peut recouper avec la météo du jour.
+    """
+    if not texte:
+        return
+    calque = image.copy()
+    _ecrit(calque, texte, int(HAUTEUR * 0.075), 0.78, BLANC, 2)
+    cv2.addWeighted(calque, 0.85, image, 0.15, 0.0, dst=image)
 
 
 def choisit_extrait(piste: Path, secondes: float) -> float:
@@ -170,7 +204,8 @@ def morceau(racine: Path, filtre: str | None) -> tuple[Path, dict]:
 
 
 def fabrique(racine: Path, source: Path, sortie: Path, secondes: float,
-             depart: float, filtre: str | None) -> int:
+             depart: float, filtre: str | None, pan: tuple[float, float],
+             appel: str, entete: str) -> int:
     piste, fiche = morceau(racine, filtre)
     debut = choisit_extrait(piste, secondes)
     energies = energie_par_image(piste, debut, secondes)
@@ -180,7 +215,7 @@ def fabrique(racine: Path, source: Path, sortie: Path, secondes: float,
 
     with tempfile.TemporaryDirectory() as dossier:
         muet = Path(dossier) / "recadre.mp4"
-        recadre(source, muet, secondes, depart)
+        recadre(source, muet, secondes, depart, pan)
         avec = Path(dossier) / "danse.mp4"
         lecture = cv2.VideoCapture(str(muet))
         ecrivain = cv2.VideoWriter(str(avec), cv2.VideoWriter_fourcc(*"mp4v"),
@@ -194,9 +229,11 @@ def fabrique(racine: Path, source: Path, sortie: Path, secondes: float,
             force = energies[min(index, energies.size - 1)]
             pose_danseurs(image, instant, float(force), sol=DANSE_SOL,
                           marge=DANSE_MARGE, haut=DANSE_HAUT)
+            pose_entete(image, entete)
             reste = secondes - instant
             if reste <= APPEL_S:
-                pose_appel(image, min(1.0, (APPEL_S - reste) / APPEL_MONTEE_S))
+                pose_appel(image, min(1.0, (APPEL_S - reste) / APPEL_MONTEE_S),
+                           appel)
             ecrivain.write(image)
             index += 1
         lecture.release()
@@ -231,10 +268,16 @@ def main(argv: list[str] | None = None) -> int:
     parseur.add_argument("--depart", type=float, default=0.0,
                          help="où commencer dans la vidéo source")
     parseur.add_argument("--morceau", default=None)
+    parseur.add_argument("--pan", nargs=2, type=float, default=(0.5, 0.5),
+                         metavar=("DEBUT", "FIN"),
+                         help="dérive de la fenêtre, en fraction du débord")
+    parseur.add_argument("--appel", default="ailleurs", choices=tuple(APPELS))
+    parseur.add_argument("--entete", default="", help="lieu et heure, en haut")
     args = parseur.parse_args(argv)
     sortie = Path(args.sortie) if args.sortie else ROOT / "data" / "short_danse.mp4"
     return fabrique(ROOT, Path(args.source), sortie, args.secondes,
-                    args.depart, args.morceau)
+                    args.depart, args.morceau, tuple(args.pan), args.appel,
+                    args.entete)
 
 
 if __name__ == "__main__":
