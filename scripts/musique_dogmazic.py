@@ -367,6 +367,8 @@ def main() -> int:
     partie.add_argument("--graine", type=int, default=None)
     partie.add_argument("--danse", action="store_true",
                         help="ne chercher que dans les genres où l'on danse")
+    partie.add_argument("--genres", default="",
+                        help="les genres à parcourir, séparés par des virgules")
     partie.add_argument("--mini-min", type=float, default=COURT_MIN_S / 60,
                         help="durée minimale d'un morceau, en minutes")
     partie.add_argument("--garde", type=int, default=0,
@@ -376,7 +378,9 @@ def main() -> int:
     dossier = ROOT / args.dossier
     dossier.mkdir(parents=True, exist_ok=True)
     print(f"Lecture du catalogue pour {args.minutes:.0f} min de musique")
-    fiches = moisson(args.minutes, genres=GENRES_DANSE if args.danse else None,
+    choisis = [g.strip() for g in args.genres.split(",") if g.strip()]
+    fiches = moisson(args.minutes,
+                     genres=choisis or (GENRES_DANSE if args.danse else None),
                      mini=args.mini_min * 60)
     random.Random(args.graine).shuffle(fiches)
     duree = sum(f["duree"] for f in fiches)
