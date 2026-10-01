@@ -3542,3 +3542,45 @@ class PantinsAilleurs(unittest.TestCase):
         defauts = inspect.signature(pose_danseurs).parameters
         self.assertEqual(defauts["sol"].default, 0.93)
         self.assertEqual(defauts["marge"].default, 0.10)
+
+
+class DeploiementSansCouper(unittest.TestCase):
+    """Le déploiement a tué la diffusion deux fois le premier octobre."""
+
+    def test_the_stream_is_not_restarted_for_every_change(self):
+        """La veille redémarre librement, le flux non.
+
+        La veille écrit des fichiers et ne touche pas à l'antenne ; le flux
+        tient la connexion que YouTube surveille. Les traiter pareil est ce
+        qui a terminé la diffusion à dix-huit heures, en trois coupures pour
+        trois corrections que rien n'obligeait à livrer séparément.
+        """
+        from scripts import deploie
+        appels = []
+        with mock.patch.object(deploie, "_ssh", lambda c, muet=False: appels.append(c) or ""), \
+             mock.patch.object(deploie.subprocess, "run"):
+            deploie.main([])
+        restarts = [c for c in appels if "restart" in c]
+        self.assertEqual(restarts, ["sudo systemctl restart ventoux-watch"])
+
+    def test_a_stream_too_freshly_started_is_left_alone(self):
+        """Trois coupures en vingt-cinq minutes terminent la diffusion."""
+        from scripts import deploie
+        appels = []
+        with mock.patch.object(deploie, "_ssh", lambda c, muet=False: appels.append(c) or ""), \
+             mock.patch.object(deploie, "depuis_quand", lambda s: 600.0), \
+             mock.patch.object(deploie.subprocess, "run"):
+            code = deploie.main(["--flux"])
+        self.assertEqual(code, 2)
+        self.assertNotIn("sudo systemctl restart ventoux-stream", appels)
+
+    def test_the_rest_can_be_overridden_on_purpose(self):
+        from scripts import deploie
+        appels = []
+        with mock.patch.object(deploie, "_ssh", lambda c, muet=False: appels.append(c) or ""), \
+             mock.patch.object(deploie, "depuis_quand", lambda s: 10.0), \
+             mock.patch.object(deploie, "chaine_en_direct", lambda: True), \
+             mock.patch.object(deploie.time, "sleep", lambda s: None), \
+             mock.patch.object(deploie.subprocess, "run"):
+            deploie.main(["--flux", "--quand-meme"])
+        self.assertIn("sudo systemctl restart ventoux-stream", appels)
