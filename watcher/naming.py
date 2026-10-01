@@ -552,6 +552,27 @@ def decide(obs: Observation) -> Decision:
     # feu plutôt que de le refuser sur une mesure qui n'en est pas une.
     if obs.distance_doubt > SIZE_DOUBT_MAX:
         obs = replace(obs, width_m=0.0, height_m=0.0, rise_ms=0.0)
+    # Une lecture qui ne recouvre rien de ce qui a bougé parle d'autre chose.
+    #
+    # C'est la seule mesure de ce fichier qui ne dépende d'aucune distance :
+    # deux rectangles dans la même image se recoupent ou non, et cela se sait
+    # sur n'importe quelle caméra sans rien relever. La taille, elle, s'efface
+    # au-dessus — et c'est précisément là que le trou s'ouvrait : les mesures
+    # parties, plus rien ne contredisait le modèle, et le modèle parlait d'un
+    # autre endroit de l'image.
+    #
+    # Le 30 septembre à 19 h 40, un « person » à 0,56 lu cent pixels à gauche
+    # de la tache a nommé « Piéton » le trampoline du village. Le 29 à 12 h 33,
+    # un « car » à 0,43 de cinq pixels sur cinq, à quatre cents pixels de là, a
+    # nommé « Voiture » un véhicule qui en était bien un : juste, et pour une
+    # raison qui ne valait rien. Dix des cent quatre publications qui ont gardé
+    # leur observation tenaient d'une lecture à zéro pour cent.
+    #
+    # On ne touche qu'au zéro, et pas au cinquième de NAMED_SHARE : un
+    # cinquième est un réglage qui se discute, zéro est une contradiction. Une
+    # tache gonflée par son ombre peut n'être recouverte qu'au dixième par la
+    # voiture qui l'a produite ; elle ne peut pas l'être pas du tout.
+    obs = replace(obs, detections=[hit for hit in obs.detections if hit.share > 0])
     conf = obs.min_conf or {"bus": 0.45, "bus_unnamed": 0.6, "car": 0.4}
     # Un déplacement, c'est une vitesse multipliée par un temps. Si le temps
     # écoulé n'aurait pas suffi à un passage ordinaire pour franchir la barre,

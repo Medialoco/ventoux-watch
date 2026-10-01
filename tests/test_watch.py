@@ -21,7 +21,8 @@ from watcher.main import (STREAM_RETRY_MAX_S, STREAM_RETRY_S, _box_of_the_named,
                           _might_be_bus, _next_wait, _note_interruption, _published, _utc)
 from watcher.naming import Decision
 from watcher.motion import MotionDetector, Track
-from watcher.naming import Detection, Observation, Trip, choose_aircraft, decide, in_camera_view
+from watcher.naming import (SIZE_DOUBT_MAX, Detection, Observation, Trip, choose_aircraft,
+                            decide, in_camera_view)
 from watcher.review import apply_review, parse_review
 from watcher.opensky import SkyArchive
 from watcher.scene import Scene, ViewLog, moon_spot, read_sky, solar_period, weather_label
@@ -1891,7 +1892,14 @@ class FogTests(unittest.TestCase):
         # la réparation est en amont, dans la tache de mouvement, pas ici.
         "2026-09-29T14-59-32Z-motion-222 : attendu 'Camion', obtenu 'Voiture'",
         # Un piéton lu comme une voiture.
-        "2026-09-29T10-57-18Z-motion-94 : attendu 'Piéton', obtenu 'Voiture'",
+        # Était « Voiture », un faux nom tiré d'une lecture qui ne recouvrait
+        # rien de ce qui bougeait. La règle du recouvrement nul l'a ramené à un
+        # refus : toujours en désaccord avec le verdict, puisqu'on attendait
+        # « Piéton », mais d'un désaccord d'une autre nature. Une machine qui
+        # dit « je ne sais pas » se corrige ; une machine qui dit « Voiture »
+        # pour avoir regardé ailleurs ne se corrige pas, elle a raison par
+        # accident jusqu'au jour où elle a tort de la même façon.
+        "2026-09-29T10-57-18Z-motion-94 : attendu 'Piéton', obtenu 'Mouvement sur la route'",
         # Un tracteur lu comme un camion : le modèle n'a pas la classe.
         "2026-09-29T07-56-22Z-motion-10 : attendu 'Tracteur', obtenu 'Camion'",
     ]
@@ -2571,3 +2579,52 @@ class DiffusionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as dossier:
             self.assertIsNone(stream.batir_session(Path(dossier)))
         self.assertIsNone(stream.batir_session(Path("/inexistant/nulle/part")))
+
+
+class RecouvrementTests(unittest.TestCase):
+    """Une lecture qui ne recouvre rien de ce qui a bougé parle d'autre chose."""
+
+    def _tache(self, **extra):
+        base = dict(zone="road", travel=0.2, duration_s=6.0, area_ratio=0.002,
+                    width_m=4.0, height_m=1.8, frames=4, min_travel=0.01, cross_rate=0.034)
+        base.update(extra)
+        return base
+
+    def test_a_reading_that_touches_none_of_the_motion_cannot_name_it(self):
+        """Le 29 septembre à 12 h 33, un « car » de cinq pixels sur cinq, à
+        quatre cents pixels de la tache, a publié « Voiture ». La réponse était
+        juste et la raison ne valait rien."""
+        ailleurs = Detection("car", 0.9, share=0.0)
+        self.assertNotEqual(decide(Observation(**self._tache(), detections=[ailleurs])).type, "vehicle")
+        dessus = Detection("car", 0.9, share=0.8)
+        self.assertEqual(decide(Observation(**self._tache(), detections=[dessus])).type, "vehicle")
+
+    def test_a_blob_swollen_by_its_shadow_still_gets_named(self):
+        """On ne touche qu'au zéro, pas au cinquième.
+
+        Une voiture qui traîne son ombre ne recouvre qu'une part de la tache
+        qu'elle a produite ; elle en recouvre toujours quelque chose.
+        """
+        maigre = Detection("car", 0.9, share=0.08)
+        self.assertEqual(decide(Observation(**self._tache(), detections=[maigre])).type, "vehicle")
+
+    def test_a_reading_without_a_box_keeps_its_say(self):
+        """Faute de boîte, la part vaut un par défaut et non zéro : on ne sait
+        pas où la lecture s'est posée, et un « on ne sait pas » ne témoigne pas
+        à charge."""
+        self.assertEqual(Detection("car", 0.9).share, 1.0)
+        self.assertEqual(decide(Observation(**self._tache(),
+                                            detections=[Detection("car", 0.9)])).type, "vehicle")
+
+    def test_the_size_rules_vanish_but_the_overlap_rule_does_not(self):
+        """Le trou par lequel le trampoline est passé.
+
+        Au-dessus du doute de distance, les tailles s'effacent — à raison — et
+        plus rien ne contredisait le modèle. Le recouvrement, lui, se lit dans
+        l'image seule : aucune distance, aucun relevé, et il tient sur toutes
+        les caméras à venir.
+        """
+        loin = self._tache(zone="other", width_m=6.6, height_m=8.1,
+                           distance_doubt=SIZE_DOUBT_MAX + 0.4, travel=0.135)
+        faux = Detection("person", 0.56, share=0.0)
+        self.assertNotEqual(decide(Observation(**loin, detections=[faux])).type, "person")
