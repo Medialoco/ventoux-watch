@@ -2873,6 +2873,50 @@ class DiffusionTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 stream.attends_la_webcam("http://camera/x.m3u8")
 
+    def test_pushing_into_a_void_gets_said_out_loud(self):
+        """Quatre heures d'emission dans le vide avec un journal irreprochable.
+
+        Une diffusion terminee par YouTube ne se voit pas depuis le Pi : l'arrivee
+        accepte toujours les octets. La seule facon de l'apprendre est de regarder
+        la chaine du dehors.
+        """
+        coupe = threading.Event()
+        attentes = []
+
+        def patiente(_):
+            attentes.append(1)
+            if len(attentes) > 3:
+                coupe.set()
+            return coupe.is_set()
+
+        with mock.patch.object(stream, "direct_visible", lambda _: False), \
+                mock.patch.object(coupe, "wait", patiente), \
+                self.assertLogs(stream.log, level="ERROR") as journal:
+            stream.veille_le_direct("UCxxxx", coupe)
+        cris = [m for m in journal.output if "dans le vide" in m]
+        self.assertEqual(len(cris), 1, "on le dit une fois, pas a chaque tour")
+
+    def test_a_channel_we_cannot_read_is_never_declared_dead(self):
+        """« Je ne sais pas » n'est pas « non ».
+
+        Un direct prive est invisible du dehors, et une page qui repond mal l'est
+        aussi. Crier sur une incertitude, c'est apprendre a l'utilisateur a ne
+        plus nous croire.
+        """
+        coupe = threading.Event()
+        tours = []
+
+        def patiente(_):
+            tours.append(1)
+            if len(tours) > 5:
+                coupe.set()
+            return coupe.is_set()
+
+        with mock.patch.object(stream, "direct_visible", lambda _: None), \
+                mock.patch.object(coupe, "wait", patiente):
+            with self.assertNoLogs(stream.log, level="ERROR"):
+                stream.veille_le_direct("UCxxxx", coupe)
+
     def test_a_refusal_never_gets_a_red_box_on_the_stream(self):
         """Un rectangle rouge dit « j'ai vu ceci », pas « je n'ai rien su lire »."""
         with tempfile.TemporaryDirectory() as dossier:

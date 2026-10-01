@@ -146,6 +146,71 @@ def attends_la_webcam(url: str) -> tuple[str, float, float]:
     raise RuntimeError(f"webcam muette depuis {ATTENTE_WEBCAM_S:.0f} s : {souci}")
 
 
+# À quel rythme on va vérifier que la diffusion existe encore, et au bout de
+# combien d'absences on le dit. Dix minutes, deux fois : une page qui répond mal
+# une fois ne vaut pas qu'on crie.
+VEILLE_DIRECT_S = 600.0
+VEILLE_DIRECT_SEUIL = 2
+
+
+def direct_visible(chaine: str) -> bool | None:
+    """La chaîne est-elle en direct ? None quand on n'a pas su regarder.
+
+    L'adresse /live d'une chaîne répond de deux façons, et c'est la façon qui
+    porte la réponse plus que le contenu. Quand la chaîne émet, YouTube sert la
+    page de la vidéo en cours : elle contient « videoDetails » et un
+    « isLive: true ». Quand elle n'émet pas, il sert la page de la chaîne, qui
+    contient « channelMetadataRenderer » et aucune vidéo. Tout le reste — une
+    panne de réseau, une page qu'on ne reconnaît pas — n'est ni l'un ni l'autre.
+
+    Ne vaut que pour un direct public : un direct privé est invisible d'ici et
+    serait annoncé disparu à tort. D'où le None, qui dit « je ne sais pas » et
+    non « non » ; on ne crie que sur ce qu'on a vraiment lu.
+    """
+    url = f"https://www.youtube.com/channel/{chaine}/live"
+    requete = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(requete, timeout=20) as reponse:
+            page = reponse.read().decode("utf-8", "replace")
+    except Exception:
+        return None
+    if "videoDetails" in page and '"isLive":true' in page:
+        return True
+    if "channelMetadataRenderer" in page:
+        return False
+    return None
+
+
+def veille_le_direct(chaine: str, coupe: threading.Event) -> None:
+    """Dire quand on pousse des octets dans le vide.
+
+    Une diffusion terminée par YouTube ne se voit pas d'ici : l'arrivée continue
+    d'accepter tout ce qu'on lui envoie, ffmpeg ne signale rien, et le journal
+    reste propre. Le premier octobre, on a poussé quatre heures dans le vide
+    avec un journal irréprochable, et c'est l'utilisateur qui s'en est aperçu.
+
+    Alors on va regarder dehors. Ça ne répare rien — rouvrir une diffusion
+    demande le compte — mais ça change « quatre heures sans le savoir » en
+    « dix minutes et c'est écrit ».
+    """
+    absences = 0
+    while not coupe.wait(VEILLE_DIRECT_S):
+        vu = direct_visible(chaine)
+        if vu is None:
+            continue
+        if vu:
+            if absences >= VEILLE_DIRECT_SEUIL:
+                log.info("La diffusion est de nouveau visible sur la chaîne")
+            absences = 0
+            continue
+        absences += 1
+        if absences == VEILLE_DIRECT_SEUIL:
+            log.error("Aucune diffusion en direct sur la chaîne depuis %.0f min "
+                      "alors qu'on émet : les octets partent dans le vide. Il "
+                      "faut rouvrir un direct dans YouTube Studio, la clé est "
+                      "déjà alimentée.", VEILLE_DIRECT_S * absences / 60)
+
+
 def identifications(chemin: Path, depuis: float) -> list[dict]:
     """Ce que la veille a nommé, avec son heure et son rectangle.
 
@@ -1716,6 +1781,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     sortie = son = None
     verseur: threading.Thread | None = None
     coupe = threading.Event()
+    chaine = cfg.get("youtube_chaine")
+    if chaine and cible.startswith("rtmp"):
+        threading.Thread(target=veille_le_direct, args=(chaine, coupe),
+                         daemon=True).start()
     debut = _maintenant()
     # L'heure de la première image montrée : le bord du direct, moins ce qu'on
     # a reculé. Tout le reste s'en déduit par le compte des images.
