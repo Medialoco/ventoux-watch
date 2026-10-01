@@ -2,6 +2,220 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-01T10-13-41Z-vehicle-62",
+      "t": "2026-10-01T10:13:41Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "roundabout",
+      "confidence": 0.832,
+      "thumb": "data/thumbs/2026-10-01T10-13-41Z-vehicle-62.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 5.0,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2536,
+          "area_grow": 1.12,
+          "clipped": true,
+          "shade": 1.111,
+          "kept": 0.385,
+          "area_ratio": 0.01704,
+          "duration_s": 0.3,
+          "frames": 3,
+          "width_m": 5.0,
+          "height_m": 3.1,
+          "width_named_m": 2.3,
+          "height_named_m": 2.0,
+          "rise_ms": 0.0,
+          "drift_rate": 6.27,
+          "seen_as": [
+            "car 0.83 sur 30%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.1119,
+          0.8591,
+          0.1007,
+          0.1409
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T10-13-41Z-vehicle-62.jpg"
+    },
+    {
+      "id": "2026-10-01T10-12-21Z-motion-60",
+      "t": "2026-10-01T10:12:36Z",
+      "type": "vehicle",
+      "label": "Voiture blanche",
+      "zone": "road",
+      "confidence": 0.626,
+      "thumb": "data/thumbs/2026-10-01T10-12-21Z-motion-60.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.136,
+          "area_grow": 6.9,
+          "clipped": false,
+          "shade": 1.094,
+          "kept": 0.216,
+          "area_ratio": 0.00428,
+          "duration_s": 13.3,
+          "frames": 12,
+          "width_m": 8.0,
+          "height_m": 5.6,
+          "width_named_m": 4.5,
+          "height_named_m": 5.2,
+          "rise_ms": 0.0,
+          "drift_rate": 0.017,
+          "seen_as": [
+            "truck 0.63 sur 50%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.0141,
+          0.6866,
+          0.052,
+          0.1055
+        ],
+        "count": 2,
+        "since": "2026-10-01T10:12:21Z"
+      },
+      "closeup": "data/closeups/2026-10-01T10-12-21Z-motion-60.jpg"
+    },
+    {
+      "id": "2026-10-01T10-03-25Z-missed-59",
+      "t": "2026-10-01T10:03:25Z",
+      "type": "missed",
+      "label": "machine",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T10-03-25Z-missed-59.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Le haut de la tache ne monte qu'à 0.5 m/s. La fumée d'un feu qui vient de prendre s'élève plusieurs fois plus vite : elle est portée par sa propre chaleur.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0056,
+          "area_grow": 3.56,
+          "clipped": false,
+          "shade": 1.259,
+          "kept": 0.7,
+          "area_ratio": 0.00153,
+          "duration_s": 7.3,
+          "frames": 7,
+          "width_m": 12.4,
+          "height_m": 17.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.53,
+          "drift_rate": 0.011,
+          "seen_as": []
+        },
+        "refused": "machine",
+        "box": [
+          0.8078,
+          0.3139,
+          0.025,
+          0.0611
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T10-03-25Z-missed-59.jpg"
+    },
+    {
+      "id": "2026-10-01T10-01-42Z-missed-58",
+      "t": "2026-10-01T10:01:42Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T10-01-42Z-missed-58.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0219,
+          "area_grow": 0.92,
+          "clipped": false,
+          "shade": 1.305,
+          "kept": 0.5,
+          "area_ratio": 0.00042,
+          "duration_s": 21.0,
+          "frames": 23,
+          "width_m": 10.8,
+          "height_m": 12.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.26,
+          "drift_rate": 0.036,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.9469,
+          0.2972,
+          0.0219,
+          0.0444
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T10-01-42Z-missed-58.jpg"
+    },
+    {
+      "id": "2026-10-01T10-01-38Z-motion-57",
+      "t": "2026-10-01T10:01:38Z",
+      "type": "motion",
+      "label": "Mouvement sur la route",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-01T10-01-38Z-motion-57.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0243,
+          "area_grow": 1.25,
+          "clipped": true,
+          "shade": 1.45,
+          "kept": 0.0,
+          "area_ratio": 0.00056,
+          "duration_s": 16.4,
+          "frames": 6,
+          "width_m": 8.1,
+          "height_m": 8.8,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.13,
+          "drift_rate": 0.103,
+          "seen_as": []
+        },
+        "box": [
+          0.9828,
+          0.3083,
+          0.0172,
+          0.0333
+        ]
+      },
+      "closeup": "data/closeups/2026-10-01T10-01-38Z-motion-57.jpg"
+    },
+    {
       "id": "2026-10-01T09-41-16Z-motion-56",
       "t": "2026-10-01T09:41:16Z",
       "type": "motion",
