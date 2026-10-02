@@ -227,8 +227,24 @@ GENRES_DANSE = ["Techno", "House", "Deep techno", "Trance", "Drum n Bass",
                 "Big Beat", "Electro", "Electronic", "electronica"]
 
 
+# Des auteurs libres sur Dogmazic et déposés dans Content ID sous un autre nom.
+# Une licence libre dit ce que l'auteur autorise ; elle ne dit rien de ce qu'un
+# distributeur a déposé en son nom ailleurs, et c'est le dépôt qui coupe le
+# direct. « Emptiness » d'Alexander blu, CC-BY 2.0 sur Dogmazic, a été revendiqué
+# le 2 octobre sous le nom « puckaros » : la diffusion s'est arrêtée à 7 h 22 et
+# la chaîne est restée muette neuf heures. Le second morceau du même auteur part
+# avec, puisque c'est l'auteur qui est déposé et non le morceau.
+#
+# La liste se tient à la main parce qu'une revendication n'est lisible nulle
+# part avant d'être tombée. Ce qu'on peut faire, c'est ne jamais la reprendre
+# deux fois.
+REVENDIQUES = {"alexander blu"}
+
+
 def retenu(fiche: dict, mini: float = COURT_MIN_S) -> str:
     """Vide si on le garde, sinon la raison du refus — pour pouvoir la lire."""
+    if fiche.get("auteur", "").strip().lower() in REVENDIQUES:
+        return "revendiqué sur YouTube malgré la licence"
     if not licence_libre(fiche["licence"], fiche["url_licence"]):
         return f"licence « {fiche['licence'] or 'absente'} »"
     if sent_le_mix(fiche["titre"], fiche["album"], fiche["genres"]):

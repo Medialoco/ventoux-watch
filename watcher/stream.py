@@ -36,6 +36,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from watcher.store import floute
+
 log = logging.getLogger("ventoux.stream")
 
 # Combien de segments de retard. Un seul suffirait à la logique, deux donnent
@@ -1450,10 +1452,11 @@ def archives(racine: Path, combien: int = 400) -> list[dict]:
         nom = str(fiche.get("label") or "")
         if not nom or nom.startswith(NON_NOMS) or nom.startswith(JAMAIS_REDIFF):
             continue
-        # La découpe floutée d'abord, la vue d'ensemble seulement à défaut.
-        # Ce qui repasse à l'antenne doit être ce qui est publié ailleurs, et
-        # pour la même raison : un passage reconnaissable rejoué en boucle met
-        # mal à l'aise, et ce n'est pas ce qu'on cherche à montrer.
+        # La découpe d'abord, la vue d'ensemble seulement à défaut. Elle est
+        # nette sur le disque, et c'est voulu : le site la montre telle quelle
+        # pour qu'on puisse juger dessus. Le flou est posé plus bas, à l'instant
+        # d'afficher — un passage rejoué en boucle devant des gens qui ne l'ont
+        # pas demandé n'est pas une image qu'on va chercher pour l'examiner.
         nom_photo = str(fiche.get("closeup") or fiche.get("thumb") or "")
         photo = racine / nom_photo
         if not nom_photo or not photo.is_file():
@@ -1587,6 +1590,13 @@ def pose_rediffusion(image: np.ndarray, fiche: dict) -> bool:
     vignette = cv2.imread(str(fiche["photo"]))
     if vignette is None:
         return False
+    # Pixellisée ici et seulement ici. Le fichier reste net sur le disque et sur
+    # le site, où l'on va chercher une image pour juger dessus ; ce qui change,
+    # c'est qu'à l'antenne le même passage revient devant des gens qui ne l'ont
+    # pas demandé, en boucle, sans rien à en faire. « Je trouve ça creepy » — et
+    # c'est vrai. La chose reste lisible comme chose, personne n'y est
+    # reconnaissable, et c'est tout ce que la rediffusion a besoin de montrer.
+    vignette = floute(vignette)
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
     cible_l = int(largeur * REDIFF_PART)

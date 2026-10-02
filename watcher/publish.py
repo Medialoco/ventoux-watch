@@ -15,29 +15,13 @@ def publish(repo: Path) -> bool:
         return False
     paths = [
         "data/events.json",
-        # Plus les vignettes de la vue d'ensemble.
-        #
-        # Analyser automatiquement un flux auquel on accède licitement est une
-        # chose, et une chose prévue. En pousser chaque jour cinquante
-        # mégaoctets de captures dans un dépôt public en est une autre : c'est
-        # une photothèque de la webcam constituée à côté d'elle, et ni la
-        # fouille de données ni rien d'autre ne l'autorise. Celles déjà
-        # publiées restent, elles sont dans l'histoire du dépôt ; il n'en part
-        # plus de nouvelles.
-        #
-        # Ce qui part à leur place est la découpe du sujet, en gros blocs gris.
-        # Elle dit ce que l'historique a à dire — quelque chose est passé là, à
-        # cette heure — sans reproduire l'image ni montrer personne.
-        # La découpe que le modèle a vue, gardée à la résolution de la source.
-        # La vignette fait 480 pixels de large pour une image de 1920 : une
-        # voiture au rond-point y tient sur trente pixels, de quoi voir qu'il
-        # s'est passé quelque chose, pas de quoi dire quoi — et c'est
-        # exactement ce qu'on demande à qui juge une carte. Douze mégaoctets
-        # pour huit cents découpes, contre soixante-cinq de vignettes déjà
-        # poussées, et « prune » les efface au même moment que la vignette.
-        # La découpe publiée est pixellisée et en gris : on y voit qu'une
-        # chose est passée, jamais qui. Les originaux nets restent sur la
-        # machine qui veille, dans un dossier que git ignore.
+        # Les deux images, et nettes. La vue d'ensemble dit où la chose est
+        # passée, la découpe dit ce que c'était, et qui juge a besoin des deux :
+        # un car dont on ne lit plus le flanc n'est plus jugeable. Le floutage
+        # existe, mais il est posé à l'antenne, à l'instant de rejouer un
+        # passage devant des gens qui ne l'ont pas demandé — pas ici, où l'on
+        # vient chercher une image pour l'examiner.
+        "data/thumbs",
         "data/closeups",
         "data/learning.json",
         "data/view.json",

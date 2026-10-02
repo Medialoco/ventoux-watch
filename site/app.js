@@ -840,9 +840,12 @@ function render() {
     const day = moment.toLocaleDateString(locale(), { day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/Paris" });
   // Le plan rapproche flouté plutôt que la vue d'ensemble : revoir des
     // passages reconnaissables met mal à l'aise, et republier indéfiniment des
-    // captures du flux est autre chose que l'analyser. La vue large reste pour
-    // les entrées anciennes, qui n'ont pas de découpe.
-    const shot = event.closeup || event.thumb;
+    // Les deux images : la vue d'ensemble dit où, la découpe dit quoi, et il
+    // faut les deux pour juger. Elles sont nettes ici, et c'est voulu — un car
+    // dont on ne lit plus le flanc n'est plus jugeable. Le floutage, lui, est
+    // posé à l'antenne, où des passages sont rejoués devant des gens qui ne
+    // l'ont pas demandé.
+    const shot = event.thumb || event.closeup;
     const picture = shot
       ? `<img src="${escapeHtml(shot)}" alt="" loading="lazy" decoding="async">`
       : `<span class="placeholder"></span>`;
@@ -984,9 +987,12 @@ function card(event) {
   const day = moment.toLocaleDateString(locale(), { day: "2-digit", month: "short", timeZone: "Europe/Paris" });
   // Le plan rapproche flouté plutôt que la vue d'ensemble : revoir des
   // passages reconnaissables met mal à l'aise, et republier indéfiniment des
-  // captures du flux est autre chose que l'analyser. La vue large reste pour
-  // les entrées anciennes, qui n'ont pas de découpe.
-  const shot = event.closeup || event.thumb;
+  // Les deux images : la vue d'ensemble dit où, la découpe dit quoi, et il
+  // faut les deux pour juger. Elles sont nettes ici, et c'est voulu — un car
+  // dont on ne lit plus le flanc n'est plus jugeable. Le floutage, lui, est
+  // posé à l'antenne, où des passages sont rejoués devant des gens qui ne
+  // l'ont pas demandé.
+  const shot = event.thumb || event.closeup;
   const picture = shot
     ? `<img src="${escapeHtml(shot)}" alt="" loading="lazy" decoding="async">`
     : `<span class="placeholder"></span>`;

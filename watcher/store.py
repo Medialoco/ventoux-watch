@@ -93,27 +93,19 @@ class Store:
         return event
 
     def keep_closeup(self, event: dict, frame, bbox, metres: float = 0.0) -> str:
-        """Le sujet, de près, pixellisé et en gris — c'est ce qui est publié.
+        """Le sujet, de près et net. C'est l'image de travail.
 
-        La découpe nette reste sur la machine qui veille, dans un dossier que
-        git ignore. Deux raisons tombent ensemble.
+        Elle sert à juger : le site la montre en grand, et c'est dessus qu'un
+        humain décide si la machine a eu raison. Un car dont on ne lit plus le
+        flanc n'est plus jugeable, donc elle reste nette et elle est publiée.
 
-        La première tient en un mot de celui qui regarde : revoir des passages
-        reconnaissables, « je trouve ça creepy ». Il a raison, et c'est
-        suffisant. On ne construit pas une chaîne qui met les gens mal à l'aise
-        pour gagner quelques pixels.
-
-        La seconde est juridique. Analyser automatiquement un flux auquel on
-        accède licitement est prévu par la fouille de textes et de données ;
-        constituer puis republier indéfiniment une photothèque tirée de ce flux
-        est autre chose. Et une image devient une donnée personnelle dès qu'une
-        personne y est identifiable. Une vignette en gros blocs gris n'est ni
-        une reproduction de l'œuvre ni un portrait de personne, et elle suffit
-        toujours à dire « quelque chose est passé là, à cette heure ».
-
-        Ce qu'on perd est réel et il faut le dire : le nom d'un transporteur
-        sur le flanc d'un car ne se lira plus sur la version publiée. Il se lit
-        encore sur la machine, où le verdict d'un humain peut s'appuyer dessus.
+        Le floutage existe, mais il ne se fait pas ici. Il se fait à l'antenne,
+        au moment de composer la rediffusion, parce que c'est là qu'il est
+        demandé et seulement là : une image qu'on va chercher pour l'examiner
+        n'est pas la même chose qu'un passage rejoué en boucle devant des gens
+        qui ne l'ont pas demandé. Floutée au dépôt, elle l'était pour tout le
+        monde, y compris pour celui qui doit juger — c'était l'inverse de ce
+        qu'il fallait.
         """
         if frame is None or not bbox or not any(bbox):
             return ""
@@ -127,13 +119,7 @@ class Store:
         self.closeups.mkdir(parents=True, exist_ok=True)
         name = f"{event['id']}.jpg"
         decoupe = frame[y0:y1, x0:x1]
-        nets = self.root / "closeups_nets"
-        nets.mkdir(parents=True, exist_ok=True)
-        net, encode_net = cv2.imencode(".jpg", decoupe, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
-        if net:
-            (nets / name).write_bytes(encode_net.tobytes())
-        ok, encoded = cv2.imencode(".jpg", floute(decoupe, metres),
-                                   [int(cv2.IMWRITE_JPEG_QUALITY), 88])
+        ok, encoded = cv2.imencode(".jpg", decoupe, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
         if not ok:
             return ""
         (self.closeups / name).write_bytes(encoded.tobytes())

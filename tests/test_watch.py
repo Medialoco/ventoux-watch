@@ -4164,17 +4164,29 @@ class RienDeReconnaissableNeSort(unittest.TestCase):
         colonnes = len({flou[:, i].tobytes() for i in range(600)})
         self.assertLessEqual(colonnes, BLOCS_MAX)
 
-    def test_the_sharp_crop_stays_on_the_machine_and_is_not_published(self):
-        """Stocker, oui. Diffuser, non."""
-        from watcher import publish
-        chemins = inspect.getsource(publish.publish)
-        self.assertNotIn('"data/thumbs"', chemins)
-        self.assertIn('"data/closeups"', chemins)
-        self.assertNotIn("closeups_nets", chemins)
-        self.assertIn("data/closeups_nets/",
-                      (ROOT / ".gitignore").read_text().splitlines())
+    def test_both_pictures_are_published_and_sharp(self):
+        """Le site montre les deux, et nettes : c'est dessus qu'on juge.
 
-    def test_the_replay_shows_the_blurred_crop(self):
-        """Ce qui repasse à l'antenne est ce qui est publié ailleurs."""
-        source = inspect.getsource(stream)
-        self.assertIn('fiche.get("closeup") or fiche.get("thumb")', source)
+        La vue d'ensemble dit où la chose est passée, la découpe dit ce que
+        c'était. Floutées au dépôt, elles l'étaient aussi pour celui qui doit
+        trancher, et un car dont on ne lit plus le flanc n'est plus jugeable.
+        """
+        from watcher import publish
+        from watcher import store
+        chemins = inspect.getsource(publish.publish)
+        self.assertIn('"data/thumbs"', chemins)
+        self.assertIn('"data/closeups"', chemins)
+        depose = inspect.getsource(store.Store.keep_closeup)
+        self.assertNotIn("floute(", depose)
+
+    def test_the_replay_blurs_at_the_moment_it_shows(self):
+        """Le flou est posé à l'antenne, et nulle part ailleurs.
+
+        La différence n'est pas dans l'image : elle est dans qui la regarde.
+        On va chercher une photo sur le site pour l'examiner ; à l'antenne le
+        même passage revient en boucle devant des gens qui ne l'ont pas
+        demandé.
+        """
+        source = inspect.getsource(stream.pose_rediffusion)
+        self.assertIn("floute(vignette)", source)
+        self.assertLess(source.index("imread"), source.index("floute(vignette)"))
