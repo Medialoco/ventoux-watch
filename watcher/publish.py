@@ -35,6 +35,9 @@ def publish(repo: Path) -> bool:
         # exactement ce qu'on demande à qui juge une carte. Douze mégaoctets
         # pour huit cents découpes, contre soixante-cinq de vignettes déjà
         # poussées, et « prune » les efface au même moment que la vignette.
+        # La découpe publiée est pixellisée et en gris : on y voit qu'une
+        # chose est passée, jamais qui. Les originaux nets restent sur la
+        # machine qui veille, dans un dossier que git ignore.
         "data/closeups",
         "data/learning.json",
         "data/view.json",
