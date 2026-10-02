@@ -2,6 +2,185 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-02T15-03-43Z-motion-225",
+      "t": "2026-10-02T15:03:58Z",
+      "type": "vehicle",
+      "label": "Voiture verte",
+      "zone": "road",
+      "confidence": 0.677,
+      "thumb": "data/thumbs/2026-10-02T15-03-43Z-motion-225.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 2.9,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2485,
+          "area_grow": 22.73,
+          "clipped": false,
+          "shade": 0.981,
+          "kept": 0.364,
+          "area_ratio": 0.00977,
+          "duration_s": 7.2,
+          "frames": 6,
+          "width_m": 2.9,
+          "height_m": 2.7,
+          "width_named_m": 2.5,
+          "height_named_m": 2.2,
+          "rise_ms": 0.0,
+          "drift_rate": 0.193,
+          "seen_as": [
+            "truck 0.68 sur 73%"
+          ]
+        },
+        "surface": "island",
+        "box": [
+          0.1067,
+          0.7704,
+          0.086,
+          0.1351
+        ],
+        "count": 2,
+        "since": "2026-10-02T15:03:43Z"
+      },
+      "closeup": "data/closeups/2026-10-02T15-03-43Z-motion-225.jpg"
+    },
+    {
+      "id": "2026-10-02T15-03-58Z-missed-227",
+      "t": "2026-10-02T15:03:58Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T15-03-58Z-missed-227.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 33 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.108,
+          "kept": 0.227,
+          "area_ratio": 0.00153,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 1.8,
+          "height_m": 0.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "tarmac",
+        "box": [
+          0.3656,
+          0.9778,
+          0.0688,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T15-03-58Z-missed-227.jpg"
+    },
+    {
+      "id": "2026-10-02T14-56-59Z-missed-223",
+      "t": "2026-10-02T14:56:59Z",
+      "type": "missed",
+      "label": "Hors chaussée",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T14-56-59Z-missed-223.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Aucune voiture ne roule là.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.108,
+          "kept": 0.384,
+          "area_ratio": 0.00866,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.8,
+          "height_m": 2.3,
+          "width_named_m": 4.1,
+          "height_named_m": 2.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "truck 0.33 sur 72%"
+          ]
+        },
+        "refused": "off_road",
+        "box": [
+          0.2578,
+          0.75,
+          0.0891,
+          0.0972
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T14-56-59Z-missed-223.jpg"
+    },
+    {
+      "id": "2026-10-02T14-56-57Z-vehicle-222",
+      "t": "2026-10-02T14:56:57Z",
+      "type": "vehicle",
+      "label": "Voiture blanche",
+      "zone": "other",
+      "confidence": 0.522,
+      "thumb": "data/thumbs/2026-10-02T14-56-57Z-vehicle-222.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.7,
+        "height_m": 1.5,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.614,
+          "kept": 0.321,
+          "area_ratio": 0.01263,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 4.7,
+          "height_m": 1.5,
+          "width_named_m": 4.4,
+          "height_named_m": 1.4,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "truck 0.52 sur 87%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.8381,
+          0.9086,
+          0.1619,
+          0.0914
+        ],
+        "count": 2,
+        "since": "2026-10-02T14:56:57Z"
+      },
+      "closeup": "data/closeups/2026-10-02T14-56-57Z-vehicle-222.jpg"
+    },
+    {
       "id": "2026-10-02T14-48-01Z-missed-221",
       "t": "2026-10-02T14:48:01Z",
       "type": "missed",
