@@ -436,31 +436,44 @@ def _entrelace(premier: list[Path], second: list[Path],
     return [r[3] for r in rangs]
 
 
-def _espace(suite: list[Path], auteurs: dict[str, str]) -> list[Path]:
-    """Jamais deux fois le même nom d'affilée, quand on peut l'éviter.
+# Combien de noms différents au moins entre deux passages du même. Trois, parce
+# qu'avec un seul on obtient une alternance à deux noms et pas de la variété :
+# la règle refusait le voisin immédiat, donc un artiste bien fourni occupait les
+# rangs un, trois, cinq et sept. Trois sur trente-quatre artistes est tenable
+# sans jamais devoir y renoncer.
+MEMOIRE_ARTISTES = 3
+
+
+def _espace(suite: list[Path], auteurs: dict[str, str],
+            memoire: int = MEMOIRE_ARTISTES) -> list[Path]:
+    """Garde quelques noms d'écart entre deux morceaux du même artiste.
 
     La durée ne dit pas qui joue. Deux morceaux courts du même artiste tombent
     côte à côte aussi facilement que deux longs, et le mélange par paquets n'y
-    peut rien : seul le nom le sait. Quand le suivant porte le même nom que
-    celui qui vient de passer, on va chercher plus loin le premier qui n'en est
-    pas et on l'avance.
+    peut rien : seul le nom le sait.
 
-    « Quand on peut l'éviter » : si tout le reste est du même artiste, on le
-    passe quand même. Un silence serait pire qu'une répétition.
+    On cherche donc le premier morceau dont l'auteur n'est pas dans les trois
+    derniers passés. S'il n'y en a pas, on se contente de deux, puis d'un, puis
+    de n'importe lequel : une bibliothèque d'un seul artiste doit continuer à
+    jouer, un silence serait pire qu'une répétition.
     """
     if not auteurs:
         return suite
     reste = suite[:]
     ordre: list[Path] = []
-    precedent = ""
+    recents: list[str] = []
     while reste:
         choisi = 0
-        for i, piste in enumerate(reste):
-            if auteurs.get(piste.name, piste.name) != precedent:
-                choisi = i
+        for profondeur in range(min(memoire, len(recents)), 0, -1):
+            interdits = set(recents[-profondeur:])
+            trouve = next((i for i, p in enumerate(reste)
+                           if auteurs.get(p.name, p.name) not in interdits), None)
+            if trouve is not None:
+                choisi = trouve
                 break
         piste = reste.pop(choisi)
-        precedent = auteurs.get(piste.name, piste.name)
+        recents.append(auteurs.get(piste.name, piste.name))
+        del recents[:-memoire]
         ordre.append(piste)
     return ordre
 

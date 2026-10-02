@@ -4012,6 +4012,28 @@ class UneNuitNEstPasUnSeulArtiste(unittest.TestCase):
         self.assertLessEqual(colles, 1)
         self.assertEqual(sorted(noms), ["a", "a", "a", "b", "c"])
 
+    def test_a_well_stocked_artist_does_not_take_every_other_slot(self):
+        """Refuser le seul voisin immédiat donne une alternance, pas de la
+        variété : un nom bien fourni prenait les rangs un, trois, cinq, sept.
+        """
+        from watcher.stream import MEMOIRE_ARTISTES, _espace
+        # Les proportions de la vraie bibliothèque : le nom le plus fourni y
+        # pèse dix-sept morceaux sur cent trente-cinq. Une moitié sous un seul
+        # nom rendrait trois noms d'écart arithmétiquement impossible.
+        pistes, auteurs = [], {}
+        for i in range(15):
+            pistes.append(Path(f"gros{i}.mp3"))
+            auteurs[f"gros{i}.mp3"] = "le gros"
+        for i in range(45):
+            pistes.append(Path(f"petit{i}.mp3"))
+            auteurs[f"petit{i}.mp3"] = f"petit {i % 15}"
+        noms = [auteurs[p.name] for p in _espace(pistes, auteurs)]
+        for depart in range(0, len(noms) - 8):
+            tranche = noms[depart:depart + 8]
+            self.assertLessEqual(
+                tranche.count("le gros"), 8 // (MEMOIRE_ARTISTES + 1) + 1,
+                f"un seul nom tient la tranche {depart}")
+
     def test_a_library_of_one_artist_still_plays(self):
         """Un silence serait pire qu'une répétition."""
         from watcher.stream import _espace
