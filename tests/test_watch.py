@@ -2832,6 +2832,35 @@ class DiffusionTests(unittest.TestCase):
         stream.dessine(tard, [dict(vu)], debut + 3.5)
         self.assertFalse(np.array_equal(tot, tard))
 
+    def test_the_box_stays_as_long_as_the_subject_does(self):
+        """Quatre secondes, c'est la durée d'un geste, pas celle d'un passage.
+
+        Un piéton met une demi-minute à traverser. Le rectangle le lâchait au
+        quart du chemin et le reste se faisait en silence, alors que le flux a
+        toute la trajectoire en main bien avant de diffuser l'image.
+        """
+        debut = 1_000_000.0
+        traverse = {"t": debut, "label": "Piéton", "sur": True,
+                    "box": [0.10, 0.50, 0.03, 0.05],
+                    "trace": [[debut, 0.10, 0.50, 0.03, 0.05],
+                              [debut + 30.0, 0.80, 0.50, 0.03, 0.05]]}
+        ouvre, ferme = stream.presence(traverse)
+        self.assertEqual((ouvre, ferme), (debut, debut + 30.0))
+        fond = np.zeros((360, 640, 3), np.uint8)
+        for instant in (debut + 1.0, debut + 15.0, debut + 29.0):
+            toile = fond.copy()
+            self.assertEqual(stream.dessine(toile, [dict(traverse)], instant), 1,
+                             f"abandonn\u00e9 \u00e0 {instant - debut:.0f} s")
+        # Et une fois sorti du champ, le rectangle s'en va.
+        tard = fond.copy()
+        stream.dessine(tard, [dict(traverse)], debut + 31.0)
+        self.assertTrue(np.array_equal(tard, fond))
+        # Une prise d'une seule image garde son plancher, sinon sa fen\u00eatre
+        # serait nulle et elle ne s'afficherait jamais.
+        bref = {"t": debut, "label": "Voiture", "sur": True,
+                "box": [0.4, 0.4, 0.1, 0.1], "trace": []}
+        self.assertEqual(stream.presence(bref), (debut, debut + stream.TENUE_S))
+
     def test_the_box_never_goes_where_nothing_was_measured(self):
         """Hors du trajet relevé, on se tient au dernier point connu.
 

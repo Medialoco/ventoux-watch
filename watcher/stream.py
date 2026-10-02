@@ -321,6 +321,26 @@ def suit(vu: dict, quand: float) -> tuple[float, float, float, float]:
     return tuple(vu["box"])
 
 
+def presence(vu: dict) -> tuple[float, float]:
+    """Du moment où la chose est entrée dans le champ à celui où elle en sort.
+
+    Quatre secondes fixes, c'était la durée d'un geste, pas celle d'un passage.
+    Un piéton qui traverse met une demi-minute : le rectangle le lâchait au
+    quart du chemin et le reste de la traversée se faisait en silence.
+
+    La trajectoire porte déjà ses deux bouts, donc on les prend. Le rectangle
+    vit exactement aussi longtemps que la chose a été là — ni moins, ce qui
+    l'abandonnait, ni plus, ce qui le laisserait sur du vide.
+
+    Le plancher reste pour les prises d'une seule image : sans lui, elles
+    auraient une fenêtre nulle et ne s'afficheraient jamais.
+    """
+    chemin = vu.get("trace") or []
+    debut = min(vu["t"], chemin[0][0]) if chemin else vu["t"]
+    fin = max(chemin[-1][0], debut + TENUE_S) if chemin else debut + TENUE_S
+    return debut, fin
+
+
 def dessine(image: np.ndarray, vus: list[dict], quand: float) -> int:
     """Pose un rectangle et un nom pour chaque chose vue à cet instant.
 
@@ -330,8 +350,8 @@ def dessine(image: np.ndarray, vus: list[dict], quand: float) -> int:
     hauteur, largeur = image.shape[:2]
     poses = 0
     for vu in vus:
-        age = quand - vu["t"]
-        if age < 0 or age > TENUE_S:
+        debut, fin = presence(vu)
+        if not debut <= quand <= fin:
             continue
         x, y, w, h = suit(vu, quand)
         x1, y1 = int(x * largeur), int(y * hauteur)
@@ -374,7 +394,8 @@ def prise_a_feter(vus: list[dict], quand: float, fetes: set) -> dict | None:
     for vu in vus:
         if (vu.get("type") or "") not in PRISES:
             continue
-        if not 0.0 <= quand - vu["t"] <= TENUE_S:
+        debut, fin = presence(vu)
+        if not debut <= quand <= fin:
             continue
         if vu["t"] in fetes:
             continue
