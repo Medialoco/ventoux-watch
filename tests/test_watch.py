@@ -2962,6 +2962,88 @@ class DiffusionTests(unittest.TestCase):
         self.assertEqual(_trace_of(image, _Immobile()), [])
         self.assertEqual(_trace_of(None, _Suivi()), [])
 
+    def test_the_carpet_flies_over_the_ridge_and_never_through_it(self):
+        """À hauteur fixe, il traversait le Ventoux par le milieu.
+
+        La crête descend de 0,30 à gauche à 0,16 à droite dans le contour du
+        ciel : un tapis volant à hauteur constante passe donc devant le sommet,
+        qui est exactement ce que les gens sont venus voir.
+        """
+        ciel = [[0.0, 0.0], [1.0, 0.0], [1.0, 0.16], [0.48, 0.18],
+                [0.22, 0.26], [0.0, 0.30]]
+        for part, attendu in ((0.0, 0.30), (0.22, 0.26), (1.0, 0.16)):
+            self.assertAlmostEqual(stream._crete(ciel, part), attendu, places=3)
+        self.assertIsNone(stream._crete(None, 0.5), "sans carte, pas de cr\u00eate")
+        # Et à chaque instant de la traversée, le tapis reste au-dessus d'elle.
+        vols = 0
+        for instant in np.arange(0.0, stream.TAPIS_TRAVERSEE_S, 0.5):
+            toile = np.zeros((720, 1280, 3), np.uint8)
+            self.assertTrue(stream.pose_tapis(toile, float(instant), 0.9, ciel))
+            pose = np.argwhere(toile.any(axis=2))
+            if not len(pose):
+                # Il entre de nulle part et sort de même : aux deux extrémités
+                # de la traversée il est entièrement hors du cadre.
+                continue
+            vols += 1
+            bas = pose[:, 0].max()
+            for bord in (pose[:, 1].min(), pose[:, 1].max()):
+                sol = stream._crete(ciel, bord / 1280) * 720
+                self.assertLess(bas, sol, f"dans la montagne \u00e0 {instant:.1f} s")
+        self.assertGreater(vols, 20, "il doit passer, pas seulement exister")
+        # Hors de sa fenêtre, le ciel est vide.
+        vide = np.zeros((720, 1280, 3), np.uint8)
+        self.assertFalse(stream.pose_tapis(vide, stream.TAPIS_TRAVERSEE_S + 1, 0.9, ciel))
+        self.assertFalse(vide.any())
+
+    def test_the_elephant_stands_on_the_roundabout_and_yields_to_the_watch(self):
+        """Il danse à l'endroit même où les choses se passent.
+
+        C'est tout le charme et tout le risque : un éléphant rose par-dessus
+        une voiture entourée de rouge ferait passer la veille pour une
+        plaisanterie. Il est donc posé sur le rond-point, à l'échelle du
+        rond-point, et l'appelant ne le propose que dans un creux.
+        """
+        rond = [[0.0, 0.78], [0.34, 0.72], [0.40, 0.86], [0.30, 1.0], [0.0, 1.0]]
+        toile = np.zeros((720, 1280, 3), np.uint8)
+        self.assertTrue(stream.pose_elephant(toile, 4.0, 0.9, rond))
+        pose = np.argwhere(toile.any(axis=2))
+        hauteur = pose[:, 0].max() - pose[:, 0].min()
+        # Sa taille vient du rond-point et de rien d'autre : c'est ce qui lui
+        # permettra d'exister sur une autre caméra sans qu'on règle un pixel.
+        attendu = (1.0 - 0.72) * 720 * stream.ELEPHANT_PART
+        self.assertLess(abs(hauteur - attendu) / attendu, 0.6)
+        # Il est bien sur le rond-point, pas à côté.
+        milieu = pose[:, 1].mean() / 1280
+        self.assertLess(abs(milieu - 0.208), 0.08)
+        # Sans rond-point, pas d'éléphant — et c'est la bonne réponse, il n'y
+        # aurait nulle part où le faire danser.
+        vide = np.zeros((720, 1280, 3), np.uint8)
+        self.assertFalse(stream.pose_elephant(vide, 4.0, 0.9, None))
+        self.assertFalse(vide.any())
+        # Et il ne reste pas : neuf secondes, puis onze minutes de silence.
+        apres = np.zeros((720, 1280, 3), np.uint8)
+        self.assertFalse(stream.pose_elephant(apres, stream.ELEPHANT_TENUE_S + 1,
+                                              0.9, rond))
+        self.assertFalse(apres.any())
+
+    def test_the_two_turns_almost_never_happen_at_once(self):
+        """Des périodes rondes les feraient tomber ensemble plusieurs fois par jour.
+
+        Et un numéro qui revient toujours avec l'autre cesse d'être une
+        surprise : on croit à un spectacle réglé.
+        """
+        for periode in (stream.TAPIS_PERIODE_S, stream.ELEPHANT_PERIODE_S):
+            entier = int(periode)
+            self.assertEqual(periode, entier)
+            self.assertTrue(all(entier % d for d in range(2, int(entier ** 0.5) + 1)),
+                            f"{entier} n'est pas premier")
+        self.assertNotEqual(stream.TAPIS_PERIODE_S, stream.ELEPHANT_PERIODE_S)
+        ensemble = sum(
+            1 for s in range(24 * 3600)
+            if s % stream.TAPIS_PERIODE_S < stream.TAPIS_TRAVERSEE_S
+            and s % stream.ELEPHANT_PERIODE_S < stream.ELEPHANT_TENUE_S)
+        self.assertLess(ensemble, 30, "ils se croisent trop souvent")
+
     def test_fog_gets_said_in_the_words_the_watch_used(self):
         """Un mur gris sans un mot ressemble \u00e0 une cam\u00e9ra en panne.
 

@@ -1941,6 +1941,264 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
     cv2.addWeighted(calque, opacite, image, 1.0 - opacite, 0.0, dst=image)
 
 
+# Le rose de l'éléphant et les tons du tapis, en BGR comme tout OpenCV.
+ROSE = (205, 160, 250)
+ROSE_OMBRE = (150, 105, 205)
+TAPIS_ETOFFE = (62, 92, 228)
+TAPIS_FRANGE = (120, 205, 250)
+
+
+def _elephant(calque: np.ndarray, cx: int, sol: int, taille: float,
+              phase: float) -> None:
+    """Un éléphant rose en ellipses, qui danse de profil.
+
+    Tout est rond et rien n'est anatomique : des oreilles trop grandes, des
+    pattes trop courtes, une trompe qui se balance. C'est ce qui le sauve — un
+    éléphant qu'on essaierait de dessiner juste, à quatre-vingts pixels de
+    haut, ne serait qu'une tache grise de la taille d'une voiture, et on
+    croirait à un défaut de l'image plutôt qu'à une intention.
+
+    Il regarde vers la gauche, du côté d'où viennent les voitures.
+
+    « taille » est sa hauteur au garrot, « sol » la ligne où ses pieds posent.
+    """
+    tube = max(2, int(taille * 0.055))
+
+    def rond(centre, axes, couleur, angle=0.0, epaisseur=-1):
+        cv2.ellipse(calque, centre, axes, angle, 0, 360, couleur, epaisseur,
+                    cv2.LINE_AA)
+
+    # Le dandinement : il se soulève sur le temps et se balance à contretemps.
+    # Deux mouvements de périodes différentes, sinon il tressaute sur place
+    # comme un jouet à ressort.
+    bond = int(math.sin(phase * 2) * taille * 0.05)
+    roulis = math.sin(phase) * taille * 0.04
+    pose = sol - bond
+    axe = cx + int(roulis)
+
+    # Les pattes d'abord, pour que le corps les recouvre à la hanche. Courtes
+    # et épaisses : des pattes à l'échelle feraient un animal juste, et un
+    # animal juste n'est pas drôle. Celles-ci sont des poteaux.
+    for i, ecart in enumerate((-0.24, -0.09, 0.11, 0.26)):
+        balance = math.sin(phase + i * 1.7) * taille * 0.05
+        pied = (int(axe + taille * ecart + balance), pose)
+        haut = (int(axe + taille * ecart), int(pose - taille * 0.26))
+        cv2.line(calque, haut, pied, ROSE_OMBRE, int(tube * 2.6), cv2.LINE_AA)
+        cv2.circle(calque, pied, int(tube * 1.3), ROSE_OMBRE, -1, cv2.LINE_AA)
+
+    corps = (axe, int(pose - taille * 0.56))
+    rond(corps, (int(taille * 0.40), int(taille * 0.29)), ROSE)
+    # La queue pend et fouette plus vite que le reste, comme toutes les queues.
+    fouet = math.sin(phase * 3) * 0.5
+    queue = (int(axe + taille * 0.38), int(pose - taille * 0.62))
+    cv2.line(calque, queue,
+             (int(queue[0] + taille * 0.13 + fouet * taille * 0.06),
+              int(queue[1] + taille * 0.26)),
+             ROSE_OMBRE, max(2, int(tube * 0.6)), cv2.LINE_AA)
+
+    tete = (int(axe - taille * 0.44), int(pose - taille * 0.72))
+    rond(tete, (int(taille * 0.27), int(taille * 0.26)), ROSE)
+    # L'oreille bat, et c'est elle qui fait tout le travail : c'est à l'oreille
+    # qu'on reconnaît un éléphant de dessin animé, pas à la trompe.
+    bat = 18 * math.sin(phase * 2 + 0.7)
+    rond((tete[0] + int(taille * 0.10), tete[1] - int(taille * 0.02)),
+         (int(taille * 0.22), int(taille * 0.17)), ROSE_OMBRE, angle=bat)
+    rond((tete[0] + int(taille * 0.10), tete[1] - int(taille * 0.02)),
+         (int(taille * 0.19), int(taille * 0.14)), ROSE, angle=bat)
+
+    # La trompe : un arc qui s'affine et qui se relève quand il saute.
+    leve = math.sin(phase * 2) * 0.5
+    depart = (tete[0] - taille * 0.16, tete[1] + taille * 0.10)
+    courbe = []
+    for pas in range(7):
+        part = pas / 6
+        angle = -0.3 + part * (1.9 + leve)
+        courbe.append((int(depart[0] - math.sin(angle) * taille * 0.30 * part
+                           - taille * 0.04),
+                       int(depart[1] + math.cos(angle * 0.8) * taille * 0.32 * part)))
+    for pas in range(6):
+        cv2.line(calque, courbe[pas], courbe[pas + 1], ROSE,
+                 max(2, int(tube * (2.0 - pas * 0.22))), cv2.LINE_AA)
+
+    # L'œil, en dernier et tout petit : plus il est petit, plus il est gentil.
+    oeil = (tete[0] - int(taille * 0.09), tete[1] - int(taille * 0.05))
+    cv2.circle(calque, oeil, max(2, int(taille * 0.045)), BLANC, -1, cv2.LINE_AA)
+    cv2.circle(calque, oeil, max(1, int(taille * 0.022)), (20, 20, 20), -1, cv2.LINE_AA)
+
+
+# L'éléphant danse onze minutes et une seconde après le précédent, le tapis
+# passe toutes les six minutes trente-sept. Deux nombres premiers, et c'est la
+# seule raison de leur drôle de valeur : avec des périodes rondes, les deux
+# numéros tomberaient ensemble plusieurs fois par jour et on croirait à un
+# spectacle réglé. Premiers entre eux, ils ne se croisent qu'une fois tous les
+# trois jours.
+ELEPHANT_PERIODE_S = 661.0
+ELEPHANT_TENUE_S = 9.0
+# Sa hauteur au garrot, en parts de la hauteur du rond-point à l'image. Pas en
+# pixels : le rond-point est la seule chose dont on connaisse la taille ici, et
+# c'est ce qui permettra à une autre caméra d'avoir le sien, à l'échelle de son
+# propre rond-point, sans qu'on ait à rien régler.
+ELEPHANT_PART = 0.30
+
+
+def pose_elephant(image: np.ndarray, seconde: float, energie: float,
+                  rond_point: list | None,
+                  vue: tuple[int, int, int, int] | None = None) -> bool:
+    """Un éléphant rose vient danser sur le rond-point, de temps en temps.
+
+    Sur le rond-point et non à un endroit choisi : le contour est déjà dans
+    `zones.json`, parce que la veille a besoin de savoir où est la chaussée. On
+    s'en sert pour le poser au milieu et pour le mettre à l'échelle. Une caméra
+    sans rond-point n'aura pas d'éléphant, et c'est la bonne réponse — il n'y
+    aurait nulle part où le faire danser.
+
+    L'appelant ne le propose que dans un creux, quand rien n'est à l'écran.
+    C'est le rond-point, c'est-à-dire exactement l'endroit où les choses se
+    passent : un éléphant par-dessus une voiture entourée de rouge ferait
+    passer la veille pour une plaisanterie.
+
+    Rend vrai quand il est là, pour que l'appelant sache qu'il se passe
+    quelque chose.
+    """
+    if energie < DANSE_ARRET or not rond_point:
+        return False
+    phase_cycle = seconde % ELEPHANT_PERIODE_S
+    if phase_cycle >= ELEPHANT_TENUE_S:
+        return False
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    xs = [p[0] for p in rond_point]
+    ys = [p[1] for p in rond_point]
+    taille = (max(ys) - min(ys)) * haute_vue * ELEPHANT_PART
+    if taille < 12:
+        return False
+    cx = int(gauche + (sum(xs) / len(xs)) * large_vue)
+    # Il pose les pieds aux trois quarts du rond-point et non sur son bord bas,
+    # qui touche le bas de l'image : plus bas, il aurait les pattes coupées.
+    sol = int(cime + (min(ys) + (max(ys) - min(ys)) * 0.75) * haute_vue)
+    calque = image.copy()
+    _elephant(calque, cx, sol, taille, seconde * DANSE_PAS_S * 0.8)
+    # Il arrive et repart en fondu d'une seconde. Un éléphant qui apparaît d'un
+    # coup se lit comme une image sautée ; en fondu, il se lit comme un rêve.
+    bord = min(phase_cycle, ELEPHANT_TENUE_S - phase_cycle, 1.0)
+    cv2.addWeighted(calque, bord * 0.88, image, 1.0 - bord * 0.88, 0.0, dst=image)
+    return True
+
+
+TAPIS_PERIODE_S = 397.0
+TAPIS_TRAVERSEE_S = 14.0
+# À mi-hauteur entre le haut du cadre et la crête, et le reste de l'onde en
+# plus. La crête, pas une valeur fixe : à hauteur constante il passerait devant
+# le sommet du Ventoux, qui est précisément ce que les gens sont venus voir. En
+# la suivant, il le survole — et sur une autre caméra il survolera la sienne.
+TAPIS_CIEL = 0.5
+TAPIS_ONDE = 0.07
+# Faute de contour du ciel, une hauteur prudente.
+TAPIS_CIEL_SANS_CARTE = 0.14
+
+
+def _crete(ciel: list | None, part_x: float) -> float | None:
+    """Jusqu'où le ciel descend à cette abscisse : la ligne de crête.
+
+    On prend le point le plus bas du contour, et non le premier croisement :
+    un contour de ciel peut redescendre derrière un pylône ou une antenne, et
+    c'est sous le plus bas de ses passages qu'il y a de la montagne.
+    """
+    if not ciel or len(ciel) < 3:
+        return None
+    bas = None
+    for (x1, y1), (x2, y2) in zip(ciel, ciel[1:] + ciel[:1]):
+        if min(x1, x2) <= part_x <= max(x1, x2) and x1 != x2:
+            y = y1 + (y2 - y1) * (part_x - x1) / (x2 - x1)
+            bas = y if bas is None else max(bas, y)
+    return bas
+
+
+def pose_tapis(image: np.ndarray, seconde: float, energie: float,
+               ciel: list | None = None,
+               vue: tuple[int, int, int, int] | None = None) -> bool:
+    """Un tapis volant traverse le ciel avec un troisième danseur dessus.
+
+    Latéralement et d'un bord à l'autre du cadre entier, bandes noires
+    comprises : il entre de nulle part et sort de même, ce qui est la seule
+    façon qu'un tapis volant a d'être crédible. Les deux pantins du bas, eux,
+    sont chez eux et vont faire un tour ; celui-ci est de passage.
+
+    Il suit la crête au lieu de voler droit, donc il monte au-dessus du sommet
+    et redescend de l'autre côté. C'était une nécessité avant d'être une jolie
+    chose : à hauteur fixe, il traversait le Ventoux par le milieu.
+
+    Et comme il reste au-dessus du relief, il n'attend pas le creux comme
+    l'éléphant — il n'y a jamais rien à regarder là-haut.
+    """
+    if energie < DANSE_ARRET:
+        return False
+    phase_cycle = seconde % TAPIS_PERIODE_S
+    if phase_cycle >= TAPIS_TRAVERSEE_S:
+        return False
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    avance = phase_cycle / TAPIS_TRAVERSEE_S
+    etoffe = haute_vue * 0.085
+    # Il part entièrement hors du cadre et finit entièrement dehors.
+    cx = int(-etoffe * 2 + avance * (largeur + etoffe * 4))
+    # Au-dessus des bandes noires il n'y a pas de crête : on prolonge celle du
+    # bord de la vue, sans quoi il plongerait en entrant et en sortant.
+    part_x = min(1.0, max(0.0, (cx - gauche) / max(large_vue, 1)))
+    crete = _crete(ciel, part_x)
+    plafond = crete * TAPIS_CIEL if crete is not None else TAPIS_CIEL_SANS_CARTE
+    vol = math.sin(avance * math.pi * 3) * haute_vue * TAPIS_ONDE * plafond
+    cy = int(cime + haute_vue * plafond + vol)
+    calque = image.copy()
+    _tapis(calque, cx, cy, etoffe, seconde * DANSE_PAS_S)
+    cv2.addWeighted(calque, 0.9, image, 0.1, 0.0, dst=image)
+    return True
+
+
+def _tapis(calque: np.ndarray, cx: int, cy: int, etoffe: float,
+           phase: float) -> None:
+    """Le tapis lui-même : une étoffe qui ondule, et quelqu'un debout dessus.
+
+    L'ondulation court d'un bout à l'autre au lieu de monter et descendre
+    ensemble : c'est ce qui fait la différence entre un tapis qui vole et une
+    planche qui glisse. Le danseur suit la bosse sous ses pieds, sinon il
+    flotte un peu au-dessus et tout l'effet tombe.
+    """
+    long_tapis = etoffe * 3.4
+    def onde(part):
+        return math.sin(part * 4.5 - phase * 1.4) * etoffe * 0.17
+
+    haut, bas = [], []
+    for pas in range(13):
+        part = pas / 12
+        x = int(cx - long_tapis / 2 + part * long_tapis)
+        y = int(cy + onde(part))
+        haut.append((x, y))
+        bas.append((x, int(y + etoffe * 0.30)))
+    corps = np.array(haut + bas[::-1], np.int32)
+    cv2.fillPoly(calque, [corps], TAPIS_ETOFFE, cv2.LINE_AA)
+    cv2.polylines(calque, [np.array(haut, np.int32)], False, TAPIS_FRANGE,
+                  max(1, int(etoffe * 0.05)), cv2.LINE_AA)
+    # Les franges aux deux bouts, qui traînent derrière.
+    for bout, sens in ((haut[0], -1), (haut[-1], 1)):
+        for brin in range(4):
+            pied = (int(bout[0] + sens * etoffe * 0.16),
+                    int(bout[1] + etoffe * (0.26 + brin * 0.07)))
+            cv2.line(calque, (bout[0], int(bout[1] + etoffe * 0.1)), pied,
+                     TAPIS_FRANGE, max(1, int(etoffe * 0.04)), cv2.LINE_AA)
+    # Deux losanges pour le motif, et pas plus : à cette taille, un vrai tapis
+    # d'orient ne serait qu'une bouillie de pixels.
+    for part in (0.33, 0.67):
+        centre = (int(cx - long_tapis / 2 + part * long_tapis),
+                  int(cy + onde(part) + etoffe * 0.11))
+        cote = int(etoffe * 0.09)
+        cv2.fillPoly(calque, [np.array(
+            [(centre[0], centre[1] - cote), (centre[0] + cote, centre[1]),
+             (centre[0], centre[1] + cote), (centre[0] - cote, centre[1])],
+            np.int32)], TAPIS_FRANGE, cv2.LINE_AA)
+    _danseur(calque, cx, int(cy + onde(0.5)), etoffe * 1.5, phase + 1.1, BLANC)
+
+
 # Les ciels où le soleil ne passe pas. « Peu nuageux » n'en est pas un.
 SANS_SOLEIL = {"nuageux", "couvert", "brouillard", "brume", "pluie", "neige", "orage"}
 # Il doit être assez haut pour être dans le ciel et non derrière la crête, et
@@ -2472,6 +2730,19 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     trio: tuple[dict | None, dict | None, dict | None] = (None, None, None)
     lieu = ligne_lieu(cfg.get("camera") or {}, altitude_camera(racine))
     relu = 0.0
+    # Les contours que la veille utilise pour savoir où est la chaussée servent
+    # aussi à placer les deux numéros : le rond-point dit où l'éléphant danse,
+    # le ciel dit jusqu'où le tapis peut descendre sans toucher la montagne.
+    # Lus une fois, et pardonnés s'ils manquent — une caméra sans carte garde
+    # sa diffusion, elle perd seulement ses fantaisies.
+    contours = {}
+    try:
+        contours = json.loads(
+            (racine / cfg["zones"]).read_text(encoding="utf-8")).get("polygons") or {}
+    except (OSError, ValueError, KeyError):
+        log.info("Pas de contours de zones : ni tapis ni éléphant")
+    contour_ciel = contours.get("sky")
+    contour_rond_point = contours.get("roundabout")
     # On démarre comme si on venait de voir quelque chose : une rediffusion à
     # la première seconde du direct donnerait l'impression que rien ne marche.
     dernier_vu = origine
@@ -2680,8 +2951,19 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # autre sujet que la montagne en direct, et deux pantins dansant
             # dessus diraient que c'est le même plan filmé autrement.
             if survol is None:
-                pose_danseurs(toile, quand - origine, musique.pouls(),
-                              vue=fenetre(vue.shape[:2], largeur, hauteur))
+                cadrage = fenetre(vue.shape[:2], largeur, hauteur)
+                pose_danseurs(toile, quand - origine, musique.pouls(), vue=cadrage)
+                # Le tapis vole au-dessus de la crête, donc il passe quoi qu'il
+                # arrive. L'éléphant danse sur le rond-point, c'est-à-dire en
+                # plein sur l'endroit où les choses se passent : il n'y va que
+                # dans un creux, à la même condition que le survol du relief.
+                # Un éléphant rose par-dessus une voiture entourée de rouge
+                # ferait passer toute la veille pour une plaisanterie.
+                pose_tapis(toile, quand - origine, musique.pouls(),
+                           contour_ciel, vue=cadrage)
+                if quand - dernier_vu > CREUX_S:
+                    pose_elephant(toile, quand - origine, musique.pouls(),
+                                  contour_rond_point, vue=cadrage)
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
