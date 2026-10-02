@@ -2,6 +2,177 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-02T17-46-37Z-vehicle-16",
+      "t": "2026-10-02T17:46:37Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.637,
+      "thumb": "data/thumbs/2026-10-02T17-46-37Z-vehicle-16.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 2.9,
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.289,
+          "kept": 0.283,
+          "area_ratio": 0.00443,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 2.9,
+          "height_m": 0.8,
+          "width_named_m": 0.4,
+          "height_named_m": 0.3,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.64 sur 4%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.9852,
+          0.9832,
+          0.0148,
+          0.0168
+        ],
+        "count": 2,
+        "since": "2026-10-02T17:46:37Z"
+      },
+      "closeup": "data/closeups/2026-10-02T17-46-37Z-vehicle-16.jpg"
+    },
+    {
+      "id": "2026-10-02T17-41-44Z-missed-14",
+      "t": "2026-10-02T17:41:44Z",
+      "type": "missed",
+      "label": "Décor connu",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T17-41-44Z-missed-14.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "statue n'a pas bougé. Une lumière est passée dessus.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.076,
+          "kept": 1.0,
+          "area_ratio": 0.0025,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 1.8,
+          "height_m": 1.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "landmark",
+        "box": [
+          0.4813,
+          0.8306,
+          0.05,
+          0.05
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T17-41-44Z-missed-14.jpg"
+    },
+    {
+      "id": "2026-10-02T17-41-44Z-missed-15",
+      "t": "2026-10-02T17:41:44Z",
+      "type": "missed",
+      "label": "Décor de l'îlot",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T17-41-44Z-missed-15.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur l'îlot central du rond-point, et ça n'a pas bougé. Les pierres et les figures y sont plantées.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.934,
+          "kept": 0.438,
+          "area_ratio": 0.00372,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 2.2,
+          "height_m": 1.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "island",
+        "box": [
+          0.2734,
+          0.7694,
+          0.0516,
+          0.0722
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T17-41-44Z-missed-15.jpg"
+    },
+    {
+      "id": "2026-10-02T17-41-41Z-motion-13",
+      "t": "2026-10-02T17:41:41Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T17-41-41Z-motion-13.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0455,
+          "area_grow": 1.62,
+          "clipped": true,
+          "shade": 1.062,
+          "kept": 0.737,
+          "area_ratio": 0.00146,
+          "duration_s": 6.7,
+          "frames": 5,
+          "width_m": 12.0,
+          "height_m": 3.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.017,
+          "seen_as": []
+        },
+        "box": [
+          0.2828,
+          0.775,
+          0.4578,
+          0.225
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T17-41-41Z-motion-13.jpg"
+    },
+    {
       "id": "2026-10-02T17-19-42Z-vehicle-10",
       "t": "2026-10-02T17:20:19Z",
       "type": "vehicle",
