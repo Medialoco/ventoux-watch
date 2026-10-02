@@ -1291,6 +1291,23 @@ BORD_HAUT = 46
 BORD_BAS = 202
 
 
+def fenetre(forme: tuple[int, int], largeur: int,
+            hauteur: int) -> tuple[int, int, int, int]:
+    """Où la vue se pose dans la toile : x, y, largeur, hauteur.
+
+    Calculé à part parce que deux choses en ont besoin, et pas seulement celle
+    qui dessine : savoir où finit l'image, c'est aussi savoir où commencent les
+    bandes noires, et il a fallu le savoir le jour où les pantins ont eu le
+    droit d'y aller.
+    """
+    echelle = largeur / 1600
+    haut = int(BORD_HAUT * echelle)
+    libre = hauteur - haut - int(BORD_BAS * echelle)
+    cible_l = min(largeur, int(libre * forme[1] / forme[0]))
+    cible_h = int(cible_l * forme[0] / forme[1])
+    return (largeur - cible_l) // 2, haut, cible_l, cible_h
+
+
 def cadre(cam: np.ndarray, largeur: int, hauteur: int) -> np.ndarray:
     """Pose l'image de la caméra dans une fenêtre, et rend la toile entière.
 
@@ -1298,13 +1315,8 @@ def cadre(cam: np.ndarray, largeur: int, hauteur: int) -> np.ndarray:
     remplir un trou est une image qui ment sur les formes, et ce flux passe son
     temps à dire qu'il mesure des largeurs en mètres.
     """
-    echelle = largeur / 1600
-    haut = int(BORD_HAUT * echelle)
-    libre = hauteur - haut - int(BORD_BAS * echelle)
-    cible_l = min(largeur, int(libre * cam.shape[1] / cam.shape[0]))
-    cible_h = int(cible_l * cam.shape[0] / cam.shape[1])
+    gauche, haut, cible_l, cible_h = fenetre(cam.shape[:2], largeur, hauteur)
     toile = np.zeros((hauteur, largeur, 3), np.uint8)
-    gauche = (largeur - cible_l) // 2
     toile[haut:haut + cible_h, gauche:gauche + cible_l] = cv2.resize(
         cam, (cible_l, cible_h), interpolation=cv2.INTER_AREA)
     return toile
@@ -1709,15 +1721,56 @@ def _danseur(calque: np.ndarray, x: int, sol: int, taille: float,
     membre(genou_d, -0.2 + math.sin(phase * 2 + 4) * 0.5, taille * 0.24, ecart)
 
 
+# La promenade des pantins : toutes les trois minutes ils glissent vers la
+# bande noire, y dansent cinq secondes et reviennent.
+#
+# Trois minutes parce qu'une surprise qu'on attend n'en est plus une : à une
+# minute on comprend le mécanisme en deux passages et on cesse de regarder, à
+# dix on ne la voit jamais. Cinq secondes dehors parce que c'est le temps de
+# s'apercevoir qu'ils y sont allés ; trois pour le trajet, assez pour que ça
+# ressemble à une glissade et pas à un saut.
+PROMENADE_PERIODE_S = 180.0
+PROMENADE_GLISSE_S = 3.0
+PROMENADE_TENUE_S = 5.0
+
+
+def promenade(seconde: float) -> float:
+    """Où en est la sortie : zéro à sa place, un au milieu de la bande.
+
+    Une fonction du temps et rien d'autre, donc les deux pantins partent
+    ensemble et reviennent exactement d'où ils sont partis. Un tirage au sort
+    aurait fait deux promeneurs indépendants, ce qui se lirait comme un défaut
+    plutôt que comme une idée.
+    """
+    cycle = 2 * PROMENADE_GLISSE_S + PROMENADE_TENUE_S
+    phase = seconde % PROMENADE_PERIODE_S
+    if phase >= cycle:
+        return 0.0
+    if phase < PROMENADE_GLISSE_S:
+        avance = phase / PROMENADE_GLISSE_S
+    elif phase < PROMENADE_GLISSE_S + PROMENADE_TENUE_S:
+        return 1.0
+    else:
+        avance = (cycle - phase) / PROMENADE_GLISSE_S
+    # Départ et arrivée en douceur : à vitesse constante, le pantin s'arrête
+    # net contre le bord et repart net, ce qui se voit comme une saccade.
+    return avance * avance * (3 - 2 * avance)
+
+
 def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
                   sol: float = 0.93, marge: float = 0.10,
-                  voile: float = DANSE_VOILE, haut: float = 0.22) -> None:
+                  voile: float = DANSE_VOILE, haut: float = 0.22,
+                  vue: tuple[int, int, int, int] | None = None) -> None:
     """Des pantins dans les coins bas de la vue, quand la musique pousse.
 
     Dans les coins et translucides : le flux existe pour regarder une montagne,
     et rien de ce qu'on ajoute pour le plaisir n'a le droit de se mettre devant.
-    Ils sont posés sur l'image de la caméra et non sur la toile, donc ils
-    restent dans la fenêtre, du bon côté des bandes.
+
+    « vue » dit où la caméra se pose dans l'image qu'on reçoit, et donc où
+    commencent les bandes noires. Sans elle les pantins tiennent le cadre
+    entier pour la vue, ce qui est vrai sur un Short et faux à l'antenne. C'est
+    ce qui leur permet d'aller danser dehors sans qu'ils aient à connaître la
+    mise en page : ils savent seulement qu'il y a un dedans et un dehors.
 
     Le sol, la marge, le voile et la taille se règlent parce que la même paire
     doit tenir dans deux cadres très différents. Sur un Short, l'application
@@ -1732,28 +1785,45 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
     if energie < DANSE_ARRET:
         return
     hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
     # Entre le seuil d'arrêt et celui d'entrée, ils s'effacent au lieu de
     # disparaître d'un coup : une coupure franche se verrait plus qu'eux.
     force = min(1.0, (energie - DANSE_ARRET) / (DANSE_SEUIL - DANSE_ARRET))
-    taille = hauteur * haut
+    taille = haute_vue * haut
     # Jambe tendue, le pied descend quatre centièmes de la taille sous la
     # hanche, et le liseré sombre déborde encore du trait. « Sol » désigne donc
     # le pixel le plus bas du pantin et non la hauteur de ses hanches : sans
     # cela la garantie donnée à l'appelant est fausse d'une trentaine de pixels,
     # ce qui est précisément la largeur de bande qu'on essaie d'éviter.
     tube = max(2, int(taille * 0.045))
-    pied = int(hauteur * sol - taille * 0.04 - (tube + max(2, tube // 2)) / 2)
+    pied = int(cime + haute_vue * sol - taille * 0.04
+               - (tube + max(2, tube // 2)) / 2)
     # Un dixième de la largeur, et non un quatorzième : bras tendu, le pantin
     # atteint six centièmes de la largeur depuis son axe, et à sept il sortait
     # du cadre une fois sur trois — une main coupée par le bord ne se lit pas
     # comme un parti pris, elle se lit comme un bogue.
-    bord = int(largeur * marge)
+    bord = int(large_vue * marge)
+    maison = (gauche + bord, gauche + large_vue - bord)
+    # Dehors, c'est le milieu de la bande. Et seulement si le pantin y tient :
+    # une bande plus étroite que sa demi-envergure lui couperait les mains, et
+    # un Short n'a pas de bande du tout. Là où il n'y a nulle part où aller, ils
+    # restent chez eux — la promenade est une conséquence de la mise en page,
+    # pas une décoration qu'on pose dessus.
+    dehors = (gauche / 2, (gauche + large_vue + largeur) / 2)
+    place = min(gauche, largeur - gauche - large_vue) >= taille * 0.5
+    sortie = promenade(seconde) if place else 0.0
     # La cadence suit l'énergie : mou quand c'est calme, pressé quand ça tape.
     phase = seconde * DANSE_PAS_S * min(1.6, 0.5 + energie * 4)
     calque = image.copy()
-    for i, x in enumerate((bord, largeur - bord)):
+    for i, (chez_lui, ailleurs) in enumerate(zip(maison, dehors)):
+        x = int(chez_lui + (ailleurs - chez_lui) * sortie)
         _danseur(calque, x, pied, taille, phase + i * 2.1, BLANC)
-    opacite = voile * force
+    # Pleins dehors, voilés dedans. Le voile n'est pas une esthétique, c'est
+    # une politesse envers la montagne : on ne se met pas devant ce que les gens
+    # sont venus regarder. Dans la bande noire il n'y a rien derrière eux, donc
+    # plus rien à ménager, et le demi-effacement n'y serait qu'une timidité
+    # héritée. C'est aussi ce qui fait qu'on remarque la sortie.
+    opacite = (voile + (1.0 - voile) * sortie) * force
     cv2.addWeighted(calque, opacite, image, 1.0 - opacite, 0.0, dst=image)
 
 
@@ -2416,11 +2486,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     dernier_vu = quand if rediff is None else dernier_vu
             if quand - attrape <= ATTRAPE_S:
                 pose_attrape(image, quand - attrape, attrape_nom)
-            # Les danseurs appartiennent à la vue, pas aux bandes : ils sont
-            # posés sur l'image de la caméra, avant qu'elle entre dans sa
-            # fenêtre. Et après les rectangles, pour qu'une détection ne passe
-            # jamais derrière un pantin.
-            pose_danseurs(image, quand - origine, musique.pouls())
             # Le brouillard se dit entre deux prises et jamais par-dessus : une
             # voiture qui passe est plus intéressante que le temps qu'il fait.
             if (mot_gris and quand - gris_depuis > BROUILLARD_PAUSE_S
@@ -2469,6 +2534,18 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     vue = dessus
             # La webcam dans sa fenêtre, les encarts dans les bandes autour.
             toile = cadre(vue, largeur, hauteur)
+            # Les pantins sur la toile et non sur l'image de la caméra, depuis
+            # qu'ils ont le droit d'aller danser dans la bande noire : posés
+            # sur la vue, ils étaient enfermés dedans par construction. Ils
+            # gardent leur place habituelle dans le cadre, on leur dit seulement
+            # où il finit.
+            #
+            # Et pas pendant un survol. Le relief en trois dimensions est un
+            # autre sujet que la montagne en direct, et deux pantins dansant
+            # dessus diraient que c'est le même plan filmé autrement.
+            if survol is None:
+                pose_danseurs(toile, quand - origine, musique.pouls(),
+                              vue=fenetre(vue.shape[:2], largeur, hauteur))
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser)
             # Le mot tient au moins trois secondes, et tant que la voix parle.

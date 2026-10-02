@@ -4040,3 +4040,85 @@ class UneNuitNEstPasUnSeulArtiste(unittest.TestCase):
         pistes = [Path(f"a{i}.mp3") for i in range(4)]
         auteurs = {p.name: "seul" for p in pistes}
         self.assertEqual(len(_espace(pistes, auteurs)), 4)
+
+
+class LaPromenadeDesPantins(unittest.TestCase):
+    """Ils glissent dans la bande noire, y dansent, et reviennent."""
+
+    VUE = (264, 55, 1392, 783)          # la fenêtre réelle d'une toile 1920×1080
+
+    def _ou(self, seconde, largeur=1920, hauteur=1080, vue=None):
+        """Les abscisses des deux pantins à cet instant."""
+        toile = np.zeros((hauteur, largeur, 3), np.uint8)
+        stream.pose_danseurs(toile, seconde, 1.0, voile=1.0,
+                             vue=vue if vue is not None else self.VUE)
+        colonnes = np.where(toile.max(axis=(0, 2)) > 0)[0]
+        milieu = largeur // 2
+        return (int(colonnes[colonnes < milieu].mean()),
+                int(colonnes[colonnes >= milieu].mean()))
+
+    def test_they_come_back_exactly_where_they_started(self):
+        """« Et reviendrait au point initial. »
+
+        Sur « promenade » et non sur le dessin : les membres bougent tout le
+        temps, donc deux silhouettes diffèrent même quand le pantin n'a pas
+        bougé d'un pixel. C'est l'écart qui doit retomber à zéro, et c'est lui
+        seul qui déplace l'ancre.
+        """
+        cycle = 2 * stream.PROMENADE_GLISSE_S + stream.PROMENADE_TENUE_S
+        for seconde in (0.0, cycle, cycle + 1, stream.PROMENADE_PERIODE_S,
+                        3 * stream.PROMENADE_PERIODE_S - 1):
+            self.assertEqual(stream.promenade(seconde), 0.0, seconde)
+        # Et à écart nul, les deux pantins sont bien dans la vue.
+        gauche, _, large, _ = self.VUE
+        chez_eux = self._ou(cycle + 1)
+        self.assertGreater(chez_eux[0], gauche)
+        self.assertLess(chez_eux[1], gauche + large)
+
+    def test_at_the_far_point_they_stand_in_the_black_band(self):
+        """Dehors, c'est la bande — pas le bord de l'image."""
+        gauche, cime, large, haute = self.VUE
+        sortis = self._ou(stream.PROMENADE_GLISSE_S + 1)
+        self.assertLess(sortis[0], gauche, "le gauche n'a pas quitté la vue")
+        self.assertGreater(sortis[1], gauche + large,
+                           "le droit n'a pas quitté la vue")
+
+    def test_nobody_is_cut_by_the_edge_of_the_picture(self):
+        """Une main coupée par le bord se lit comme un bogue."""
+        for seconde in np.arange(0, 2 * stream.PROMENADE_GLISSE_S
+                                 + stream.PROMENADE_TENUE_S, 0.4):
+            toile = np.zeros((1080, 1920, 3), np.uint8)
+            stream.pose_danseurs(toile, float(seconde), 1.0, voile=1.0,
+                                 vue=self.VUE)
+            colonnes = np.where(toile.max(axis=(0, 2)) > 0)[0]
+            self.assertGreater(colonnes.min(), 0, f"coupé à gauche à {seconde}")
+            self.assertLess(colonnes.max(), 1919, f"coupé à droite à {seconde}")
+
+    def test_they_stay_home_where_there_is_no_band(self):
+        """Un Short n'a pas de bande : il n'y a nulle part où aller."""
+        plein = (0, 0, 1080, 1920)
+        toile = np.zeros((1920, 1080, 3), np.uint8)
+        poses = []
+        for seconde in (0.0, stream.PROMENADE_GLISSE_S + 1):
+            toile[:] = 0
+            stream.pose_danseurs(toile, seconde, 1.0, voile=1.0, vue=plein)
+            colonnes = np.where(toile.max(axis=(0, 2)) > 0)[0]
+            poses.append((int(colonnes.min()), int(colonnes.max())))
+        self.assertEqual(poses[0], poses[1])
+
+    def test_the_outing_is_rare_enough_to_stay_a_surprise(self):
+        """Une surprise qu'on attend n'en est plus une."""
+        dehors = sum(1 for s in np.arange(0, stream.PROMENADE_PERIODE_S, 0.5)
+                     if stream.promenade(float(s)) > 0)
+        part = dehors / (stream.PROMENADE_PERIODE_S * 2)
+        self.assertLess(part, 0.1)
+        self.assertGreater(part, 0.02)
+
+    def test_the_window_is_where_the_picture_actually_lands(self):
+        """La bande noire est ce que « cadre » laisse autour, rien d'autre."""
+        cam = np.full((1080, 1920, 3), 255, np.uint8)
+        toile = stream.cadre(cam, 1920, 1080)
+        gauche, cime, large, haute = stream.fenetre((1080, 1920), 1920, 1080)
+        self.assertEqual(toile[cime + 1, gauche + 1].tolist(), [255, 255, 255])
+        self.assertEqual(toile[cime + 1, gauche - 1].tolist(), [0, 0, 0])
+        self.assertEqual(toile[cime + 1, gauche + large + 1].tolist(), [0, 0, 0])
