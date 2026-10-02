@@ -2852,15 +2852,16 @@ class DiffusionTests(unittest.TestCase):
 
     def test_the_word_is_written_only_when_the_watch_named_something(self):
         """« Mouvement détecté » est un aveu, pas une identification."""
-        self.assertTrue(stream.nomme("Voiture"))
-        self.assertTrue(stream.nomme("Camion"))
+        sur = 0.9
+        self.assertTrue(stream.nomme("Voiture", sur))
+        self.assertTrue(stream.nomme("Camion", sur))
         # De nuit la veille ne sépare plus la voiture du camion et publie le
         # mot générique. C'est une lecture, elle a droit au sien.
-        self.assertTrue(stream.nomme("Véhicule"))
-        self.assertTrue(stream.nomme("Véhicule rouge"))
+        self.assertTrue(stream.nomme("Véhicule", sur))
+        self.assertTrue(stream.nomme("Véhicule rouge", sur))
         for aveu in ("Mouvement détecté", "Rien de reconnu", "Tache trop large",
                      "Véhicule non nommé", "Brouillard", "Immobile sur la pente", ""):
-            self.assertFalse(stream.nomme(aveu), aveu)
+            self.assertFalse(stream.nomme(aveu, sur), aveu)
         # Le rectangle reste dans les deux cas — il y a bien eu quelque chose —
         # mais il ne parle que dans un seul.
         fond = np.zeros((360, 640, 3), np.uint8)
@@ -2875,6 +2876,37 @@ class DiffusionTests(unittest.TestCase):
         self.assertFalse(np.array_equal(tait, fond), "l'innommé aussi")
         self.assertGreater(int(dit.any(axis=2).sum()), int(tait.any(axis=2).sum()),
                            "le mot ne s'écrit que dans un des deux cas")
+
+    def test_a_name_is_only_written_when_the_watch_is_sure_of_it(self):
+        """Un rectangle muet avoue ; un rectangle qui se trompe de mot affirme.
+
+        Le seuil n'est pas choisi, il est relevé : sur les cent six prises
+        tranchées par un humain, aucune faute au-dessus de 0,60, les dix refus
+        en dessous. Et c'est un score de modèle, donc il se transporte sur une
+        autre caméra — une largeur en mètres ne le ferait pas.
+        """
+        self.assertGreaterEqual(stream.CONFIANCE_MOT, 0.6)
+        self.assertTrue(stream.nomme("Voiture", stream.CONFIANCE_MOT))
+        self.assertFalse(stream.nomme("Voiture", stream.CONFIANCE_MOT - 0.01),
+                         "un nom douteux ne s'\u00e9crit pas")
+        # Et la fiche porte bien la confiance jusqu'\u00e0 l'\u00e9cran : sans \u00e7a le seuil
+        # ne s'appliquerait \u00e0 rien.
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = Path(dossier) / "events.json"
+            boite = {"box": [0.1, 0.1, 0.2, 0.2]}
+            chemin.write_text(json.dumps({"events": [
+                {"t": "2026-10-01T06:00:00Z", "type": "car", "label": "Voiture",
+                 "confidence": 0.90, "detail": boite},
+                {"t": "2026-10-01T06:00:02Z", "type": "car", "label": "Camion",
+                 "confidence": 0.41, "detail": boite},
+                # Une fiche sans confiance du tout : on ne devine pas \u00e0 sa place.
+                {"t": "2026-10-01T06:00:04Z", "type": "car", "label": "Bus",
+                 "detail": boite},
+            ]}), encoding="utf-8")
+            vus = stream.identifications(chemin, 0.0)
+        self.assertEqual([v["label"] for v in vus], ["Voiture", "Camion", "Bus"],
+                         "les trois gardent leur rectangle")
+        self.assertEqual([v["sur"] for v in vus], [True, False, False])
 
     def test_the_path_is_published_in_absolute_hours(self):
         """Le flux pose les rectangles sur une image qui porte son heure.

@@ -250,17 +250,47 @@ def identifications(chemin: Path, depuis: float) -> list[dict]:
             continue
         gardes.append({"t": quand, "box": boite, "label": event.get("label") or "",
                        "type": event.get("type"), "trace": detail.get("trace") or [],
-                       "sur": nomme(event.get("label") or "")})
+                       "sur": nomme(event.get("label") or "",
+                                    float(event.get("confidence") or 0.0))})
     return gardes
 
 
-def nomme(label: str) -> bool:
-    """Vrai quand le mot désigne une chose, et non un embarras.
+# Sous cette confiance, le rectangle reste et le mot se tait.
+#
+# Mesuré sur les 106 prises que l'oeil humain a tranchées : au-dessus de 0,60,
+# quarante-cinq noms et pas un désaccord ; en dessous, les dix refus. Le seuil
+# est posé là où la faute disparaît, pas là où elle devient rare.
+#
+# Il en coûte la moitié des bons noms — quarante-cinq gardés sur quatre-vingt-
+# seize —, et c'est le bon prix. Un rectangle muet avoue qu'on a vu passer
+# quelque chose sans savoir quoi ; un rectangle qui écrit « VOITURE » sur un
+# piéton affirme. La première erreur se corrige d'un coup d'oeil, la seconde
+# discrédite tout le reste.
+#
+# C'est un score de modèle et non une mesure de ce terrain : il se transporte
+# tel quel sur une autre caméra, là où une largeur en mètres ne le ferait pas.
+CONFIANCE_MOT = 0.60
 
-    La même liste que la rediffusion, et pour la même raison : ce qui ne mérite
-    pas d'être remontré ne mérite pas d'être annoncé.
+
+def nomme(label: str, confiance: float) -> bool:
+    """Vrai quand le mot désigne une chose, et qu'il est assez sûr pour l'écrire.
+
+    Deux conditions, et elles ne disent pas la même chose. La liste des
+    non-noms écarte ce qui n'est pas une identification du tout — la même liste
+    que la rediffusion, et pour la même raison : ce qui ne mérite pas d'être
+    remontré ne mérite pas d'être annoncé. La confiance écarte ce qui en est
+    une mais qu'on ne tiendrait pas devant quelqu'un.
+
+    On a essayé d'y ajouter l'autonomie de la lecture — n'écrire le mot que
+    lorsque le modèle a lu la classe lui-même, sans l'aide de la taille au sol
+    ni de l'horaire d'un car. L'idée était juste et la mesure l'a refusée :
+    elle fait tomber les noms de quarante-cinq à vingt-sept sans retirer une
+    seule faute, parce qu'à cette confiance-là il n'y en avait déjà plus. Vingt-
+    six de ces vingt-sept sont de jour, ce qui dit surtout que la nuit ne passe
+    pas cette porte — et c'est un autre chantier que celui-ci.
     """
-    return bool(label) and not label.startswith(NON_NOMS)
+    return (bool(label) and not label.startswith(NON_NOMS)
+            and confiance >= CONFIANCE_MOT)
 
 
 def suit(vu: dict, quand: float) -> tuple[float, float, float, float]:
