@@ -2,6 +2,97 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-02T14-48-01Z-missed-221",
+      "t": "2026-10-02T14:48:01Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T14-48-01Z-missed-221.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2787,
+          "area_grow": 21.5,
+          "clipped": false,
+          "shade": 0.923,
+          "kept": 0.333,
+          "area_ratio": 0.01026,
+          "duration_s": 6.6,
+          "frames": 7,
+          "width_m": 3.1,
+          "height_m": 2.4,
+          "width_named_m": 0.6,
+          "height_named_m": 0.6,
+          "rise_ms": 0.0,
+          "drift_rate": 0.218,
+          "seen_as": [
+            "person 0.26 sur 1%"
+          ]
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.1187,
+          0.8,
+          0.0859,
+          0.1194
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T14-48-01Z-missed-221.jpg"
+    },
+    {
+      "id": "2026-10-02T14-45-00Z-vehicle-219",
+      "t": "2026-10-02T14:45:00Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.9,
+      "thumb": "data/thumbs/2026-10-02T14-45-00Z-vehicle-219.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.4,
+        "height_m": 1.5,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 0.903,
+          "kept": 0.344,
+          "area_ratio": 0.01333,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.4,
+          "height_m": 1.5,
+          "width_named_m": 3.1,
+          "height_named_m": 1.4,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.90 sur 83%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4811,
+          0.8885,
+          0.1493,
+          0.1115
+        ],
+        "count": 2,
+        "since": "2026-10-02T14:45:00Z"
+      },
+      "closeup": "data/closeups/2026-10-02T14-45-00Z-vehicle-219.jpg"
+    },
+    {
       "id": "2026-10-02T14-34-23Z-vehicle-218",
       "t": "2026-10-02T14:34:23Z",
       "type": "vehicle",
