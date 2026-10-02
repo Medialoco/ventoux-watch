@@ -2,6 +2,133 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-02T09-19-55Z-person-67",
+      "t": "2026-10-02T09:19:55Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "roundabout",
+      "confidence": 0.44,
+      "thumb": "data/thumbs/2026-10-02T09-19-55Z-person-67.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0093,
+          "area_grow": 0.23,
+          "clipped": true,
+          "shade": 0.822,
+          "kept": 0.25,
+          "area_ratio": 0.00125,
+          "duration_s": 1.8,
+          "frames": 5,
+          "width_m": 0.8,
+          "height_m": 3.9,
+          "width_named_m": 0.5,
+          "height_named_m": 1.9,
+          "rise_ms": 0.0,
+          "drift_rate": 0.052,
+          "seen_as": [
+            "person 0.44 sur 26%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.0,
+          0.8586,
+          0.016,
+          0.1244
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T09-19-55Z-person-67.jpg"
+    },
+    {
+      "id": "2026-10-02T09-17-19Z-motion-66",
+      "t": "2026-10-02T09:17:19Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T09-17-19Z-motion-66.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.8345,
+          "area_grow": 0.16,
+          "clipped": true,
+          "shade": 0.597,
+          "kept": 0.283,
+          "area_ratio": 0.00083,
+          "duration_s": 12.3,
+          "frames": 10,
+          "width_m": 3.1,
+          "height_m": 1.8,
+          "width_named_m": 2.6,
+          "height_named_m": 2.5,
+          "rise_ms": 0.37,
+          "drift_rate": 0.517,
+          "seen_as": [
+            "person 0.37 sur 0%"
+          ]
+        },
+        "box": [
+          0.4938,
+          0.8778,
+          0.1172,
+          0.1222
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T09-17-19Z-motion-66.jpg"
+    },
+    {
+      "id": "2026-10-02T09-09-37Z-motion-65",
+      "t": "2026-10-02T09:09:37Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T09-09-37Z-motion-65.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.4978,
+          "area_grow": 0.43,
+          "clipped": true,
+          "shade": 0.814,
+          "kept": 0.322,
+          "area_ratio": 0.00213,
+          "duration_s": 23.1,
+          "frames": 27,
+          "width_m": 5.2,
+          "height_m": 2.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.121,
+          "seen_as": []
+        },
+        "box": [
+          0.05,
+          0.8528,
+          0.175,
+          0.1472
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T09-09-37Z-motion-65.jpg"
+    },
+    {
       "id": "2026-10-02T09-06-12Z-missed-64",
       "t": "2026-10-02T09:06:12Z",
       "type": "missed",
