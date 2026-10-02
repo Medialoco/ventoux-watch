@@ -2332,7 +2332,21 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
 
     entree = _entree(cfg["stream_url"], recul)
     assert entree.stdout is not None
-    largeur, hauteur = 1920, 1080
+    # La toile, et donc ce que l'encodeur doit avaler chaque image.
+    #
+    # Elle était figée à 1920x1080, et c'est ce qui a fini par lâcher. Mesuré
+    # sur cette machine en priorité basse et chargée comme elle l'est : 1,71 fois
+    # le temps réel en 1080p, contre 2,36 quand ce choix a été fait. La marge a
+    # fondu à mesure que la veille s'est alourdie, et un encodeur qui tombe sous
+    # le temps réel envoie l'image en retard — YouTube le dit alors lui-même,
+    # « pas assez de données vidéo », et finit par couper.
+    #
+    # En 1280x720 le même banc donne 2,66 fois le temps réel : la marge revient
+    # au double de ce qu'il faut. C'est la moitié des pixels, et ça se voit un
+    # peu ; une diffusion qui tient vaut mieux qu'une définition qui coupe. Le
+    # réglage est dans la configuration pour qu'on remonte sans toucher au code
+    # le jour où la machine aura de quoi.
+    largeur, hauteur = cfg["stream_size"]
     octets = largeur * hauteur * 3
     sortie = son = None
     verseur: threading.Thread | None = None
@@ -2678,6 +2692,7 @@ def main(argv: list[str] | None = None) -> int:
     cfg.setdefault("stream_out_fps", 15)
     cfg.setdefault("stream_preset", "veryfast")
     cfg.setdefault("stream_bitrate", "2500k")
+    cfg.setdefault("stream_size", [1920, 1080])
     cible = args.sortie or cible_youtube(cfg) or str(racine / "data" / "diffusion.mp4")
     # Jamais l'adresse complète dans le journal : la clé y est dedans, et les
     # journaux se lisent par-dessus l'épaule et se collent dans des rapports.

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -29,6 +30,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CHAINE = "UCvN0sNcj5JM9tklIkAlGi7g"
 LIVE_URL = "https://www.youtube.com/channel/{chaine}/live"
+VIDEO_URL = "https://www.youtube.com/watch?v={video}"
 # Un navigateur, sinon YouTube sert une page sans le détail de la diffusion.
 NAVIGATEUR = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
 DELAI_S = 20
@@ -42,25 +44,32 @@ def page(url: str) -> str:
         return reponse.read().decode("utf-8", "replace")
 
 
-def en_direct(html: str) -> tuple[bool, str]:
-    """Vrai seulement si YouTube le dit lui-même, et l'identifiant de la vidéo.
+def en_direct(ouvre, chaine: str) -> tuple[bool, str]:
+    """Vrai seulement si YouTube le dit de la diffusion elle-même.
 
-    Le marqueur est « isLiveNow », qui n'apparaît que sur la page d'une
-    diffusion. Quand la chaîne n'est pas en l'air, l'adresse /live renvoie la
-    liste des vidéos passées : on y trouve toujours des identifiants, et c'est
-    précisément ce qui m'a fait croire un moment que tout allait bien. Un
-    identifiant ne prouve rien ; ce drapeau-là, si.
+    En deux temps, et il le faut. La page /live de la chaîne ne porte pas de
+    drapeau lisible : elle liste des identifiants, et elle en liste aussi quand
+    la chaîne est éteinte. Mon premier essai s'y fiait et annonçait la panne en
+    plein direct — une alarme qui se trompe dans ce sens-là est pire que pas
+    d'alarme, parce qu'on apprend à ne plus la croire.
+
+    Ce qui est vrai, c'est que l'identifiant en tête de cette page est celui de
+    la diffusion en cours quand il y en a une. On va donc lire sa fiche, où
+    « isLiveNow » dit oui ou non sans ambiguïté — c'est le même champ qui
+    portait la date de fin, 7 h 28 min 34 s, le matin où la chaîne est tombée.
     """
-    vivant = '"isLiveNow":true' in html
-    debut = html.find('"videoId":"')
-    video = html[debut + 11:html.find('"', debut + 11)] if debut >= 0 else ""
-    return vivant, video if vivant else ""
+    page_chaine = ouvre(LIVE_URL.format(chaine=chaine))
+    trouve = re.search(r'"videoId":"([\w-]{11})"', page_chaine)
+    if not trouve:
+        return False, ""
+    video = trouve.group(1)
+    return '"isLiveNow":true' in ouvre(VIDEO_URL.format(video=video)), video
 
 
 def releve(chaine: str = CHAINE) -> dict:
     quand = datetime.now(timezone.utc).isoformat(timespec="seconds")
     try:
-        vivant, video = en_direct(page(LIVE_URL.format(chaine=chaine)))
+        vivant, video = en_direct(page, chaine)
     except (urllib.error.URLError, OSError, TimeoutError) as souci:
         # Ne pas confondre « la chaîne est morte » et « on n'a pas pu demander ».
         # Déclarer la panne sur un réseau qui bronche ferait crier l'alarme pour
