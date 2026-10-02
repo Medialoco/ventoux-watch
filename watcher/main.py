@@ -422,7 +422,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
             detail["box"] = [round(value, 4) for value in box]
         entry = store.add_event(when, "missed", refusal_words(decision.reason), track.zone,
                                 decision.confidence, track.best_jpeg, detail)
-        store.keep_closeup(entry, frame, track.best_bbox)
+        store.keep_closeup(entry, frame, track.best_bbox, width_m)
         store.record_seen(entry["id"], write_observation(obs), habit=decision.type == "habit")
         log.info("Refus gardé pour relecture : %s", decision.reason)
 
@@ -442,7 +442,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
                 decision.detail["box"] = [round(value, 4) for value in box]
             entry = store.add_event(when, decision.type, decision.label, track.zone,
                                     decision.confidence, track.best_jpeg, decision.detail)
-            store.keep_closeup(entry, frame, track.best_bbox)
+            store.keep_closeup(entry, frame, track.best_bbox, width_m)
             store.record_seen(entry["id"], write_observation(obs))
             log.info("Passage soumis à revue %s", track.zone)
             return
@@ -456,7 +456,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
     if drawn:
         decision.detail["box"] = [round(value, 4) for value in drawn]
     event = store.add_event(when, decision.type, decision.label, track.zone, decision.confidence, track.best_jpeg, decision.detail)
-    close = store.keep_closeup(event, frame, track.best_bbox)
+    close = store.keep_closeup(event, frame, track.best_bbox, width_m)
     # Ce que la décision a eu sous les yeux, gardé à part de l'historique. Un
     # verdict rendu dans trois jours pourra ainsi repasser par decide() au lieu
     # de se réduire à un compteur.

@@ -838,8 +838,13 @@ function render() {
     const moment = new Date(event.t);
     const clock = moment.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Paris" });
     const day = moment.toLocaleDateString(locale(), { day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/Paris" });
-    const picture = event.thumb
-      ? `<img src="${escapeHtml(event.thumb)}" alt="" loading="lazy" decoding="async"${bigger(event)}>`
+  // Le plan rapproche flouté plutôt que la vue d'ensemble : revoir des
+    // passages reconnaissables met mal à l'aise, et republier indéfiniment des
+    // captures du flux est autre chose que l'analyser. La vue large reste pour
+    // les entrées anciennes, qui n'ont pas de découpe.
+    const shot = event.closeup || event.thumb;
+    const picture = shot
+      ? `<img src="${escapeHtml(shot)}" alt="" loading="lazy" decoding="async">`
       : `<span class="placeholder"></span>`;
     const info = event.detail || {};
     const people = Number(info.persons || 0);
@@ -977,8 +982,13 @@ function card(event) {
   const moment = new Date(event.t);
   const clock = moment.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Paris" });
   const day = moment.toLocaleDateString(locale(), { day: "2-digit", month: "short", timeZone: "Europe/Paris" });
-  const picture = event.thumb
-    ? `<img src="${escapeHtml(event.thumb)}" alt="" loading="lazy" decoding="async"${bigger(event)}>`
+  // Le plan rapproche flouté plutôt que la vue d'ensemble : revoir des
+  // passages reconnaissables met mal à l'aise, et republier indéfiniment des
+  // captures du flux est autre chose que l'analyser. La vue large reste pour
+  // les entrées anciennes, qui n'ont pas de découpe.
+  const shot = event.closeup || event.thumb;
+  const picture = shot
+    ? `<img src="${escapeHtml(shot)}" alt="" loading="lazy" decoding="async">`
     : `<span class="placeholder"></span>`;
   const info = event.detail || {};
   const place = t("places")[info.surface || event.zone] || "";

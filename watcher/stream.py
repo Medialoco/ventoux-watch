@@ -1450,8 +1450,13 @@ def archives(racine: Path, combien: int = 400) -> list[dict]:
         nom = str(fiche.get("label") or "")
         if not nom or nom.startswith(NON_NOMS) or nom.startswith(JAMAIS_REDIFF):
             continue
-        photo = racine / str(fiche.get("thumb") or "")
-        if not str(fiche.get("thumb") or "") or not photo.is_file():
+        # La découpe floutée d'abord, la vue d'ensemble seulement à défaut.
+        # Ce qui repasse à l'antenne doit être ce qui est publié ailleurs, et
+        # pour la même raison : un passage reconnaissable rejoué en boucle met
+        # mal à l'aise, et ce n'est pas ce qu'on cherche à montrer.
+        nom_photo = str(fiche.get("closeup") or fiche.get("thumb") or "")
+        photo = racine / nom_photo
+        if not nom_photo or not photo.is_file():
             continue
         gardees.append({"photo": photo, "label": nom, "t": str(fiche.get("t") or ""),
                         "contexte": str((fiche.get("detail") or {}).get("context") or "")})

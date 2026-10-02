@@ -43,7 +43,10 @@ sys.path.insert(0, str(ROOT))
 TAUX = 44100
 AUTEUR = "thepriben"
 LICENCE = "CC0"
-SOURCE = "https://medialoco.github.io/ventoux-watch/"
+# L'auteur plutôt que le projet. CC0 n'oblige à rien, mais un crédit qui
+# renvoie au flux où le morceau passe ne renvoie nulle part : il faut qu'on
+# puisse remonter à qui l'a fait.
+SOURCE = "https://github.com/thepriben"
 
 # Un tempo de marche. Plus vite, le flux pousse ; plus lentement, il endort.
 # Chaque morceau prend le sien dans cette fourchette : à tempo unique, seize

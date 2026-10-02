@@ -92,18 +92,28 @@ class Store:
         self.dirty = True
         return event
 
-    def keep_closeup(self, event: dict, frame, bbox) -> str:
-        """Keep the subject at full resolution, so the lettering can be read.
+    def keep_closeup(self, event: dict, frame, bbox, metres: float = 0.0) -> str:
+        """Le sujet, de près, pixellisé et en gris — c'est ce qui est publié.
 
-        The thumbnail is 480 px wide and the stream is 1920: an operator's name
-        on the side of a coach is four pixels tall in the thumbnail and sixteen
-        here.
+        La découpe nette reste sur la machine qui veille, dans un dossier que
+        git ignore. Deux raisons tombent ensemble.
 
-        Kept for everything published, not just long vehicles. Of the
-        eighty-seven readings a human has corrected so far, sixty-seven have no
-        crop left, and a correction without the picture the model was shown
-        teaches nothing that can be checked later. At twenty kilobytes each it
-        costs about three megabytes a day, against fifty for the thumbnails.
+        La première tient en un mot de celui qui regarde : revoir des passages
+        reconnaissables, « je trouve ça creepy ». Il a raison, et c'est
+        suffisant. On ne construit pas une chaîne qui met les gens mal à l'aise
+        pour gagner quelques pixels.
+
+        La seconde est juridique. Analyser automatiquement un flux auquel on
+        accède licitement est prévu par la fouille de textes et de données ;
+        constituer puis republier indéfiniment une photothèque tirée de ce flux
+        est autre chose. Et une image devient une donnée personnelle dès qu'une
+        personne y est identifiable. Une vignette en gros blocs gris n'est ni
+        une reproduction de l'œuvre ni un portrait de personne, et elle suffit
+        toujours à dire « quelque chose est passé là, à cette heure ».
+
+        Ce qu'on perd est réel et il faut le dire : le nom d'un transporteur
+        sur le flanc d'un car ne se lira plus sur la version publiée. Il se lit
+        encore sur la machine, où le verdict d'un humain peut s'appuyer dessus.
         """
         if frame is None or not bbox or not any(bbox):
             return ""
@@ -116,7 +126,14 @@ class Store:
             return ""
         self.closeups.mkdir(parents=True, exist_ok=True)
         name = f"{event['id']}.jpg"
-        ok, encoded = cv2.imencode(".jpg", frame[y0:y1, x0:x1], [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+        decoupe = frame[y0:y1, x0:x1]
+        nets = self.root / "closeups_nets"
+        nets.mkdir(parents=True, exist_ok=True)
+        net, encode_net = cv2.imencode(".jpg", decoupe, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+        if net:
+            (nets / name).write_bytes(encode_net.tobytes())
+        ok, encoded = cv2.imencode(".jpg", floute(decoupe, metres),
+                                   [int(cv2.IMWRITE_JPEG_QUALITY), 88])
         if not ok:
             return ""
         (self.closeups / name).write_bytes(encoded.tobytes())
@@ -331,6 +348,42 @@ def _copy_reading(host: dict, event: dict) -> None:
         host["review"] = review
     if clip:
         host["clip_url"] = clip
+
+
+# La taille d'un bloc, comptée au sol et non en pixels : un demi-mètre.
+#
+# C'est la seule façon d'écrire cette règle une fois pour toutes. Un visage
+# fait une vingtaine de centimètres, une plaque une douzaine : ni l'un ni
+# l'autre ne tient dans un bloc d'un demi-mètre, donc ni l'un ni l'autre ne
+# peut être reconstitué — quelle que soit la définition de la caméra, son
+# objectif, ou la distance du sujet. Un nombre de pixels, lui, voudrait dire
+# autre chose sur la caméra suivante, et ce projet en vise mille.
+FLOU_SOL_M = 0.5
+# Et jamais plus fin que ça, même quand on ne sait pas mesurer. Vingt-quatre
+# blocs sur la largeur d'une découpe de voiture font vingt centimètres par
+# bloc : on voit une voiture, on ne voit pas qui conduit.
+BLOCS_MAX = 24
+
+
+def floute(decoupe: np.ndarray, metres: float = 0.0) -> np.ndarray:
+    """La découpe en niveaux de gris et en gros blocs.
+
+    Le gris autant que les blocs. La couleur d'un vêtement est un signalement
+    à elle seule — « l'homme au manteau rouge » suffit à désigner quelqu'un
+    dans un village — alors qu'elle n'apprend rien sur ce qu'on cherche à
+    dire, qui est qu'une chose est passée là à cette heure.
+    """
+    hauteur, largeur = decoupe.shape[:2]
+    if metres > 0.1:
+        bloc = max(2.0, largeur * FLOU_SOL_M / metres)
+        colonnes = max(2, min(BLOCS_MAX, int(largeur / bloc)))
+    else:
+        colonnes = max(2, min(BLOCS_MAX, largeur // 8))
+    lignes = max(2, int(round(colonnes * hauteur / max(largeur, 1))))
+    gris = cv2.cvtColor(decoupe, cv2.COLOR_BGR2GRAY)
+    petit = cv2.resize(gris, (colonnes, lignes), interpolation=cv2.INTER_AREA)
+    gros = cv2.resize(petit, (largeur, hauteur), interpolation=cv2.INTER_NEAREST)
+    return cv2.cvtColor(gros, cv2.COLOR_GRAY2BGR)
 
 
 def _write_thumb(folder: Path, event: dict, jpeg: bytes) -> None:

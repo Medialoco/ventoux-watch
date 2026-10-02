@@ -4122,3 +4122,59 @@ class LaPromenadeDesPantins(unittest.TestCase):
         self.assertEqual(toile[cime + 1, gauche + 1].tolist(), [255, 255, 255])
         self.assertEqual(toile[cime + 1, gauche - 1].tolist(), [0, 0, 0])
         self.assertEqual(toile[cime + 1, gauche + large + 1].tolist(), [0, 0, 0])
+
+
+class RienDeReconnaissableNeSort(unittest.TestCase):
+    """« Tu peux stocker les originaux mais pas les diffuser. »"""
+
+    @staticmethod
+    def _scene(largeur=400, hauteur=300):
+        """Un damier fin : ce qui survit au flou se voit tout de suite."""
+        x = np.arange(largeur) // 3 % 2
+        y = np.arange(hauteur) // 3 % 2
+        motif = (np.logical_xor.outer(y, x) * 255).astype(np.uint8)
+        return cv2.merge([motif, motif // 2, motif // 4])
+
+    def test_nothing_smaller_than_half_a_metre_survives(self):
+        """Un visage fait vingt centimètres, une plaque douze.
+
+        Le seuil se compte au sol et non en pixels : c'est la seule façon de
+        l'écrire une fois pour mille caméras.
+        """
+        from watcher.store import FLOU_SOL_M, floute
+        for largeur, metres in ((400, 4.5), (900, 12.0), (120, 2.0)):
+            decoupe = self._scene(largeur, largeur * 3 // 4)
+            flou = floute(decoupe, metres)
+            # La plus petite case uniforme, mesurée sur l'image rendue.
+            colonnes = len({flou[:, i].tobytes() for i in range(largeur)})
+            bloc_m = metres / max(colonnes, 1)
+            self.assertGreaterEqual(bloc_m, FLOU_SOL_M * 0.9,
+                                    f"{largeur} px pour {metres} m")
+
+    def test_colour_goes_too(self):
+        """« L'homme au manteau rouge » suffit à désigner quelqu'un."""
+        from watcher.store import floute
+        flou = floute(self._scene(), 4.5)
+        self.assertTrue((flou[:, :, 0] == flou[:, :, 2]).all())
+
+    def test_an_unmeasured_crop_is_blurred_hard_anyway(self):
+        """Quand on ne sait pas mesurer, on floute franchement."""
+        from watcher.store import BLOCS_MAX, floute
+        flou = floute(self._scene(600, 400), 0.0)
+        colonnes = len({flou[:, i].tobytes() for i in range(600)})
+        self.assertLessEqual(colonnes, BLOCS_MAX)
+
+    def test_the_sharp_crop_stays_on_the_machine_and_is_not_published(self):
+        """Stocker, oui. Diffuser, non."""
+        from watcher import publish
+        chemins = inspect.getsource(publish.publish)
+        self.assertNotIn('"data/thumbs"', chemins)
+        self.assertIn('"data/closeups"', chemins)
+        self.assertNotIn("closeups_nets", chemins)
+        self.assertIn("data/closeups_nets/",
+                      (ROOT / ".gitignore").read_text().splitlines())
+
+    def test_the_replay_shows_the_blurred_crop(self):
+        """Ce qui repasse à l'antenne est ce qui est publié ailleurs."""
+        source = inspect.getsource(stream)
+        self.assertIn('fiche.get("closeup") or fiche.get("thumb")', source)
