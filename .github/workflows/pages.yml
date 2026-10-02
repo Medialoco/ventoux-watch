@@ -20,7 +20,16 @@ name: pages
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 5-19 * * *"
+    # Deux fois par heure, et jamais à l'heure pile. GitHub n'exécute pas les
+    # horloges qu'on lui donne : il les met dans une file commune et jette ce
+    # qu'il ne peut pas servir, d'autant plus à la minute zéro où tout le monde
+    # se réveille en même temps. Sur une journée, « toutes les heures » a donné
+    # 18 h 37, 22 h 57, 10 h 48, 16 h 25 — quatre passages pour quinze demandés,
+    # et des trous de six heures pendant lesquels le site montrait un historique
+    # périmé et des photos manquantes. Deux rendez-vous en minutes creuses
+    # valent mieux qu'un seul à l'heure ronde, et si les deux passent on perd
+    # une demi-heure de fraîcheur au lieu d'une journée.
+    - cron: "7,37 5-19 * * *"
 
 permissions:
   contents: read

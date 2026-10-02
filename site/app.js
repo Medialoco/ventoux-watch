@@ -1125,8 +1125,14 @@ function reviewControls(event, { naming = false } = {}) {
   if (ground && (event.type === "motion" || naming)) {
     const correction = (event.detail || {}).correction;
     const rejected = event.review === "rejected" ? " on" : "";
+    // Le mot que la machine a lu est marqué. Les neuf boutons se ressemblaient
+    // tous, et rien ne disait que cliquer celui-là voulait dire « juste » :
+    // « Est juste ! mais je sais pas comment l'indiquer ». La question posée
+    // reste « qu'y avait-il ? », parce qu'un oui sans mot n'apprend rien ; il
+    // suffit qu'on voie lequel était la réponse de la machine.
+    const read = event.label;
     const choices = REVIEW_CLASSES.map(([classe, word, label]) =>
-      `<a class="yes${correction === label ? " on" : ""}" href="${reviewUrl(event, "accepted", "valide", classe)}">${escapeHtml(t(word))}</a>`).join("");
+      `<a class="yes${correction === label ? " on" : ""}${label === read ? " lu" : ""}" href="${reviewUrl(event, "accepted", "valide", classe)}">${escapeHtml(t(word))}</a>`).join("");
     // Sur une publication, démentir veut dire « ce n'était pas cela ». Sur une
     // tache écartée, cela veut dire « il n'y avait rien », donc que le refus
     // avait raison. Le même bouton, deux phrases opposées : il faut les écrire.

@@ -551,6 +551,11 @@ tr.wrong .event .sub { text-decoration: none; display: block; }
 
 .verdict a:hover { color: var(--ink); border-color: var(--ink); }
 .verdict a.on { color: var(--ink); border-color: var(--ink); font-weight: 600; }
+/* Ce que la machine a lu. Un point devant le mot, pas une couleur : il ne
+   s'agit pas d'appuyer sur sa réponse mais de la désigner, pour qu'on sache
+   lequel des neuf boutons veut dire « c'est juste ». */
+.verdict a.lu::before { content: "• "; opacity: 0.75; }
+.verdict a.lu { border-style: dashed; }
 
 /* Pipeline */
 
