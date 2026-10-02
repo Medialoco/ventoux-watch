@@ -2,6 +2,136 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-02T09-49-33Z-motion-77",
+      "t": "2026-10-02T09:49:41Z",
+      "type": "vehicle",
+      "label": "Voiture bleue",
+      "zone": "roundabout",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-02T09-49-33Z-motion-77.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.8,
+        "height_m": 1.5,
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 0.992,
+          "kept": 0.333,
+          "area_ratio": 0.01322,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.8,
+          "height_m": 1.5,
+          "width_named_m": 3.8,
+          "height_named_m": 1.4,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.46 sur 92%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.1778,
+          0.8948,
+          0.1747,
+          0.1052
+        ],
+        "count": 2,
+        "since": "2026-10-02T09:49:33Z"
+      },
+      "closeup": "data/closeups/2026-10-02T09-49-33Z-motion-77.jpg"
+    },
+    {
+      "id": "2026-10-02T09-42-49Z-motion-76",
+      "t": "2026-10-02T09:42:49Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T09-42-49Z-motion-76.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0173,
+          "area_grow": 0.06,
+          "clipped": false,
+          "shade": 0.807,
+          "kept": 0.891,
+          "area_ratio": 0.00068,
+          "duration_s": 1.4,
+          "frames": 2,
+          "width_m": 5.5,
+          "height_m": 2.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.146,
+          "seen_as": []
+        },
+        "box": [
+          0.55,
+          0.7333,
+          0.1328,
+          0.0861
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T09-42-49Z-motion-76.jpg"
+    },
+    {
+      "id": "2026-10-02T09-38-23Z-missed-75",
+      "t": "2026-10-02T09:38:23Z",
+      "type": "missed",
+      "label": "Voiture garée",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T09-38-23Z-missed-75.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur une aire de stationnement, et ça n'a pas bougé.",
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.913,
+          "kept": 0.967,
+          "area_ratio": 0.00219,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 4.6,
+          "height_m": 4.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "parked",
+        "box": [
+          0.0844,
+          0.7111,
+          0.0375,
+          0.0583
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T09-38-23Z-missed-75.jpg"
+    },
+    {
       "id": "2026-10-02T09-37-48Z-motion-74",
       "t": "2026-10-02T09:37:48Z",
       "type": "motion",
