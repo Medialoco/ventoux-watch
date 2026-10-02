@@ -491,6 +491,9 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
     drawn = _box_of_the_named(frame, decision, detections, moved) or box
     if drawn:
         decision.detail["box"] = [round(value, 4) for value in drawn]
+    trace = _trace_of(frame, track)
+    if trace:
+        decision.detail["trace"] = trace
     event = store.add_event(when, decision.type, decision.label, track.zone, decision.confidence, track.best_jpeg, decision.detail)
     close = store.keep_closeup(event, frame, track.best_bbox, width_m)
     # Ce que la décision a eu sous les yeux, gardé à part de l'historique. Un
@@ -753,6 +756,35 @@ def _box_of_the_named(frame, decision, detections, moved=None) -> tuple[float, f
     if x1 - x0 < 0.002 or y1 - y0 < 0.002:
         return None
     return x0, y0, x1 - x0, y1 - y0
+
+
+def _trace_of(frame, track) -> list[list[float]]:
+    """Le chemin suivi, en heures absolues et en parts d'image.
+
+    Une seule boîte suffisait tant que le flux la posait un instant. Tenue
+    quatre secondes, elle reste en arrière : le sujet avance, le rectangle non,
+    et au bout de la quatrième seconde il désigne un bout de route vide.
+
+    En heures absolues, pas en écart au début : le flux diffuse avec une
+    quinzaine de secondes de retard et pose chaque rectangle sur l'image qui
+    porte la bonne heure. Lui donner des heures entières lui évite d'avoir à
+    deviner à quoi l'écart se rapporte, et laisse la question du calage là où
+    elle est déjà résolue.
+
+    Arrondi à quatre décimales : un millième de la largeur fait deux pixels, et
+    personne ne voit un rectangle bouger de deux pixels.
+    """
+    suite = getattr(track, "trace", None)
+    if frame is None or not suite or len(suite) < 2:
+        return []
+    hauteur, largeur = frame.shape[:2]
+    chemin = []
+    for quand, (x, y, w, h) in suite:
+        if not any((x, y, w, h)):
+            continue
+        chemin.append([round(quand, 2), round(x / largeur, 4), round(y / hauteur, 4),
+                       round(max(w, 1) / largeur, 4), round(max(h, 1) / hauteur, 4)])
+    return chemin if len(chemin) >= 2 else []
 
 
 def _norm_box(frame, track) -> tuple[float, float, float, float] | None:

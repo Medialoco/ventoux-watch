@@ -248,8 +248,47 @@ def identifications(chemin: Path, depuis: float) -> list[dict]:
             continue
         if quand < depuis:
             continue
-        gardes.append({"t": quand, "box": boite, "label": event.get("label") or "", "type": event.get("type")})
+        gardes.append({"t": quand, "box": boite, "label": event.get("label") or "",
+                       "type": event.get("type"), "trace": detail.get("trace") or [],
+                       "sur": nomme(event.get("label") or "")})
     return gardes
+
+
+def nomme(label: str) -> bool:
+    """Vrai quand le mot désigne une chose, et non un embarras.
+
+    La même liste que la rediffusion, et pour la même raison : ce qui ne mérite
+    pas d'être remontré ne mérite pas d'être annoncé.
+    """
+    return bool(label) and not label.startswith(NON_NOMS)
+
+
+def suit(vu: dict, quand: float) -> tuple[float, float, float, float]:
+    """Où la chose est à cet instant, entre deux points de sa trajectoire.
+
+    La veille suit le sujet image par image, à une image par seconde ; le flux
+    en sort six. Entre deux relevés on interpole en ligne droite, ce qui est
+    exact pour une voiture sur une route et bien assez pour le reste — à cette
+    distance, une seconde de trajet tient dans la largeur du rectangle.
+
+    Avant le premier point et après le dernier, on se tient au point le plus
+    proche sans extrapoler. Prolonger un mouvement qu'on n'a pas mesuré, c'est
+    inventer, et le rectangle inventé se poserait sur du vide avec le même
+    aplomb que les autres.
+    """
+    chemin = vu.get("trace") or []
+    if len(chemin) < 2:
+        return tuple(vu["box"])
+    if quand <= chemin[0][0]:
+        return tuple(chemin[0][1:])
+    if quand >= chemin[-1][0]:
+        return tuple(chemin[-1][1:])
+    for avant, apres in zip(chemin, chemin[1:]):
+        if avant[0] <= quand <= apres[0]:
+            ecart = apres[0] - avant[0]
+            part = 0.0 if ecart <= 0 else (quand - avant[0]) / ecart
+            return tuple(a + (b - a) * part for a, b in zip(avant[1:], apres[1:]))
+    return tuple(vu["box"])
 
 
 def dessine(image: np.ndarray, vus: list[dict], quand: float) -> int:
@@ -264,11 +303,16 @@ def dessine(image: np.ndarray, vus: list[dict], quand: float) -> int:
         age = quand - vu["t"]
         if age < 0 or age > TENUE_S:
             continue
-        x, y, w, h = vu["box"]
+        x, y, w, h = suit(vu, quand)
         x1, y1 = int(x * largeur), int(y * hauteur)
         x2, y2 = int((x + w) * largeur), int((y + h) * hauteur)
         cv2.rectangle(image, (x1, y1), (x2, y2), ROUGE, 2)
-        nom = vu["label"]
+        # Le mot seulement quand la veille a nommé quelque chose. « Mouvement
+        # sur la route » n'est pas une identification, c'est l'aveu qu'il n'y en
+        # a pas eu : écrit en blanc sur rouge à côté d'un rectangle, il se lit
+        # pourtant avec le même aplomb que « Voiture ». Le rectangle reste — il
+        # y a bien eu quelque chose à cet endroit — mais il se tait.
+        nom = vu["label"] if vu.get("sur") else ""
         if nom:
             echelle = max(0.6, largeur / 1600)
             (tw, th), _ = cv2.getTextSize(nom, cv2.FONT_HERSHEY_SIMPLEX, echelle, 2)
@@ -1563,20 +1607,19 @@ MOIS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
 
 
 def _quand_dit(iso: str) -> str:
-    """« 25 Sep 2026 · 08:20 PARIS » : lisible dans les deux langues sans effort.
+    """« 25 Sep 2026 · 08:20 » : lisible dans les deux langues sans effort.
 
-    « PARIS » et non « CEST », comme l'horloge du coin et pour la même raison :
-    le nom de la ville dit d'où vient l'heure, là où le sigle change deux fois
-    par an et ne se convertit mentalement nulle part. Le format ici écrivait
-    « %Z », donc tantôt CEST tantôt CET, et plus rien qui ressemble à l'horloge
-    affichée trois centimètres plus haut.
+    Sans nom de fuseau. L'horloge du coin en porte un, en haut à droite, et
+    elle dit l'heure qu'il est maintenant ; celle-ci date une image d'hier. Les
+    deux côte à côte se lisaient comme deux heures du même instant, et le
+    « PARIS » répété appuyait la confusion au lieu de la lever.
     """
     try:
         moment = datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
     except ValueError:
         return iso
     ici = moment.astimezone(PARIS)
-    return f"{ici.day} {MOIS[ici.month - 1]} {ici.year} · {ici:%H:%M} PARIS"
+    return f"{ici.day} {MOIS[ici.month - 1]} {ici.year} · {ici:%H:%M}"
 
 
 def pose_rediffusion(image: np.ndarray, fiche: dict) -> bool:
@@ -2346,8 +2389,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # peu ; une diffusion qui tient vaut mieux qu'une définition qui coupe. Le
     # réglage est dans la configuration pour qu'on remonte sans toucher au code
     # le jour où la machine aura de quoi.
+    # Deux tailles, et il ne faut surtout pas les confondre : la webcam publie
+    # du 1920x1080 et c'est sur ces octets-là que la lecture du tuyau se cale,
+    # tandis que la toile qu'on encode peut être plus petite. Les avoir
+    # mélangées a suffi à casser l'antenne : le lecteur prenait 1280x720x3
+    # octets par image dans un flot qui en livrait deux fois plus, donc chaque
+    # image commençait au milieu de la précédente et l'écran s'est mis à
+    # montrer la montagne deux fois, déchirée en diagonale.
+    source_l, source_h = 1920, 1080
+    octets = source_l * source_h * 3
     largeur, hauteur = cfg["stream_size"]
-    octets = largeur * hauteur * 3
     sortie = son = None
     verseur: threading.Thread | None = None
     coupe = threading.Event()
@@ -2459,7 +2510,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 mot_gris = BROUILLARD_MOTS.get(temps, "")
                 trio = (None, None, None) if muet else musique.trio()
                 relu = quand
-            image = np.frombuffer(brut, np.uint8).reshape(hauteur, largeur, 3).copy()
+            image = np.frombuffer(brut, np.uint8).reshape(source_h, source_l, 3).copy()
             # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.
             applique_teinte(image, *teinte_du_moment(quand - origine))
             # Le soleil d'enfant avant les filtres : il fait partie de l'image

@@ -10,6 +10,11 @@ import numpy as np
 from watcher.geometry import assign_zone
 
 
+# Deux minutes de présence à une image par seconde. Au-delà, ce n'est plus un
+# passage mais quelque chose qui stationne, et la trajectoire n'apprend rien.
+TRACE_MAX = 120
+
+
 @dataclass
 class Track:
     id: int
@@ -23,6 +28,17 @@ class Track:
     first_area: float = 0.0
     best_area: float = 0.0
     best_bbox: tuple[int, int, int, int] = (0, 0, 0, 0)
+    # Où la chose était, image par image, avec l'heure de chaque image.
+    #
+    # On n'en gardait qu'une : celle où la tache était la plus grande. Le flux
+    # la reposait alors telle quelle pendant quatre secondes, si bien que le
+    # rectangle restait planté pendant que la voiture continuait sa route et
+    # finissait par désigner un bout de bitume vide. La trajectoire, elle, est
+    # déjà connue — elle est suivie à chaque image, elle était simplement jetée.
+    #
+    # Quelques dizaines de points de cinq nombres : le coût est nul à côté de la
+    # vignette qui accompagne la même fiche.
+    trace: list[tuple[float, tuple[int, int, int, int]]] = field(default_factory=list)
     best_jpeg: bytes = b""
     started: float = 0.0
     updated: float = 0.0
@@ -197,6 +213,7 @@ class MotionDetector:
                     foot_x=blob["foot_x"],
                     shade=blob.get("shade", 1.0),
                     texture=blob.get("texture", 0.0),
+                    trace=[(now, blob["bbox"])],
                 )
                 self._next_id += 1
                 track.best_jpeg = _jpeg(frame)
@@ -213,6 +230,8 @@ class MotionDetector:
             track.bbox = blob["bbox"]
             track.area_ratio = blob["area_ratio"]
             track.updated = now
+            if len(track.trace) < TRACE_MAX:
+                track.trace.append((now, blob["bbox"]))
             if blob["area_ratio"] >= track.best_area:
                 track.best_area = blob["area_ratio"]
                 track.best_bbox = blob["bbox"]
