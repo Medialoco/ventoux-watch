@@ -103,6 +103,37 @@ def _last_beat(beat: Path) -> float:
         return 0.0
 
 
+CRETE_PAS_S = 300.0
+
+
+def _note_ridge(journal: Path, current, now: float) -> None:
+    """La jauge de brouillard, relevée toutes les cinq minutes.
+
+    Le seuil qui fait taire la veille sous brouillard est un nombre absolu, et
+    la jauge ne lit pas la même chose selon l'heure : une crête n'a pas de
+    contraste dans le noir. Sur treize cents vues d'archive, la médiane de jour
+    tient entre 106 et 144 et celle de nuit entre 40 et 59 — le seuil est posé
+    à 40, c'est-à-dire au milieu du bruit nocturne. Les quarante-neuf
+    observations nocturnes conservées ont toutes été refusées pour brouillard,
+    nuit claire comprise.
+
+    Pour poser un seuil de nuit il faut savoir ce que la jauge lit par nuit
+    claire, et rien ne le gardait : le relevé n'existait qu'au moment de la
+    décision, jamais dans le temps. Ceci le garde. Quelques nuits de ce journal
+    suffiront à écrire le seuil nocturne sur des mesures plutôt que sur une
+    intuition, ce qui est la seule façon de pouvoir ensuite le refaire sur une
+    autre caméra.
+    """
+    ligne = {
+        "t": datetime.fromtimestamp(now, timezone.utc).isoformat(timespec="seconds"),
+        "ridge": round(current.ridge, 1),
+        "period": current.period,
+        "weather": current.weather,
+    }
+    with journal.open("a", encoding="utf-8") as sortie:
+        sortie.write(json.dumps(ligne, ensure_ascii=False) + "\n")
+
+
 def _note_interruption(journal: Path, stopped: float, now: float) -> float:
     """Write down how long nobody was watching, before watching resumes.
 
@@ -175,6 +206,7 @@ def main() -> None:
         return
     _heartbeat = root / "data" / "battement"
     _interruptions = root / "data" / "interruptions.jsonl"
+    _crete = root / "data" / "crete.jsonl"
     # Read before anything else writes it: loading the model and the scene map
     # takes half a minute, and that half minute is blind time too.
     beat_at = _last_beat(_heartbeat)
@@ -217,6 +249,7 @@ def main() -> None:
     last_gtfs = 0.0
     last_publish = 0.0
     last_view = 0.0
+    last_ridge = 0.0
 
     wait = STREAM_RETRY_S
     while True:
@@ -244,6 +277,9 @@ def main() -> None:
                     current = scene.read(frame, moment)
                     view.note(frame, current.weather, current.temperature_c, moment, current.period)
                     last_view = now
+                    if now - last_ridge >= CRETE_PAS_S:
+                        _note_ridge(_crete, current, now)
+                        last_ridge = now
                 step = motion.step(frame, now)
                 for track in step.ended:
                     _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map)
@@ -739,6 +775,22 @@ def _named_box(frame, detections) -> tuple[float, float, float, float] | None:
 
     C'est la même cause que le rectangle parti sur la flaque des phares le 29
     septembre : la tache n'est pas la forme de ce qui a bougé.
+
+    De nuit, le modèle ne nomme rien et cette boîte n'existe pas — et on ne
+    peut pas la remplacer en retaillant la tache sur la lumière. C'est mesuré,
+    sur la voiture du 2 octobre à 00:50 que la veille a vue et refusée : sa
+    tache valait 21,4 m de large, et le noyau de l'éclat 17,6 m à mi-hauteur,
+    11,9 m au plus serré. Une voiture en fait moins de deux. Le pic est à 255
+    et le centile 99 à 247 : le faisceau sature autant que les phares, donc
+    aucun seuil de clarté ne sépare la source de sa portée. Le faisceau fait
+    réellement une dizaine de mètres sur la route, et c'est lui qu'on mesure.
+
+    Ce qu'il faut en conclure n'est pas qu'il reste à mieux mesurer : c'est que
+    de nuit, à cette distance, le véhicule n'est pas résolu. Seule sa lumière
+    l'est. Largeur au sol, hauteur et pied sur la chaussée ne veulent alors
+    rien dire, et une décision nocturne ne peut s'appuyer que sur ce qui se
+    mesure encore — le trajet le long de la route, l'allure, et la signature
+    des feux.
     """
     best = max((hit for hit in detections if hit.box), key=lambda hit: hit.conf, default=None)
     if frame is None or best is None:

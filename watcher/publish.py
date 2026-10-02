@@ -45,6 +45,10 @@ def publish(repo: Path) -> bool:
         # The register of blind spells travels with the history it explains.
         # Kept on the watching machine alone, it would be lost with the machine.
         "data/interruptions.jsonl",
+        # Le relevé de la jauge de brouillard dans le temps. Même raison : le
+        # seuil qui fait taire la veille la nuit ne pourra être réécrit sur des
+        # mesures que si les mesures voyagent avec l'historique.
+        "data/crete.jsonl",
         "data/reviewed.jsonl",
         # Ce que chaque décision a eu sous les yeux. Sans ce fichier, un verdict
         # rendu depuis un navigateur trois jours plus tard ne peut pas être
