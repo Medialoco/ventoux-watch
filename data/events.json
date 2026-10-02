@@ -2,6 +2,135 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-02T06-48-19Z-motion-23",
+      "t": "2026-10-02T06:48:19Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T06-48-19Z-motion-23.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2259,
+          "area_grow": 19.05,
+          "clipped": false,
+          "shade": 0.864,
+          "kept": 0.292,
+          "area_ratio": 0.00819,
+          "duration_s": 0.6,
+          "frames": 6,
+          "width_m": 2.5,
+          "height_m": 2.8,
+          "width_named_m": 2.4,
+          "height_named_m": 2.4,
+          "rise_ms": 0.0,
+          "drift_rate": 2.215,
+          "seen_as": [
+            "truck 0.30 sur 74%"
+          ]
+        },
+        "box": [
+          0.0938,
+          0.7667,
+          0.0641,
+          0.1278
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T06-48-19Z-motion-23.jpg"
+    },
+    {
+      "id": "2026-10-02T06-41-44Z-vehicle-22",
+      "t": "2026-10-02T06:41:44Z",
+      "type": "vehicle",
+      "label": "Voiture bleue",
+      "zone": "road",
+      "confidence": 0.522,
+      "thumb": "data/thumbs/2026-10-02T06-41-44Z-vehicle-22.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.7,
+        "height_m": 1.8,
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.415,
+          "area_grow": 36.06,
+          "clipped": true,
+          "shade": 1.063,
+          "kept": 0.405,
+          "area_ratio": 0.01549,
+          "duration_s": 0.9,
+          "frames": 10,
+          "width_m": 3.7,
+          "height_m": 1.8,
+          "width_named_m": 3.7,
+          "height_named_m": 1.5,
+          "rise_ms": 0.0,
+          "drift_rate": 1.941,
+          "seen_as": [
+            "car 0.52 sur 82%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.1974,
+          0.8865,
+          0.1713,
+          0.1135
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T06-41-44Z-vehicle-22.jpg"
+    },
+    {
+      "id": "2026-10-02T06-40-04Z-motion-21",
+      "t": "2026-10-02T06:40:04Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T06-40-04Z-motion-21.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3707,
+          "area_grow": 0.1,
+          "clipped": false,
+          "shade": 0.786,
+          "kept": 0.282,
+          "area_ratio": 0.00156,
+          "duration_s": 7.0,
+          "frames": 6,
+          "width_m": 3.3,
+          "height_m": 2.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.25,
+          "drift_rate": 0.403,
+          "seen_as": []
+        },
+        "box": [
+          0.4359,
+          0.85,
+          0.1187,
+          0.1306
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T06-40-04Z-motion-21.jpg"
+    },
+    {
       "id": "2026-10-02T06-34-37Z-motion-20",
       "t": "2026-10-02T06:34:37Z",
       "type": "motion",
