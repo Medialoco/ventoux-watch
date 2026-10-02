@@ -402,6 +402,69 @@ def _tranches(piste: Path, duree: float) -> list[dict]:
     return bouts
 
 
+def _auteurs(dossier: Path) -> dict[str, str]:
+    """Le nom de l'auteur par fichier, lu dans les crédits s'ils sont là."""
+    try:
+        credits = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {nom: (fiche.get("auteur") or "").strip().lower()
+            for nom, fiche in credits.items() if isinstance(fiche, dict)}
+
+
+def _entrelace(premier: list[Path], second: list[Path],
+               tirage: random.Random) -> list[Path]:
+    """Mêle les deux paquets au lieu de les enchaîner.
+
+    Chaque morceau reçoit sa place proportionnelle dans son propre paquet,
+    puis on range tout le monde sur cette place commune. Les deux paquets se
+    répartissent donc sur toute la durée quelles que soient leurs tailles —
+    seize longs et cent dix-neuf courts donnent un long tous les sept courts
+    environ, au lieu de seize longs puis cent dix-neuf courts.
+
+    Le paquet favori passe devant à place égale : c'est tout ce que « la nuit
+    penche vers les sets » peut vouloir dire honnêtement quand un paquet est
+    sept fois plus petit que l'autre.
+    """
+    rangs = []
+    for rang, paquet in enumerate((premier, second)):
+        lot = paquet[:]
+        tirage.shuffle(lot)
+        for i, piste in enumerate(lot):
+            rangs.append(((i + 0.5) / len(lot), rang, i, piste))
+    rangs.sort(key=lambda r: r[:3])
+    return [r[3] for r in rangs]
+
+
+def _espace(suite: list[Path], auteurs: dict[str, str]) -> list[Path]:
+    """Jamais deux fois le même nom d'affilée, quand on peut l'éviter.
+
+    La durée ne dit pas qui joue. Deux morceaux courts du même artiste tombent
+    côte à côte aussi facilement que deux longs, et le mélange par paquets n'y
+    peut rien : seul le nom le sait. Quand le suivant porte le même nom que
+    celui qui vient de passer, on va chercher plus loin le premier qui n'en est
+    pas et on l'avance.
+
+    « Quand on peut l'éviter » : si tout le reste est du même artiste, on le
+    passe quand même. Un silence serait pire qu'une répétition.
+    """
+    if not auteurs:
+        return suite
+    reste = suite[:]
+    ordre: list[Path] = []
+    precedent = ""
+    while reste:
+        choisi = 0
+        for i, piste in enumerate(reste):
+            if auteurs.get(piste.name, piste.name) != precedent:
+                choisi = i
+                break
+        piste = reste.pop(choisi)
+        precedent = auteurs.get(piste.name, piste.name)
+        ordre.append(piste)
+    return ordre
+
+
 def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None = None,
                   nuit: bool = False) -> Path | None:
     """Tire une session dans la bibliothèque et l'écrit pour ffmpeg.
@@ -420,20 +483,23 @@ def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None =
     if not morceaux:
         return None
     tirage = random.Random(graine)
-    # Deux paquets : les sets et les morceaux. La nuit on commence par les
-    # sets, le jour par les morceaux ; l'autre paquet vient ensuite, car une
-    # nuit qui ne passerait que des mixes finirait par n'être qu'un seul mixe.
+    # Deux paquets : les sets et les morceaux. La nuit penche vers les sets, le
+    # jour vers les morceaux — mais les deux sont mêlés, pas enchaînés.
+    #
+    # Enchaînés, ils donnaient quatre heures du même artiste pour ouvrir chaque
+    # nuit. Les seize longs de la bibliothèque sont tous de thepriben, donc
+    # « commencer par les sets » revenait à commencer par les seize, soit
+    # quatre heures avant d'entendre quelqu'un d'autre. Le découpage par durée
+    # était un bon moyen de distinguer une ambiance d'un morceau ; il ne l'est
+    # plus dès qu'un seul nom remplit un des deux paquets.
     sets = [p for p in morceaux if durees[p] > LONG_S]
     courts = [p for p in morceaux if durees[p] <= LONG_S]
     premier, second = (sets, courts) if nuit else (courts, sets)
+    auteurs = _auteurs(dossier)
     suite: list[dict] = []
     total = 0.0
     while total < heures * 3600:
-        tour: list[Path] = []
-        for paquet in (premier, second):
-            lot = paquet[:]
-            tirage.shuffle(lot)
-            tour += lot
+        tour = _espace(_entrelace(premier, second, tirage), auteurs)
         if not tour:
             break
         for piste in tour:

@@ -3949,3 +3949,72 @@ class UneRecolteNEffacePasLaMediatheque(unittest.TestCase):
 
         self.assertGreater(force(coup), FORCE_DANSANTE)
         self.assertLess(force(nappe), FORCE_DANSANTE)
+
+
+class UneNuitNEstPasUnSeulArtiste(unittest.TestCase):
+    """Les seize premiers morceaux de chaque nuit étaient du même."""
+
+    def _bibliotheque(self, dossier, longs, courts):
+        """Des fichiers vides, et des crédits qui disent qui joue."""
+        credits = {}
+        for nom, auteur in list(longs) + list(courts):
+            (Path(dossier) / nom).write_bytes(b"x")
+            credits[nom] = {"auteur": auteur, "titre": nom}
+        (Path(dossier) / "credits.json").write_text(json.dumps(credits))
+        durees = {Path(dossier) / nom: (900.0 if (nom, a) in longs else 300.0)
+                  for nom, a in list(longs) + list(courts)}
+        return durees
+
+    def _session(self, dossier, durees, nuit):
+        with mock.patch.object(stream, "duree_audio",
+                               lambda p: durees.get(p, 0.0)):
+            stream.batir_session(Path(dossier), heures=4.0, graine=1, nuit=nuit)
+        credits = json.loads((Path(dossier) / "credits.json").read_text())
+        noms = []
+        for ligne in (Path(dossier) / "session.txt").read_text().splitlines():
+            if ligne.startswith("file "):
+                nom = ligne.split("/")[-1].rstrip("'")
+                if not noms or noms[-1] != nom:
+                    noms.append(nom)
+        return [credits[n]["auteur"] for n in noms]
+
+    def test_the_night_does_not_open_on_four_hours_of_one_name(self):
+        """Tous les longs sont de thepriben : « commencer par les sets »
+        revenait à commencer par les seize, soit quatre heures.
+        """
+        with tempfile.TemporaryDirectory() as dossier:
+            longs = [(f"maison-{i:02d}.mp3", "thepriben") for i in range(16)]
+            courts = [(f"autre-{i:03d}.mp3", f"Artiste {i}") for i in range(119)]
+            durees = self._bibliotheque(dossier, longs, courts)
+            auteurs = self._session(dossier, durees, nuit=True)
+            self.assertLessEqual(auteurs[:16].count("thepriben"), 4,
+                                 "la nuit rouvre sur un bloc du même artiste")
+
+    def test_the_long_pieces_are_spread_and_not_dropped(self):
+        """Mêlés et non enchaînés : ils doivent rester présents partout."""
+        with tempfile.TemporaryDirectory() as dossier:
+            longs = [(f"maison-{i:02d}.mp3", "thepriben") for i in range(16)]
+            courts = [(f"autre-{i:03d}.mp3", f"Artiste {i}") for i in range(119)]
+            durees = self._bibliotheque(dossier, longs, courts)
+            auteurs = self._session(dossier, durees, nuit=True)
+            moitie = len(auteurs) // 2
+            self.assertGreater(auteurs[:moitie].count("thepriben"), 0)
+            self.assertGreater(auteurs[moitie:].count("thepriben"), 0)
+
+    def test_the_same_name_never_follows_itself_when_avoidable(self):
+        from watcher.stream import _espace
+        pistes = [Path(f"{n}.mp3") for n in ("a1", "a2", "a3", "b1", "c1")]
+        auteurs = {"a1.mp3": "a", "a2.mp3": "a", "a3.mp3": "a",
+                   "b1.mp3": "b", "c1.mp3": "c"}
+        noms = [auteurs[p.name] for p in _espace(pistes, auteurs)]
+        colles = sum(1 for i in range(1, len(noms)) if noms[i] == noms[i - 1])
+        # Trois « a » pour deux autres : une répétition est inévitable à la fin.
+        self.assertLessEqual(colles, 1)
+        self.assertEqual(sorted(noms), ["a", "a", "a", "b", "c"])
+
+    def test_a_library_of_one_artist_still_plays(self):
+        """Un silence serait pire qu'une répétition."""
+        from watcher.stream import _espace
+        pistes = [Path(f"a{i}.mp3") for i in range(4)]
+        auteurs = {p.name: "seul" for p in pistes}
+        self.assertEqual(len(_espace(pistes, auteurs)), 4)
