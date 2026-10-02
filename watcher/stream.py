@@ -29,7 +29,7 @@ import sys
 import threading
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
 
@@ -2043,7 +2043,8 @@ ELEPHANT_PART = 0.30
 
 def pose_elephant(image: np.ndarray, seconde: float, energie: float,
                   rond_point: list | None,
-                  vue: tuple[int, int, int, int] | None = None) -> bool:
+                  vue: tuple[int, int, int, int] | None = None,
+                  nuit: bool = False) -> bool:
     """Un éléphant rose vient danser sur le rond-point, de temps en temps.
 
     Sur le rond-point et non à un endroit choisi : le contour est déjà dans
@@ -2062,7 +2063,8 @@ def pose_elephant(image: np.ndarray, seconde: float, energie: float,
     """
     if energie < DANSE_ARRET or not rond_point:
         return False
-    phase_cycle = seconde % ELEPHANT_PERIODE_S
+    periode = ELEPHANT_PERIODE_S / (NUIT_PLUS_SOUVENT if nuit else 1.0)
+    phase_cycle = seconde % periode
     if phase_cycle >= ELEPHANT_TENUE_S:
         return False
     hauteur, largeur = image.shape[:2]
@@ -2084,6 +2086,21 @@ def pose_elephant(image: np.ndarray, seconde: float, energie: float,
     cv2.addWeighted(calque, bord * 0.88, image, 1.0 - bord * 0.88, 0.0, dst=image)
     return True
 
+
+# Ce qui raccourcit l'attente quand il ne se passe rien.
+#
+# Le jour, la route suffit : des voitures, des cars, des marcheurs, et un
+# survol du relief de temps en temps. La nuit, la veille ne voit presque plus
+# rien — c'est mesuré, pas supposé — et le survol ne peut pas jouer, parce
+# qu'il est rendu en plein soleil et qu'au milieu d'une nuit noire il ne montre
+# pas le relief, il montre qu'on a collé une autre vidéo. Il reste donc douze
+# heures d'une image fixe et sombre, et c'est exactement là qu'on a besoin
+# qu'il se passe quelque chose.
+#
+# Le facteur s'applique aux deux périodes à la fois, ce qui laisse intact ce
+# qui faisait l'intérêt de nombres premiers : leur rapport ne change pas, donc
+# les deux numéros ne se mettent pas à tomber ensemble.
+NUIT_PLUS_SOUVENT = 3.0
 
 TAPIS_PERIODE_S = 397.0
 TAPIS_TRAVERSEE_S = 14.0
@@ -2116,7 +2133,8 @@ def _crete(ciel: list | None, part_x: float) -> float | None:
 
 def pose_tapis(image: np.ndarray, seconde: float, energie: float,
                ciel: list | None = None,
-               vue: tuple[int, int, int, int] | None = None) -> bool:
+               vue: tuple[int, int, int, int] | None = None,
+               nuit: bool = False) -> bool:
     """Un tapis volant traverse le ciel avec un troisième danseur dessus.
 
     Latéralement et d'un bord à l'autre du cadre entier, bandes noires
@@ -2133,7 +2151,8 @@ def pose_tapis(image: np.ndarray, seconde: float, energie: float,
     """
     if energie < DANSE_ARRET:
         return False
-    phase_cycle = seconde % TAPIS_PERIODE_S
+    periode = TAPIS_PERIODE_S / (NUIT_PLUS_SOUVENT if nuit else 1.0)
+    phase_cycle = seconde % periode
     if phase_cycle >= TAPIS_TRAVERSEE_S:
         return False
     hauteur, largeur = image.shape[:2]
@@ -2152,6 +2171,101 @@ def pose_tapis(image: np.ndarray, seconde: float, energie: float,
     calque = image.copy()
     _tapis(calque, cx, cy, etoffe, seconde * DANSE_PAS_S)
     cv2.addWeighted(calque, 0.9, image, 0.1, 0.0, dst=image)
+    return True
+
+
+def _grain(rang: int, sel: int) -> float:
+    """Un nombre entre zéro et un, toujours le même pour le même rang.
+
+    Du hasard qui n'en est pas : deux machines qui diffusent la même seconde
+    dessinent la même chose, et une épreuve peut vérifier la millième étoile
+    sans l'avoir vue passer. C'est la seule façon d'avoir de la variété sans
+    renoncer à pouvoir dire ce qui va se produire.
+    """
+    x = (rang * 2654435761 + sel * 40503) & 0xFFFFFFFF
+    x ^= x >> 15
+    x = (x * 2246822519) & 0xFFFFFFFF
+    x ^= x >> 13
+    return (x & 0xFFFFFFFF) / 0xFFFFFFFF
+
+
+# Une toutes les dix-sept secondes, et elle dure moins d'une seconde.
+#
+# Le ciel réel en donne une par heure un soir ordinaire ; celui-ci en donne
+# deux cents. Ce n'est pas une mesure, c'est un décor, et il est là pour que
+# douze heures d'image fixe aient quelque chose à offrir. L'honnêteté est
+# ailleurs : aucune des étoiles filantes ne passe par la file à juger, aucune
+# n'entre dans l'historique, et la veille ne les voit pas — elles sont posées
+# après elle, sur l'image qui part à l'antenne.
+ETOILE_PERIODE_S = 17.0
+ETOILE_DUREE_S = 0.9
+ETOILE_LONGUEUR = 0.24
+ETOILE_BLANC = (248, 246, 236)
+
+
+def pose_etoile_filante(image: np.ndarray, seconde: float, ciel: list | None = None,
+                        vue: tuple[int, int, int, int] | None = None) -> bool:
+    """Une étoile filante traverse le haut du ciel, de temps en temps.
+
+    Au-dessus de la crête et nulle part ailleurs : plus bas, la traînée
+    passerait sur le versant, et une lueur qui file sur une forêt la nuit est
+    exactement ce que la veille cherche. On ne va pas dessiner ce qu'on
+    surveille.
+
+    Elle tombe toujours vers le bas et vers un côté, parce qu'une étoile
+    filante qui monte est la seule chose que l'œil refuse.
+    """
+    phase_cycle = seconde % ETOILE_PERIODE_S
+    if phase_cycle >= ETOILE_DUREE_S:
+        return False
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    rang = int(seconde // ETOILE_PERIODE_S)
+    depart_x = 0.08 + _grain(rang, 1) * 0.84
+    crete = _crete(ciel, depart_x)
+    # Elle naît dans le tiers haut de ce qu'il y a de ciel à cet endroit, et
+    # sa course s'arrête avant la crête.
+    plafond = (crete if crete is not None else 0.30)
+    depart_y = plafond * (0.08 + _grain(rang, 2) * 0.30)
+    cote = -1 if _grain(rang, 3) < 0.5 else 1
+    longueur = ETOILE_LONGUEUR * (0.6 + _grain(rang, 4) * 0.8)
+    avance = phase_cycle / ETOILE_DUREE_S
+    # Elle accélère : une traînée à vitesse constante ressemble à un trait
+    # qu'on déplace, pas à une chute.
+    file = avance * avance
+    x0 = gauche + depart_x * large_vue
+    y0 = cime + depart_y * haute_vue
+    course_x = cote * longueur * large_vue
+    # La chute s'arrête au-dessus de la crête, et de la plus basse des crêtes
+    # qu'elle survole — elle se déplace pendant qu'elle tombe, et c'est sous
+    # son point d'arrivée qu'elle risquait de mordre le versant.
+    arrivee_x = min(1.0, max(0.0, depart_x + cote * longueur))
+    sous_elle = min(p for p in (_crete(ciel, depart_x), _crete(ciel, arrivee_x),
+                                plafond) if p is not None)
+    place = max(0.0, sous_elle - depart_y) * haute_vue
+    course_y = min(longueur * haute_vue * 1.6, place * 0.75)
+    # Là où le ciel est trop bas pour qu'elle tombe, elle ne passe pas. Une
+    # étoile filante qui glisse à l'horizontale n'est plus une étoile filante,
+    # c'est un trait qui se déplace — et sous la crête, ce serait pire.
+    if course_y < haute_vue * 0.04:
+        return False
+    tete = (int(x0 + course_x * file), int(y0 + course_y * file))
+    # La traînée s'efface derrière, du plus récent au plus ancien.
+    calque = image.copy()
+    trait = max(2, int(haute_vue * 0.006))
+    for recul in range(6):
+        part = max(0.0, file - recul * 0.10)
+        depuis = (int(x0 + course_x * part), int(y0 + course_y * part))
+        part_avant = max(0.0, file - (recul + 1) * 0.10)
+        jusqua = (int(x0 + course_x * part_avant), int(y0 + course_y * part_avant))
+        eclat = (1.0 - recul / 6) ** 2
+        cv2.line(calque, depuis, jusqua,
+                 tuple(int(c * eclat) for c in ETOILE_BLANC),
+                 max(1, int(trait * (1.0 - recul / 8))), cv2.LINE_AA)
+    cv2.circle(calque, tete, trait + 1, ETOILE_BLANC, -1, cv2.LINE_AA)
+    # Elle s'éteint sur la fin au lieu de disparaître d'un coup.
+    reste = min(1.0, (1.0 - avance) * 3.0)
+    cv2.addWeighted(calque, reste, image, 1.0 - reste, 0.0, dst=image)
     return True
 
 
@@ -2286,23 +2400,120 @@ def ou_est_le_soleil(camera: dict, quand: float, rapport: float) -> tuple[float,
     haut = solar_elevation(moment, camera["lat"], camera["lon"])
     if haut < SOLEIL_HAUT_MIN:
         return None
+    return _ou_dans_le_ciel(camera, solar_azimuth(moment, camera["lat"], camera["lon"]),
+                            haut, rapport, SOLEIL_COIN, SOLEIL_COIN_HAUT, SOLEIL_CIEL)
+
+
+def _ou_dans_le_ciel(camera: dict, azimut: float, haut: float, rapport: float,
+                     coin_x: float, coin_haut: float,
+                     plafond: float) -> tuple[float, float]:
+    """Où un astre tombe dans l'image, d'après son azimut et sa hauteur.
+
+    La même projection pour le soleil et pour la lune, parce que c'est le même
+    ciel et le même objectif. Elle ne dépend que du cap, de l'ouverture et du
+    piqué de la caméra : elle posera n'importe quel astre au bon endroit sur
+    n'importe quelle autre webcam dont on connaît la fiche.
+    """
     champ = float(camera.get("fov") or 90.0)
-    ecart = (solar_azimuth(moment, camera["lat"], camera["lon"])
-             - float(camera.get("bearing") or 0.0) + 180.0) % 360.0 - 180.0
-    coin = (SOLEIL_COIN if ecart < 0 else 1.0 - SOLEIL_COIN, SOLEIL_COIN_HAUT)
+    ecart = (azimut - float(camera.get("bearing") or 0.0) + 180.0) % 360.0 - 180.0
+    coin = (coin_x if ecart < 0 else 1.0 - coin_x, coin_haut)
     if abs(ecart) > champ / 2 - 4:
         return coin
     # Projection rectilinéaire : c'est une tangente et non une règle de trois,
-    # sinon le soleil dérive d'un bon dixième d'image vers les bords.
+    # sinon l'astre dérive d'un bon dixième d'image vers les bords.
     demi = math.tan(math.radians(champ / 2))
     x = 0.5 + math.tan(math.radians(ecart)) / (2 * demi)
     y = 0.5 - math.tan(math.radians(haut - float(camera.get("pitch") or 0.0))) / (2 * demi * rapport)
     # Plus bas que la moitié de l'image, ce n'est plus le ciel, c'est la
-    # montagne : un soleil planté dans un versant est un dessin faux, pas un
+    # montagne : un astre planté dans un versant est un dessin faux, pas un
     # dessin d'enfant.
-    if not 0.08 < x < 0.92 or not 0.06 < y < SOLEIL_CIEL:
+    if not 0.08 < x < 0.92 or not 0.06 < y < plafond:
         return coin
     return x, y
+
+
+LUNE_HAUT_MIN = 2.0
+LUNE_COIN = 0.14
+LUNE_COIN_HAUT = 0.16
+LUNE_CIEL = 0.42
+LUNE_TAILLE = 0.062
+# Pâle et un peu bleutée, et la part non éclairée visible mais presque éteinte :
+# une lune dont on ne voit que le croissant est juste, et une lune dont on voit
+# le disque entier est ce que tout le monde dessine. Le compromis est le même
+# que pour le soleil — on console sans mentir.
+LUNE_PALE = (232, 236, 240)
+LUNE_CENDRE = (58, 54, 48)
+
+
+def ou_est_la_lune(camera: dict, quand: float,
+                   rapport: float) -> tuple[tuple[float, float], float] | None:
+    """Où est la lune et à quel point elle est pleine, ou rien si elle est couchée.
+
+    Le pendant exact du soleil dessiné, pour les douze heures où il n'y en a
+    pas. Rien n'est lu sur l'image : l'azimut, la hauteur et la phase viennent
+    du calcul, et la phase est vraie — c'est un croissant quand c'en est un.
+
+    C'est le seul moment où ce flux montre quelque chose que la caméra ne voit
+    pas. Il le montre là où c'est, ce qui en fait moins une décoration qu'une
+    indication : par ciel couvert, la lune est quand même de ce côté-là.
+    """
+    from watcher.bodies import moon_phase, moon_position
+
+    moment = datetime.fromtimestamp(quand, timezone.utc)
+    azimut, haut = moon_position(moment, camera["lat"], camera["lon"],
+                                 float(camera.get("ele") or 0.0))
+    if haut < LUNE_HAUT_MIN:
+        return None
+    ou = _ou_dans_le_ciel(camera, azimut, haut, rapport, LUNE_COIN,
+                          LUNE_COIN_HAUT, LUNE_CIEL)
+    return ou, moon_phase(moment)
+
+
+def lune_croissante(quand: float) -> bool:
+    """Vrai quand elle grossit, ce qui dit de quel côté elle est éclairée.
+
+    Demandé au calcul plutôt qu'à une table : une heure plus tard, est-elle
+    plus pleine ? Sous nos latitudes, une lune qui grossit est éclairée à
+    droite et une lune qui décroît à gauche, et se tromper de côté est la
+    faute que tout le monde voit sans savoir la nommer.
+    """
+    from watcher.bodies import moon_phase
+
+    maintenant = datetime.fromtimestamp(quand, timezone.utc)
+    return moon_phase(maintenant + timedelta(hours=1)) > moon_phase(maintenant)
+
+
+def pose_lune_dessinee(image: np.ndarray, ou: tuple[float, float], pleine: float,
+                       croissante: bool, seconde: float) -> None:
+    """La lune, de la même main que le soleil, et dans sa vraie phase.
+
+    Le disque entier d'abord, en cendre, puis la part éclairée par-dessus. Le
+    terminateur est une ellipse dont le petit axe vaut |1 − 2p| fois le rayon :
+    c'est la projection du cercle d'ombre, et c'est exact, pas une
+    approximation de dessinateur. Le seul endroit où la main reprend ses droits
+    est le contour, qui tremble comme celui du soleil.
+    """
+    hauteur, largeur = image.shape[:2]
+    rayon = int(hauteur * LUNE_TAILLE)
+    centre = (int(ou[0] * largeur), int(ou[1] * hauteur))
+    phase = seconde * 0.45
+    trait = max(2, int(rayon * 0.11))
+    calque = image.copy()
+
+    cv2.circle(calque, centre, rayon, LUNE_CENDRE, -1, cv2.LINE_AA)
+    # La moitié toujours éclairée, du côté du soleil.
+    debut = -90 if croissante else 90
+    cv2.ellipse(calque, centre, (rayon, rayon), 0, debut, debut + 180,
+                LUNE_PALE, -1, cv2.LINE_AA)
+    # Puis le terminateur : il ajoute à la part sombre quand elle est gibbeuse,
+    # il mord dans la part claire quand elle n'est qu'un croissant.
+    petit = max(1, int(rayon * abs(1 - 2 * pleine)))
+    cv2.ellipse(calque, centre, (petit, rayon), 0, 0, 360,
+                LUNE_PALE if pleine > 0.5 else LUNE_CENDRE, -1, cv2.LINE_AA)
+    contour = _rond_tremble(centre, rayon, phase)
+    cv2.polylines(calque, [contour], True, (30, 30, 34), trait + 2, cv2.LINE_AA)
+    cv2.polylines(calque, [contour], True, LUNE_PALE, trait, cv2.LINE_AA)
+    cv2.addWeighted(calque, 0.72, image, 0.28, 0.0, dst=image)
 
 
 def _rond_tremble(centre: tuple[int, int], rayon: float, phase: float) -> np.ndarray:
@@ -2759,6 +2970,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     machine = etat_machine(racine)
     hauteur_soleil: float | None = None
     soleil: tuple[float, float] | None = None
+    lune: tuple[tuple[float, float], float] | None = None
+    lune_droite = True
     relief = charge_relief(racine, cfg["camera"])
     almanach: dict = {}
     # Les heures de demain aussi : après le coucher, c'est d'elles que le ruban
@@ -2834,6 +3047,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 temps = str(ciel.get("webcam") or ciel.get("api") or "")
                 soleil = (ou_est_le_soleil(cfg["camera"], quand, hauteur / largeur)
                           if soleil_absent(relief, cfg["camera"], quand, temps) else None)
+                # La lune prend le relais quand le soleil est couché. Le même
+                # calcul, la même main, et sa vraie phase : c'est un croissant
+                # quand c'en est un.
+                lune = (ou_est_la_lune(cfg["camera"], quand, hauteur / largeur)
+                        if soleil is None else None)
+                lune_droite = lune is not None and lune_croissante(quand)
                 mot_gris = BROUILLARD_MOTS.get(temps, "")
                 trio = (None, None, None) if muet else musique.trio()
                 relu = quand
@@ -2844,6 +3063,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # du ciel, donc il se pixellise et il ondule avec elle.
             if soleil is not None:
                 pose_soleil_dessine(image, soleil, quand - origine)
+            elif lune is not None:
+                pose_lune_dessinee(image, lune[0], lune[1], lune_droite,
+                                   quand - origine)
             # Le grain ne tombe jamais sur une prise. Tout l'intérêt d'un
             # rectangle rouge est qu'on puisse regarder ce qu'il entoure, et
             # une voiture en gros carrés n'est plus une voiture.
@@ -2959,11 +3181,25 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # dans un creux, à la même condition que le survol du relief.
                 # Un éléphant rose par-dessus une voiture entourée de rouge
                 # ferait passer toute la veille pour une plaisanterie.
+                #
+                # Et plus souvent la nuit. La veille n'y voit presque rien, le
+                # survol du relief ne peut pas jouer puisqu'il est rendu en
+                # plein soleil, et il reste douze heures d'une image fixe et
+                # sombre. C'est exactement là qu'on a besoin qu'il se passe
+                # quelque chose.
                 pose_tapis(toile, quand - origine, musique.pouls(),
-                           contour_ciel, vue=cadrage)
+                           contour_ciel, vue=cadrage, nuit=not fait_jour)
                 if quand - dernier_vu > CREUX_S:
                     pose_elephant(toile, quand - origine, musique.pouls(),
-                                  contour_rond_point, vue=cadrage)
+                                  contour_rond_point, vue=cadrage,
+                                  nuit=not fait_jour)
+                # Les étoiles filantes seulement la nuit, évidemment, et
+                # seulement quand rien n'est à l'écran : une traînée blanche
+                # qui file pendant qu'un rectangle rouge montre quelque chose
+                # tirerait l'œil exactement au mauvais endroit.
+                if not fait_jour and quand - dernier_vu > TENUE_S:
+                    pose_etoile_filante(toile, quand - origine, contour_ciel,
+                                        vue=cadrage)
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser)
             # Le mot tient au moins trois secondes, et tant que la voix parle.

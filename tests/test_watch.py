@@ -3026,6 +3026,127 @@ class DiffusionTests(unittest.TestCase):
                                               0.9, rond))
         self.assertFalse(apres.any())
 
+    def test_the_moon_is_drawn_where_it_really_is_and_in_its_real_phase(self):
+        """Le pendant du soleil dessiné, pour les douze heures sans soleil.
+
+        Rien n'est lu sur l'image : l'azimut, la hauteur et la phase viennent
+        du calcul. Et la phase est vraie, donc c'est un croissant quand c'en
+        est un — une pleine lune un soir de premier quartier serait la seule
+        faute que tout le monde verrait.
+        """
+        from watcher.bodies import moon_phase, moon_position
+
+        camera = {"lat": 44.168, "lon": 5.286, "ele": 1400.0,
+                  "bearing": 20.0, "fov": 90.0, "pitch": 0.0}
+        # Une nuit où elle est levée, cherchée au calcul et non choisie.
+        base = datetime(2026, 10, 3, 20, 0, tzinfo=timezone.utc)
+        levee = None
+        for heures in range(72):
+            moment = base + timedelta(hours=heures)
+            if moon_position(moment, camera["lat"], camera["lon"], 1400.0)[1] > 20:
+                levee = moment
+                break
+        self.assertIsNotNone(levee, "la lune se l\u00e8ve bien quelque part")
+        trouve = stream.ou_est_la_lune(camera, levee.timestamp(), 9 / 16)
+        self.assertIsNotNone(trouve)
+        ou, pleine = trouve
+        self.assertAlmostEqual(pleine, moon_phase(levee), places=6)
+        self.assertTrue(0.0 <= ou[0] <= 1.0 and 0.0 <= ou[1] <= stream.LUNE_CIEL)
+        # Couchée, on ne la dessine pas : une lune sous l'horizon posée dans le
+        # ciel serait un mensonge, pas une consolation.
+        for heures in range(72):
+            moment = levee + timedelta(hours=heures)
+            if moon_position(moment, camera["lat"], camera["lon"], 1400.0)[1] < -10:
+                self.assertIsNone(stream.ou_est_la_lune(camera, moment.timestamp(), 9 / 16))
+                break
+        else:
+            self.fail("la lune se couche bien quelque part")
+
+    def test_the_crescent_is_lit_on_the_side_the_sun_is(self):
+        """Une lune qui grossit est éclairée à droite, et l'inverse ensuite."""
+        croissant, decroissant = np.zeros((720, 1280, 3), np.uint8), np.zeros((720, 1280, 3), np.uint8)
+        stream.pose_lune_dessinee(croissant, (0.5, 0.25), 0.22, True, 0.0)
+        stream.pose_lune_dessinee(decroissant, (0.5, 0.25), 0.22, False, 0.0)
+        def clair(toile):
+            # Le centre de gravité de ce qui est pâle, en largeur. Le seuil
+            # est bas parce que la lune est posée par transparence : sur un
+            # ciel noir, son blanc ressort à moins des trois quarts.
+            pale = toile[:, :, 0] > 120
+            return np.argwhere(pale)[:, 1].mean() / 1280
+        self.assertGreater(clair(croissant), 0.5, "croissante : \u00e9clair\u00e9e \u00e0 droite")
+        self.assertLess(clair(decroissant), 0.5, "d\u00e9croissante : \u00e9clair\u00e9e \u00e0 gauche")
+        # Et un croissant montre bien moins de clair qu'une pleine lune.
+        pleine = np.zeros((720, 1280, 3), np.uint8)
+        stream.pose_lune_dessinee(pleine, (0.5, 0.25), 1.0, True, 0.0)
+        self.assertGreater(int((pleine[:, :, 0] > 120).sum()),
+                           2 * int((croissant[:, :, 0] > 120).sum()))
+
+    def test_shooting_stars_fall_above_the_ridge_and_downwards(self):
+        """Une lueur qui file sur une forêt la nuit est ce que la veille cherche.
+
+        On ne dessine donc rien sous la crête — et une étoile filante qui
+        monte est la seule chose que l'œil refuse.
+        """
+        ciel = [[0.0, 0.0], [1.0, 0.0], [1.0, 0.16], [0.22, 0.26], [0.0, 0.30]]
+        passages, montantes = 0, 0
+        for rang in range(60):
+            bas_precedent = None
+            # Tant qu'elle brille à plein. Sur le dernier tiers elle s'éteint,
+            # et son point le plus bas remonte de quelques pixels parce que sa
+            # tête pâlit jusqu'à se confondre avec le noir — ce qui est une
+            # extinction, pas une remontée.
+            for part in (0.1, 0.3, 0.5, 0.66):
+                toile = np.zeros((720, 1280, 3), np.uint8)
+                instant = rang * stream.ETOILE_PERIODE_S + part * stream.ETOILE_DUREE_S
+                stream.pose_etoile_filante(toile, instant, ciel)
+                pose = np.argwhere(toile.any(axis=2))
+                if not len(pose):
+                    continue
+                passages += 1
+                bas = pose[:, 0].max()
+                gauche, droite = pose[:, 1].min(), pose[:, 1].max()
+                for bord in (gauche, droite):
+                    sol = stream._crete(ciel, bord / 1280) * 720
+                    self.assertLess(bas, sol, f"sous la cr\u00eate au rang {rang}")
+                if gauche <= 1 or droite >= 1278:
+                    # Elle sort du cadre par le côté : son point le plus bas
+                    # remonte parce que sa tête est dehors, pas parce qu'elle
+                    # grimpe. Il n'y a plus rien à mesurer sur celle-là.
+                    break
+                if bas_precedent is not None and bas < bas_precedent - 1:
+                    montantes += 1
+                bas_precedent = bas
+        self.assertGreater(passages, 100, "elles doivent passer")
+        self.assertEqual(montantes, 0, "aucune ne remonte")
+        # Le même rang donne toujours la même étoile : du hasard reproductible.
+        une, deux = (np.zeros((720, 1280, 3), np.uint8) for _ in range(2))
+        stream.pose_etoile_filante(une, 17 * 40 + 0.4, ciel)
+        stream.pose_etoile_filante(deux, 17 * 40 + 0.4, ciel)
+        self.assertTrue(np.array_equal(une, deux))
+
+    def test_the_night_gets_the_turns_more_often(self):
+        """Douze heures d'image fixe et sombre, c'est là qu'on en a besoin.
+
+        La veille n'y voit presque rien et le survol du relief ne peut pas
+        jouer : il est rendu en plein soleil, et au milieu d'une nuit noire il
+        ne montre pas le relief, il montre qu'on a collé une autre vidéo.
+        """
+        self.assertGreater(stream.NUIT_PLUS_SOUVENT, 1.0)
+        rond = [[0.0, 0.78], [0.34, 0.72], [0.40, 0.86], [0.30, 1.0], [0.0, 1.0]]
+
+        def combien(nuit):
+            vus = 0
+            for seconde in range(2 * 3600):
+                # Assez grande pour que l'éléphant y tienne : sous une douzaine
+                # de pixels de haut il renonce, et il aurait raison.
+                toile = np.zeros((240, 320, 3), np.uint8)
+                vus += bool(stream.pose_elephant(toile, float(seconde), 0.9, rond,
+                                                 nuit=nuit))
+            return vus
+
+        self.assertAlmostEqual(combien(True) / combien(False),
+                               stream.NUIT_PLUS_SOUVENT, delta=0.4)
+
     def test_the_two_turns_almost_never_happen_at_once(self):
         """Des périodes rondes les feraient tomber ensemble plusieurs fois par jour.
 
