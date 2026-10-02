@@ -1443,7 +1443,12 @@ REDIFF_PAUSE_S = 600.0
 # justement rien reconnu. Les rediffuser serait rediffuser son embarras.
 NON_NOMS = ("Mouvement", "Rien", "Vu trop", "Tache", "Toujours", "Au bord",
             "Devant", "Brouillard", "Brume", "Décor", "Lueur", "Immobile",
-            "Trop ", "Sans ", "Hors ", "Aucun")
+            "Trop ", "Sans ", "Hors ", "Aucun",
+            # En entier, parce que « Véhicule » tout court est une vraie
+            # lecture : de nuit la veille ne distingue plus la voiture du
+            # camion et publie le mot générique. Le préfixe les emporterait
+            # tous les deux.
+            "Véhicule non nommé")
 # Jamais de feu en rediffusion, à aucune condition.
 #
 # Tout le reste de ce fichier peut se tromper sans conséquence : un camion pris

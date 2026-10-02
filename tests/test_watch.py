@@ -2812,6 +2812,95 @@ class DiffusionTests(unittest.TestCase):
         self.assertEqual(len(ordre), 1)
         self.assertEqual(stream._age_heures("pas une date", maintenant), 0.0)
 
+    def test_the_box_follows_the_subject_instead_of_waiting_for_it(self):
+        """Tenue quatre secondes sur une seule position, elle finit sur du vide.
+
+        Une voiture traverse le champ en six secondes. Au milieu de la tenue, le
+        rectangle doit être au milieu du trajet, pas à son départ.
+        """
+        debut = 1_000_000.0
+        vu = {"t": debut, "label": "Voiture", "sur": True,
+              "box": [0.10, 0.50, 0.05, 0.03],
+              "trace": [[debut, 0.10, 0.50, 0.05, 0.03],
+                        [debut + 6.0, 0.70, 0.50, 0.05, 0.03]]}
+        x, _, _, _ = stream.suit(vu, debut + 3.0)
+        self.assertAlmostEqual(x, 0.40, places=3)
+        # Et le rectangle posé sur l'image suit vraiment : deux instants
+        # différents ne peuvent pas donner la même image.
+        tot, tard = (np.zeros((360, 640, 3), np.uint8) for _ in range(2))
+        stream.dessine(tot, [dict(vu)], debut + 0.5)
+        stream.dessine(tard, [dict(vu)], debut + 3.5)
+        self.assertFalse(np.array_equal(tot, tard))
+
+    def test_the_box_never_goes_where_nothing_was_measured(self):
+        """Hors du trajet relevé, on se tient au dernier point connu.
+
+        Prolonger la droite serait inventer une position, et un rectangle
+        inventé se pose sur du vide avec le même aplomb que les autres.
+        """
+        debut = 1_000_000.0
+        vu = {"t": debut, "label": "Voiture", "sur": True,
+              "box": [0.10, 0.50, 0.05, 0.03],
+              "trace": [[debut, 0.10, 0.50, 0.05, 0.03],
+                        [debut + 6.0, 0.70, 0.50, 0.05, 0.03]]}
+        self.assertEqual(stream.suit(vu, debut - 10.0)[0], 0.10)
+        self.assertEqual(stream.suit(vu, debut + 600.0)[0], 0.70)
+        # Sans trajectoire — un événement d'avant cette version, ou une prise
+        # d'une seule image —, la boîte d'origine sert telle quelle.
+        seul = {"t": debut, "box": [0.2, 0.3, 0.1, 0.1], "trace": []}
+        self.assertEqual(stream.suit(seul, debut + 2.0), (0.2, 0.3, 0.1, 0.1))
+
+    def test_the_word_is_written_only_when_the_watch_named_something(self):
+        """« Mouvement détecté » est un aveu, pas une identification."""
+        self.assertTrue(stream.nomme("Voiture"))
+        self.assertTrue(stream.nomme("Camion"))
+        # De nuit la veille ne sépare plus la voiture du camion et publie le
+        # mot générique. C'est une lecture, elle a droit au sien.
+        self.assertTrue(stream.nomme("Véhicule"))
+        self.assertTrue(stream.nomme("Véhicule rouge"))
+        for aveu in ("Mouvement détecté", "Rien de reconnu", "Tache trop large",
+                     "Véhicule non nommé", "Brouillard", "Immobile sur la pente", ""):
+            self.assertFalse(stream.nomme(aveu), aveu)
+        # Le rectangle reste dans les deux cas — il y a bien eu quelque chose —
+        # mais il ne parle que dans un seul.
+        fond = np.zeros((360, 640, 3), np.uint8)
+        quand = 1_000_000.0
+        boite = {"t": quand, "box": [0.4, 0.4, 0.1, 0.1], "trace": []}
+        dit = fond.copy()
+        stream.dessine(dit, [dict(boite, label="Voiture", sur=True)], quand + 1.0)
+        tait = fond.copy()
+        stream.dessine(tait, [dict(boite, label="Mouvement détecté", sur=False)],
+                       quand + 1.0)
+        self.assertFalse(np.array_equal(dit, fond), "le nommé est entouré")
+        self.assertFalse(np.array_equal(tait, fond), "l'innommé aussi")
+        self.assertGreater(int(dit.any(axis=2).sum()), int(tait.any(axis=2).sum()),
+                           "le mot ne s'écrit que dans un des deux cas")
+
+    def test_the_path_is_published_in_absolute_hours(self):
+        """Le flux pose les rectangles sur une image qui porte son heure.
+
+        Des écarts au début l'obligeraient à deviner à quoi ils se rapportent ;
+        des heures entières laissent la question du calage là où elle est déjà
+        résolue.
+        """
+        from watcher.main import _trace_of
+
+        class _Suivi:
+            trace = [(1_000_000.0, (320, 180, 64, 36)),
+                     (1_000_001.0, (384, 180, 64, 36))]
+
+        image = np.zeros((360, 640, 3), np.uint8)
+        chemin = _trace_of(image, _Suivi())
+        self.assertEqual(len(chemin), 2)
+        self.assertEqual(chemin[0], [1_000_000.0, 0.5, 0.5, 0.1, 0.1])
+        self.assertGreater(chemin[1][0], 1_000_000.0, "des heures, pas des \u00e9carts")
+        # Un seul point ne fait pas une trajectoire : on n'en publie pas.
+        class _Immobile:
+            trace = [(1_000_000.0, (320, 180, 64, 36))]
+
+        self.assertEqual(_trace_of(image, _Immobile()), [])
+        self.assertEqual(_trace_of(None, _Suivi()), [])
+
     def test_fog_gets_said_in_the_words_the_watch_used(self):
         """Un mur gris sans un mot ressemble \u00e0 une cam\u00e9ra en panne.
 
