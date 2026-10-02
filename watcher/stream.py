@@ -1786,6 +1786,11 @@ DANSE_VOILE = 0.5
 # Trois pas par seconde à pleine énergie : c'est à peu près cent quatre-vingts
 # battements par minute, le haut de ce que joue la sélection.
 DANSE_PAS_S = 3.0
+# La taille d'un pantin, en parts de la hauteur de la vue. Une seule valeur
+# pour les trois : celui du tapis est le même bonhomme que ceux du bas, parti
+# faire un tour en l'air, et un troisième plus petit se lirait comme un enfant
+# ou comme une erreur de perspective plutôt que comme le même personnage.
+DANSE_HAUT = 0.22
 
 
 def _danseur(calque: np.ndarray, x: int, sol: int, taille: float,
@@ -1873,7 +1878,7 @@ def promenade(seconde: float) -> float:
 
 def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
                   sol: float = 0.93, marge: float = 0.10,
-                  voile: float = DANSE_VOILE, haut: float = 0.22,
+                  voile: float = DANSE_VOILE, haut: float = DANSE_HAUT,
                   vue: tuple[int, int, int, int] | None = None) -> None:
     """Des pantins dans les coins bas de la vue, quand la musique pousse.
 
@@ -1942,8 +1947,17 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
 
 
 # Le rose de l'éléphant et les tons du tapis, en BGR comme tout OpenCV.
-ROSE = (205, 160, 250)
+#
+# Quatre roses et non un seul, parce qu'un aplat se lit comme un autocollant.
+# Du plus sombre au plus clair, ils servent à dégrader chaque masse de son
+# dessous vers sa lumière : c'est tout ce qu'il faut pour que des ellipses
+# deviennent un volume, et à quarante pixels de haut c'est tout ce qu'on peut
+# se permettre.
+ROSE_NUIT = (112, 70, 158)
 ROSE_OMBRE = (150, 105, 205)
+ROSE = (205, 160, 250)
+ROSE_CLAIR = (232, 206, 255)
+IVOIRE = (222, 238, 250)
 TAPIS_ETOFFE = (62, 92, 228)
 TAPIS_FRANGE = (120, 205, 250)
 
@@ -1968,6 +1982,30 @@ def _elephant(calque: np.ndarray, cx: int, sol: int, taille: float,
         cv2.ellipse(calque, centre, axes, angle, 0, 360, couleur, epaisseur,
                     cv2.LINE_AA)
 
+    def masse(centre, axes, angle=0.0, sombre=ROSE_OMBRE, clair=ROSE_CLAIR,
+              marches=7):
+        """Une boule et non une tache : la même ellipse, de l'ombre à la lumière.
+
+        Sept ellipses emboîtées qui rétrécissent vers le haut à gauche, du plus
+        sombre au plus clair. C'est un dégradé pauvre, et il suffit : l'œil
+        lit un volume dès qu'il voit une lumière décalée et un dessous plus
+        foncé, et à cette taille un vrai calcul d'éclairage ne se verrait pas.
+
+        La lumière vient d'en haut à gauche pour tout le monde, comme sur le
+        reste de l'image : la webcam regarde au nord et le soleil passe de ce
+        côté-là la plus grande partie du temps.
+        """
+        cx, cy = centre
+        ax, ay = axes
+        for pas in range(marches):
+            part = pas / (marches - 1)
+            teinte = tuple(int(a + (b - a) * part) for a, b in zip(sombre, clair))
+            cv2.ellipse(calque,
+                        (int(cx - ax * 0.30 * part), int(cy - ay * 0.34 * part)),
+                        (max(1, int(ax * (1 - 0.46 * part))),
+                         max(1, int(ay * (1 - 0.50 * part)))),
+                        angle, 0, 360, teinte, -1, cv2.LINE_AA)
+
     # Le dandinement : il se soulève sur le temps et se balance à contretemps.
     # Deux mouvements de périodes différentes, sinon il tressaute sur place
     # comme un jouet à ressort.
@@ -1976,35 +2014,51 @@ def _elephant(calque: np.ndarray, cx: int, sol: int, taille: float,
     pose = sol - bond
     axe = cx + int(roulis)
 
-    # Les pattes d'abord, pour que le corps les recouvre à la hanche. Courtes
-    # et épaisses : des pattes à l'échelle feraient un animal juste, et un
-    # animal juste n'est pas drôle. Celles-ci sont des poteaux.
-    for i, ecart in enumerate((-0.24, -0.09, 0.11, 0.26)):
+    # L'ombre portée d'abord, et elle ne bondit pas avec lui : elle s'étale
+    # quand il retombe et se resserre quand il est en l'air. C'est ce qui le
+    # pose au sol au lieu de le laisser flotter devant.
+    au_sol = 1.0 - bond / max(1.0, taille * 0.05) * 0.18
+    rond((axe, sol), (int(taille * 0.44 * au_sol), max(2, int(taille * 0.07))),
+         (24, 18, 26))
+
+    # Les pattes, pour que le corps les recouvre à la hanche. Courtes et
+    # épaisses : des pattes à l'échelle feraient un animal juste, et un animal
+    # juste n'est pas drôle. Celles-ci sont des poteaux. Les deux du fond sont
+    # plus sombres, ce qui suffit à les mettre derrière.
+    for i, ecart in enumerate((-0.24, 0.11, -0.09, 0.26)):
+        derriere = i < 2
         balance = math.sin(phase + i * 1.7) * taille * 0.05
         pied = (int(axe + taille * ecart + balance), pose)
         haut = (int(axe + taille * ecart), int(pose - taille * 0.26))
-        cv2.line(calque, haut, pied, ROSE_OMBRE, int(tube * 2.6), cv2.LINE_AA)
-        cv2.circle(calque, pied, int(tube * 1.3), ROSE_OMBRE, -1, cv2.LINE_AA)
+        teinte = ROSE_NUIT if derriere else ROSE_OMBRE
+        cv2.line(calque, haut, pied, teinte, int(tube * 2.6), cv2.LINE_AA)
+        cv2.circle(calque, pied, int(tube * 1.3), teinte, -1, cv2.LINE_AA)
+        if not derriere:
+            # Un ongle clair sur les pattes de devant.
+            cv2.circle(calque, (pied[0], pied[1] - tube // 2),
+                       max(1, int(tube * 0.6)), ROSE_CLAIR, -1, cv2.LINE_AA)
+
+    # La queue pend derrière le corps, donc avant lui.
+    fouet = math.sin(phase * 3) * 0.5
+    queue = (int(axe + taille * 0.36), int(pose - taille * 0.66))
+    cv2.line(calque, queue,
+             (int(queue[0] + taille * 0.15 + fouet * taille * 0.06),
+              int(queue[1] + taille * 0.30)),
+             ROSE_NUIT, max(2, int(tube * 0.6)), cv2.LINE_AA)
 
     corps = (axe, int(pose - taille * 0.56))
-    rond(corps, (int(taille * 0.40), int(taille * 0.29)), ROSE)
-    # La queue pend et fouette plus vite que le reste, comme toutes les queues.
-    fouet = math.sin(phase * 3) * 0.5
-    queue = (int(axe + taille * 0.38), int(pose - taille * 0.62))
-    cv2.line(calque, queue,
-             (int(queue[0] + taille * 0.13 + fouet * taille * 0.06),
-              int(queue[1] + taille * 0.26)),
-             ROSE_OMBRE, max(2, int(tube * 0.6)), cv2.LINE_AA)
+    masse(corps, (int(taille * 0.40), int(taille * 0.29)))
 
     tete = (int(axe - taille * 0.44), int(pose - taille * 0.72))
-    rond(tete, (int(taille * 0.27), int(taille * 0.26)), ROSE)
+    masse(tete, (int(taille * 0.27), int(taille * 0.26)))
     # L'oreille bat, et c'est elle qui fait tout le travail : c'est à l'oreille
-    # qu'on reconnaît un éléphant de dessin animé, pas à la trompe.
+    # qu'on reconnaît un éléphant de dessin animé, pas à la trompe. Elle est
+    # derrière la joue, donc plus sombre, avec un intérieur plus clair.
     bat = 18 * math.sin(phase * 2 + 0.7)
-    rond((tete[0] + int(taille * 0.10), tete[1] - int(taille * 0.02)),
-         (int(taille * 0.22), int(taille * 0.17)), ROSE_OMBRE, angle=bat)
-    rond((tete[0] + int(taille * 0.10), tete[1] - int(taille * 0.02)),
-         (int(taille * 0.19), int(taille * 0.14)), ROSE, angle=bat)
+    oreille = (tete[0] + int(taille * 0.11), tete[1] - int(taille * 0.03))
+    rond(oreille, (int(taille * 0.23), int(taille * 0.18)), ROSE_NUIT, angle=bat)
+    masse(oreille, (int(taille * 0.20), int(taille * 0.15)), angle=bat,
+          sombre=ROSE_OMBRE, clair=ROSE, marches=4)
 
     # La trompe : un arc qui s'affine et qui se relève quand il saute.
     leve = math.sin(phase * 2) * 0.5
@@ -2017,13 +2071,35 @@ def _elephant(calque: np.ndarray, cx: int, sol: int, taille: float,
                            - taille * 0.04),
                        int(depart[1] + math.cos(angle * 0.8) * taille * 0.32 * part)))
     for pas in range(6):
-        cv2.line(calque, courbe[pas], courbe[pas + 1], ROSE,
-                 max(2, int(tube * (2.0 - pas * 0.22))), cv2.LINE_AA)
+        epais = max(2, int(tube * (2.0 - pas * 0.22)))
+        cv2.line(calque, courbe[pas], courbe[pas + 1], ROSE_OMBRE, epais, cv2.LINE_AA)
+        # La lumière sur le dessus de la trompe : un trait plus fin et plus
+        # clair, décalé vers le haut. C'est le même éclairage que les masses,
+        # dit avec les moyens d'une ligne.
+        cv2.line(calque,
+                 (courbe[pas][0], courbe[pas][1] - epais // 4),
+                 (courbe[pas + 1][0], courbe[pas + 1][1] - epais // 4),
+                 ROSE if pas > 2 else ROSE_CLAIR,
+                 max(1, epais // 2), cv2.LINE_AA)
+
+    # Deux défenses, courtes. C'est le détail qui dit « dessin animé » plutôt
+    # que « animal », et il ne coûte que deux arcs.
+    for cote, longueur in ((0.0, 0.17), (0.5, 0.13)):
+        base = (int(tete[0] - taille * (0.17 + cote * 0.05)),
+                int(tete[1] + taille * 0.14))
+        cv2.ellipse(calque, base,
+                    (max(2, int(taille * longueur)), max(2, int(taille * 0.10))),
+                    0, 60, 160, IVOIRE, max(2, int(tube * 0.9)), cv2.LINE_AA)
 
     # L'œil, en dernier et tout petit : plus il est petit, plus il est gentil.
-    oeil = (tete[0] - int(taille * 0.09), tete[1] - int(taille * 0.05))
-    cv2.circle(calque, oeil, max(2, int(taille * 0.045)), BLANC, -1, cv2.LINE_AA)
-    cv2.circle(calque, oeil, max(1, int(taille * 0.022)), (20, 20, 20), -1, cv2.LINE_AA)
+    # Avec son reflet, qui est le seul trait de tout le dessin dont on peut
+    # dire qu'il sert à quelque chose — sans lui le regard est en verre.
+    oeil = (tete[0] - int(taille * 0.09), tete[1] - int(taille * 0.07))
+    cv2.circle(calque, oeil, max(2, int(taille * 0.055)), BLANC, -1, cv2.LINE_AA)
+    cv2.circle(calque, oeil, max(1, int(taille * 0.026)), (20, 20, 20), -1, cv2.LINE_AA)
+    cv2.circle(calque, (oeil[0] - max(1, int(taille * 0.016)),
+                        oeil[1] - max(1, int(taille * 0.016))),
+               max(1, int(taille * 0.014)), BLANC, -1, cv2.LINE_AA)
 
 
 # L'éléphant danse onze minutes et une seconde après le précédent, le tapis
@@ -2104,11 +2180,12 @@ NUIT_PLUS_SOUVENT = 3.0
 
 TAPIS_PERIODE_S = 397.0
 TAPIS_TRAVERSEE_S = 14.0
-# À mi-hauteur entre le haut du cadre et la crête, et le reste de l'onde en
-# plus. La crête, pas une valeur fixe : à hauteur constante il passerait devant
+# Aux deux tiers de la descente entre le haut du cadre et la crête, et le
+# reste de l'onde en plus. Plus haut, il rasait le bord et on n'en voyait que
+# la moitié ; le milieu du ciel est l'endroit d'où on le regarde passer. La crête, pas une valeur fixe : à hauteur constante il passerait devant
 # le sommet du Ventoux, qui est précisément ce que les gens sont venus voir. En
 # la suivant, il le survole — et sur une autre caméra il survolera la sienne.
-TAPIS_CIEL = 0.5
+TAPIS_CIEL = 0.66
 TAPIS_ONDE = 0.07
 # Faute de contour du ciel, une hauteur prudente.
 TAPIS_CIEL_SANS_CARTE = 0.14
@@ -2158,20 +2235,139 @@ def pose_tapis(image: np.ndarray, seconde: float, energie: float,
     hauteur, largeur = image.shape[:2]
     gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
     avance = phase_cycle / TAPIS_TRAVERSEE_S
-    etoffe = haute_vue * 0.085
     # Il part entièrement hors du cadre et finit entièrement dehors.
-    cx = int(-etoffe * 2 + avance * (largeur + etoffe * 4))
+    cx = int(-haute_vue * 0.3 + avance * (largeur + haute_vue * 0.6))
     # Au-dessus des bandes noires il n'y a pas de crête : on prolonge celle du
     # bord de la vue, sans quoi il plongerait en entrant et en sortant.
     part_x = min(1.0, max(0.0, (cx - gauche) / max(large_vue, 1)))
     crete = _crete(ciel, part_x)
-    plafond = crete * TAPIS_CIEL if crete is not None else TAPIS_CIEL_SANS_CARTE
-    vol = math.sin(avance * math.pi * 3) * haute_vue * TAPIS_ONDE * plafond
-    cy = int(cime + haute_vue * plafond + vol)
+    ciel_haut = (crete if crete is not None else TAPIS_CIEL_SANS_CARTE) * haute_vue
+    # Le bonhomme fait la même taille que ceux du bas, donc c'est lui qui
+    # commande et le tapis se règle sur lui. L'ensemble doit tenir entre le
+    # haut du cadre et la crête : là où le ciel est trop mince, tout rapetisse
+    # plutôt que de se faire couper la tête ou de plonger dans la montagne.
+    ensemble = haute_vue * DANSE_HAUT * 1.35
+    facteur = min(1.0, ciel_haut / max(ensemble, 1.0))
+    danseur = haute_vue * DANSE_HAUT * facteur
+    etoffe = danseur / 1.5
+    vol = math.sin(avance * math.pi * 3) * ciel_haut * TAPIS_ONDE
+    # Les pieds posent à cette hauteur-là ; au-dessus il y a le danseur, en
+    # dessous l'épaisseur de l'étoffe et ses franges.
+    cy = cime + TAPIS_CIEL * ciel_haut - etoffe * 0.3 + vol
+    cy = max(cy, cime + danseur + 2)
+    # Le tapis est large : sous ses deux bouts la crête n'est pas la même que
+    # sous son milieu, et c'est par un bout qu'il mordait le versant. On se
+    # cale donc sur la plus basse des crêtes qu'il couvre, franges comprises.
+    bouts = [_crete(ciel, min(1.0, max(0.0, (cx + bord * etoffe * 1.7 - gauche)
+                                       / max(large_vue, 1))))
+             for bord in (-1, 0, 1)]
+    sous_lui = min([c for c in bouts if c is not None] or [crete or
+                                                          TAPIS_CIEL_SANS_CARTE])
+    # Sept dixièmes de l'étoffe sous la ligne des pieds : l'épaisseur du
+    # tapis, l'amplitude de son ondulation et la longueur de ses franges, qui
+    # pendent plus bas que tout le reste.
+    cy = min(cy, cime + sous_lui * haute_vue - etoffe * 0.78)
     calque = image.copy()
-    _tapis(calque, cx, cy, etoffe, seconde * DANSE_PAS_S)
+    _tapis(calque, cx, int(cy), etoffe, seconde * DANSE_PAS_S, danseur=danseur)
     cv2.addWeighted(calque, 0.9, image, 0.1, 0.0, dst=image)
     return True
+
+
+LAMPADAIRE_M = 7.0
+# Le fer est froid, la lumière est chaude : c'est tout ce qu'il faut pour
+# qu'une lampe ait l'air allumée.
+LAMP_FER = (104, 96, 108)
+LAMP_OR = (120, 214, 252)
+LAMP_HALO = (92, 176, 232)
+
+
+def hampe_du_lampadaire(camera: dict, distance_m: float, rapport: float) -> float:
+    """La longueur du mât à l'image, en parts de hauteur, d'après sa vraie taille.
+
+    Sept mètres à vingt-cinq, vus par un objectif dont on connaît l'ouverture :
+    la longueur n'est pas réglée à l'œil, elle est calculée. C'est ce qui
+    permettra de poser le même dessin sur le lampadaire d'une autre caméra,
+    plus loin ou plus près, sans retoucher un chiffre.
+    """
+    champ = math.radians(float(camera.get("fov") or 90.0))
+    vertical = 2 * math.atan(math.tan(champ / 2) * rapport)
+    return (LAMPADAIRE_M / max(distance_m, 1.0)) / (2 * math.tan(vertical / 2))
+
+
+def pose_lampadaire(image: np.ndarray, tete: tuple[float, float], hampe: float,
+                    seconde: float) -> None:
+    """Un lampadaire de livre d'images, posé sur le vrai.
+
+    Sa lanterne tombe exactement sur l'ampoule qu'OpenStreetMap place là, et
+    son mât descend de sa vraie hauteur : le dessin recouvre l'objet, il ne se
+    met pas à côté. C'est ce qui le distingue d'un autocollant.
+
+    Il ne sort que la nuit, parce que c'est la nuit que la vraie lampe est
+    allumée. Dessiner une lampe éteinte en train d'éclairer serait le genre de
+    petit mensonge dont ce flux n'a pas besoin.
+
+    Son halo respire très lentement. Pas de scintillement : une lampe qui
+    clignote se lit comme une panne, et il y a bien assez de vraies lueurs ici
+    pour qu'on n'en invente pas d'ambiguës.
+    """
+    hauteur, largeur = image.shape[:2]
+    x = int(tete[0] * largeur)
+    y = int(tete[1] * hauteur)
+    long_px = max(8, int(hampe * hauteur))
+    pied = y + long_px
+    fer = max(2, int(long_px * 0.022))
+    lanterne = max(4, int(long_px * 0.055))
+    souffle = 0.88 + 0.12 * math.sin(seconde * 0.5)
+
+    # Le halo s'ajoute à l'image au lieu de la recouvrir, parce que c'est ce
+    # que fait la lumière. Dessiné en disques pleins, le plus large et le plus
+    # sombre effaçait un tiers du paysage : une lampe qui fait de l'ombre.
+    lueur = np.zeros_like(image)
+    for anneau in range(6, 0, -1):
+        rayon = int(lanterne * (0.8 + anneau * 0.75) * souffle)
+        part = ((7 - anneau) / 7) ** 2
+        cv2.circle(lueur, (x, y + lanterne // 2), rayon,
+                   tuple(int(c * part * 0.5) for c in LAMP_HALO), -1, cv2.LINE_AA)
+    cv2.add(image, lueur, dst=image)
+    calque = image.copy()
+
+    # Le mât, qui s'épaissit vers le bas comme tous les mâts dessinés.
+    for part in range(6):
+        depuis = y + int(long_px * part / 6)
+        jusqua = y + int(long_px * (part + 1) / 6)
+        epais = fer + int(fer * 0.5 * part / 5)
+        cv2.line(calque, (x, depuis), (x, jusqua), (40, 36, 44), epais + 2, cv2.LINE_AA)
+        cv2.line(calque, (x, depuis), (x, jusqua), LAMP_FER, epais, cv2.LINE_AA)
+        # Une arête claire sur le côté éclairé, qui donne du tube au trait.
+        cv2.line(calque, (x - epais // 3, depuis), (x - epais // 3, jusqua),
+                 (152, 146, 156), max(1, epais // 3), cv2.LINE_AA)
+    # Un socle, pour qu'il soit planté et non suspendu.
+    cv2.ellipse(calque, (x, pied), (fer * 3, max(2, fer)), 0, 180, 360,
+                LAMP_FER, -1, cv2.LINE_AA)
+    # Deux volutes de ferronnerie, qui ne servent à rien et font tout.
+    for cote in (-1, 1):
+        cv2.ellipse(calque, (x + cote * lanterne, y + int(lanterne * 2.4)),
+                    (lanterne, int(lanterne * 1.1)),
+                    0, 180 if cote < 0 else 0, 270 if cote < 0 else 90,
+                    LAMP_FER, max(2, fer - 1), cv2.LINE_AA)
+
+    # La lanterne : un tronc de cône, un chapeau, une petite flèche au-dessus.
+    verre = np.int32([[x - lanterne, y + lanterne],
+                      [x + lanterne, y + lanterne],
+                      [x + int(lanterne * 0.62), y - int(lanterne * 0.5)],
+                      [x - int(lanterne * 0.62), y - int(lanterne * 0.5)]])
+    cv2.fillPoly(calque, [verre], LAMP_OR, cv2.LINE_AA)
+    cv2.polylines(calque, [verre], True, LAMP_FER, max(2, fer - 1), cv2.LINE_AA)
+    cv2.line(calque, (x, y + lanterne), (x, y - int(lanterne * 0.5)),
+             LAMP_FER, max(1, fer - 2), cv2.LINE_AA)
+    chapeau = np.int32([[x - int(lanterne * 1.25), y - int(lanterne * 0.5)],
+                        [x + int(lanterne * 1.25), y - int(lanterne * 0.5)],
+                        [x, y - int(lanterne * 1.45)]])
+    cv2.fillPoly(calque, [chapeau], LAMP_FER, cv2.LINE_AA)
+    cv2.line(calque, (x, y - int(lanterne * 1.45)), (x, y - int(lanterne * 2.0)),
+             LAMP_FER, max(2, fer - 1), cv2.LINE_AA)
+    cv2.circle(calque, (x, y - int(lanterne * 2.1)), max(2, fer), LAMP_FER, -1, cv2.LINE_AA)
+    cv2.addWeighted(calque, 0.80, image, 0.20, 0.0, dst=image)
 
 
 def _grain(rang: int, sel: int) -> float:
@@ -2270,7 +2466,7 @@ def pose_etoile_filante(image: np.ndarray, seconde: float, ciel: list | None = N
 
 
 def _tapis(calque: np.ndarray, cx: int, cy: int, etoffe: float,
-           phase: float) -> None:
+           phase: float, danseur: float = 0.0) -> None:
     """Le tapis lui-même : une étoffe qui ondule, et quelqu'un debout dessus.
 
     L'ondulation court d'un bout à l'autre au lieu de monter et descendre
@@ -2310,7 +2506,12 @@ def _tapis(calque: np.ndarray, cx: int, cy: int, etoffe: float,
             [(centre[0], centre[1] - cote), (centre[0] + cote, centre[1]),
              (centre[0], centre[1] + cote), (centre[0] - cote, centre[1])],
             np.int32)], TAPIS_FRANGE, cv2.LINE_AA)
-    _danseur(calque, cx, int(cy + onde(0.5)), etoffe * 1.5, phase + 1.1, BLANC)
+    # Debout au milieu du tapis, à la taille des deux autres : c'est le même
+    # bonhomme, parti faire un tour en l'air. Il était calculé sur la largeur
+    # de l'étoffe, donc plus petit qu'eux, et il se lisait comme un troisième
+    # personnage plutôt que comme un des trois.
+    _danseur(calque, cx, int(cy + onde(0.5)), danseur or etoffe * 1.5,
+             phase + 1.1, BLANC)
 
 
 # Les ciels où le soleil ne passe pas. « Peu nuageux » n'en est pas un.
@@ -2443,6 +2644,8 @@ LUNE_TAILLE = 0.062
 # que pour le soleil — on console sans mentir.
 LUNE_PALE = (232, 236, 240)
 LUNE_CENDRE = (58, 54, 48)
+LUNE_BONNET = (168, 124, 110)
+LUNE_JOUE = (178, 162, 238)
 
 
 def ou_est_la_lune(camera: dict, quand: float,
@@ -2497,23 +2700,138 @@ def pose_lune_dessinee(image: np.ndarray, ou: tuple[float, float], pleine: float
     rayon = int(hauteur * LUNE_TAILLE)
     centre = (int(ou[0] * largeur), int(ou[1] * hauteur))
     phase = seconde * 0.45
-    trait = max(2, int(rayon * 0.11))
+    # La largeur de la part éclairée : nulle à la nouvelle lune, deux rayons à
+    # la pleine. Tout se règle dessus et non sur le rayon, parce que c'est la
+    # seule chose qu'on dessine. Au premier essai le contour se comptait sur le
+    # rayon : à un trait de treize pixels sur un croissant qui en fait vingt,
+    # il ne restait rien de pâle et la lune était noire.
+    k = 1 - 2 * pleine
+    clair = 1 if croissante else -1
+    large = rayon * (1 - k)
+    trait = max(2, int(min(rayon * 0.11, large * 0.14)))
+    encre = (38, 36, 44)
     calque = image.copy()
 
-    cv2.circle(calque, centre, rayon, LUNE_CENDRE, -1, cv2.LINE_AA)
-    # La moitié toujours éclairée, du côté du soleil.
-    debut = -90 if croissante else 90
-    cv2.ellipse(calque, centre, (rayon, rayon), 0, debut, debut + 180,
-                LUNE_PALE, -1, cv2.LINE_AA)
-    # Puis le terminateur : il ajoute à la part sombre quand elle est gibbeuse,
-    # il mord dans la part claire quand elle n'est qu'un croissant.
-    petit = max(1, int(rayon * abs(1 - 2 * pleine)))
-    cv2.ellipse(calque, centre, (petit, rayon), 0, 0, 360,
-                LUNE_PALE if pleine > 0.5 else LUNE_CENDRE, -1, cv2.LINE_AA)
-    contour = _rond_tremble(centre, rayon, phase)
-    cv2.polylines(calque, [contour], True, (30, 30, 34), trait + 2, cv2.LINE_AA)
-    cv2.polylines(calque, [contour], True, LUNE_PALE, trait, cv2.LINE_AA)
-    cv2.addWeighted(calque, 0.72, image, 0.28, 0.0, dst=image)
+    def crayon(trace, ferme=False, couleur=None, epais=None):
+        cv2.polylines(calque, [trace], ferme, encre,
+                      (epais or trait) + max(2, trait // 2), cv2.LINE_AA)
+        cv2.polylines(calque, [trace], ferme, couleur or LUNE_PALE,
+                      epais or trait, cv2.LINE_AA)
+
+    # On ne dessine que la part éclairée, et elle seule : un disque entier dont
+    # une moitié serait grise se lit comme une photographie ratée, alors qu'un
+    # croissant est une forme que tout le monde reconnaît et que personne ne
+    # prend pour une mesure.
+    #
+    # Le contour se construit en une fois, pour toutes les phases. Le limbe est
+    # un demi-cercle, le terminateur est une ellipse dont le demi-axe vaut
+    # k = 1 − 2p fois le rayon. k passe de +1 à la nouvelle lune à −1 à la
+    # pleine : positif il creuse le croissant, négatif il gonfle la partie
+    # gibbeuse jusqu'au disque plein. C'est la projection du cercle d'ombre,
+    # et c'est exact.
+    angles = np.linspace(-math.pi / 2, math.pi / 2, 30)
+    limbe = [(clair * rayon * math.cos(a), rayon * math.sin(a)) for a in angles]
+    nuit = [(clair * k * rayon * math.cos(a), rayon * math.sin(a))
+            for a in reversed(angles)]
+    # Le tremblé du contour : la même main que le soleil, à qui on pardonne de
+    # ne pas fermer juste.
+    silhouette = np.int32([
+        (centre[0] + x * (1 + 0.03 * math.sin(i * 0.7 + phase)),
+         centre[1] + y * (1 + 0.03 * math.sin(i * 0.5 - phase)))
+        for i, (x, y) in enumerate(limbe + nuit)])
+    cv2.fillPoly(calque, [silhouette], LUNE_PALE, cv2.LINE_AA)
+    crayon(silhouette, ferme=True, couleur=encre, epais=trait)
+
+    # Le bonnet de nuit, posé de travers. C'est lui qui fait tout le travail :
+    # un disque pâle dans un ciel nocturne se prend pour la lune, et c'est bien
+    # l'ennui — ce flux montre aussi de vraies lueurs, des phares, des avions,
+    # et il ne doit jamais y avoir de doute sur ce qui est mesuré et ce qui est
+    # dessiné. Un bonnet à pompon ne se confond avec aucun phénomène céleste.
+    #
+    # Posé sur la part éclairée et non sur le centre du disque : quand elle
+    # n'est qu'un croissant, le centre du disque est dans le noir, et le bonnet
+    # y flottait tout seul à côté d'elle.
+    visage = int(centre[0] + clair * rayon * (1 + k) / 2)
+    tete = rayon * max(0.42, (1 - k) / 2)
+    pointe = (int(visage + clair * tete * 1.15), int(centre[1] - rayon * 1.52))
+    bord_g = (int(visage - tete * 0.62), int(centre[1] - rayon * 0.72))
+    bord_d = (int(visage + tete * 0.62), int(centre[1] - rayon * 0.72))
+    bonnet = np.int32([bord_g, pointe, bord_d])
+    cv2.fillPoly(calque, [bonnet], LUNE_BONNET, cv2.LINE_AA)
+    crayon(bonnet, ferme=True, couleur=LUNE_BONNET, epais=max(1, trait - 1))
+    crayon(np.int32([bord_g, bord_d]), couleur=LUNE_PALE, epais=trait)
+    cv2.circle(calque, pointe, int(rayon * 0.19), encre, -1, cv2.LINE_AA)
+    cv2.circle(calque, pointe, int(rayon * 0.14), LUNE_PALE, -1, cv2.LINE_AA)
+
+    # Le visage. De profil quand elle n'est qu'un croissant, parce que c'est
+    # là qu'il y a de la place et parce que c'est la lune que tout le monde a
+    # dessinée à six ans ; de face dès qu'elle en a assez pour deux yeux.
+    # La phase ne change pas pour autant : c'est le vrai terminateur qui
+    # décide, et le visage se range dessus.
+    # La largeur de la part éclairée vaut (1 − k) fois le rayon : nulle à la
+    # nouvelle lune, deux rayons à la pleine. En dessous d'un rayon il n'y a
+    # pas la place de deux yeux, et c'est précisément là que la lune de profil
+    # est celle que tout le monde a dessinée à six ans.
+    # En dessous d'un rayon et demi de large, il n'y a pas la place de deux
+    # yeux — et c'est précisément là que la lune de profil est celle que tout
+    # le monde a dessinée à six ans.
+    profil = large < rayon * 1.3
+    if profil:
+        # Le visage occupe toute la hauteur du croissant, comme dans les livres
+        # d'images : l'œil en haut, la bouche en bas, et rien entre les deux.
+        # Groupé au milieu, il n'était qu'un petit gribouillis sombre.
+        plume = max(2, int(large * 0.10))
+        cv2.ellipse(calque, (visage, centre[1] - int(rayon * 0.40)),
+                    (max(2, int(large * 0.26)), max(2, int(rayon * 0.16))),
+                    0, 180, 360, encre, plume, cv2.LINE_AA)
+        # Quelques cils, qui ne coûtent rien et font tout.
+        for bord in (-1, 0, 1):
+            depuis = (visage + int(bord * large * 0.20),
+                      centre[1] - int(rayon * 0.40))
+            crayon(np.int32([depuis, (depuis[0] + int(bord * large * 0.10),
+                                      depuis[1] - int(rayon * 0.12))]),
+                   couleur=encre, epais=max(1, plume - 1))
+        crayon(np.int32([[visage + clair * large * (0.02 - 0.22 * math.cos(a)),
+                          centre[1] + rayon * (0.30 + 0.22 * math.sin(a))]
+                         for a in np.linspace(0.25, math.pi - 0.25, 11)]),
+               couleur=encre, epais=plume)
+        cv2.circle(calque, (visage - int(clair * large * 0.26),
+                            centre[1] + int(rayon * 0.16)),
+                   max(2, int(large * 0.13)), LUNE_JOUE, -1, cv2.LINE_AA)
+    else:
+        for bord in (-1, 1):
+            oeil = (centre[0] + int(bord * rayon * 0.34), centre[1] - int(rayon * 0.14))
+            # Des yeux fermés, en arc vers le bas : elle dort, et une lune qui
+            # dort est plus aimable qu'une lune qui regarde.
+            crayon(np.int32([[oeil[0] + math.cos(a) * rayon * 0.19,
+                              oeil[1] - math.sin(a) * rayon * 0.13]
+                             for a in np.linspace(math.pi, 2 * math.pi, 9)]),
+                   couleur=encre)
+        crayon(np.int32([[centre[0] + math.cos(a) * rayon * 0.30,
+                          centre[1] + rayon * 0.20 + math.sin(a) * rayon * 0.17]
+                         for a in np.linspace(0.35, math.pi - 0.35, 11)]),
+               couleur=encre)
+        for bord in (-1, 1):
+            cv2.circle(calque, (centre[0] + int(bord * rayon * 0.56),
+                                centre[1] + int(rayon * 0.20)),
+                       max(2, int(rayon * 0.11)), LUNE_JOUE, -1, cv2.LINE_AA)
+
+    # Trois petites étoiles autour, du même crayon : elles achèvent de dire
+    # que c'est une page de cahier et pas une photographie.
+    for i in range(3):
+        angle = 2.2 + i * 1.5 + math.sin(phase * 0.4 + i) * 0.1
+        loin = rayon * (1.75 + 0.25 * math.sin(i * 2.0))
+        ou_etoile = (int(centre[0] + math.cos(angle) * loin),
+                     int(centre[1] + math.sin(angle) * loin))
+        branche = rayon * (0.16 + 0.05 * math.sin(i * 1.3))
+        for tour in range(2):
+            pente = tour * math.pi / 2 + 0.3
+            crayon(np.int32([[ou_etoile[0] - math.cos(pente) * branche,
+                              ou_etoile[1] - math.sin(pente) * branche],
+                             [ou_etoile[0] + math.cos(pente) * branche,
+                              ou_etoile[1] + math.sin(pente) * branche]]),
+                   epais=max(1, trait - 1))
+    cv2.addWeighted(calque, 0.78, image, 0.22, 0.0, dst=image)
 
 
 def _rond_tremble(centre: tuple[int, int], rayon: float, phase: float) -> np.ndarray:
@@ -3189,15 +3507,24 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # quelque chose.
                 pose_tapis(toile, quand - origine, musique.pouls(),
                            contour_ciel, vue=cadrage, nuit=not fait_jour)
-                if quand - dernier_vu > CREUX_S:
+                #
+                # Le creux se compte sur « dernier_mouvement » et non sur
+                # « dernier_vu », qui est remis à zéro par chaque rediffusion.
+                # La nuit, le flux rediffuse sans arrêt faute de mieux, donc le
+                # second ne dépassait jamais cinq minutes et l'éléphant n'est
+                # tout simplement jamais venu. Seule une vraie détection doit
+                # le retenir ; une image d'hier n'est pas un évènement.
+                if quand - dernier_mouvement > CREUX_S:
                     pose_elephant(toile, quand - origine, musique.pouls(),
                                   contour_rond_point, vue=cadrage,
                                   nuit=not fait_jour)
                 # Les étoiles filantes seulement la nuit, évidemment, et
                 # seulement quand rien n'est à l'écran : une traînée blanche
                 # qui file pendant qu'un rectangle rouge montre quelque chose
-                # tirerait l'œil exactement au mauvais endroit.
-                if not fait_jour and quand - dernier_vu > TENUE_S:
+                # tirerait l'œil exactement au mauvais endroit. Sur « poses »
+                # et pas sur une horloge : c'est la seule chose qui dise ce qui
+                # est à l'écran à cette image-ci.
+                if not fait_jour and not poses:
                     pose_etoile_filante(toile, quand - origine, contour_ciel,
                                         vue=cadrage)
             if a_poser is not None:

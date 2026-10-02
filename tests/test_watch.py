@@ -3147,6 +3147,22 @@ class DiffusionTests(unittest.TestCase):
         self.assertAlmostEqual(combien(True) / combien(False),
                                stream.NUIT_PLUS_SOUVENT, delta=0.4)
 
+    def test_the_elephant_waits_on_a_clock_replays_cannot_reset(self):
+        """Il n'est jamais venu, et le fichier disait pourquoi trois lignes plus haut.
+
+        Il y a deux horloges du vide. « dernier_vu » est remis à zéro par
+        chaque rediffusion ; « dernier_mouvement » ne l'est que par une vraie
+        détection. La nuit, le flux rediffuse sans arrêt faute de mieux, donc
+        la première ne dépassait jamais cinq minutes et le creux ne s'ouvrait
+        pas. Une image d'hier n'est pas un évènement.
+        """
+        source = inspect.getsource(stream.diffuse)
+        appel = source[source.index("pose_elephant") - 400:source.index("pose_elephant")]
+        self.assertIn("dernier_mouvement > CREUX_S", appel)
+        self.assertNotIn("dernier_vu > CREUX_S", appel)
+        # Et la raison du piège est toujours écrite là où on tombe dedans.
+        self.assertIn("dernier_vu", inspect.getsource(stream.diffuse))
+
     def test_the_two_turns_almost_never_happen_at_once(self):
         """Des périodes rondes les feraient tomber ensemble plusieurs fois par jour.
 
