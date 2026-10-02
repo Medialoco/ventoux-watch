@@ -2,6 +2,135 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-02T14-34-23Z-vehicle-218",
+      "t": "2026-10-02T14:34:23Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.94,
+      "thumb": "data/thumbs/2026-10-02T14-34-23Z-vehicle-218.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.8,
+        "height_m": 1.6,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.912,
+          "kept": 0.367,
+          "area_ratio": 0.01517,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.8,
+          "height_m": 1.6,
+          "width_named_m": 3.2,
+          "height_named_m": 1.4,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.94 sur 77%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4622,
+          0.88,
+          0.1553,
+          0.12
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T14-34-23Z-vehicle-218.jpg"
+    },
+    {
+      "id": "2026-10-02T14-25-34Z-missed-217",
+      "t": "2026-10-02T14:25:34Z",
+      "type": "missed",
+      "label": "Nuage",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T14-25-34Z-missed-217.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Une masse pâle monte, mais elle est dans le ciel. Rien n'y brûle.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0383,
+          "area_grow": 69.6,
+          "clipped": false,
+          "shade": 1.158,
+          "kept": 0.395,
+          "area_ratio": 0.00604,
+          "duration_s": 8.4,
+          "frames": 8,
+          "width_m": 64.8,
+          "height_m": 39.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.64,
+          "drift_rate": 0.082,
+          "seen_as": []
+        },
+        "refused": "cloud",
+        "box": [
+          0.8938,
+          0.1389,
+          0.075,
+          0.0806
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T14-25-34Z-missed-217.jpg"
+    },
+    {
+      "id": "2026-10-02T14-25-22Z-missed-216",
+      "t": "2026-10-02T14:25:22Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T14-25-22Z-missed-216.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 40 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0016,
+          "area_grow": 1.16,
+          "clipped": true,
+          "shade": 1.18,
+          "kept": 0.75,
+          "area_ratio": 0.00121,
+          "duration_s": 6.9,
+          "frames": 4,
+          "width_m": 40.5,
+          "height_m": 11.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.18,
+          "drift_rate": 0.006,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.95,
+          0.1861,
+          0.05,
+          0.025
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T14-25-22Z-missed-216.jpg"
+    },
+    {
       "id": "2026-10-02T14-20-57Z-vehicle-215",
       "t": "2026-10-02T14:20:57Z",
       "type": "vehicle",
