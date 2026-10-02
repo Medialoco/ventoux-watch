@@ -2,6 +2,172 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-02T08-03-55Z-motion-39",
+      "t": "2026-10-02T08:03:55Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T08-03-55Z-motion-39.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3855,
+          "area_grow": 21.55,
+          "clipped": false,
+          "shade": 0.739,
+          "kept": 0.336,
+          "area_ratio": 0.00973,
+          "duration_s": 20.4,
+          "frames": 24,
+          "width_m": 3.6,
+          "height_m": 3.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.095,
+          "seen_as": []
+        },
+        "box": [
+          0.0875,
+          0.8139,
+          0.1234,
+          0.1806
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T08-03-55Z-motion-39.jpg"
+    },
+    {
+      "id": "2026-10-02T07-58-35Z-missed-38",
+      "t": "2026-10-02T07:58:35Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T07-58-35Z-missed-38.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1412,
+          "area_grow": 0.49,
+          "clipped": false,
+          "shade": 0.963,
+          "kept": 0.343,
+          "area_ratio": 0.00057,
+          "duration_s": 7.0,
+          "frames": 8,
+          "width_m": 5.9,
+          "height_m": 4.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.88,
+          "drift_rate": 0.294,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.1453,
+          0.6889,
+          0.0469,
+          0.0611
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T07-58-35Z-missed-38.jpg"
+    },
+    {
+      "id": "2026-10-02T07-58-13Z-motion-37",
+      "t": "2026-10-02T07:58:13Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T07-58-13Z-motion-37.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0905,
+          "area_grow": 0.39,
+          "clipped": false,
+          "shade": 1.033,
+          "kept": 0.317,
+          "area_ratio": 0.00181,
+          "duration_s": 14.8,
+          "frames": 18,
+          "width_m": 3.1,
+          "height_m": 2.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.08,
+          "drift_rate": 0.107,
+          "seen_as": []
+        },
+        "box": [
+          0.2406,
+          0.75,
+          0.0625,
+          0.075
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T07-58-13Z-motion-37.jpg"
+    },
+    {
+      "id": "2026-10-02T07-57-18Z-missed-36",
+      "t": "2026-10-02T07:57:18Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-02T07-57-18Z-missed-36.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 62 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1546,
+          "area_grow": 0.32,
+          "clipped": false,
+          "shade": 1.109,
+          "kept": 0.147,
+          "area_ratio": 0.00015,
+          "duration_s": 81.7,
+          "frames": 74,
+          "width_m": 62.3,
+          "height_m": 42.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.64,
+          "drift_rate": 0.033,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.85,
+          0.1222,
+          0.0484,
+          0.0583
+        ]
+      },
+      "closeup": "data/closeups/2026-10-02T07-57-18Z-missed-36.jpg"
+    },
+    {
       "id": "2026-10-02T07-52-49Z-missed-35",
       "t": "2026-10-02T07:52:49Z",
       "type": "missed",
