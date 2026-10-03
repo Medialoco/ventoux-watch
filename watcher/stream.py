@@ -246,8 +246,10 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     """
     absences = 0
     connu = ""
+    premier = True
     attente = 0.0
-    while not coupe.wait(attente):
+    while premier or not coupe.wait(attente):
+        premier = False
         vu, numero = lit_le_direct(page_du_direct(chaine))
         if racine is not None and numero:
             try:
