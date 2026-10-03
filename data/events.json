@@ -2,6 +2,94 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-03T06-02-34Z-vehicle-11",
+      "t": "2026-10-03T06:02:34Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.925,
+      "thumb": "data/thumbs/2026-10-03T06-02-34Z-vehicle-11.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 5.1,
+        "height_m": 2.5,
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.002,
+          "kept": 0.284,
+          "area_ratio": 0.03309,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 5.1,
+          "height_m": 2.5,
+          "width_named_m": 4.5,
+          "height_named_m": 2.5,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "truck 0.92 sur 87%",
+            "person 0.33 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4497,
+          0.8072,
+          0.2213,
+          0.1928
+        ]
+      },
+      "closeup": "data/closeups/2026-10-03T06-02-34Z-vehicle-11.jpg"
+    },
+    {
+      "id": "2026-10-03T05-59-28Z-missed-10",
+      "t": "2026-10-03T05:59:28Z",
+      "type": "missed",
+      "label": "Décor de l'îlot",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-03T05-59-28Z-missed-10.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur l'îlot central du rond-point, et ça n'a pas bougé. Les pierres et les figures y sont plantées.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.927,
+          "kept": 0.167,
+          "area_ratio": 0.00049,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 0.8,
+          "height_m": 0.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "island",
+        "box": [
+          0.175,
+          0.8972,
+          0.0219,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-10-03T05-59-28Z-missed-10.jpg"
+    },
+    {
       "id": "2026-10-03T05-56-51Z-vehicle-9",
       "t": "2026-10-03T05:56:51Z",
       "type": "vehicle",
