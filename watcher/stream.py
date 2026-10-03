@@ -450,6 +450,100 @@ def dessine(image: np.ndarray, vus: list[dict], quand: float) -> int:
     return poses
 
 
+# LE FLASH DE PRISE
+# -----------------
+# Un rectangle fin au bord de l'image est juste, et il se rate. Il faut déjà
+# regarder là où il se pose pour le voir apparaître, et sur un flux qu'on laisse
+# tourner dans un coin de l'écran personne ne regarde là.
+#
+# Alors on allume tout le reste. La lumière sort de la fenêtre et se répand sur
+# les bandes, forte au bord et faible au loin, et le nom de ce qui passe
+# s'écrit en grand sous l'image. Ça se voit du fond de la pièce.
+#
+# Jamais un pixel de montagne. C'est la règle de tout ce qu'on ajoute ici, et
+# elle vaut doublement pour un effet qui annonce une voiture : la cacher au
+# moment où on la désigne serait se moquer du monde.
+ECLAT_VIE_S = 3.5
+# La montée se compte en centièmes et la chute en secondes. Un éclat qui monte
+# aussi lentement qu'il descend n'est pas un flash, c'est un fondu.
+ECLAT_MONTEE_S = 0.09
+# Jusqu'où la lumière déborde, et ce qu'il en reste au loin. En pixels à 1600
+# de large, pour que la même valeur donne la même image à n'importe quelle
+# définition.
+ECLAT_PORTEE = 170.0
+ECLAT_FOND = 0.26
+_NAPPES: dict[tuple, np.ndarray] = {}
+
+
+def force_eclat(age: float) -> float:
+    """De zéro à un très vite, puis retour à zéro lentement."""
+    if age < 0.0 or age > ECLAT_VIE_S:
+        return 0.0
+    if age < ECLAT_MONTEE_S:
+        return age / ECLAT_MONTEE_S
+    reste = (age - ECLAT_MONTEE_S) / (ECLAT_VIE_S - ECLAT_MONTEE_S)
+    return float((1.0 - reste) ** 2)
+
+
+def _nappe_eclat(forme: tuple[int, int], vue: tuple[int, int, int, int]) -> np.ndarray:
+    """La carte de la lumière : zéro dans la fenêtre, un à son bord, décroissante.
+
+    Calculée une fois par définition d'écran et gardée : c'est une distance au
+    bord de la fenêtre, elle ne change pas d'une image à l'autre.
+    """
+    cle = (forme, vue)
+    nappe = _NAPPES.get(cle)
+    if nappe is not None:
+        return nappe
+    x, y, l, h = vue
+    dehors = np.full(forme, 255, np.uint8)
+    dehors[y:y + h, x:x + l] = 0
+    loin = cv2.distanceTransform(dehors, cv2.DIST_L2, 3)
+    portee = max(1.0, ECLAT_PORTEE * forme[1] / 1600)
+    nappe = ECLAT_FOND + (1.0 - ECLAT_FOND) * np.exp(-loin / portee)
+    nappe[y:y + h, x:x + l] = 0.0
+    _NAPPES[cle] = nappe.astype(np.float32)
+    return _NAPPES[cle]
+
+
+def pose_eclat(toile: np.ndarray, vue: tuple[int, int, int, int], age: float,
+               nom: str, teinte: tuple[int, int, int]) -> None:
+    """Allume tout ce qui entoure l'image, et écrit en grand ce qu'on a vu."""
+    f = force_eclat(age)
+    if f <= 0.0:
+        return
+    x, y, l, h = vue
+    echelle = toile.shape[1] / 1600
+    nappe = _nappe_eclat(toile.shape[:2], vue)
+    melange = (nappe * f)[:, :, None]
+    couleur = np.array(teinte, np.float32)
+    toile[:] = (toile * (1.0 - melange) + couleur * melange).astype(np.uint8)
+
+    # Le liseré, posé juste à l'extérieur : il dessine la fenêtre sans mordre
+    # dessus. C'est lui qui fait que la lumière a l'air de sortir de l'image
+    # plutôt que d'être peinte autour.
+    vif = tuple(int(c + (255 - c) * 0.65 * f) for c in teinte)
+    epais = max(2, int(3 * echelle))
+    cv2.rectangle(toile, (x - epais, y - epais), (x + l + epais - 1, y + h + epais - 1),
+                  vif, epais)
+
+    if not nom:
+        return
+    # Le nom sous l'image, en grand. Il couvre le fil des kilomètres et le haut
+    # du bloc musique pendant trois secondes et demie, et c'est le bon ordre :
+    # ce qui passe sur la route prime sur ce qui passe dans les enceintes.
+    taille = 1.45 * echelle
+    gras = max(2, int(3 * echelle))
+    mot = nom.upper()
+    (large, haut), _ = cv2.getTextSize(mot, cv2.FONT_HERSHEY_DUPLEX, taille, gras)
+    ox = (toile.shape[1] - large) // 2
+    oy = y + h + int(16 * echelle) + haut
+    cv2.putText(toile, mot, (ox, oy), cv2.FONT_HERSHEY_DUPLEX, taille,
+                (0, 0, 0), gras + max(3, int(7 * echelle)), cv2.LINE_AA)
+    cv2.putText(toile, mot, (ox, oy), cv2.FONT_HERSHEY_DUPLEX, taille,
+                BLANC, gras, cv2.LINE_AA)
+
+
 def prise_a_feter(vus: list[dict], quand: float, fetes: set) -> dict | None:
     """La prise qu'on peut fêter à cette image : celle qu'on est en train de montrer.
 
@@ -4431,6 +4525,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     dernier_mouvement = origine
     attrape = origine - 1000.0
     attrape_nom = ""
+    attrape_teinte = ROUGE
     # Les prises déjà fêtées, pour ne pas les fêter à chaque image des quatre
     # secondes où leur rectangle est à l'écran. Purgé à chaque fête.
     fetes: set[float] = set()
@@ -4582,6 +4677,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 if neuve is not None:
                     fetes = {t for t in fetes if t > quand - 3600} | {neuve["t"]}
                     attrape, attrape_nom = quand, neuve["label"]
+                    attrape_teinte = teinte_de(neuve)
                     if musique.felicitations:
                         musique.dis(tirage.choice(musique.felicitations))
                     log.info("Prise à l'écran : %s — %s", neuve["label"],
@@ -4793,6 +4889,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # elle que la licence oblige à nommer.
             pose_bloc_musique(toile, prog, racine / "data" / "musique",
                               musique.pouls(), quand - origine)
+            # Et le flash par-dessus tout le reste, parce qu'une prise prime
+            # sur les encarts. Jamais par-dessus la montagne : il s'arrête au
+            # bord de la fenêtre, où il est le plus vif.
+            pose_eclat(toile, cadrage, quand - attrape, attrape_nom, attrape_teinte)
             if sortie is None:
                 sortie, son = _sortie(cible, largeur, hauteur, cfg["stream_fps"],
                                       cfg["stream_bitrate"], cfg["stream_out_fps"],

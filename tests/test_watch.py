@@ -5208,3 +5208,66 @@ class LesDeuxProgrammesParlentDeLaMemeSeconde(unittest.TestCase):
         self.assertLess(source.index("time.sleep(min(attente, 1.0))"),
                         source.index("sortie.stdin.write(toile.tobytes())"),
                         "l'attente doit precéder l'ecriture, sinon elle ne cadence rien")
+
+
+class LeFlashNeCachePasCeQuIlAnnonce(unittest.TestCase):
+    """Un rectangle fin au bord de l'image est juste, et il se rate.
+
+    Sur un flux qu'on laisse tourner dans un coin de l'ecran, personne ne
+    regarde l'endroit ou il apparait. Alors on allume tout le reste : la
+    lumiere sort de la fenetre, inonde les bandes, et le nom s'ecrit en grand
+    dessous.
+
+    Mais cacher la voiture au moment ou on la designe serait se moquer du
+    monde, et c'est la regle de tout ce qu'on ajoute ici.
+    """
+
+    TOILE = (720, 1280)
+    VUE = (140, 28, 1000, 562)
+
+    def _toile(self):
+        return np.full((*self.TOILE, 3), 70, np.uint8)
+
+    def test_pas_un_pixel_de_montagne_ne_bouge(self):
+        x, y, l, h = self.VUE
+        for age in (0.0, 0.09, 0.4, 1.5, 3.4):
+            toile = self._toile()
+            avant = toile[y:y + h, x:x + l].copy()
+            stream.pose_eclat(toile, self.VUE, age, "Voiture", stream.AMBRE)
+            self.assertTrue(np.array_equal(toile[y:y + h, x:x + l], avant),
+                            f"la fenetre a bouge a {age} s")
+
+    def test_les_bandes_sattirent_la_lumiere(self):
+        toile = self._toile()
+        stream.pose_eclat(toile, self.VUE, 0.09, "Voiture", stream.AMBRE)
+        self.assertFalse(np.array_equal(toile[0:10, 0:10], self._toile()[0:10, 0:10]),
+                         "le coin de la toile aurait du s'allumer")
+
+    def test_il_monte_vite_et_retombe_lentement(self):
+        """Un eclat qui monte aussi lentement qu'il descend est un fondu."""
+        self.assertEqual(stream.force_eclat(-0.1), 0.0)
+        self.assertEqual(stream.force_eclat(stream.ECLAT_VIE_S + 0.1), 0.0)
+        self.assertAlmostEqual(stream.force_eclat(stream.ECLAT_MONTEE_S), 1.0, places=6)
+        plein = stream.force_eclat(stream.ECLAT_MONTEE_S)
+        moitie = stream.force_eclat(stream.ECLAT_VIE_S / 2)
+        self.assertLess(moitie, plein / 2, "a mi-vie il doit en rester moins de la moitie")
+        self.assertGreater(stream.force_eclat(0.02), 0.0)
+
+    def test_il_sefface_tout_seul(self):
+        """Rien ne doit rester a l'ecran passe sa vie."""
+        toile = self._toile()
+        temoin = self._toile()
+        stream.pose_eclat(toile, self.VUE, stream.ECLAT_VIE_S + 0.01,
+                          "Voiture", stream.AMBRE)
+        self.assertTrue(np.array_equal(toile, temoin))
+
+    def test_le_flash_part_avec_le_rectangle_et_pas_avec_la_fiche(self):
+        """Dix-neuf secondes d'ecart si on le lance a l'arrivee de la fiche.
+
+        La veille travaille au bord du direct, le flux montre plus tard : fete
+        et rectangle doivent partager la meme fenetre, sinon le flash salue une
+        route vide et la voiture passe ensuite en silence.
+        """
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("pose_eclat(toile, cadrage, quand - attrape", source)
+        self.assertIn("attrape_teinte = teinte_de(neuve)", source)

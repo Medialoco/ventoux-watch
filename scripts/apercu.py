@@ -45,7 +45,8 @@ def une_vue(nuit: bool) -> np.ndarray:
     return cv2.imread(str(choisi))
 
 
-def compose(largeur: int, nuit: bool, musique: bool = True) -> np.ndarray:
+def compose(largeur: int, nuit: bool, musique: bool = True,
+            eclat: float | None = None, nom: str = "Voiture") -> np.ndarray:
     hauteur = largeur * 9 // 16
     cfg = json.loads((ROOT / "config" / "config.json").read_text(encoding="utf-8"))
     scene = json.loads((ROOT / "config" / "scene.json").read_text(encoding="utf-8"))
@@ -92,6 +93,8 @@ def compose(largeur: int, nuit: bool, musique: bool = True) -> np.ndarray:
         stream.pose_fil(toile,
                         f"{km:,.0f} KM AS THE CROW FLIES".replace(",", " "),
                         cadrage, stream.flottement(3.0, largeur / 1600))
+    if eclat is not None:
+        stream.pose_eclat(toile, cadrage, eclat, nom, stream.AMBRE)
     return toile
 
 
@@ -101,9 +104,13 @@ def main() -> int:
     sujet.add_argument("--nuit", action="store_true")
     sujet.add_argument("--sans-musique", action="store_true")
     sujet.add_argument("--sortie", default="/tmp/apercu.jpg")
+    sujet.add_argument("--eclat", type=float, default=None,
+                       help="l'âge du flash de prise, en secondes")
+    sujet.add_argument("--nom", default="Voiture")
     args = sujet.parse_args()
 
-    image = compose(args.large, args.nuit, not args.sans_musique)
+    image = compose(args.large, args.nuit, not args.sans_musique,
+                    args.eclat, args.nom)
     cv2.imwrite(args.sortie, image, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
     print(f"{args.sortie}  {image.shape[1]}x{image.shape[0]}")
     return 0
