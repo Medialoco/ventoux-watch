@@ -164,7 +164,14 @@ def licence_libre(nom: str, url: str) -> bool:
         return "nc" not in parts and "nd" not in parts
     return any(mot in texte for mot in
                ("cc0", "public domain", "domaine public", "art libre",
-                "licenceartlibre", "artlibre", "lal 1.3"))
+                "licenceartlibre", "artlibre", "lal 1.3",
+                # Creative Commons sert le CC0 sous deux adresses : celle du
+                # texte, « /publicdomain/zero/ », et celle du formulaire qui l'a
+                # posé, « /choose/zero/ ». La seconde ne contient nulle part le
+                # sigle « cc0 » et trois morceaux du domaine public ont été
+                # refusés pour ça — la plus permissive des licences écartée
+                # comme illisible.
+                "publicdomain/zero", "choose/zero"))
 
 
 def sent_le_mix(titre: str, album: str, genres: str) -> bool:
