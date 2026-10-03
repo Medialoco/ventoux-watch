@@ -2031,20 +2031,37 @@ def pose_fil(image: np.ndarray, texte: str, vue: tuple | None = None,
         cv2.polylines(image, [np.int32(points)], False, FIL_GRIS, trait,
                       cv2.LINE_AA)
 
-    # Les deux descentes, du coin de l'encart jusqu'à sa poulie.
-    brin([(bord, haut_g), (bord, bas_g - rayon)])
-    brin([(largeur - 1 - bord, haut_d), (largeur - 1 - bord, bas_d - rayon)])
-    for cx, cy in ((bord, bas_g), (largeur - 1 - bord, bas_d)):
+    # Les deux descentes et les deux poulies.
+    #
+    # Le fil est tangent à la poulie et ne va pas à son centre : il descend du
+    # côté extérieur, fait un quart de tour sur la gorge et repart à
+    # l'horizontale par-dessous. Rejoignant le moyeu, les trois brins se
+    # rencontraient en un point et la poulie n'était plus qu'une rondelle
+    # posée sur un angle droit — ce qui se voyait surtout en bas à droite, où
+    # la traversée arrive de loin et bien à plat.
+    gorge_g, gorge_d = bord - rayon, largeur - 1 - bord + rayon
+    moyeu_g, moyeu_d = bas_g - rayon, bas_d - rayon
+    brin([(gorge_g, haut_g), (gorge_g, moyeu_g)])
+    brin([(gorge_d, haut_d), (gorge_d, moyeu_d)])
+    for cx, cy, depart in ((bord, moyeu_g, 180.0), (largeur - 1 - bord, moyeu_d, 270.0)):
         cv2.circle(image, (cx, cy), rayon, FIL_GRIS, trait, cv2.LINE_AA)
         cv2.circle(image, (cx, cy), max(1, rayon // 3), FIL_GRIS, -1, cv2.LINE_AA)
+        # Le quart de tour du fil sur la gorge : à gauche de neuf heures à six
+        # heures, à droite de six heures à trois heures.
+        cv2.ellipse(image, (cx, cy), (rayon, rayon), 0.0, depart, depart + 90.0,
+                    FIL_GRIS, trait, cv2.LINE_AA)
     # La traversée, avec le ventre que prend tout fil tendu à l'horizontale.
+    # Elle va d'une poulie à l'autre et son dernier point tombe exactement sur
+    # la seconde : calculée par pas réguliers, elle s'arrêtait jusqu'à un pas
+    # avant le bord droit et laissait un trou dans l'angle.
     creux = FIL_CREUX * echelle
-    pas = max(2, (largeur - 2 * bord) // 48)
+    combien = 48
     travee = []
-    for x in range(bord, largeur - bord, pas):
-        part = (x - bord) / max(1, largeur - 2 * bord)
+    for i in range(combien + 1):
+        part = i / combien
+        x = bord + (largeur - 1 - 2 * bord) * part
         droit = bas_g + (bas_d - bas_g) * part
-        travee.append((x, int(droit + creux * math.sin(math.pi * part))))
+        travee.append((int(x), int(droit + creux * math.sin(math.pi * part))))
     brin(travee)
 
     if not texte:
@@ -2761,6 +2778,112 @@ def pose_sous_marin(image: np.ndarray, seconde: float,
     return True
 
 
+# LE RELEVÉ DES BÂTIMENTS
+# ----------------------
+# Une fois toutes les dix-sept minutes quarante et une, pendant quatorze
+# secondes : le temps qu'un trait fin fasse le tour de la bergerie, tienne un
+# instant, et s'efface. Encore un nombre premier, pour la raison habituelle.
+BATIMENT_PERIODE_S = 1061.0
+BATIMENT_RELEVE_S = 14.0
+# Le trait se dessine pendant la première moitié, tient, puis s'efface.
+BATIMENT_TRACE = 0.45
+BATIMENT_EFFACE = 0.80
+BATIMENT_TRAIT = 2.0       # en pixels à 1600 de large : fin, comme demandé
+BATIMENT_VOILE = 0.72
+
+
+def _aretes(bati: dict) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    """Toutes les arêtes du fil de fer, dans l'ordre où on les dessine.
+
+    Le pied d'abord, puis les montants, puis le toit. C'est l'ordre dans
+    lequel on relève un bâtiment et c'est aussi celui qui se lit le mieux :
+    le contour au sol dit où il est posé, les montants le font sortir de
+    terre, le toit le ferme.
+    """
+    pied = [tuple(p) for p in bati.get("foot") or []]
+    toit = [tuple(p) for p in bati.get("roof") or []]
+    if len(pied) < 3 or len(toit) != len(pied):
+        return []
+    aretes = [(pied[i], pied[(i + 1) % len(pied)]) for i in range(len(pied))]
+    aretes += list(zip(pied, toit))
+    aretes += [(toit[i], toit[(i + 1) % len(toit)]) for i in range(len(toit))]
+    return aretes
+
+
+def pose_batiments(image: np.ndarray, seconde: float, batis: list | None,
+                   vue: tuple[int, int, int, int] | None = None,
+                   nuit: bool = False) -> bool:
+    """Le fil de fer d'un bâtiment se dessine sur le paysage, puis s'efface.
+
+    Rien n'est dessiné à la main. OpenStreetMap connaît l'emprise au sol de la
+    bergerie du Mont Serein ; la pose de la caméra et le modèle d'altitude
+    savent où ça tombe dans l'image. On projette l'emprise deux fois, au sol
+    et à la hauteur du toit, et on relie les coins. Sur une autre caméra dont
+    on aura l'OSM local, la même recette rendra ses bâtiments à elle.
+
+    Un bâtiment à la fois et un seul, le plus large à l'écran : relever trois
+    maisons en même temps fait un plan d'architecte, en relever une fait un
+    geste. C'est la bergerie qu'on voit finir sur le bord droit de l'image.
+
+    Le trait ne reste pas. Un fil de fer permanent sur la seule construction
+    du cadre finirait par ressembler à une cible, et rien de ce qu'on ajoute
+    pour le plaisir n'a le droit de ressembler à une mesure. Il se dessine, il
+    tient trois secondes, il s'en va.
+    """
+    if not batis:
+        return False
+    phase_cycle = en_scene("batiment", seconde, nuit)
+    if phase_cycle is None:
+        return False
+    aretes = _aretes(batis[0])
+    if not aretes:
+        return False
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    echelle = largeur / 1600
+
+    avance = phase_cycle / BATIMENT_RELEVE_S
+    # Combien d'arêtes sont déjà tracées, et de combien la suivante est
+    # entamée. Le trait avance arête par arête plutôt qu'au métré de la
+    # longueur totale : un relevé se fait segment par segment, et la petite
+    # hésitation à chaque coin est ce qui le fait ressembler à une main.
+    part = min(1.0, avance / BATIMENT_TRACE)
+    combien = part * len(aretes)
+
+    def au_cadre(point) -> tuple[int, int]:
+        return (int(gauche + point[0] * large_vue),
+                int(cime + point[1] * haute_vue))
+
+    calque = image.copy()
+    trait = max(1, int(BATIMENT_TRAIT * echelle))
+    for i, (a, b) in enumerate(aretes):
+        fait = max(0.0, min(1.0, combien - i))
+        if fait <= 0.0:
+            continue
+        debut, fin = au_cadre(a), au_cadre(b)
+        if fait < 1.0:
+            fin = (int(debut[0] + (fin[0] - debut[0]) * fait),
+                   int(debut[1] + (fin[1] - debut[1]) * fait))
+        # Doublé d'un liseré sombre comme les pantins, mais d'un pixel
+        # seulement : à la largeur des membres d'un pantin, deux pixels de
+        # noir de chaque côté ne se remarquent pas ; sur un trait de deux
+        # pixels ils l'emportent, et le relevé se dessinait en noir.
+        cv2.line(calque, debut, fin, (0, 0, 0), trait + 1, cv2.LINE_AA)
+        cv2.line(calque, debut, fin, BLANC, trait, cv2.LINE_AA)
+
+    # Entrée et sortie en fondu. La sortie est plus longue que l'entrée :
+    # le trait se construit tout seul par le tracé, il n'a pas besoin qu'on
+    # l'amène en plus, alors qu'une disparition nette ressemble à une image
+    # sautée.
+    if avance < BATIMENT_EFFACE:
+        force = BATIMENT_VOILE
+    else:
+        reste = (1.0 - avance) / max(1e-6, 1.0 - BATIMENT_EFFACE)
+        force = BATIMENT_VOILE * max(0.0, reste)
+    cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
+    return True
+
+
 # La descente : une fois toutes les treize minutes trois, et elle dure vingt
 # secondes. Un nombre premier de plus, pour la raison habituelle.
 PISTE_PERIODE_S = 787.0
@@ -2775,6 +2898,7 @@ PLATEAU = (
     ("sous-marin", SOUS_MARIN_PERIODE_S, SOUS_MARIN_TRAVERSEE_S),
     ("piste", PISTE_PERIODE_S, PISTE_DESCENTE_S),
     ("elephant", ELEPHANT_PERIODE_S, ELEPHANT_TENUE_S),
+    ("batiment", BATIMENT_PERIODE_S, BATIMENT_RELEVE_S),
 )
 # Ce que le surfeur fait de large : il louvoie de part et d'autre du tracé,
 # comme on descend vraiment, et jamais tout droit. En parts de sa taille.
@@ -4010,12 +4134,15 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         log.info("Lampadaire non mesuré : il restera celui de la webcam")
     # La piste de ski, projetée hors ligne depuis OpenStreetMap par
     # scripts/build_piste.py. Absente, personne ne descend.
+    # Les bâtiments viennent du même fichier et du même principe, relevés par
+    # scripts/build_batiments.py. Absents, rien ne se dessine.
     try:
-        piste = (json.loads((racine / "config" / "scene.json")
-                            .read_text(encoding="utf-8")).get("piste")
-                 or {}).get("trace")
+        decor = json.loads((racine / "config" / "scene.json")
+                           .read_text(encoding="utf-8"))
+        piste = (decor.get("piste") or {}).get("trace")
+        batiments = decor.get("buildings") or []
     except (OSError, ValueError):
-        piste = None
+        piste, batiments = None, []
     if not piste:
         log.info("Pas de tracé de piste : personne ne descendra")
     # Le seul numéro qu'on ne dessine pas soi-même. Lu une fois, et absent sans
@@ -4332,6 +4459,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # derrière le surfeur. Rien ne reste sur l'image.
                 pose_piste(toile, quand - origine, piste, vue=cadrage,
                            nuit=not fait_jour)
+                # Le relevé non plus n'attend pas de creux : il se pose sur
+                # une construction, pas sur la route, et il s'efface.
+                pose_batiments(toile, quand - origine, batiments, vue=cadrage,
+                               nuit=not fait_jour)
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser, vue=cadrage)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
