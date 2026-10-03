@@ -140,7 +140,24 @@ def main() -> int:
                         help="choisir et montrer sans rien télécharger")
     partie.add_argument("--par-auteur", type=int, default=2,
                         help="au plus N morceaux du même auteur")
+    partie.add_argument("--genres", default="",
+                        help="n'écouter que ces genres, par leur nom "
+                             "(« hardcore,punk ») ; tous par défaut")
+    partie.add_argument("--force", type=float, default=0.0,
+                        help="refuser ce qui pousse moins que ça, pulsation "
+                             "mesurée après téléchargement")
     args = partie.parse_args()
+
+    genres = GENRES
+    if args.genres:
+        voulus = [m.strip().lower() for m in args.genres.split(",") if m.strip()]
+        genres = {i: n for i, n in GENRES.items()
+                  if any(m in n.lower() for m in voulus)}
+        if not genres:
+            print(f"Aucun genre ne contient {voulus} parmi "
+                  f"{sorted(GENRES.values())}", file=sys.stderr)
+            return 1
+        print("Genres : " + ", ".join(genres.values()))
 
     cle = (load_config().get("dogmazic") or {}).get("api_key") or ""
     if not cle:
@@ -149,7 +166,7 @@ def main() -> int:
     site = Dogmazic(cle)
 
     tout: dict[int, dict] = {}
-    for identifiant, nom in GENRES.items():
+    for identifiant, nom in genres.items():
         lot = site.morceaux_du_genre(identifiant)
         for chanson in lot:
             fiche = en_fiche(chanson, nom)
@@ -175,7 +192,12 @@ def main() -> int:
             continue
         par_auteur[auteur] = par_auteur.get(auteur, 0) + 1
         gardes.append(fiche)
-        if len(gardes) >= args.combien:
+        # Une réserve quand on exige une pulsation : elle ne se mesure qu'une
+        # fois le fichier là, donc on en retient plus qu'il n'en faut pour
+        # pouvoir en jeter sans revenir bredouille. Trois fois : sur la
+        # bibliothèque actuelle, un peu plus d'un tiers des morceaux de ces
+        # genres passent la barre.
+        if len(gardes) >= args.combien * (3 if args.force else 1):
             break
 
     print()
@@ -194,15 +216,40 @@ def main() -> int:
 
     dossier.mkdir(parents=True, exist_ok=True)
     pris = []
+    mous = 0
     for fiche in gardes:
+        if len(pris) >= args.combien:
+            break
         chemin = rapatrie(fiche, dossier)
         if chemin is None:
             print(f"  échec : {fiche['auteur']} — {fiche['titre']}")
             continue
+        # Le genre dit ce que l'auteur a coché dans un formulaire, pas ce que
+        # le morceau fait. « Hard Tek - Hardcore » contient des nappes et des
+        # intros de six minutes. La pulsation, elle, se mesure : c'est la
+        # force du grave sur quatre minutes prises au milieu.
+        if args.force > 0:
+            from scripts.pulsation import mesure
+            coup = mesure(chemin)
+            if coup["force"] < args.force:
+                mous += 1
+                print(f"  mou ({coup['force']:.2f}) : "
+                      f"{fiche['auteur']} — {fiche['titre']}")
+                # Seulement ce qu'on vient de télécharger : un morceau qui
+                # était déjà là appartient à la bibliothèque, pas à cette
+                # récolte, et ce n'est pas à elle de le jeter.
+                if fiche.get("telecharge"):
+                    chemin.unlink(missing_ok=True)
+                continue
+            fiche["pulsation"] = coup
         fiche["fichier"] = str(chemin)
         pris.append(fiche)
+        pulse = (f"  force {fiche['pulsation']['force']:.2f}  "
+                 f"{fiche['pulsation']['bpm']:.0f} bpm" if args.force > 0 else "")
         print(f"  {'pris' if fiche.get('telecharge') else 'déjà là'} : "
-              f"{fiche['auteur']} — {fiche['titre']}")
+              f"{fiche['auteur']} — {fiche['titre']}{pulse}")
+    if mous:
+        print(f"{mous} écartés pour une pulsation sous {args.force:.2f}.")
     ecris_credits(dossier, pris)
     minutes = sum(f["duree"] for f in pris) / 60
     print(f"{len(pris)} morceaux, {minutes:.0f} min, crédits à jour.")
