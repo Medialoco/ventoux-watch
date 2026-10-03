@@ -74,11 +74,11 @@ def compose(largeur: int, nuit: bool, musique: bool = True) -> np.ndarray:
             fiches = json.loads(credits.read_text(encoding="utf-8"))
             trio = list(fiches.values())[:3]
             stream.pose_bloc_musique(toile, tuple(trio), credits.parent)
-    feuille = ROOT / "data" / "sport.json"
+    feuille = ROOT / "data" / "agenda.json"
     if feuille.is_file():
-        sport = json.loads(feuille.read_text(encoding="utf-8"))
-        stream.pose_sport(toile, (sport.get("joues") or []) + (sport.get("a_venir") or []),
-                          str(sport.get("ligue") or ""), 0.0)
+        agenda = json.loads(feuille.read_text(encoding="utf-8"))
+        stream.pose_agenda(toile, agenda.get("evenements") or [],
+                           str(agenda.get("credit") or ""), 0.0)
     machine = cfg.get("machine") or {}
     if machine.get("lat") is not None:
         km = stream.a_vol_d_oiseau((float(machine["lat"]), float(machine["lon"])),

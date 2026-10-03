@@ -1467,7 +1467,7 @@ def pose_bloc_musique(image: np.ndarray, trio: tuple[dict | None, dict | None, d
     bloc_l = cote + 3 * marge + colonne
     if la_suite:
         bloc_l += marge * 2 + etiquette + marge + suite_large
-    bas = hauteur - int(SPORT_H * echelle)
+    bas = hauteur - int(AGENDA_H * echelle)
     haut = bas - bloc_h
     fond = image[haut:bas, 0:min(largeur, bloc_l)]
     if fond.size:
@@ -1766,20 +1766,20 @@ def pose_rediffusion(image: np.ndarray, fiche: dict) -> bool:
 # et c'est voulu. Un bandeau rapide se lit par morceaux et oblige à le
 # rattraper ; celui-ci se lit par-dessus l'épaule, sans y penser, et pendant
 # six minutes il ne demande rien à personne.
-SPORT_H = 42
-SPORT_VITESSE = 4.5      # pixels par seconde, à 1600 de large
-SPORT_ECART = 70         # le blanc entre deux rencontres
-SPORT_RELIT_S = 600.0    # on relit le fichier toutes les dix minutes
+AGENDA_H = 42
+AGENDA_VITESSE = 4.5      # pixels par seconde, à 1600 de large
+AGENDA_ECART = 70         # le blanc entre deux tours de bandeau
+AGENDA_RELIT_S = 600.0    # on relit le fichier toutes les dix minutes
 
 
-def pose_sport(image: np.ndarray, matchs: list, ligue: str,
-               seconde: float) -> None:
-    """Les résultats du championnat, en une ligne qui glisse très lentement."""
-    if not matchs:
+def pose_agenda(image: np.ndarray, rendez_vous: list, credit: str,
+                seconde: float) -> None:
+    """Ce qui se passe autour, en une ligne qui glisse très lentement."""
+    if not rendez_vous:
         return
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
-    pas = int(SPORT_H * echelle)
+    pas = int(AGENDA_H * echelle)
     taille = 0.56 * echelle
     base = hauteur - int(13 * echelle)
     bande = image[hauteur - pas:hauteur, :]
@@ -1789,24 +1789,22 @@ def pose_sport(image: np.ndarray, matchs: list, ligue: str,
              cv2.LINE_AA)
 
     morceaux: list[tuple[str, tuple[int, int, int]]] = []
-    if ligue:
-        morceaux.append((f"{ligue}   ", AMBRE))
-    for match in matchs:
-        # L'équipe du coin en cyan : c'est tout l'intérêt d'un résultat
-        # sportif sur une webcam de Provence, savoir comment a joué l'équipe
-        # d'à côté. Les autres en blanc, parce qu'un classement amputé des
-        # adversaires n'est plus un classement.
-        teinte = CYAN if match.get("du_coin") else BLANC
-        milieu = match.get("score") or "vs"
-        morceaux.append((f"{match.get('chez', '')} {milieu} "
-                         f"{match.get('dehors', '')}", teinte))
+    if credit:
+        morceaux.append((f"{credit}   ", AMBRE))
+    for quoi in rendez_vous:
+        # Trois couleurs pour trois natures : quand, quoi, où. L'œil d'un
+        # spectateur qui ne lit pas tout attrape au moins la date et la
+        # commune, qui sont ce qui décide si l'affaire le concerne.
+        morceaux.append((f"{quoi.get('jour', '')}  ", AMBRE))
+        morceaux.append((str(quoi.get("titre", "")), BLANC))
+        morceaux.append((f"  {quoi.get('commune', '')}", CYAN))
         morceaux.append(("   ·   ", (110, 110, 110)))
     larges = [cv2.getTextSize(m, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
               for m, _ in morceaux]
-    tour = sum(larges) + int(SPORT_ECART * echelle)
+    tour = sum(larges) + int(AGENDA_ECART * echelle)
     if tour <= 0:
         return
-    decalage = int(seconde * SPORT_VITESSE * echelle) % tour
+    decalage = int(seconde * AGENDA_VITESSE * echelle) % tour
     for depart in (-decalage, -decalage + tour):
         x = depart
         for (mot, teinte), large in zip(morceaux, larges):
@@ -3227,6 +3225,20 @@ MACHINE_NOIR = 0.10      # le noir de la photo, en part du blanc de l'encart
 MACHINE_BLANC = 0.52     # et son blanc, qui n'est plus celui du bureau
 
 
+def _au_plus_juste(image: np.ndarray, large: int, haut: int) -> np.ndarray:
+    """L'image entière réduite pour tenir dans une boîte, et rien autour.
+
+    Sans bandes, à la différence de _tient_dedans : ici c'est le cadre qui
+    viendra épouser la photo, et un cadre posé sur la boîte plutôt que sur la
+    photo laisse au-dessus d'elle un rectangle vide qu'on lit comme un défaut
+    d'affichage — on voit un encadrement qui n'encadre rien.
+    """
+    facteur = min(large / image.shape[1], haut / image.shape[0])
+    return cv2.resize(image, (max(1, round(image.shape[1] * facteur)),
+                              max(1, round(image.shape[0] * facteur))),
+                      interpolation=cv2.INTER_AREA)
+
+
 def _tient_dedans(image: np.ndarray, large: int, haut: int) -> np.ndarray:
     """L'image entière, centrée dans une boîte, sans être déformée.
 
@@ -3338,7 +3350,7 @@ def pose_machine(image: np.ndarray, etat: dict | None,
         # lignes écrites au-dessus, qui n'a aucune raison d'avoir le rapport
         # de la photo : l'étirer donnait un Raspberry Pi plus long que large,
         # la rogner donnait un gros plan sur le ventilateur.
-        photo = tamise_la_photo(_tient_dedans(vignette, vu_large, vu_haut))
+        photo = tamise_la_photo(_au_plus_juste(vignette, vu_large, vu_haut))
     else:
         bas = sommet + pas * (len(lignes) + bool(lieu)) + marge
     panneau = image[sommet:bas, 0:droite]
@@ -3352,12 +3364,17 @@ def pose_machine(image: np.ndarray, etat: dict | None,
               sommet + pas * (len(lignes) + 1) - int(6 * echelle),
               taille * HORLOGE_LIEU, echelle)
     if photo is not None:
-        coin = image[haut_photo:haut_photo + photo.shape[0], marge:marge + photo.shape[1]]
+        # Centrée dans la place qui reste, et le cadre pris sur elle. La
+        # photo est large et la place est haute : il y a forcément du mou, et
+        # le mou doit se partager au-dessus et au-dessous plutôt que tomber
+        # d'un seul côté.
+        x = marge + (vu_large - photo.shape[1]) // 2
+        y = haut_photo + (vu_haut - photo.shape[0]) // 2
+        coin = image[y:y + photo.shape[0], x:x + photo.shape[1]]
         if coin.shape[:2] == photo.shape[:2]:
             coin[:] = photo
-            cadre_encart(image, (marge - 1, haut_photo - 1),
-                         (marge + photo.shape[1], haut_photo + photo.shape[0]),
-                         echelle)
+            cadre_encart(image, (x - 1, y - 1),
+                         (x + photo.shape[1], y + photo.shape[0]), echelle)
 
 
 BONJOUR_S = 8.0
@@ -3700,7 +3717,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # Le seul numéro qu'on ne dessine pas soi-même. Lu une fois, et absent sans
     # conséquence : il ne passe pas, c'est tout.
     sous_marin = charge_vignette(racine / "assets" / "sous-marin.png")
-    sport, sport_ligue, sport_lu = [], "", 0.0
+    agenda, agenda_credit, agenda_lu = [], "", 0.0
     # La photo de la machine qui fait tout ça. Lue en BGR et non en BGRA :
     # c'est une photo, elle n'a pas de transparence.
     photo_machine = cv2.imread(str(racine / "assets" / "machine.jpg"))
@@ -4032,18 +4049,18 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             pose_machine(toile, machine, photo_machine, ville, remue)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             # Relu de temps en temps et jamais à chaque image : le fichier
-            # est écrit par un autre programme, et un championnat ne change
-            # pas plus d'une fois par jour.
-            if quand - sport_lu > SPORT_RELIT_S:
-                sport_lu = quand
+            # est écrit par un autre programme, et un agenda ne change pas
+            # plus d'une fois par jour.
+            if quand - agenda_lu > AGENDA_RELIT_S:
+                agenda_lu = quand
                 try:
-                    feuille = json.loads((racine / "data" / "sport.json")
+                    feuille = json.loads((racine / "data" / "agenda.json")
                                          .read_text(encoding="utf-8"))
-                    sport = (feuille.get("joues") or []) + (feuille.get("a_venir") or [])
-                    sport_ligue = str(feuille.get("ligue") or "")
+                    agenda = feuille.get("evenements") or []
+                    agenda_credit = str(feuille.get("credit") or "")
                 except (OSError, ValueError):
-                    sport, sport_ligue = [], ""
-            pose_sport(toile, sport, sport_ligue, quand - origine)
+                    agenda, agenda_credit = [], ""
+            pose_agenda(toile, agenda, agenda_credit, quand - origine)
             pose_distance(toile, dit_la_distance,
                           fenetre(vue.shape[:2], largeur, hauteur))
             # La musique en dernier : c'est elle qu'on vient écouter, et c'est
