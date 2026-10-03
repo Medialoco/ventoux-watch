@@ -847,6 +847,7 @@ class Musique:
         self.felicitations = repliques(self.racine / "data" / "voix", "attrape")
         self.brouillards = repliques(self.racine / "data" / "voix", "brouillard")
         self.matins = repliques(self.racine / "data" / "voix", "matin")
+        self.redifferes = repliques(self.racine / "data" / "voix", "rediff")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -1841,7 +1842,15 @@ REDIFF_TENUE_S = 10.0
 # cent : la rediffusion mangeait l'écran et on ne voyait plus le direct, ce qui
 # est le contraire du but — le direct doit rester lisible pendant qu'on montre
 # l'archive, sinon autant diffuser un diaporama.
-REDIFF_PART = 0.42
+# Un tiers de la largeur, et non quarante-deux pour cent. Ce qu'il y a dans la
+# carte est une image en gros blocs gris — c'est la règle de vie privée et elle
+# est bien fondée, vingt centimètres par bloc, on voit une voiture et pas qui
+# conduit. Mais un rectangle gris illisible occupant la moitié de l'écran ne
+# dit pas plus qu'un petit, et il a l'air d'un écran censuré. Plus petit, il
+# redevient ce qu'il est : une carte d'archive posée devant la montagne, qu'on
+# continue de voir.
+REDIFF_PART = 0.32
+REDIFF_ZOOM_MAX = 3
 # Et jamais deux coup sur coup : « pas en abuser » veut dire que la rediffusion
 # est une respiration, pas un programme. Dix minutes de direct entre deux.
 REDIFF_PAUSE_S = 600.0
@@ -2054,7 +2063,16 @@ def pose_rediffusion(image: np.ndarray, fiche: dict,
     vignette = floute(vignette)
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
-    cible_l = int(largeur * REDIFF_PART)
+    # Jamais agrandie plus de trois fois. Les archives sont gardées petites —
+    # un piéton tient dans cent pixels de large — et les étirer jusqu'à
+    # quarante-deux pour cent de l'écran en faisait douze carrés gris hauts
+    # comme la montagne. Ce n'était plus une image, c'était un mur, et c'est ce
+    # mur qui rendait la rediffusion angoissante : on ne reconnaissait même
+    # plus une scène, seulement un visage censuré qui n'en était pas un.
+    #
+    # Le commentaire d'en dessous disait déjà qu'on ne prétend pas retrouver ce
+    # qui n'a pas été gardé. Le plafond est la même phrase, appliquée.
+    cible_l = min(int(largeur * REDIFF_PART), vignette.shape[1] * REDIFF_ZOOM_MAX)
     cible_h = int(vignette.shape[0] * cible_l / vignette.shape[1])
     # Les archives sont enregistrées en petit ; agrandies autant, elles sont
     # douces. « cubic » vaut mieux que « linear » pour ce qu'on en fait, et on
@@ -2082,13 +2100,23 @@ def pose_rediffusion(image: np.ndarray, fiche: dict,
     # direct est caché derrière de toute façon, et une image collée contre le
     # bord droit d'un écran par ailleurs vide a juste l'air mal posée.
     gauche = (largeur - cible_l) // 2
+    # Assombri, pas éteint. À un quart, le direct disparaissait complètement
+    # derrière un rectangle noir et l'écran avait l'air de tomber en panne au
+    # moment où une image de surveillance apparaissait dessus. À 0,45 la
+    # montagne se devine encore autour de la vignette : on comprend que le flux
+    # est toujours là et qu'il montre simplement autre chose.
     fond = image[haut:haut + carte_h, max(0, gauche - marge):min(largeur, gauche + cible_l + marge)]
     if fond.size:
-        fond[:] = (fond * 0.25).astype(np.uint8)
+        fond[:] = (fond * 0.45).astype(np.uint8)
     image[haut:haut + cible_h, gauche:gauche + cible_l] = vignette
     bas = haut + cible_h + marge
+    # En ambre et non en rouge. Le rouge est la couleur de l'alerte, et il ne
+    # sert ailleurs dans ce flux qu'au point qui bat à côté de l'heure. Posé en
+    # grand sous une image floue de surveillance, il disait « incident » là où
+    # il n'y a qu'une archive — c'est exactement ce qui rendait la chose
+    # angoissante. L'ambre est déjà la couleur des encarts.
     cv2.putText(image, "REPLAY · REDIFFUSION", (gauche, bas + pas - int(12 * echelle)),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.72 * echelle, ROUGE, 2, cv2.LINE_AA)
+                cv2.FONT_HERSHEY_SIMPLEX, 0.72 * echelle, AMBRE, 2, cv2.LINE_AA)
     cv2.putText(image, f"{_quand_dit(fiche['t'])}  —  {fiche['label']}",
                 (gauche, bas + pas * 2 - int(14 * echelle)),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.72 * echelle, BLANC, 2, cv2.LINE_AA)
@@ -4397,12 +4425,17 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     rayon = int(7 * echelle)
     x = gauche + marge
     y = sommet + pas - int(6 * echelle)
+    # Le point rouge appartient au direct et à lui seul : partout ailleurs sur
+    # terre il veut dire « ça tourne, là, maintenant ». Fixe et rouge au-dessus
+    # d'une archive, il disait l'inverse de ce qu'il est — et c'est ce qui
+    # faisait de la rediffusion un moment inquiétant plutôt qu'un moment
+    # d'archive. Hors direct il passe à l'ambre, comme le mot qu'il accompagne.
     if direct and int(quand) % 2 == 0:
         cv2.circle(image, (x + rayon, y - rayon), rayon, ROUGE, -1)
     elif not direct:
-        cv2.circle(image, (x + rayon, y - rayon), rayon, ROUGE, -1)
+        cv2.circle(image, (x + rayon, y - rayon), rayon, AMBRE, -1)
     cv2.putText(image, badge, (x + pas, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
-                BLANC if direct else ROUGE, 2, cv2.LINE_AA)
+                BLANC if direct else AMBRE, 2, cv2.LINE_AA)
     for i, ligne in enumerate(lignes):
         cv2.putText(image, ligne, (x, sommet + pas * (i + 2) - int(6 * echelle)),
                     cv2.FONT_HERSHEY_SIMPLEX, taille, BLANC, 2, cv2.LINE_AA)
@@ -4821,6 +4854,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     if choisie is not None:
                         montrees.add(str(choisie["photo"]))
                         log.info("Rediffusion : %s du %s", choisie["label"], choisie["t"])
+                        # Et on l'annonce en chantant. La rediffusion était le
+                        # seul moment du flux qui faisait peur : l'écran
+                        # s'assombrissait d'un coup et une image floue de
+                        # surveillance apparaissait au milieu, sans un mot.
+                        # Ce n'était pas voulu — on voulait ne pas mentir sur
+                        # la date — mais c'est ce que ça faisait. Une voix qui
+                        # chante le mot dit exactement la même chose et ne fait
+                        # peur à personne : une alarme ne chante pas.
+                        if musique.redifferes:
+                            musique.dis(tirage.choice(musique.redifferes))
                     rediff = (choisie, quand) if choisie is not None else None
                     dernier_vu = quand if rediff is None else dernier_vu
             if quand - attrape <= ATTRAPE_S:

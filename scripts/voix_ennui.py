@@ -92,6 +92,16 @@ REPLIQUES = [
     ("brouillard", PLAT, "Fog. Again"),
     ("brouillard", PLAT, "Just fooog"),
     ("brouillard", CLAIRE, "I can see nothing at all"),
+    # La rediffusion était le seul moment du flux qui faisait peur. Tout
+    # s'assombrissait d'un coup, une image floue de surveillance apparaissait
+    # au milieu, et « REPLAY » s'écrivait en rouge — la couleur qu'on garde
+    # pour les alarmes. Rien de tout cela n'était voulu : on voulait seulement
+    # ne pas mentir sur la date. Une voix qui chante le mot dit la même chose
+    # et ne fait peur à personne, parce qu'une alarme ne chante pas.
+    ("rediff", CLAIRE, "Replaaaayyyyyyy"),
+    ("rediff", PLAT, "Replaaaayyyyyyy"),
+    ("rediff", CLAIRE, "Replaaaayyy, again"),
+    ("rediff", PLAT, "And now, a replaaaayyyyy"),
 ]
 
 
@@ -160,7 +170,10 @@ def _nom(voix: str, texte: str) -> str:
 # Le débit, en mots par minute, pour le secours macOS. Une machine qui s'ennuie
 # parle lentement, une machine qui vient de repérer quelque chose claque sa
 # phrase. C'est le seul réglage de jeu que « say » accepte.
-CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180}
+CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180,
+            # Lentement : c'est une voyelle tenue, pas une phrase. « say » ne
+            # chantera pas, mais au moins il traînera.
+            "rediff": 110}
 
 # La consigne de jeu, envoyée avec chaque phrase. C'est ce qu'on ne pouvait pas
 # faire avec les voix système : le ton s'y choisissait en changeant de personne,
@@ -180,6 +193,10 @@ JEU = {
                "not loud, and over in a second.",
     "matin": "Warm and welcoming, a radio host opening the morning. Stretch "
              "the long vowel generously. Unhurried but awake.",
+    "rediff": "Sing it, actually sing — a silly little descending melody on "
+              "the stretched vowel, like a jingle announcing an old clip on a "
+              "late-night show. Light, amused, slightly ridiculous and "
+              "completely harmless. Never dramatic, never ominous.",
 }
 
 # Les voix, par rôle. « ash » est celle dont medialoco-tube se sert pour sa
