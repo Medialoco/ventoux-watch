@@ -4370,6 +4370,31 @@ def _entree(url: str, recul: int) -> subprocess.Popen:
     return subprocess.Popen(commande, stdout=subprocess.PIPE, bufsize=10 ** 8)
 
 
+# Le temps qu'on laisse à l'arrivée avant de la rouvrir une deuxième fois. Une
+# sortie qui lâche tout de suite après avoir été rouverte dit que la chaîne n'a
+# plus de direct du tout : rouvrir en boucle ne le ferait pas revenir, ça ne
+# ferait que marteler l'arrivée de YouTube.
+REPRISE_SORTIE_S = 15.0
+
+
+def _ferme_sortie(sortie: subprocess.Popen | None, son: int | None) -> None:
+    """Rend l'arrivée et le descripteur de son, sans rien laisser derrière."""
+    if son is not None:
+        try:
+            os.close(son)
+        except OSError:
+            pass
+    if sortie is not None and sortie.stdin is not None:
+        try:
+            sortie.stdin.close()
+        except OSError:
+            pass
+        try:
+            sortie.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            sortie.kill()
+
+
 def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
             debit: str, sortie_par_s: int = 25,
             vitesse: str = "veryfast") -> tuple[subprocess.Popen, int]:
@@ -4457,6 +4482,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     sortie = son = None
     verseur: threading.Thread | None = None
     coupe = threading.Event()
+    coupe_son = threading.Event()
+    ouverte_a = 0.0
     chaine = cfg.get("youtube_chaine")
     if chaine and cible.startswith("rtmp"):
         threading.Thread(target=veille_le_direct, args=(chaine, coupe, racine),
@@ -4465,6 +4492,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # L'heure de la première image montrée : le bord du direct, moins ce qu'on
     # a reculé. Tout le reste s'en déduit par le compte des images.
     origine = dernier - (recul - 1) * segment
+    # L'ancre de l'entrée en cours, et le compte d'images depuis son ouverture.
+    # Séparées d'« origine », qui reste le début de l'émission : c'est lui qui
+    # donne sa seconde au lecteur de musique, et il ne doit pas reculer parce
+    # que la webcam a hoqueté.
+    ouvert = origine
+    vues = 0
     # L'écart entre l'heure de la montagne et l'heure d'ici, fixé sur la
     # première image et tenu ensuite. None tant qu'on n'a pas vu cette image.
     cadence: float | None = None
@@ -4605,9 +4638,29 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         while True:
             brut = entree.stdout.read(octets)
             if len(brut) < octets:
-                log.warning("Le flux s'est tari après %d images", images)
-                break
-            quand = origine + images / cfg["stream_fps"]
+                # Le raisonnement d'attends_la_webcam, appliqué en cours de
+                # route. Au démarrage on a appris à patienter plutôt qu'à
+                # quitter, parce qu'un départ rouvre la connexion RTMP et
+                # qu'une arrivée qui clignote fait fermer le direct. Ici on
+                # quittait quand même : la webcam s'est tarie vingt-cinq fois
+                # dans la journée, systemd a tout rouvert chaque fois, et
+                # YouTube a fini par couper. L'entrée se rouvre seule ; la
+                # sortie ne se touche pas.
+                log.warning("Le flux s'est tari après %d images : on rouvre l'entrée", images)
+                entree.kill()
+                _, dernier, segment = attends_la_webcam(cfg["stream_url"])
+                entree = _entree(cfg["stream_url"], recul)
+                assert entree.stdout is not None
+                # La nouvelle entrée repart au bord du direct : l'ancre et le
+                # compte d'images la suivent, et la cadence se refait sur la
+                # première image pour retrouver les mêmes quarante-deux
+                # secondes de retard.
+                ouvert = dernier - (recul - 1) * segment
+                vues = 0
+                cadence = None
+                continue
+            quand = ouvert + vues / cfg["stream_fps"]
+            vues += 1
             images += 1
             if quand - relu >= 2.0:
                 vus = identifications(racine / "data" / "events.json", quand - TENUE_S - 60)
@@ -4898,7 +4951,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                                       cfg["stream_bitrate"], cfg["stream_out_fps"],
                                       cfg["stream_preset"])
                 assert sortie.stdin is not None
-                verseur = threading.Thread(target=_verse_le_son, args=(son, musique, coupe),
+                ouverte_a = _maintenant()
+                # Propre au verseur : couper le son d'une sortie qu'on remplace
+                # ne doit pas couper aussi la veille du direct, qui partage
+                # l'autre événement et qui, elle, vit aussi longtemps que nous.
+                coupe_son = threading.Event()
+                verseur = threading.Thread(target=_verse_le_son, args=(son, musique, coupe_son),
                                            daemon=True)
                 verseur.start()
             # LE RETARD SE TIENT, IL NE SE CONSOMME PAS
@@ -4922,23 +4980,37 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             attente = (quand + cadence) - _maintenant()
             if attente > 0:
                 time.sleep(min(attente, 1.0))
-            sortie.stdin.write(toile.tobytes())
+            try:
+                sortie.stdin.write(toile.tobytes())
+            except BrokenPipeError:
+                # YouTube a raccroché. Mourir ici revient à laisser systemd
+                # tout rouvrir, entrée comprise, et c'est le clignotement qu'on
+                # cherche justement à éviter. On rouvre la seule chose qui a
+                # lâché, et pas plus souvent que REPRISE_SORTIE_S : si la
+                # chaîne n'a plus de direct du tout, rouvrir en boucle ne le
+                # ferait pas revenir, ça ne ferait que marteler l'arrivée.
+                if _maintenant() - ouverte_a < REPRISE_SORTIE_S:
+                    log.error("La sortie a lâché de nouveau : on laisse reposer "
+                              "%.0f s avant de rouvrir", REPRISE_SORTIE_S)
+                    time.sleep(REPRISE_SORTIE_S)
+                log.warning("La sortie a lâché : on la rouvre sans toucher à l'entrée")
+                coupe_son.set()
+                if verseur is not None:
+                    verseur.join(timeout=5)
+                _ferme_sortie(sortie, son)
+                sortie = son = verseur = None
+                cadence = None
+                continue
             if duree_s is not None and _maintenant() - debut >= duree_s:
                 break
     finally:
         entree.kill()
         coupe.set()
+        coupe_son.set()
         musique.arrete()
         if verseur is not None:
             verseur.join(timeout=5)
-        if son is not None:
-            try:
-                os.close(son)
-            except OSError:
-                pass
-        if sortie is not None and sortie.stdin is not None:
-            sortie.stdin.close()
-            sortie.wait(timeout=30)
+        _ferme_sortie(sortie, son)
     log.info("%d images diffusées", images)
 
 

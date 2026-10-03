@@ -1885,6 +1885,44 @@ class FogTests(unittest.TestCase):
         # regroupent toujours, sans quoi chaque voiture ferait trois lignes.
         self.assertIsNotNone(open_passage([voiture], autre))
 
+    def test_une_webcam_qui_hoquette_ne_ferme_pas_le_direct(self):
+        """Rouvrir l'entrée, jamais le processus.
+
+        attends_la_webcam avait appris à patienter au démarrage, parce qu'un
+        départ rouvre la connexion RTMP et qu'une arrivée qui clignote fait
+        fermer le direct. En cours de route on quittait quand même : le 3
+        octobre la webcam s'est tarie vingt-cinq fois, systemd a tout rouvert
+        neuf fois, et YouTube a fermé la diffusion à 13h57.
+        """
+        source = inspect.getsource(stream.diffuse)
+        tari = source.split("Le flux s'est tari")[1].split("quand = ouvert")[0]
+        self.assertIn("entree = _entree(", tari,
+                      "l'entrée doit se rouvrir d'elle-même")
+        self.assertIn("attends_la_webcam", tari,
+                      "et attendre la webcam comme au démarrage")
+        self.assertNotIn("break", tari,
+                         "sortir de la boucle rend la main à systemd, "
+                         "qui rouvrira aussi la sortie")
+
+        # L'ancre suit la nouvelle entrée, mais « origine » ne bouge pas : il
+        # donne sa seconde au lecteur de musique.
+        self.assertIn("ouvert = dernier - (recul - 1) * segment", tari)
+        self.assertIn("vues = 0", tari)
+        self.assertIn("cadence = None", tari)
+        self.assertIn("quand = ouvert + vues / cfg[\"stream_fps\"]", source)
+
+        # Et quand c'est YouTube qui raccroche, on ne rouvre que l'arrivée.
+        self.assertIn("except BrokenPipeError:", source)
+        laché = source.split("except BrokenPipeError:")[1].split("continue")[0]
+        self.assertIn("REPRISE_SORTIE_S", laché,
+                      "rouvrir en boucle ne ferait que marteler l'arrivée")
+        self.assertNotIn("entree", laché,
+                         "l'entrée n'a rien fait de mal, on n'y touche pas")
+        self.assertIn("coupe_son.set()", laché)
+        self.assertNotIn("coupe.set()", laché,
+                         "couper le son d'une sortie remplacée ne doit pas "
+                         "couper la veille du direct")
+
     def test_le_detecteur_recoit_la_boite_de_limage_quon_lui_donne(self):
         """L'image et le rectangle doivent venir du même instant.
 
