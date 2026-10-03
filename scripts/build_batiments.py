@@ -52,9 +52,32 @@ AUTOUR_M = 900
 ETAGE_M = 3.0
 HAUTEUR_PAR_DEFAUT_M = 6.0
 MINI_COINS = 3
-# En part de largeur d'image. En dessous, le fil de fer n'est plus lisible
-# comme un volume et devient une tache de traits.
-MINI_LARGE = 0.035
+# En part de largeur de la fenêtre caméra. En dessous, le fil de fer n'est
+# plus lisible comme un volume et devient une tache de traits.
+MINI_LARGE = 0.022
+
+# LA TOILE EST PLUS LARGE QUE LA CAMÉRA
+# -------------------------------------
+# Le flux pose la webcam dans une fenêtre et laisse des bandes noires autour.
+# La caméra s'arrête au bord de sa fenêtre ; la projection, elle, continue —
+# un bâtiment à vingt degrés sur la gauche tombe à x = -0,15, c'est-à-dire
+# très exactement dans la bande noire de gauche.
+#
+# C'est tout l'intérêt : la bergerie finit hors du champ et on peut dessiner
+# sa fin, et le hameau que la caméra n'attrape pas d'un cheveu peut se relever
+# dans la bande. On ne triche pas pour autant — chaque trait est à la place
+# où ce mur serait si la caméra voyait plus large.
+#
+# Les bornes ne dépendent pas de la définition : la fenêtre garde les
+# proportions de la webcam, donc le rapport entre la bande et la fenêtre est
+# le même à 1280, 1600 et 1920. Mesuré : la toile va de -0,19 à 1,19.
+TOILE_GAUCHE = -0.19
+TOILE_DROITE = 1.19
+# Au-delà, ce n'est plus de la perspective, c'est une division par presque
+# zéro : un mur rasant la caméra ressort à x = -516.
+TOILE_HAUT = -0.10
+TOILE_BAS = 1.30
+PLUS_LARGE_QUE_LA_TOILE = 1.6
 
 
 def demande(lat: float, lon: float) -> list[dict]:
@@ -115,14 +138,18 @@ def candidats(pose, altitudes, elements) -> list[dict]:
             toit.append(list(sommet))
         if len(pied) < MINI_COINS:
             continue
-        dedans = [p for p in pied + toit
-                  if 0.0 <= p[0] <= 1.0 and 0.0 <= p[1] <= 1.0]
-        if len(dedans) < MINI_COINS:
-            continue
         xs = [p[0] for p in pied + toit]
         ys = [p[1] for p in pied + toit]
         large = max(xs) - min(xs)
-        if large < MINI_LARGE:
+        # Il doit mordre sur la toile — fenêtre caméra ou bande noire — et
+        # rester d'une taille de bâtiment. Un mur rasant la caméra ressort
+        # large de cinq cents fois l'image : c'est une division par presque
+        # zéro, pas un bâtiment.
+        if large < MINI_LARGE or large > PLUS_LARGE_QUE_LA_TOILE:
+            continue
+        if max(xs) < TOILE_GAUCHE or min(xs) > TOILE_DROITE:
+            continue
+        if max(ys) < TOILE_HAUT or min(ys) > TOILE_BAS:
             continue
         trouves.append({
             "name": etiquettes.get("name") or etiquettes.get("building") or "(sans nom)",
@@ -131,6 +158,9 @@ def candidats(pose, altitudes, elements) -> list[dict]:
             "foot": [[round(x, 5), round(y, 5)] for x, y in pied],
             "roof": [[round(x, 5), round(y, 5)] for x, y in toit],
             "width": round(large, 4),
+            # De quel côté il est : dedans, ou dans l'une des deux bandes.
+            "side": ("left" if max(xs) < 0.02 else
+                     "right" if min(xs) > 0.98 else "in"),
             # Où il est dans l'image, pour pouvoir choisir « celui de droite »
             # sans rouvrir le fichier à la main.
             "cx": round(sum(xs) / len(xs), 4),

@@ -2842,6 +2842,9 @@ BATIMENT_TRACE = 0.45
 BATIMENT_EFFACE = 0.80
 BATIMENT_TRAIT = 2.0       # en pixels à 1600 de large : fin, comme demandé
 BATIMENT_VOILE = 0.72
+# Combien de bâtiments se relèvent à tour de rôle. Au-delà, on tombe dans des
+# cabanes de quarante pixels dont le fil de fer est une tache de traits.
+BATIMENT_COMBIEN = 5
 
 
 def _aretes(bati: dict) -> list[tuple[tuple[float, float], tuple[float, float]]]:
@@ -2873,9 +2876,19 @@ def pose_batiments(image: np.ndarray, seconde: float, batis: list | None,
     et à la hauteur du toit, et on relie les coins. Sur une autre caméra dont
     on aura l'OSM local, la même recette rendra ses bâtiments à elle.
 
-    Un bâtiment à la fois et un seul, le plus large à l'écran : relever trois
-    maisons en même temps fait un plan d'architecte, en relever une fait un
-    geste. C'est la bergerie qu'on voit finir sur le bord droit de l'image.
+    Un bâtiment à la fois et un seul : relever trois maisons en même temps
+    fait un plan d'architecte, en relever une fait un geste. Mais pas toujours
+    le même — le tour suivant prend le suivant de la liste, et la liste va du
+    plus large au plus étroit.
+
+    ET PAS SEULEMENT DANS LA FENÊTRE CAMÉRA
+    La caméra s'arrête au bord de sa fenêtre ; la projection, elle, continue.
+    La bergerie finit hors du champ, à droite : son fil de fer sort de la
+    fenêtre et se poursuit dans la bande noire, là où il n'y a rien à cacher.
+    Et le hameau que la caméra rate d'un cheveu sur la gauche tombe lui aussi
+    dans sa bande. Rien n'est déplacé pour l'occasion : chaque trait est à
+    l'endroit où ce mur serait si la caméra voyait plus large. C'est la seule
+    chose du flux qui montre ce qui est juste à côté du champ.
 
     Le trait ne reste pas. Un fil de fer permanent sur la seule construction
     du cadre finirait par ressembler à une cible, et rien de ce qu'on ajoute
@@ -2887,7 +2900,11 @@ def pose_batiments(image: np.ndarray, seconde: float, batis: list | None,
     phase_cycle = en_scene("batiment", seconde, nuit)
     if phase_cycle is None:
         return False
-    aretes = _aretes(batis[0])
+    # Lequel : celui dont c'est le tour. Le numéro du tour se relit sur
+    # l'horloge et ne se retient pas, pour que le flux puisse redémarrer sans
+    # recommencer la liste.
+    tour = int(seconde // (BATIMENT_PERIODE_S / (NUIT_PLUS_SOUVENT if nuit else 1.0)))
+    aretes = _aretes(batis[tour % min(len(batis), BATIMENT_COMBIEN)])
     if not aretes:
         return False
     hauteur, largeur = image.shape[:2]
