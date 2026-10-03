@@ -36,7 +36,7 @@ from watcher.review import apply_review, parse_review
 from watcher.opensky import SkyArchive
 from watcher.scene import Scene, ViewLog, moon_spot, read_sky, solar_period, weather_label
 from watcher.store import Store, fold_events, small_jpeg
-from watcher import stream
+from watcher import direct, main, stream
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -5099,3 +5099,112 @@ class RienDeReconnaissableNeSort(unittest.TestCase):
         source = inspect.getsource(stream.pose_rediffusion)
         self.assertIn("floute(vignette)", source)
         self.assertLess(source.index("imread"), source.index("floute(vignette)"))
+
+
+class LesDeuxProgrammesParlentDeLaMemeSeconde(unittest.TestCase):
+    """La veille nomme, la diffusion dessine, et aucune des deux ne voit en direct.
+
+    La veille recoit l'image vingt et une secondes apres la prise de vue —
+    mesure du 3 octobre, trois segments de sept secondes, ce que ffmpeg prend
+    de lui-meme. La diffusion la montre plus tard encore. Tant que chacune
+    datait a sa montre, le rectangle se posait sur une route vide : la voiture
+    etait passee depuis longtemps quand son numero arrivait.
+
+    La seule heure que les deux peuvent retrouver est celle de la prise de vue,
+    et le flux la donne dans chaque segment.
+    """
+
+    PLAYLIST = (
+        "#EXTM3U\n"
+        "#EXT-X-TARGETDURATION:7\n"
+        "#EXTINF:7.000000,\n"
+        "#EXT-X-PROGRAM-DATE-TIME:2026-10-03T05:12:45.000+0000\n"
+        "a.m4s\n"
+        "#EXTINF:7.000000,\n"
+        "#EXT-X-PROGRAM-DATE-TIME:2026-10-03T05:12:52.000+0000\n"
+        "b.m4s\n"
+        "#EXTINF:7.000000,\n"
+        "#EXT-X-PROGRAM-DATE-TIME:2026-10-03T05:12:59.000+0000\n"
+        "c.m4s\n"
+    )
+
+    def test_reculer_de_trois_segments_donne_lheure_du_troisieme_avant_la_fin(self):
+        """Reculer de N, c'est partir du N-ieme avant la fin, et il porte sa date.
+
+        Verifie contre le flux reel le 3 octobre : l'image que ffmpeg livre avec
+        « -live_start_index -7 » est octet pour octet la premiere du septieme
+        segment avant la fin. L'heure n'est donc pas approchee, elle est lue.
+        """
+        with mock.patch.object(direct, "_lire", lambda _: self.PLAYLIST):
+            heure, duree = direct.depart("http://camera/media.m3u8", 3,
+                                         maintenant=lambda: 1791004379.0)
+        self.assertEqual(duree, 7.0)
+        attendu = datetime(2026, 10, 3, 5, 12, 45, tzinfo=timezone.utc).timestamp()
+        self.assertAlmostEqual(heure, attendu, places=3)
+
+    def test_on_ne_part_pas_dans_les_dernieres_secondes_dun_segment(self):
+        """Sinon ffmpeg ne compte pas depuis la meme fin que nous.
+
+        On lui demande de reculer de N segments ; il compte depuis la playlist
+        telle qu'il la voit, lui, une fraction de seconde plus tard. Qu'un
+        segment neuf paraisse entre les deux lectures et tout glisse d'un
+        segment entier — sept secondes, bien plus que ce qu'on corrige.
+        """
+        dernier = datetime(2026, 10, 3, 5, 12, 59, tzinfo=timezone.utc).timestamp()
+        suivant = self.PLAYLIST + (
+            "#EXTINF:7.000000,\n"
+            "#EXT-X-PROGRAM-DATE-TIME:2026-10-03T05:13:06.000+0000\n"
+            "d.m4s\n"
+        )
+        horloge = [dernier + 6.4]        # il reste 0,6 s au segment en cours
+        paru = []
+
+        def lis(_):
+            return suivant if paru else self.PLAYLIST
+
+        def patiente(duree):
+            paru.append(duree)
+            horloge[0] = dernier + 7.6   # le segment suivant a paru, tout jeune
+
+        with mock.patch.object(direct, "_lire", lis):
+            heure, _ = direct.depart("http://camera/media.m3u8", 1,
+                                     maintenant=lambda: horloge[0], patiente=patiente)
+        self.assertTrue(paru, "on a demarre a la seconde ou la playlist basculait")
+        self.assertAlmostEqual(
+            heure,
+            datetime(2026, 10, 3, 5, 13, 6, tzinfo=timezone.utc).timestamp(),
+            places=3, msg="une fois le segment neuf paru, c'est lui le dernier")
+
+    def test_la_veille_date_ses_images_a_lheure_de_la_montagne(self):
+        """Et non a la sienne : entre les deux il y a vingt et une secondes."""
+        source = inspect.getsource(main._frames)
+        self.assertIn("depart + vues", source)
+        self.assertNotIn("time.time()", source)
+
+    def test_rien_de_ce_qui_decrit_limage_nest_date_dici(self):
+        """La piste, le releve, l'evenement : tout porte l'heure de prise de vue.
+
+        « now » reste, mais pour ce qu'il sait vraiment : si ce programme est
+        vivant, et quand il a publie. Lui laisser dater une piste, c'est
+        remettre les vingt et une secondes dans le rectangle.
+        """
+        source = inspect.getsource(main.main)
+        for appel in ("motion.step(frame, prise)",
+                      "_flush_clips(pending, ring, prise",
+                      "ring.append((prise,"):
+            self.assertIn(appel, source, f"{appel} doit porter l'heure de la montagne")
+        self.assertNotIn("motion.step(frame, now)", source)
+
+    def test_la_diffusion_tient_son_retard_au_lieu_de_le_consommer(self):
+        """Partir avec quarante-deux secondes d'avance ne sert a rien si on les avale.
+
+        Mesure du 3 octobre : partie sept segments en arriere, la diffusion
+        etait revenue a dix secondes du direct en une heure, c'est-a-dire
+        devant la veille. La voiture etait nommee apres que son image soit
+        passee, et le rectangle n'avait plus d'image ou se poser.
+        """
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("attente = (quand + cadence) - _maintenant()", source)
+        self.assertLess(source.index("time.sleep(min(attente, 1.0))"),
+                        source.index("sortie.stdin.write(toile.tobytes())"),
+                        "l'attente doit precéder l'ecriture, sinon elle ne cadence rien")

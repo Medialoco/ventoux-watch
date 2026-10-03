@@ -37,6 +37,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from watcher import direct
 from watcher.store import floute
 
 log = logging.getLogger("ventoux.stream")
@@ -89,38 +90,13 @@ VOIES = 2
 OCTETS_PAR_ECHANTILLON = 2
 
 
-def _lire(url: str) -> str:
-    with urllib.request.urlopen(url, timeout=10) as reponse:
-        return reponse.read().decode("utf-8", "replace")
-
-
-def playlist_media(url: str) -> str:
-    """L'adresse de la liste des segments, sous la liste maîtresse."""
-    for ligne in _lire(url).splitlines():
-        ligne = ligne.strip()
-        if ligne and not ligne.startswith("#"):
-            return ligne if ligne.startswith("http") else url.rsplit("/", 1)[0] + "/" + ligne
-    raise RuntimeError("aucune liste de segments dans la playlist maîtresse")
-
-
-def bord_du_direct(media_url: str) -> tuple[float, float]:
-    """L'heure du dernier segment publié, et la durée d'un segment.
-
-    Le HLS porte un « EXT-X-PROGRAM-DATE-TIME » par segment : chaque image sait
-    l'heure qu'il était. C'est ce qui permet de poser le bon rectangle sur la
-    bonne image au lieu de l'approcher.
-    """
-    dates: list[float] = []
-    duree = 7.0
-    for ligne in _lire(media_url).splitlines():
-        ligne = ligne.strip()
-        if ligne.startswith("#EXTINF:"):
-            duree = float(ligne.split(":", 1)[1].rstrip(","))
-        elif ligne.startswith("#EXT-X-PROGRAM-DATE-TIME:"):
-            dates.append(datetime.fromisoformat(ligne.split(":", 1)[1]).timestamp())
-    if not dates:
-        raise RuntimeError("la playlist ne date pas ses segments")
-    return dates[-1], duree
+# La lecture de la playlist appartient à watcher.direct : c'est elle qui donne
+# l'heure de prise de vue, et la veille comme la diffusion doivent lire la même.
+# Reprises sous leur nom ici parce que c'est ici qu'on les attrape pour les
+# essais.
+_lire = direct._lire
+playlist_media = direct.playlist_media
+bord_du_direct = direct.bord_du_direct
 
 
 # Combien de temps on insiste quand la webcam ne répond pas, et à quel rythme.
@@ -4395,6 +4371,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # L'heure de la première image montrée : le bord du direct, moins ce qu'on
     # a reculé. Tout le reste s'en déduit par le compte des images.
     origine = dernier - (recul - 1) * segment
+    # L'écart entre l'heure de la montagne et l'heure d'ici, fixé sur la
+    # première image et tenu ensuite. None tant qu'on n'a pas vu cette image.
+    cadence: float | None = None
     images = 0
     vus: list[dict] = []
     ruban: list[tuple[str, tuple[int, int, int]]] = []
@@ -4822,6 +4801,27 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 verseur = threading.Thread(target=_verse_le_son, args=(son, musique, coupe),
                                            daemon=True)
                 verseur.start()
+            # LE RETARD SE TIENT, IL NE SE CONSOMME PAS
+            # ----------------------------------------
+            # On ouvre le flux sept segments en arrière pour avoir quarante-
+            # deux secondes d'avance sur ce qu'on montre : c'est ce délai qui
+            # laisse à la veille le temps de reconnaître une voiture avant que
+            # son image ne passe à l'écran. Mais rien ne retenait la boucle, et
+            # une machine qui encode plus vite que le temps réel avale cette
+            # avance en une minute. Mesuré ce matin : partie avec quarante-deux
+            # secondes, la diffusion était revenue à dix du direct, c'est-à-dire
+            # devant la veille. La voiture était nommée après coup, le rectangle
+            # arrivait sur une route vide, et le plus souvent il n'arrivait pas.
+            #
+            # Alors on tient la cadence : une image de film par seconde de
+            # montre. Cela ne ralentit rien qui soit déjà lent — quand on est en
+            # retard il n'y a pas d'attente — ça empêche seulement de prendre de
+            # l'avance sur soi-même.
+            if cadence is None:
+                cadence = _maintenant() - quand
+            attente = (quand + cadence) - _maintenant()
+            if attente > 0:
+                time.sleep(min(attente, 1.0))
             sortie.stdin.write(toile.tobytes())
             if duree_s is not None and _maintenant() - debut >= duree_s:
                 break

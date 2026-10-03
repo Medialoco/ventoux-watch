@@ -23,6 +23,7 @@ from watcher import __version__
 from watcher.airports import describe_route
 from watcher.config import load_config
 from watcher.detect import YoloDetector, body_colour, car_lights
+from watcher import direct
 from watcher.drive import DriveUploader
 from watcher.geometry import load_zones
 from watcher.gtfs import GtfsIndex, PARIS
@@ -255,7 +256,13 @@ def main() -> None:
     while True:
         seen = 0
         try:
-            for frame in _frames(cfg["stream_url"]):
+            # Deux heures, et il ne faut jamais les confondre. « now » est
+            # l'heure d'ici : elle dit si ce programme est vivant et quand il a
+            # publié pour la dernière fois. « prise » est l'heure de la
+            # montagne : elle date tout ce qui parle de l'image — la piste, le
+            # relevé, l'événement — parce que c'est la seule que la diffusion
+            # saura retrouver pour poser le rectangle au bon endroit.
+            for frame, prise in _frames(cfg["stream_url"]):
                 seen += 1
                 now = time.time()
                 # A sign of life, once a second. Nothing reads it here: it is
@@ -268,24 +275,24 @@ def main() -> None:
                 _heartbeat.write_text(str(int(now)))
                 ok, encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
                 if ok:
-                    ring.append((now, encoded.tobytes()))
+                    ring.append((prise, encoded.tobytes()))
                 if now - last_gtfs >= cfg["gtfs_refresh_s"]:
                     gtfs.refresh()
                     last_gtfs = now
                 if now - last_view >= 30:
-                    moment = datetime.fromtimestamp(now, timezone.utc)
+                    moment = datetime.fromtimestamp(prise, timezone.utc)
                     current = scene.read(frame, moment)
                     view.note(frame, current.weather, current.temperature_c, moment, current.period)
                     last_view = now
                     if now - last_ridge >= CRETE_PAS_S:
-                        _note_ridge(_crete, current, now)
+                        _note_ridge(_crete, current, prise)
                         last_ridge = now
-                step = motion.step(frame, now)
+                step = motion.step(frame, prise)
                 for track in step.ended:
-                    _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map)
-                for track in _burning(motion.tracks, now, cfg, scene_map, alerted):
-                    _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map)
-                _flush_clips(pending, ring, now, drive, store)
+                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map)
+                for track in _burning(motion.tracks, prise, cfg, scene_map, alerted):
+                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map)
+                _flush_clips(pending, ring, prise, drive, store)
                 due = store.urgent or now - last_publish >= cfg["publish_interval_s"]
                 if (store.dirty or view.dirty) and due:
                     if _published(root):
@@ -862,13 +869,38 @@ def _encode_and_upload(frames: list[bytes], event_id: str, drive: DriveUploader)
         return drive.upload(path, path.name)
 
 
+# De combien de segments on recule pour ouvrir le flux.
+#
+# Trois, qui est ce que ffmpeg prend de lui-même quand on ne lui dit rien :
+# c'est donc exactement là où la veille lisait déjà, et on ne change pas sa
+# réactivité en passant par ici. On l'écrit seulement, au lieu de le subir,
+# parce qu'il faut le savoir pour dater les images.
+RECUL_VEILLE = 3
+
+
 def _frames(url: str):
+    """Les images, et l'heure à laquelle la montagne les a vues.
+
+    Pas l'heure qu'il est ici. Entre les deux il y a vingt et une secondes
+    mesurées — le temps que le flux nous parvienne — et c'est ce décalage qui
+    posait les rectangles sur la route vide : la veille datait à sa montre, la
+    diffusion dessinait à l'heure de la montagne, et les deux croyaient parler
+    de la même seconde.
+
+    Le filtre « fps=1 » rend une image par seconde de film et non par seconde
+    d'horloge : il double quand le réseau bégaie, il saute quand il rattrape.
+    Compter les images, c'est donc compter les secondes de là-bas, et il suffit
+    de savoir à quelle heure commence la première.
+    """
+    depart, _ = direct.depart(direct.playlist_media(url), RECUL_VEILLE)
     command = [
         "ffmpeg", "-hide_banner", "-loglevel", "error",
         "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+        "-live_start_index", str(-RECUL_VEILLE),
         "-i", url, "-an", "-vf", "fps=1",
         "-f", "image2pipe", "-vcodec", "mjpeg", "-",
     ]
+    vues = 0
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
     assert process.stdout is not None
     buffer = b""
@@ -906,7 +938,8 @@ def _frames(url: str):
                 buffer = buffer[end + 2 :]
                 frame = cv2.imdecode(np.frombuffer(payload, dtype=np.uint8), cv2.IMREAD_COLOR)
                 if frame is not None:
-                    yield frame
+                    yield frame, depart + vues
+                    vues += 1
     finally:
         process.kill()
 
