@@ -102,6 +102,18 @@ REPLIQUES = [
     ("rediff", PLAT, "Replaaaayyyyyyy"),
     ("rediff", CLAIRE, "Replaaaayyy, again"),
     ("rediff", PLAT, "And now, a replaaaayyyyy"),
+    # L'ours. Il y a une sculpture de bois debout près du chemin, un ours
+    # grandeur nature, 1,73 m sur la carte de scène. Il regarde passer les
+    # voitures depuis des années sans rien dire. Une fois de temps en temps son
+    # double descend danser sur le rond-point en pleurant, et c'est la seule
+    # chose de tout le flux qui ne soit ni une mesure ni une information.
+    # Deux occasions et non une : il grogne en descendant, et il crie une fois
+    # arrivé. Les trier sur le nom du fichier aurait marché jusqu'au jour où
+    # une réplique contient les deux mots.
+    ("ours", PLAT, "Grrrrrrrrrr"),
+    ("ours", PLAT, "Grrrrooaaarrr"),
+    ("ours_cri", PLAT, "THIS IS MY HOME!"),
+    ("ours_cri", PLAT, "This is my hoooome!"),
 ]
 
 
@@ -173,7 +185,9 @@ def _nom(voix: str, texte: str) -> str:
 CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180,
             # Lentement : c'est une voyelle tenue, pas une phrase. « say » ne
             # chantera pas, mais au moins il traînera.
-            "rediff": 110}
+            "rediff": 110,
+            # Un ours ne parle pas vite.
+            "ours": 100, "ours_cri": 100}
 
 # La consigne de jeu, envoyée avec chaque phrase. C'est ce qu'on ne pouvait pas
 # faire avec les voix système : le ton s'y choisissait en changeant de personne,
@@ -197,6 +211,16 @@ JEU = {
               "the stretched vowel, like a jingle announcing an old clip on a "
               "late-night show. Light, amused, slightly ridiculous and "
               "completely harmless. Never dramatic, never ominous.",
+    "ours_cri": "A big wooden bear bellowing through tears. Sobbing openly, "
+                "voice cracking, broken-hearted and absolutely furious about "
+                "it at the same time. Wail the words out at the top of his "
+                "lungs, like a creature who has lived on this mountain far "
+                "longer than the road has.",
+    "ours": "A big wooden bear, low and gravelly, growling through tears. "
+            "Sobbing openly, voice cracking, broken-hearted and absolutely "
+            "furious about it at the same time. Roll the growl deep in the "
+            "chest, then wail the words out like a creature who has lived on "
+            "this mountain far longer than the road has.",
 }
 
 # Les voix, par rôle. « ash » est celle dont medialoco-tube se sert pour sa

@@ -3697,8 +3697,19 @@ class DiffusionTests(unittest.TestCase):
                 if ou is not None and avant[nom] is None:
                     passages[nom] += 1
                 avant[nom] = ou
+        # Chacun par rapport à sa propre période, et non tous contre le même
+        # nombre. Un seuil fixe disait « vingt passages par jour » et mesurait
+        # donc la fréquence voulue autant que l'exclusion : l'ours, qui ne doit
+        # venir que toutes les deux heures et quart, le faisait échouer en
+        # faisant exactement ce qu'on lui demande. Ce qu'on veut vérifier ici
+        # est que l'exclusion refuse peu de tours, pas que les tours sont
+        # fréquents. Les trois quarts passent.
+        tours = {nom: periode for nom, periode, _ in stream.PLATEAU}
         for nom, combien in passages.items():
-            self.assertGreater(combien, 20, f"{nom} ne passe presque jamais")
+            attendus = 24 * 3600 / tours[nom]
+            self.assertGreater(
+                combien, attendus * 0.75,
+                f"{nom} ne passe que {combien} fois sur {attendus:.0f} tours")
 
         # Les périodes restent premières : c'est ce qui fait que l'exclusion
         # refuse peu de tours plutôt que d'en refuser la moitié.
@@ -4500,6 +4511,76 @@ class DiffusionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as dossier:
             self.assertIsNone(stream.batir_session(Path(dossier)))
         self.assertIsNone(stream.batir_session(Path("/inexistant/nulle/part")))
+
+
+class OursTests(unittest.TestCase):
+    """Le double de l'ours descend danser sur le rond-point, et pas ailleurs."""
+
+    def _scene(self):
+        from watcher.stream import cadre, fenetre
+        camera = np.full((1080, 1920, 3), 120, np.uint8)
+        return cadre(camera, 1920, 1080), fenetre(camera.shape[:2], 1920, 1080)
+
+    def _decoupe(self):
+        decoupe = np.zeros((280, 144, 4), np.uint8)
+        decoupe[:, :, :3] = (30, 40, 200)
+        decoupe[:, :, 3] = 255
+        return decoupe
+
+    def _ou_est_il(self, toile):
+        """Les pixels de la découpe seuls.
+
+        Le rouge ne suffit pas : les lettres jaunes du cri en ont autant, et
+        comme elles traversent tout le cadre elles donnaient un milieu au
+        milieu de l'écran quoi que fasse l'ours.
+        """
+        return (toile[:, :, 2] > 150) & (toile[:, :, 1] < 100)
+
+    def test_hors_de_son_tour_il_ne_vient_pas(self):
+        from watcher.stream import pose_ours, OURS_PERIODE_S, OURS_TENUE_S
+        toile, vue = self._scene()
+        avant = toile.copy()
+        quand = OURS_PERIODE_S + OURS_TENUE_S + 1.0
+        self.assertIsNone(pose_ours(toile, quand, self._decoupe(), vue=vue))
+        self.assertTrue((toile == avant).all(), "il a dessiné hors de son tour")
+
+    def test_pendant_son_tour_il_est_la(self):
+        from watcher.stream import pose_ours, OURS_PERIODE_S
+        toile, vue = self._scene()
+        phase = pose_ours(toile, OURS_PERIODE_S + 0.5, self._decoupe(), vue=vue)
+        self.assertIsNotNone(phase)
+        self.assertTrue(self._ou_est_il(toile).any(), "la découpe n'est pas posée")
+
+    def test_il_danse_dans_la_fenetre_et_pas_dans_les_bandes(self):
+        from watcher.stream import pose_ours, OURS_PERIODE_S, OURS_MARCHE_S
+        toile, (x, y, large, haut) = self._scene()
+        pose_ours(toile, OURS_PERIODE_S + OURS_MARCHE_S + 2.0, self._decoupe(),
+                  vue=(x, y, large, haut))
+        dehors = toile.copy()
+        dehors[y:y + haut, x:x + large] = 0
+        self.assertFalse(self._ou_est_il(dehors).any(),
+                         "le double déborde sur les bandes noires")
+
+    def test_sans_decoupe_il_ne_se_passe_rien(self):
+        from watcher.stream import pose_ours, OURS_PERIODE_S
+        toile, vue = self._scene()
+        avant = toile.copy()
+        self.assertIsNone(pose_ours(toile, OURS_PERIODE_S + 0.5, None, vue=vue))
+        self.assertTrue((toile == avant).all())
+
+    def test_il_arrive_sur_lilot_et_pas_chez_lui(self):
+        """Après la marche, son milieu est au rond-point et plus à sa place."""
+        from watcher.stream import (pose_ours, OURS_PERIODE_S, OURS_MARCHE_S,
+                                    OURS_LA, OURS_ILOT)
+        toile, (x, y, large, haut) = self._scene()
+        pose_ours(toile, OURS_PERIODE_S + OURS_MARCHE_S + 2.0, self._decoupe(),
+                  vue=(x, y, large, haut))
+        colonnes = np.flatnonzero(self._ou_est_il(toile).any(axis=0))
+        milieu = (colonnes[0] + colonnes[-1]) / 2
+        vise = x + OURS_ILOT[0] * large
+        chez_lui = x + OURS_LA[0] * large
+        self.assertLess(abs(milieu - vise), large * 0.04)
+        self.assertGreater(abs(milieu - chez_lui), large * 0.2)
 
 
 class IncrustationDirectTests(unittest.TestCase):

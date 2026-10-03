@@ -848,6 +848,8 @@ class Musique:
         self.brouillards = repliques(self.racine / "data" / "voix", "brouillard")
         self.matins = repliques(self.racine / "data" / "voix", "matin")
         self.redifferes = repliques(self.racine / "data" / "voix", "rediff")
+        self.grognements = repliques(self.racine / "data" / "voix", "ours")
+        self.cris_dours = repliques(self.racine / "data" / "voix", "ours_cri")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -2698,6 +2700,148 @@ def pose_elephant(image: np.ndarray, seconde: float, energie: float,
     return True
 
 
+# L'OURS DU MONT SEREIN
+# ---------------------
+# Il y a une sculpture de bois debout près du chemin, entre le rond-point et la
+# bergerie : un ours grandeur nature, que la carte de scène mesure à 1,73 m de
+# haut et 0,64 m de large, à vingt-cinq mètres de l'objectif. Il regarde passer
+# les voitures depuis des années sans rien dire.
+#
+# Une fois toutes les deux heures et quart, de jour, son double descend danser
+# sur le rond-point en pleurant et crie que c'est chez lui. L'original ne bouge
+# pas : il reste où il est, et c'est ce qui rend la chose lisible — on voit les
+# deux en même temps, donc on comprend que le second est une apparition.
+#
+# De jour seulement, et c'est le seul numéro du plateau qui le soit. Les autres
+# vont plus vite la nuit parce que la nuit il ne se passe rien ; celui-ci est
+# une découpe photographique prise en plein midi, et collée sur une image
+# nocturne elle ne ressemble pas à un ours, elle ressemble à une vignette
+# qu'on aurait oublié d'éteindre.
+OURS_PERIODE_S = 8191.0     # deux heures et quart, et premier comme les autres
+OURS_TENUE_S = 9.0
+OURS_MARCHE_S = 2.6
+# Où il est et où il va, en parts du cadre de la caméra. Ce ne sont pas des
+# réglages : ce sont deux endroits de ce versant, relevés une fois sur un plein
+# cadre de jour. Sur une autre caméra il n'y a pas d'ours, donc rien à régler.
+OURS_LA = (0.5698, 0.8593)
+OURS_ILOT = (0.2448, 0.8472)
+# Sa taille dans l'image d'origine, d'où la découpe a été prise.
+OURS_LARGE = 72 / 1920
+OURS_HAUT = 140 / 1080
+# La carte de scène le donne à vingt-cinq mètres et l'îlot à vingt-sept : un
+# mètre y vaut quarante-trois pixels contre quarante-sept chez lui. Le double
+# n'est donc pas dessiné à une taille choisie, il est dessiné à la taille qu'un
+# ours aurait là-bas.
+OURS_ECHELLE_ILOT = 43.0 / 47.0
+# Puis il enfle. Un ours de 1,73 m dansant à vingt-sept mètres fait quatre-
+# vingt-quinze pixels de haut : exact, et illisible. Celui-ci est un double et
+# non un relevé, et qu'il enfle le dit tout seul — personne ne prendra un ours
+# de quatre mètres pour une mesure.
+OURS_ENFLE = 2.5
+OURS_CRI = "THIS IS MY HOME!!!!!"
+OURS_JAUNE = (40, 230, 250)
+OURS_LARME = (235, 190, 120)
+
+
+def _colle_decoupe(image: np.ndarray, sprite: np.ndarray, cx: float, sol: float,
+                   large: int, haut: int, penche: float, aplat: float) -> tuple | None:
+    """Colle la découpe, son milieu en cx et ses pieds sur sol."""
+    haut = max(2, int(haut * aplat))
+    large = max(2, int(large))
+    petit = cv2.resize(sprite, (large, haut), interpolation=cv2.INTER_AREA)
+    if abs(penche) > 0.01:
+        tourne = cv2.getRotationMatrix2D((large / 2, haut), penche, 1.0)
+        petit = cv2.warpAffine(petit, tourne, (large, haut), flags=cv2.INTER_LINEAR,
+                               borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
+    x, y = int(cx - large / 2), int(sol - haut)
+    x0, y0 = max(0, x), max(0, y)
+    x1, y1 = min(image.shape[1], x + large), min(image.shape[0], y + haut)
+    if x1 <= x0 or y1 <= y0:
+        return None
+    bout = petit[y0 - y:y1 - y, x0 - x:x1 - x]
+    part = bout[:, :, 3:4].astype(np.float32) / 255.0
+    fond = image[y0:y1, x0:x1].astype(np.float32)
+    image[y0:y1, x0:x1] = (bout[:, :, :3] * part + fond * (1 - part)).astype(np.uint8)
+    return x + large / 2, y, large, haut
+
+
+def _larmes(image: np.ndarray, cx: float, cime: float, large: int, haut: int,
+            seconde: float) -> None:
+    """Deux larmes qui partent des yeux et descendent le long du museau.
+
+    Placées sur la hauteur du dessin et non sur sa largeur : la sculpture est
+    deux fois plus haute que large, et une larme calée sur la largeur tombait
+    à côté de la tête comme une bille qu'on aurait lâchée par erreur.
+    """
+    for i, cote in enumerate((-0.14, 0.14)):
+        part = (seconde * 1.25 + i * 0.5) % 1.0
+        x = int(cx + cote * large)
+        y = int(cime + haut * (0.16 + part * 0.42))
+        rayon = max(1, int(haut * 0.022))
+        cv2.circle(image, (x, y), rayon, OURS_LARME, -1, cv2.LINE_AA)
+        cv2.circle(image, (x, y + rayon), max(1, rayon - 1), (250, 225, 190), -1, cv2.LINE_AA)
+
+
+def _il_crie(image: np.ndarray, vue: tuple[int, int, int, int], seconde: float) -> None:
+    """THIS IS MY HOME!!!!! en jaune, et ça vibre."""
+    gauche, cime, large_vue, haute_vue = vue
+    echelle = image.shape[1] / 1600
+    taille = 2.6 * echelle * (1 + 0.04 * math.sin(seconde * 18))
+    trait = max(2, int(7 * echelle))
+    (mot_l, _), _ = cv2.getTextSize(OURS_CRI, cv2.FONT_HERSHEY_DUPLEX, taille, trait)
+    # Dans le ciel, au-dessus de lui. Rien de ce qu'on ajoute pour le plaisir
+    # n'a le droit de couvrir ce que les gens viennent regarder, et ce qu'ils
+    # viennent regarder est la route.
+    x = int(gauche + (large_vue - mot_l) / 2 + math.sin(seconde * 31) * 7 * echelle)
+    y = int(cime + haute_vue * 0.18 + math.cos(seconde * 27) * 7 * echelle)
+    cv2.putText(image, OURS_CRI, (x, y), cv2.FONT_HERSHEY_DUPLEX, taille,
+                (20, 20, 20), trait + 6, cv2.LINE_AA)
+    cv2.putText(image, OURS_CRI, (x, y), cv2.FONT_HERSHEY_DUPLEX, taille,
+                OURS_JAUNE, trait, cv2.LINE_AA)
+
+
+def pose_ours(image: np.ndarray, seconde: float, sprite: np.ndarray | None,
+              vue: tuple[int, int, int, int] | None = None) -> float | None:
+    """Le double de l'ours descend danser sur le rond-point, en pleurant.
+
+    Rend où en est le numéro, pour que l'appelant sache quand le faire grogner
+    et quand le faire crier — c'est le seul endroit qui connaît son horloge, et
+    la voix ne doit partir qu'une fois, pas à chaque image.
+    """
+    if sprite is None or sprite.size == 0:
+        return None
+    phase = en_scene("ours", seconde)
+    if phase is None:
+        return None
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    marche = min(1.0, phase / OURS_MARCHE_S)
+    douce = marche * marche * (3 - 2 * marche)   # il part et s'arrête en douceur
+    ux = OURS_LA[0] + (OURS_ILOT[0] - OURS_LA[0]) * douce
+    uy = OURS_LA[1] + (OURS_ILOT[1] - OURS_LA[1]) * douce
+    echelle = 1.0 + (OURS_ECHELLE_ILOT - 1.0) * douce
+    if marche < 1.0:
+        saut, penche, aplat = abs(math.sin(phase * 7)) * 5, math.sin(phase * 7) * 4, 1.0
+    else:
+        depuis = phase - OURS_MARCHE_S
+        echelle *= 1.0 + (OURS_ENFLE - 1.0) * min(1.0, depuis / 1.1)
+        saut = abs(math.sin(depuis * 6)) * 16 * echelle
+        penche = math.sin(depuis * 3) * 11
+        aplat = 1.0 - 0.1 * abs(math.sin(depuis * 6))
+    large = OURS_LARGE * large_vue * echelle
+    haut = OURS_HAUT * haute_vue * echelle
+    if large < 6 or haut < 12:
+        return None
+    boite = _colle_decoupe(image, sprite, gauche + ux * large_vue,
+                           cime + uy * haute_vue - saut, int(large), int(haut),
+                           penche, aplat)
+    if boite is not None and marche >= 1.0:
+        _, sommet, son_large, son_haut = boite
+        _larmes(image, boite[0], sommet, son_large, son_haut, phase)
+        _il_crie(image, (gauche, cime, large_vue, haute_vue), phase)
+    return phase
+
+
 # Ce qui raccourcit l'attente quand il ne se passe rien.
 #
 # Le jour, la route suffit : des voitures, des cars, des marcheurs, et un
@@ -3133,6 +3277,9 @@ PLATEAU = (
     ("piste", PISTE_PERIODE_S, PISTE_DESCENTE_S),
     ("elephant", ELEPHANT_PERIODE_S, ELEPHANT_TENUE_S),
     ("batiment", BATIMENT_PERIODE_S, BATIMENT_RELEVE_S),
+    # L'ours en dernier parce qu'il écrit en travers du ciel, et qu'il vaut
+    # mieux qu'il cède le passage plutôt que de crier par-dessus le tapis.
+    ("ours", OURS_PERIODE_S, OURS_TENUE_S),
 )
 # Ce que le surfeur fait de large : il louvoie de part et d'autre du tracé,
 # comme on descend vraiment, et jamais tout droit. En parts de sa taille.
@@ -4637,6 +4784,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # Le seul numéro qu'on ne dessine pas soi-même. Lu une fois, et absent sans
     # conséquence : il ne passe pas, c'est tout.
     sous_marin = charge_vignette(racine / "assets" / "sous-marin.png")
+    # L'autre numéro qu'on ne dessine pas : la sculpture, découpée sur un plein
+    # cadre de jour. Et de quoi se souvenir qu'il a déjà grogné à ce tour-ci,
+    # puisque la voix ne doit partir qu'une fois et que la boucle repasse ici
+    # chaque image.
+    ours = charge_vignette(racine / "data" / "ours.png")
+    ours_dit: tuple[int, int] = (-1, -1)
     agenda, agenda_credit, agenda_lu = [], "", 0.0
     # La photo de la machine qui fait tout ça. Lue en BGR et non en BGRA :
     # c'est une photo, elle n'a pas de transparence.
@@ -4989,6 +5142,23 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # une construction, pas sur la route, et il s'efface.
                 pose_batiments(toile, quand - origine, batiments, vue=cadrage,
                                nuit=not fait_jour)
+                # L'ours, de jour seulement : la découpe a été prise en plein
+                # midi et collée sur une image nocturne elle ne ressemble pas à
+                # un ours, elle ressemble à une vignette oubliée allumée.
+                if fait_jour:
+                    ou_en_est = pose_ours(toile, quand - origine, ours, vue=cadrage)
+                    if ou_en_est is not None:
+                        # Une fois, pas à chaque image : il grogne en
+                        # descendant, et il crie une fois arrivé sur l'îlot.
+                        tour = int((quand - origine) // OURS_PERIODE_S)
+                        if ours_dit != (tour, 0) and ou_en_est < OURS_MARCHE_S:
+                            ours_dit = (tour, 0)
+                            if musique.grognements:
+                                musique.dis(tirage.choice(musique.grognements))
+                        elif ours_dit == (tour, 0) and ou_en_est >= OURS_MARCHE_S + 1.1:
+                            ours_dit = (tour, 1)
+                            if musique.cris_dours:
+                                musique.dis(tirage.choice(musique.cris_dours))
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser, vue=cadrage)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
