@@ -1885,6 +1885,71 @@ class FogTests(unittest.TestCase):
         # regroupent toujours, sans quoi chaque voiture ferait trois lignes.
         self.assertIsNotNone(open_passage([voiture], autre))
 
+    def test_un_camion_ne_rejoint_pas_le_passage_dune_voiture(self):
+        """Le regroupement doit regarder la taille, pas seulement l'heure.
+
+        Le 3 octobre une bétaillère de vingt mètres a traversé le rond-point
+        dans la même minute qu'une voiture rouge. Le modèle l'a nommée
+        « Camion » trois fois. Elle a pourtant rejoint le passage de la voiture,
+        perdu au classement des confiances, et disparu : aucune fiche, et donc
+        aucun carré ni aucun flash à l'écran.
+        """
+        from watcher.store import open_passage
+
+        def vu(ident, heure, mot, metres):
+            return {"id": ident, "t": f"2026-10-03T06:39:{heure:02d}Z", "type": "vehicle",
+                    "label": mot, "zone": "roundabout", "confidence": 0.9,
+                    "detail": {"measured": {"width_m": metres}}}
+
+        voiture = vu("a", 40, "Voiture rouge", 4.1)
+        camion = vu("b", 41, "Camion", 11.2)
+        self.assertIsNone(open_passage([voiture], camion),
+                          "un poids lourd n'est pas une autre vue de la voiture")
+        self.assertIsNone(open_passage([camion], voiture),
+                          "et la voiture n'est pas une autre vue du poids lourd")
+
+        # Deux vues du même gabarit continuent de n'en faire qu'une, sans quoi
+        # chaque véhicule laisserait une traînée de fiches.
+        self.assertIsNotNone(open_passage([voiture], vu("c", 50, "Voiture", 4.6)))
+        self.assertIsNotNone(open_passage([camion], vu("d", 50, "Camion", 13.0)))
+
+        # Le passage est cherché parmi les gabarits compatibles, et non pas
+        # écarté sur le plus récent : une voiture glissée entre deux vues du
+        # camion couperait sinon le camion en deux.
+        entre_deux = [camion, vu("c", 50, "Voiture", 4.6)]
+        hote = open_passage(entre_deux, vu("e", 55, "Camion", 12.4))
+        self.assertIsNotNone(hote, "le camion doit retrouver le camion")
+        self.assertEqual(hote["id"], "b")
+
+        # Une lecture sans largeur mesurée ne se voit refuser aucun passage :
+        # on ne sait pas, et l'ignorance ne doit pas fabriquer de doublons.
+        sans_mesure = {"id": "f", "t": "2026-10-03T06:39:45Z", "type": "vehicle",
+                       "label": "Véhicule", "zone": "roundabout", "detail": {}}
+        self.assertIsNotNone(open_passage([voiture], sans_mesure))
+
+    def test_une_lecture_ecartee_ne_repeint_pas_la_fiche_qui_la_bat(self):
+        """Le gros plan doit suivre le mot, sinon la fiche se contredit.
+
+        La vignette était protégée, le gros plan ne l'était pas : la bétaillère
+        battue par la voiture rouge a laissé sa photo sur la fiche de la
+        voiture, qui montrait donc un camion sous le mot « Voiture rouge ».
+        """
+        import tempfile
+
+        import numpy as np
+        from watcher.store import Store
+
+        with tempfile.TemporaryDirectory() as dossier:
+            depot = Store(Path(dossier))
+            image = np.full((200, 300, 3), 120, np.uint8)
+            fiche = {"id": "x", "detail": {}}
+
+            depot.reading_kept = True
+            self.assertTrue(depot.keep_closeup(fiche, image, (40, 40, 90, 60)))
+            depot.reading_kept = False
+            self.assertEqual(depot.keep_closeup(fiche, image, (40, 40, 90, 60)), "",
+                             "une lecture refusée n'écrit pas de gros plan")
+
     def test_a_miss_is_asked_what_was_missed(self):
         """La question change de sens sur une tache écartée.
 

@@ -15,6 +15,12 @@ THUMB_WIDTH = 480
 THUMB_QUALITY = 52
 PASSAGE_ZONES = {"road", "roundabout", "other"}
 RANK = {"fire": 6, "bus": 4, "vehicle": 3, "car": 3, "person": 3, "plane": 2, "motion": 1, "habit": 0}
+# Above this, on the ground, the thing is longer than a car. It is the one
+# physical line the watch draws between a light vehicle and a heavy one, and it
+# is drawn once here: naming reads it to choose between Voiture and Camion, the
+# main loop to decide a timetable is worth opening, and open_passage to refuse
+# to call a lorry and a car the same crossing.
+BUS_LENGTH_M = 5.5
 # What is published the moment it is seen, instead of waiting for the group.
 # The whole point of the watch is the start of a fire; a quarter of an hour of
 # delay would give away the only thing it is for.
@@ -108,6 +114,12 @@ class Store:
         qu'il fallait.
         """
         if frame is None or not bbox or not any(bbox):
+            return ""
+        # Une lecture qu'on vient d'écarter ne repeint pas la fiche qui l'a
+        # battue. La vignette était déjà protégée, le gros plan ne l'était pas :
+        # une bétaillère refusée au profit d'une voiture rouge laissait sa photo
+        # sur la fiche de la voiture, qui montrait donc un camion.
+        if not self.reading_kept:
             return ""
         height, width = frame.shape[:2]
         x, y, w, h = bbox
@@ -258,6 +270,31 @@ def event_time(event: dict) -> datetime:
     return datetime.strptime(event["t"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
 
 
+def ground_width(event: dict) -> float | None:
+    """La largeur au sol de cette lecture, quand elle a pu être mesurée."""
+    measured = (event.get("detail") or {}).get("measured") or {}
+    try:
+        width = float(measured.get("width_m"))
+    except (TypeError, ValueError):
+        return None
+    return width if width > 0 else None
+
+
+def same_build(new: dict, old: dict) -> bool:
+    """Une voiture ne devient pas un semi-remorque en dix secondes.
+
+    Le regroupement ne regardait que la zone et l'heure. Une bétaillère de vingt
+    mètres passant dans la même minute qu'une voiture rouge rejoignait donc son
+    passage, perdait au classement des confiances, et disparaissait entièrement :
+    pas de fiche, pas de carré à l'écran, alors que le modèle l'avait nommée.
+    La largeur au sol les sépare, à la ligne qui sert déjà à dire Camion.
+    """
+    one, other = ground_width(new), ground_width(old)
+    if one is None or other is None:
+        return True
+    return (one >= BUS_LENGTH_M) == (other >= BUS_LENGTH_M)
+
+
 def open_passage(events: list[dict], event: dict) -> dict | None:
     # Une tache écartée ne rejoint aucun passage. Ce n'est pas la lecture d'une
     # chose, c'est le constat qu'on n'a rien su lire : groupée avec la voiture
@@ -272,6 +309,11 @@ def open_passage(events: list[dict], event: dict) -> dict | None:
         if item.get("type") == "missed":
             continue
         if passage_group(item.get("zone", "")) != group:
+            continue
+        # Cherché parmi les gabarits compatibles, et non pas simplement écarté
+        # sur le plus récent : sinon une voiture glissée entre deux vues du
+        # camion couperait le camion en deux passages.
+        if not same_build(event, item):
             continue
         if newest is None or event_time(item) > event_time(newest):
             newest = item

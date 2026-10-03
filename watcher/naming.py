@@ -6,6 +6,7 @@ import math
 from dataclasses import dataclass, field, replace
 
 from watcher.scenemap import DRIVABLE, FLAMMABLE
+from watcher.store import BUS_LENGTH_M
 
 NOT_DRIVABLE = {"forest", "meadow", "building", "sky", "scree", "island", "playground", "pool"}
 
@@ -299,7 +300,7 @@ def _vehicle_word(obs: Observation, vehicle: Detection | None, bus: Detection | 
     if vehicle is None and bus is None:
         return "Véhicule"
     heavy = (vehicle is not None and vehicle.cls == "truck") or bus is not None
-    if heavy and obs.width_m > 5.5:
+    if heavy and obs.width_m > BUS_LENGTH_M:
         return "Camion"
     return "Voiture"
 

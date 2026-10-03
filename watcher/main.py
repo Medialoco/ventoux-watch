@@ -35,12 +35,9 @@ from watcher.opensky import SkyArchive
 from watcher.publish import publish
 from watcher.scene import SceneReader, ViewLog, solar_azimuth, solar_elevation
 from watcher.scenemap import FLAMMABLE, SceneMap
-from watcher.store import Store
+from watcher.store import BUS_LENGTH_M, Store
 
 log = logging.getLogger("ventoux")
-# Above this, on the ground, the thing is longer than a car and the timetable
-# is worth opening.
-BUS_LENGTH_M = 5.5
 CLIP_TYPES = {"plane", "bus", "fire"}
 # How long the stream may say nothing before it is opened again. It gives an
 # image a second, so half a minute of silence is already a stream that has
