@@ -1325,20 +1325,44 @@ class FogTests(unittest.TestCase):
         return Observation(**base)
 
     def test_a_haloed_lamp_in_fog_is_not_a_fire(self):
-        called = decide(self._lamp(fogged=True, hazy=True))
+        called = decide(self._lamp(fogged=True, blind=True, hazy=True))
         self.assertEqual(called.type, "motion")
         self.assertEqual(called.reason, "fog")
 
     def test_fog_silences_every_name_and_not_only_fire(self):
         # Between 22:24 and 01:14 the fog published eight fires, two walkers
-        # and two vehicles. All twelve were wrong.
+        # and two vehicles. All twelve were wrong. The crest was not merely
+        # soft on that night, it was gone: every reading sat in single figures.
         walker = Observation(zone="roundabout", period="night", surface="road", travel=0.02,
-                             box_w=0.070, detections=[Detection("person", 0.62)], fogged=True, hazy=True)
+                             box_w=0.070, detections=[Detection("person", 0.62)],
+                             fogged=True, blind=True, hazy=True)
         van = Observation(zone="road", period="night", surface="road", travel=0.05, width_m=4.2,
-                          box_w=0.133, detections=[Detection("car", 0.71)], fogged=True, hazy=True)
+                          box_w=0.133, detections=[Detection("car", 0.71)],
+                          fogged=True, blind=True, hazy=True)
         for seen in (walker, van):
             self.assertEqual(decide(seen).reason, "fog")
             self.assertEqual(decide(seen).type, "motion")
+
+    def test_a_soft_crest_at_night_names_what_moves_but_never_a_fire(self):
+        """The band between GONE_RIDGE and FOG_RIDGE, where the bird was lost.
+
+        The crest reads under FOG_RIDGE for 74% of the night, so treating that
+        whole range as fog made the watcher mute three nights out of four and
+        killed 23 139 of the 66 492 candidates ever filed — more than any
+        other cause of refusal. Below GONE_RIDGE the crest is genuinely
+        absent and nothing is named; between the two it is soft but present,
+        and something crossing in front of it can be read.
+
+        Fire is the exception, and it is not a detail: eight of the twelve
+        false events of 26 September were fires, and the beam of the chalet
+        lamp in suspended water does not need the crest to be gone.
+        """
+        doux = dict(fogged=True, blind=False, hazy=True, period="night")
+        van = Observation(zone="road", surface="road", travel=0.05, width_m=4.2,
+                          box_w=0.133, detections=[Detection("car", 0.71)], **doux)
+        self.assertNotEqual(decide(van).reason, "fog")
+        self.assertEqual(decide(van).type, "vehicle")
+        self.assertNotEqual(decide(self._lamp(**doux)).type, "fire")
 
     def test_a_car_in_daylight_fog_is_still_named(self):
         # 27 September, 06:11 to 06:13 UTC: the crest read 3.9 and a car went
@@ -3010,6 +3034,47 @@ class DiffusionTests(unittest.TestCase):
         self.assertFalse(stream.pose_tapis(vide, stream.TAPIS_TRAVERSEE_S + 1, 0.9, ciel))
         self.assertFalse(vide.any())
 
+    def test_the_thread_and_the_bubbles_never_touch_the_camera_window(self):
+        """Nothing decorative may be drawn over what people came to watch.
+
+        The thread hangs below the window and the bubbles rise in the black
+        bands beside it. Both are drawn from the full canvas size, so the
+        arithmetic that keeps them out of the window is easy to get wrong and
+        the mistake would show up as scratches across the mountain.
+        """
+        from watcher import stream
+        vue = (220, 46, 1159, 651)
+        for pose in (lambda t: stream.pose_fil(t, "9 610 KM", vue, 3.0),
+                     lambda t: stream.pose_bulles(t, 7.0, vue)):
+            toile = np.zeros((900, 1600, 3), np.uint8)
+            pose(toile)
+            gauche, cime, large, haute = vue
+            fenetre = toile[cime:cime + haute, gauche:gauche + large]
+            self.assertEqual(int(fenetre.sum()), 0)
+            self.assertGreater(int(toile.sum()), 0)
+
+    def test_the_two_panels_float_slowly_and_in_opposition(self):
+        """The old shake was tied to the beat; this one never stops.
+
+        A movement that only happens for eighteen seconds every five minutes
+        reads as a glitch. This one is small enough to be invisible frame by
+        frame and continuous enough to be a movement, and the two panels take
+        opposite signs so the thread between them stays a single cable.
+        """
+        from watcher import stream
+        valeurs = [stream.flottement(t / 4.0) for t in range(400)]
+        self.assertLessEqual(max(abs(v) for v in valeurs),
+                             stream.ENCART_FLOTTE_PX + 1e-6)
+        self.assertGreater(max(valeurs), stream.ENCART_FLOTTE_PX * 0.5)
+        self.assertLess(min(valeurs), -stream.ENCART_FLOTTE_PX * 0.5)
+        # Jamais un saut : d'une image à l'autre le déplacement doit rester
+        # bien en dessous du pixel, sinon on le voit sauter.
+        pas = [abs(b - a) for a, b in zip(valeurs, valeurs[1:])]
+        self.assertLess(max(pas), 0.6)
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("remue = flottement(quand - origine", source)
+        self.assertIn("remue=-remue", source)
+
     def test_the_elephant_fills_the_picture_and_yields_to_the_watch(self):
         """Quatre secondes de gros plan, centré, et plus rien d'autre à l'écran.
 
@@ -3509,9 +3574,10 @@ class DiffusionTests(unittest.TestCase):
         # L'interruption est dans la m\u00eame condition que la fin du compte \u00e0
         # rebours : s\u00e9par\u00e9es, l'une pourrait un jour \u00eatre d\u00e9plac\u00e9e sans l'autre.
         self.assertIn("if survol is not None and (poses or", source)
-        self.assertIn("or quand - survol > VUE3D_TENUE_S)", source)
-        self.assertLess(stream.VUE3D_TENUE_S, stream.VUE3D_PAUSE_S / 4,
-                        "le survol doit rester une respiration, pas un programme")
+        self.assertIn("or quand - survol > tenue)", source)
+        for duree in (stream.VUE3D_TENUE_S, stream.VUE3D_NUIT_S):
+            self.assertLess(duree, stream.VUE3D_PAUSE_S / 4,
+                            "le survol doit rester une respiration, pas un programme")
 
     def test_a_verdict_survives_the_watch_writing_its_counters(self):
         """Quatre-vingt-quatorze verdicts effac\u00e9s quelques secondes apr\u00e8s coup.
@@ -4394,17 +4460,50 @@ class CeQuOnMontreEtQuandOnLeMontre(unittest.TestCase):
         # Et une date illisible repart telle quelle plutôt que de disparaître.
         self.assertEqual(stream._quand_dit("pas une date"), "pas une date")
 
-    def test_the_flyover_waits_for_daylight(self):
-        """Un rendu en plein soleil posé sur une nuit noire ne montre rien.
+    def test_the_flyover_turns_by_day_and_stands_still_by_night(self):
+        """Le mouvement est ce qui trahit un rendu posé sur une nuit noire.
 
-        La condition est le soleil au-dessus de l'horizon, pas une plage
-        horaire : la même règle vaudra sur la caméra suivante.
+        Un survol qui tourne à trois heures du matin ne montre pas le relief :
+        il montre qu'on a collé une autre vidéo, parce que le rendu est en
+        plein soleil et que le mouvement le souligne. Un plan fixe ne fait pas
+        cette promesse — il se donne pour une maquette, ce qu'il est, et c'est
+        la nuit qu'on en a le plus besoin puisque c'est la nuit qu'on ne voit
+        rien.
+
+        La condition reste le soleil au-dessus de l'horizon et non une heure :
+        c'est elle qui décide lequel des deux on joue, et elle vaudra telle
+        quelle sur la caméra suivante.
         """
         source = inspect.getsource(stream.diffuse)
         self.assertIn("fait_jour = (hauteur_soleil or -90.0) > HORIZON", source)
-        # Le survol s'arrête quand le jour tombe, et ne part pas sans lui.
-        self.assertIn("or not fait_jour", source)
-        self.assertIn("and fait_jour and quand - dernier_vu > CREUX_S", source)
+        # On retient le régime du départ, et on s'arrête s'il change : un
+        # survol commencé au crépuscule ne doit pas continuer à tourner dans
+        # le noir, ni une image fixe rester en place au lever du jour.
+        self.assertIn("survol, survol_de_jour = quand, fait_jour", source)
+        self.assertIn("fait_jour != survol_de_jour", source)
+        # Et la nuit dure moins longtemps : un plan fixe se lit en entier dès
+        # les premières secondes, là où un survol apprend quelque chose
+        # jusqu'au bout.
+        self.assertLess(stream.VUE3D_NUIT_S, stream.VUE3D_TENUE_S)
+
+    def test_the_still_flyover_shows_the_far_end_of_the_trip(self):
+        """Les deux bouts du survol sont le point de vue de la caméra.
+
+        Le survol est un aller-retour, donc sa première et sa dernière image
+        montrent ce que la caméra montre déjà. En arrêter une là n'apprendrait
+        rien la nuit. Le milieu du trajet est le point le plus éloigné, celui
+        d'où l'on voit le versant de côté.
+        """
+        images = [Path(f"{n:04d}.jpg") for n in range(1, 61)]
+        vus = []
+        with mock.patch.object(stream.cv2, "imread",
+                               side_effect=lambda c: vus.append(c)):
+            for _ in range(3):
+                stream.vue3d_arretee(images)
+        # Toujours la même, et celle du milieu.
+        self.assertEqual(len(set(vus)), 1)
+        self.assertEqual(vus[0], str(images[len(images) // 2]))
+        self.assertIsNone(stream.vue3d_arretee([]))
 
 
 class LeMotSeLitOuNeSertARien(unittest.TestCase):

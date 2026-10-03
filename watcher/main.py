@@ -359,6 +359,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         fire_rise=float(cfg["fire"].get("rise") or 0.008),
         period=current.period,
         fogged=current.fogged,
+        blind=current.blind,
         hazy=current.hazy,
         weather=current.weather,
         surface=surface,

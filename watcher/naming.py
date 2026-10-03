@@ -148,6 +148,8 @@ class Observation:
     # How far one can see, read off the picture and not off the forecast, which
     # describes the valley a thousand metres below. See watcher/scene.py.
     fogged: bool = False
+    # Softened is not the same as absent. See watcher/scene.py.
+    blind: bool = False
     hazy: bool = False
     weather: str = ""
     surface: str = ""
@@ -590,7 +592,7 @@ def decide(obs: Observation) -> Decision:
     # restent écartés : leurs boîtes cautionnaient zéro pour cent de ce qui
     # avait bougé, et une lecture aussi petite ne répond de rien.
     travelled = obs.duration_s * obs.cross_rate >= obs.min_travel
-    if obs.fogged and obs.period != "day":
+    if obs.blind and obs.period != "day":
         # Once the crest of the Ventoux is out of the picture, the watcher
         # stops naming. Not only fires: on the night of 26 September the fog
         # published twelve events between 22:24 and 01:14 and every one of them
@@ -614,6 +616,26 @@ def decide(obs: Observation) -> Decision:
         # same morning they came out 11 m to 22 m across — and those are turned
         # away by ground size, where they belong. Glow is turned away a few
         # lines below by `hazy`, which is true here too.
+        #
+        # What this no longer covers is the band between GONE_RIDGE and
+        # FOG_RIDGE, where the crest is soft but still in the picture. It used
+        # to, and the cost was not small: the crest reads under FOG_RIDGE for
+        # 74% of the night, so the watcher was mute three nights out of four,
+        # and 23 139 of the 66 492 candidates ever filed — more than any other
+        # cause of refusal — died on this line. A bird crossed in front of the
+        # camera on 3 October at a reading of 29 and was tracked, measured and
+        # filed without ever being named.
+        #
+        # The threshold had to move because it was never one measure: the
+        # crest is read off the contrast of its own edge, and at night there
+        # is less contrast whatever the air is doing. The daytime median is
+        # 127 and no daytime reading in the archive falls under 40; the night
+        # median is 26. A single number cannot mean the same thing on both
+        # sides of that.
+        #
+        # All twelve false events of 26 September sit well below GONE_RIDGE,
+        # so none of them comes back. Fire does not come back either — it is
+        # refused for the whole soft band a few lines down.
         return _motion(
             obs,
             "fog",
@@ -622,7 +644,17 @@ def decide(obs: Observation) -> Decision:
             "Il rend visibles les faisceaux des lampes et les bancs qui dérivent, "
             "et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
         )
-    if (obs.surface in FLAMMABLE or (obs.zone == "slope" and not obs.surface)) and obs.duration_s >= obs.fire_sustain_s:
+    # No fire is named at night while the crest is soft, even now that the
+    # watcher has started naming again down there. The two risks are not
+    # symmetrical: a bird that goes unnamed is a miss, a fire announced where
+    # there is none is the kind of mistake that ends the usefulness of the
+    # whole watch. Eight of the twelve false events of 26 September were
+    # fires, and what produced them — the beam of the chalet lamp in suspended
+    # water — does not need the crest to be gone, only the air to be thick.
+    aveugle_au_feu = obs.fogged and obs.period != "day"
+    if (not aveugle_au_feu
+            and (obs.surface in FLAMMABLE or (obs.zone == "slope" and not obs.surface))
+            and obs.duration_s >= obs.fire_sustain_s):
         flame = obs.warm_ratio >= obs.fire_warm
         # A fire that has just caught shows as a pale plume climbing out of the
         # trees, minutes before any flame is large enough to colour a pixel.

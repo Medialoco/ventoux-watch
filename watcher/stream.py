@@ -1082,6 +1082,11 @@ def morceaux_soleil(heures: dict, quand: float,
 # une voiture qui passe serait un écran de veille posé sur l'évènement.
 VUE3D_TENUE_S = 120.0
 VUE3D_PAUSE_S = 1800.0
+# La nuit, le survol s'arrête sur une image. Une minute et demie, contre deux
+# minutes le jour : un plan fixe se lit en entier dès les premières secondes
+# et n'a plus rien à donner ensuite, là où un survol qui tourne apprend quelque
+# chose du relief jusqu'au bout.
+VUE3D_NUIT_S = 90.0
 
 
 def charge_vue3d(racine: Path) -> list[Path]:
@@ -1112,6 +1117,20 @@ def image_vue3d(images: list[Path], age: float, par_seconde: float) -> np.ndarra
         return None
     rang = int(max(0.0, age) * par_seconde) % len(images)
     return cv2.imread(str(images[rang]))
+
+
+def vue3d_arretee(images: list[Path]) -> np.ndarray | None:
+    """Une seule image du survol, toujours la même.
+
+    Celle du milieu. Le survol est un aller-retour : ses deux extrémités sont
+    le même point de vue de départ, qui est justement celui de la caméra —
+    montrer ça la nuit ne dirait rien de plus que la nuit elle-même. Le milieu
+    du trajet est le point le plus éloigné, celui d'où l'on voit le versant de
+    côté et où le relief se lit.
+    """
+    if not images:
+        return None
+    return cv2.imread(str(images[len(images) // 2]))
 
 
 def morceaux_ruban(lieu: str, ciel: dict,
@@ -1703,7 +1722,8 @@ def _quand_dit(iso: str) -> str:
     return f"{ici.day} {MOIS[ici.month - 1]} {ici.year} · {ici:%H:%M}"
 
 
-def pose_rediffusion(image: np.ndarray, fiche: dict) -> bool:
+def pose_rediffusion(image: np.ndarray, fiche: dict,
+                     vue: tuple[int, int, int, int] | None = None) -> bool:
     """Une ancienne prise en grand, au milieu, datée.
 
     Datée surtout : sans la date, un spectateur croit voir la route en ce
@@ -1734,10 +1754,16 @@ def pose_rediffusion(image: np.ndarray, fiche: dict) -> bool:
     # La légende sous l'image et non au-dessus : le haut de l'écran appartient
     # au ruban et à la météo, et deux textes superposés ne se lisent pas.
     pied = pas * 2
-    carte_h = min(hauteur - 2 * marge, cible_h + pied + marge)
+    # Centrée sur la fenêtre caméra et non sur l'image entière. Centrée sur
+    # l'image, la carte descendait dans le crédit musical et mordait le
+    # bandeau du bas : le bas de l'écran est occupé, et le milieu de l'écran
+    # n'est pas le milieu de ce qu'on regarde. La fenêtre caméra est la scène,
+    # et une rediffusion remplace le direct — elle se met donc à sa place.
+    _, cime, _, haute_vue = vue or (0, 0, largeur, hauteur)
+    carte_h = min(haute_vue, cible_h + pied + marge)
     cible_h = min(cible_h, carte_h - pied - marge)
     vignette = vignette[:cible_h]
-    haut = (hauteur - carte_h) // 2
+    haut = cime + (haute_vue - carte_h) // 2
     # Au milieu. Elle était à droite pour laisser voir le rond-point et la
     # route, qui occupent la gauche de l'image — un bon raisonnement pour une
     # vignette posée par-dessus le direct. Mais elle n'est pas posée par-
@@ -1840,21 +1866,81 @@ def a_vol_d_oiseau(un: tuple[float, float], deux: tuple[float, float]) -> float:
     return 2 * rayon * math.asin(math.sqrt(min(1.0, a)))
 
 
-def pose_distance(image: np.ndarray, texte: str, vue: tuple | None = None) -> None:
-    """Une ligne sobre sous l'image : d'où l'on regarde, et de combien loin."""
-    if not texte:
-        return
+FIL_MARGE = 10           # à quelle distance du bord descendent les brins
+FIL_SOUS_VUE = 28        # de combien le fil passe sous la fenêtre caméra
+FIL_POULIE = 7           # le rayon d'une poulie
+FIL_GRIS = (120, 118, 112)
+FIL_CREUX = 6            # le ventre du brin tendu, au repos
+
+
+def pose_fil(image: np.ndarray, texte: str, vue: tuple | None = None,
+             remue: float = 0.0) -> None:
+    """Un fil qui relie les deux encarts, et les kilomètres posés dessus.
+
+    Les deux encarts disaient déjà la même chose chacun de son côté — ici la
+    machine, là ce qu'elle regarde — mais rien ne les reliait, et deux choses
+    qui se répondent sans se toucher ne se répondent qu'à moitié. Le fil part
+    du coin inférieur de chacun, descend le long du bord dans la bande noire,
+    passe sur une poulie et traverse sous la fenêtre caméra.
+
+    Il ne mord jamais sur l'image. C'est pour ça qu'il longe le bord au lieu
+    de tendre tout droit d'un encart à l'autre : une corde tendue entre les
+    deux coins traverserait la montagne en diagonale.
+
+    Et il travaille. Quand les encarts flottent ils flottent en opposition,
+    comme deux charges d'un même câble : celui qui descend fait monter
+    l'autre, et le fil s'incline d'autant. C'est le seul endroit où le
+    balancement se lit comme une mécanique plutôt que comme un défaut.
+    """
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
     gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
-    taille = DISTANCE_TAILLE * echelle
-    long_px = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, taille, 1)[0][0]
-    x = gauche + large_vue - long_px
-    y = cime + haute_vue + int(22 * echelle)
+    y = cime + haute_vue + int(FIL_SOUS_VUE * echelle)
     if y >= hauteur:
         return
-    cv2.putText(image, texte, (x, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
-                DISTANCE_GRIS, max(1, int(echelle)), cv2.LINE_AA)
+    bord = int(FIL_MARGE * echelle)
+    trait = max(1, int(1.5 * echelle))
+    rayon = max(3, int(FIL_POULIE * echelle))
+    haut_g = int(ENCART_BAS * echelle) + int(remue)
+    haut_d = int(ENCART_BAS * echelle) - int(remue)
+    bas_g, bas_d = y + int(remue), y - int(remue)
+
+    def brin(points: list[tuple[int, int]]) -> None:
+        cv2.polylines(image, [np.int32(points)], False, FIL_GRIS, trait,
+                      cv2.LINE_AA)
+
+    # Les deux descentes, du coin de l'encart jusqu'à sa poulie.
+    brin([(bord, haut_g), (bord, bas_g - rayon)])
+    brin([(largeur - 1 - bord, haut_d), (largeur - 1 - bord, bas_d - rayon)])
+    for cx, cy in ((bord, bas_g), (largeur - 1 - bord, bas_d)):
+        cv2.circle(image, (cx, cy), rayon, FIL_GRIS, trait, cv2.LINE_AA)
+        cv2.circle(image, (cx, cy), max(1, rayon // 3), FIL_GRIS, -1, cv2.LINE_AA)
+    # La traversée, avec le ventre que prend tout fil tendu à l'horizontale.
+    creux = FIL_CREUX * echelle
+    pas = max(2, (largeur - 2 * bord) // 48)
+    travee = []
+    for x in range(bord, largeur - bord, pas):
+        part = (x - bord) / max(1, largeur - 2 * bord)
+        droit = bas_g + (bas_d - bas_g) * part
+        travee.append((x, int(droit + creux * math.sin(math.pi * part))))
+    brin(travee)
+
+    if not texte:
+        return
+    # Le texte posé sur le fil, au milieu, et le fil effacé dessous : une
+    # ligne qui traverse les lettres les rend illisibles, et un texte qui
+    # flotte à côté du fil n'y est pas posé.
+    taille = DISTANCE_TAILLE * echelle
+    (long_px, haut_px), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX,
+                                            taille, 1)
+    x = (largeur - long_px) // 2
+    base = y - int(9 * echelle)
+    creuse = image[max(0, base - haut_px - int(6 * echelle)):base + int(10 * echelle),
+                   max(0, x - int(10 * echelle)):min(largeur, x + long_px + int(10 * echelle))]
+    if creuse.size:
+        creuse[:] = (creuse * 0.25).astype(np.uint8)
+    cv2.putText(image, texte, (x, base), cv2.FONT_HERSHEY_SIMPLEX, taille,
+                BLANC, max(1, int(echelle)), cv2.LINE_AA)
 
 
 ATTRAPE_S = 1.6
@@ -2202,9 +2288,13 @@ ELEPHANT_LARGE = ELEPHANT_GAUCHE + ELEPHANT_DROITE
 ELEPHANT_HAUT = ELEPHANT_HAUTEUR_SOL + ELEPHANT_BAS
 
 
+ELEPHANT_OUVRE_H = 1      # il entre en scène à une heure du matin
+ELEPHANT_FERME_H = 6      # et s'en va à six
+
+
 def pose_elephant(image: np.ndarray, seconde: float, energie: float,
                   vue: tuple[int, int, int, int] | None = None,
-                  nuit: bool = False) -> bool:
+                  nuit: bool = False, heure: int | None = None) -> bool:
     """Un éléphanteau rose vient danser en gros plan, de temps en temps.
 
     Plein cadre et centré, quelques secondes. Il dansait d'abord sur le
@@ -2222,6 +2312,13 @@ def pose_elephant(image: np.ndarray, seconde: float, energie: float,
     quelque chose.
     """
     if energie < DANSE_ARRET:
+        return False
+    # Entre une heure et six heures du matin, à la montagne. C'est la seule
+    # chose du flux qui cache la route, et c'est aussi la plus difficile à
+    # expliquer : un éléphant rose plein cadre à seize heures ressemble à une
+    # panne, le même à trois heures du matin ressemble à ce qu'il est. Et
+    # personne n'attend rien de cette route entre une heure et six heures.
+    if heure is not None and not ELEPHANT_OUVRE_H <= heure < ELEPHANT_FERME_H:
         return False
     phase_cycle = en_scene("elephant", seconde, nuit)
     if phase_cycle is None:
@@ -3435,6 +3532,92 @@ ENCART_LARGE = 170
 # celui de droite sortirait de l'écran, et un tableau de bord qui empiète sur
 # ce qu'on surveille est une mauvaise plaisanterie. Ils vont en sens inverse
 # l'un de l'autre — ensemble ils auraient l'air de glisser, pas de danser.
+# Le flottement des deux encarts. Lent et continu, et non plus un sursaut sur
+# le beat : un encart qui tressaute quelques secondes toutes les cinq minutes
+# ressemble à un défaut d'affichage, et c'est bien ce que ça avait l'air
+# d'être. Onze secondes de période et trois pixels d'amplitude, c'est à peine
+# perceptible image par image — on ne voit pas que ça bouge, on voit que ce
+# n'est pas figé, ce qui n'est pas la même chose.
+#
+# La seconde harmonique, plus lente et plus faible, casse le métronome : deux
+# sinusoïdes de périodes incommensurables ne repassent jamais ensemble au même
+# endroit, et le mouvement n'a plus de mesure audible.
+ENCART_FLOTTE_S = 11.0
+ENCART_FLOTTE_LENT_S = 17.0
+ENCART_FLOTTE_PX = 3.0
+
+
+def flottement(seconde: float, echelle: float = 1.0) -> float:
+    """De combien de pixels l'encart de gauche est descendu, à cet instant."""
+    return ((math.sin(2 * math.pi * seconde / ENCART_FLOTTE_S)
+             + 0.4 * math.sin(2 * math.pi * seconde / ENCART_FLOTTE_LENT_S))
+            / 1.4 * ENCART_FLOTTE_PX * echelle)
+
+
+BULLE_COLONNE = 8        # de bulles par côté, comme sur l'aquarium du site
+BULLE_MIN = 5.0          # son rayon au départ, à la largeur de référence
+BULLE_MAX = 10.0
+BULLE_LENTE_S = 8.9      # la plus lente met neuf secondes à monter
+BULLE_VIVE_S = 4.9
+BULLE_DERIVE = 11.0      # de combien elle part de côté en montant
+BULLE_VOILE = 0.55       # son opacité la plus forte
+BULLE_TRAIT = (236, 240, 218)
+
+
+def pose_bulles(image: np.ndarray, seconde: float,
+                vue: tuple | None = None) -> None:
+    """Deux colonnes de bulles qui montent dans les bandes noires.
+
+    Celles de l'aquarium du site de la maison, reprises à l'identique : un
+    anneau clair, presque pas de remplissage, qui grossit en montant parce que
+    la pression tombe, et qui s'efface en haut comme en bas. Elles dérivent un
+    peu de côté — une bulle qui monte tout droit est une bulle dessinée.
+
+    Dans les bandes noires seulement, et dessinées avant tout le reste : les
+    encarts, les pantins et la fenêtre caméra passent par-dessus. Rien de ce
+    qu'on vient regarder n'est derrière une bulle.
+    """
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    gauche, _, large_vue, _ = vue or (0, 0, largeur, hauteur)
+    bandes = [(0, gauche), (gauche + large_vue, largeur)]
+    calque = image.copy()
+    for cote, (x0, x1) in enumerate(bandes):
+        large = x1 - x0
+        if large < 20 * echelle:
+            continue
+        for n in range(BULLE_COLONNE):
+            # Des nombres tirés une fois pour toutes à partir du rang : deux
+            # bulles ne doivent jamais partager période ni départ, sinon la
+            # colonne bat la mesure.
+            graine = n * 2.399963 + cote * 1.047198
+            duree = BULLE_LENTE_S + (BULLE_VIVE_S - BULLE_LENTE_S) * (
+                0.5 + 0.5 * math.sin(graine * 3.1))
+            part = ((seconde / duree) + 0.5 + 0.5 * math.sin(graine * 5.7)) % 1.0
+            rayon = (BULLE_MIN + (BULLE_MAX - BULLE_MIN)
+                     * (0.5 + 0.5 * math.sin(graine * 2.3))) * echelle
+            # Elle grossit d'un tiers en montant, comme sur le site.
+            rayon *= 0.72 + 0.46 * part
+            depart = x0 + large * (0.18 + 0.64 * (0.5 + 0.5 * math.sin(graine)))
+            x = int(depart + BULLE_DERIVE * echelle * part)
+            y = int(hauteur - part * hauteur)
+            if not (x0 <= x - rayon and x + rayon <= x1):
+                continue
+            # Nulle en bas, pleine au premier dixième, éteinte en haut : une
+            # bulle qui apparaît et disparaît net se voit apparaître.
+            voile = BULLE_VOILE * min(1.0, part / 0.12) * (1.0 - part) ** 0.6
+            if voile <= 0.02 or rayon < 1.5:
+                continue
+            teinte = tuple(int(c * voile) for c in BULLE_TRAIT)
+            cv2.circle(calque, (x, y), int(rayon), teinte,
+                       max(1, int(1.6 * echelle)), cv2.LINE_AA)
+            cv2.circle(calque, (int(x - rayon * 0.3), int(y - rayon * 0.35)),
+                       max(1, int(rayon * 0.16)),
+                       tuple(int(c * voile * 0.9) for c in BULLE_TRAIT),
+                       -1, cv2.LINE_AA)
+    cv2.max(image, calque, image)
+
+
 ENCART_DANSE_PERIODE_S = 311.0
 ENCART_DANSE_S = 18.0
 ENCART_DANSE_PX = 7.0
@@ -3774,8 +3957,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     if ou_camera and machine_ou.get("lat") is not None:
         km = a_vol_d_oiseau((float(machine_ou["lat"]), float(machine_ou["lon"])),
                             ou_camera)
-        dit_la_distance = (f"{ville.upper()} - {commune.upper()}  "
-                           f"{km:,.0f} KM AS THE CROW FLIES".replace(",", " "))
+        # Les kilomètres seuls. Les deux noms y étaient aussi, du temps où
+        # cette ligne était seule dans un coin ; maintenant chaque encart
+        # nomme son lieu et le fil les relie, et répéter « Los Angeles » sous
+        # l'encart qui dit déjà « Los Angeles » n'apprend rien à personne.
+        dit_la_distance = f"{km:,.0f} KM AS THE CROW FLIES".replace(",", " ")
     # Loin en arrière, comme « bonjour » : à zéro, le flux s'ouvrirait sur
     # « BOOOOORING » pendant trois secondes, ce qui est une drôle de carte de
     # visite pour une veille qui vient de démarrer.
@@ -3794,6 +3980,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     historique_lu = 0.0
     images3d = charge_vue3d(racine)
     survol: float | None = None
+    survol_de_jour = True
     fin_survol = origine
     if images3d:
         log.info("Survol du terrain : %d images", len(images3d))
@@ -3938,28 +4125,44 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # semaines à ne pas rater une voiture, ce n'est pas pour la cacher
             # derrière un décor calculé. Deux minutes interrompues valent mieux
             # que deux minutes complètes par-dessus l'évènement.
-            # Et de jour seulement : le survol est un rendu en plein soleil, et
-            # le poser au milieu d'une nuit noire ne montre pas le relief, ça
-            # montre qu'on a collé une autre vidéo. Le soleil au-dessus de
-            # l'horizon est la condition physique, pas une plage horaire.
+            # De jour il tourne, de nuit il s'arrête sur une image.
+            #
+            # Un survol qui tourne au milieu d'une nuit noire ne montre pas le
+            # relief : il montre qu'on a collé une autre vidéo, parce que le
+            # rendu est en plein soleil et que le mouvement le souligne. Un
+            # plan fixe ne fait pas cette promesse-là. Il se donne pour ce
+            # qu'il est — une maquette du terrain — et c'est la nuit qu'on en
+            # a le plus besoin, puisque c'est la nuit qu'on ne voit rien.
+            #
+            # Le soleil au-dessus de l'horizon reste la condition physique :
+            # c'est elle qui décide lequel des deux on joue, pas une heure.
             fait_jour = (hauteur_soleil or -90.0) > HORIZON
-            if survol is not None and (poses or not fait_jour
-                                       or quand - survol > VUE3D_TENUE_S):
+            tenue = VUE3D_TENUE_S if survol_de_jour else VUE3D_NUIT_S
+            if survol is not None and (poses or fait_jour != survol_de_jour
+                                       or quand - survol > tenue):
                 fin_survol, survol = quand, None
             elif (survol is None and images3d and rediff is None and a_poser is None
-                  and fait_jour and quand - dernier_vu > CREUX_S
+                  and quand - dernier_vu > CREUX_S
                   and quand - fin_survol > VUE3D_PAUSE_S):
-                survol = quand
-                log.info("Survol du terrain pendant %.0f s", VUE3D_TENUE_S)
+                survol, survol_de_jour = quand, fait_jour
+                log.info("Survol du terrain (%s) pendant %.0f s",
+                         "animé" if fait_jour else "arrêté",
+                         VUE3D_TENUE_S if fait_jour else VUE3D_NUIT_S)
             vue = image
             if survol is not None:
-                dessus = image_vue3d(images3d, quand - survol, cfg["stream_fps"])
+                dessus = (image_vue3d(images3d, quand - survol, cfg["stream_fps"])
+                          if survol_de_jour else vue3d_arretee(images3d))
                 if dessus is None:
                     fin_survol, survol = quand, None
                 else:
                     vue = dessus
             # La webcam dans sa fenêtre, les encarts dans les bandes autour.
             toile = cadre(vue, largeur, hauteur)
+            cadrage = fenetre(vue.shape[:2], largeur, hauteur)
+            # Les bulles d'abord, pour que tout le reste passe par-dessus :
+            # les encarts, les pantins, le fil. Rien de ce qu'on vient
+            # regarder ne doit se trouver derrière une bulle.
+            pose_bulles(toile, quand - origine, cadrage)
             # Les pantins sur la toile et non sur l'image de la caméra, depuis
             # qu'ils ont le droit d'aller danser dans la bande noire : posés
             # sur la vue, ils étaient enfermés dedans par construction. Ils
@@ -3970,7 +4173,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # autre sujet que la montagne en direct, et deux pantins dansant
             # dessus diraient que c'est le même plan filmé autrement.
             if survol is None:
-                cadrage = fenetre(vue.shape[:2], largeur, hauteur)
                 pose_danseurs(toile, quand - origine, musique.pouls(), vue=cadrage)
                 # Le tapis vole au-dessus de la crête, donc il passe quoi qu'il
                 # arrive. L'éléphant danse sur le rond-point, c'est-à-dire en
@@ -3995,7 +4197,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # le retenir ; une image d'hier n'est pas un évènement.
                 if quand - dernier_mouvement > CREUX_S:
                     pose_elephant(toile, quand - origine, musique.pouls(),
-                                  vue=cadrage, nuit=not fait_jour)
+                                  vue=cadrage, nuit=not fait_jour,
+                                  heure=datetime.fromtimestamp(quand, PARIS).hour)
                 # Le sous-marin n'attend pas de creux, lui. Il ne descend
                 # jamais sous la crête, donc il ne peut pas passer devant ce
                 # qu'on surveille, et il n'a pas besoin du silence pour être
@@ -4009,7 +4212,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 pose_piste(toile, quand - origine, piste, vue=cadrage,
                            nuit=not fait_jour)
             if a_poser is not None:
-                pose_rediffusion(toile, a_poser)
+                pose_rediffusion(toile, a_poser, vue=cadrage)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
             #
             # Il durait exactement la voix, ce qui semblait honnête et ne
@@ -4033,15 +4236,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             elif dit == "ennui" or quand - dernier_ennui <= ENNUI_TENUE_S:
                 pose_ennui(toile, "BOOOOORING", quand - origine)
             pose_ruban(toile, ruban, quand - origine)
-            # Le balancement des deux encarts : seulement quand la musique
-            # pousse vraiment, et seulement de temps en temps. Tout le temps,
-            # ce serait un défaut d'affichage ; jamais, ce serait dommage.
-            remue = 0.0
-            if (musique.pouls() > DANSE_SEUIL
-                    and (quand - origine) % ENCART_DANSE_PERIODE_S < ENCART_DANSE_S):
-                remue = (math.sin((quand - origine) * DANSE_PAS_S * math.pi)
-                         * ENCART_DANSE_PX * (largeur / 1600)
-                         * min(2.0, musique.pouls() / DANSE_SEUIL))
+            # Le flottement des deux encarts, lent et continu. Il sautait
+            # avant sur le beat, quelques secondes toutes les cinq minutes, et
+            # ça ne ressemblait pas à un mouvement : ça ressemblait à un
+            # défaut d'affichage. Celui-ci ne se remarque pas image par image ;
+            # il se remarque sur la durée, et seulement parce que le fil qui
+            # relie les deux encarts s'incline avec eux.
+            remue = flottement(quand - origine, largeur / 1600)
             pose_horloge(toile, quand, direct=rediff is None and survol is None,
                          autre="REPLAY" if rediff is not None else "3D MODEL",
                          commune=commune, carte=carte_pays, ou=ou_camera,
@@ -4061,8 +4262,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 except (OSError, ValueError):
                     agenda, agenda_credit = [], ""
             pose_agenda(toile, agenda, agenda_credit, quand - origine)
-            pose_distance(toile, dit_la_distance,
-                          fenetre(vue.shape[:2], largeur, hauteur))
+            pose_fil(toile, dit_la_distance, cadrage, remue)
             # La musique en dernier : c'est elle qu'on vient écouter, et c'est
             # elle que la licence oblige à nommer.
             pose_bloc_musique(toile, trio, racine / "data" / "musique")

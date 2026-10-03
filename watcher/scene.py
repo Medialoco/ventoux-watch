@@ -33,6 +33,15 @@ log = logging.getLogger("ventoux.scene")
 # the fire rule for more evidence instead of silencing it.
 CLEAR_RIDGE = 60.0
 FOG_RIDGE = 40.0
+# Below this the crest is not merely softened, it is absent. The distinction
+# matters because one threshold for both day and night was never one measure:
+# the crest is read off the contrast of its own edge, and at night there is
+# less contrast whatever the air is doing. Over 181 night readings the median
+# was 26 and 74% fell under FOG_RIDGE, against a daytime median of 127 and not
+# a single reading under it. Treating all 74% as fog silenced the watch three
+# nights out of four, and 23 139 of the 66 492 candidates ever filed -- more
+# than any other cause of refusal -- were turned away by that one line.
+GONE_RIDGE = 20.0
 
 
 @dataclass
@@ -49,6 +58,17 @@ class Scene:
     def fogged(self) -> bool:
         """The ridge is gone: nothing at that distance can be read at all."""
         return self.ridge < FOG_RIDGE
+
+    @property
+    def blind(self) -> bool:
+        """The crest is not there at all: the far field is a closed door.
+
+        This is the state the night of 26 September was in when the fog
+        published twelve events and all twelve were wrong. Between here and
+        FOG_RIDGE the crest is soft but present, which is a different thing
+        and deserves a different answer.
+        """
+        return self.ridge < GONE_RIDGE
 
     @property
     def hazy(self) -> bool:

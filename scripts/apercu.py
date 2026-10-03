@@ -52,6 +52,8 @@ def compose(largeur: int, nuit: bool, musique: bool = True) -> np.ndarray:
     site = scene.get("site") or {}
 
     toile = stream.cadre(une_vue(nuit), largeur, hauteur)
+    stream.pose_bulles(toile, 3.0, stream.fenetre(une_vue(nuit).shape[:2],
+                                                  largeur, hauteur))
     cadrage = stream.fenetre(une_vue(nuit).shape[:2], largeur, hauteur)
     stream.pose_danseurs(toile, 3.0, 0.2, vue=cadrage)
 
@@ -83,11 +85,9 @@ def compose(largeur: int, nuit: bool, musique: bool = True) -> np.ndarray:
     if machine.get("lat") is not None:
         km = stream.a_vol_d_oiseau((float(machine["lat"]), float(machine["lon"])),
                                    (float(pose["lat"]), float(pose["lon"])))
-        stream.pose_distance(
-            toile,
-            f"{str(machine['ville']).upper()} - {str(site.get('commune','')).upper()}"
-            f"  {km:,.0f} KM AS THE CROW FLIES".replace(",", " "),
-            cadrage)
+        stream.pose_fil(toile,
+                        f"{km:,.0f} KM AS THE CROW FLIES".replace(",", " "),
+                        cadrage, stream.flottement(3.0, largeur / 1600))
     return toile
 
 
