@@ -35,17 +35,29 @@ EDITEUR = "https://musicbrainz.org/release/add"
 # 2026 : l'artiste existait déjà, avec cette désambiguïsation exactement.
 ARTISTE_MBID = "e6460645-fca4-49cd-a68d-910b52b88027"
 CREDITE = "thepriben"
-# Les types de relation, relevés sur musicbrainz.org/relationships/release-url.
-# Pris sous leur identifiant plutôt que sous leur nom : les noms se traduisent
-# et se reformulent, les identifiants non.
+# Les types de relation, lus dans la table « link_type » du serveur MusicBrainz
+# et non pas devinés sur la page publique des relations : là-bas, le libellé est
+# séparé de son identifiant par assez de balises pour qu'on les apparie de
+# travers. C'est arrivé, et l'appariement faux donnait « purchase for download »
+# à un album gratuit — l'éditeur l'a refusé, mais il aurait pu l'accepter.
+#
+# Ce sont des entiers, comme la documentation le dit expressément. Le champ est
+# facultatif : laissé vide, il se choisit à la main dans l'éditeur.
+#
+# Le 85 est l'écoute gratuite, et non l'écoute tout court : le 320adf26 existe
+# à côté pour les plateformes sur abonnement. La base de test l'appelle encore
+# « streaming music », le site l'appelle « free streaming » — on a vérifié que
+# c'était le même en passant par son identifiant long, qui, lui, ne bouge pas.
 RELATION = {
-    "licence": "823656dd-0309-4247-b282-b92d287d59c5",
-    "telechargement": "98e08c20-8402-4163-8970-53504bb6a1e4",
-    "ecoute": "9896ecd0-6d29-482d-a21e-bd5d1b5e3425",
+    "licence": "301",
+    "telechargement": "75",
+    "ecoute": "85",
 }
 LICENCES = {
-    "by": "https://creativecommons.org/licenses/by/4.0/",
-    "by-sa": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "by": ("https://creativecommons.org/licenses/by/4.0/",
+           "Creative Commons Attribution 4.0 International (CC BY 4.0)"),
+    "by-sa": ("https://creativecommons.org/licenses/by-sa/4.0/",
+              "Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)"),
 }
 # « Pas de contenu linguistique », qui est le cas d'une techno instrumentale.
 # Laisser le champ vide ferait poser la question à chaque relecteur.
@@ -78,7 +90,7 @@ def rang(piste: str) -> int:
 
 
 def champs(morceaux: list[dict], album: str, annee: str, jour: tuple[int, int],
-           licence: str, adresses: list[str]) -> list[tuple[str, str]]:
+           licence: tuple[str, str], adresses: list[str]) -> list[tuple[str, str]]:
     """Les couples nom/valeur que l'éditeur attend, dans son propre vocabulaire."""
     plan: list[tuple[str, str]] = [
         ("name", album),
@@ -88,17 +100,20 @@ def champs(morceaux: list[dict], album: str, annee: str, jour: tuple[int, int],
         # confondre effacerait l'un des deux.
         ("artist_credit.names.0.name", CREDITE),
         ("type", "Album"),
-        ("status", "Official"),
-        ("packaging", "None"),
+        # En minuscules : ce sont les valeurs que la documentation énumère.
+        ("status", "official"),
         ("language", LANGUE),
         ("mediums.0.format", "Digital Media"),
-        ("mediums.0.position", "1"),
     ]
+    # Ne sont pas envoyés, faute de pouvoir les donner à coup sûr : « packaging »,
+    # dont la documentation décrit les valeurs par celles d'un autre champ, et le
+    # pays de parution, annoncé comme un code ISO alors qu'une sortie numérique
+    # demande [Worldwide], qui n'en est pas un. Les deux se posent d'un clic dans
+    # l'éditeur ; un champ refusé, lui, fait rejeter tout le formulaire.
     if annee:
         plan += [("events.0.date.year", annee),
                  ("events.0.date.month", str(jour[0])),
-                 ("events.0.date.day", str(jour[1])),
-                 ("events.0.country", "XW")]
+                 ("events.0.date.day", str(jour[1]))]
     for place, morceau in enumerate(morceaux):
         plan += [
             (f"mediums.0.track.{place}.name", morceau["titre"]),
@@ -108,8 +123,13 @@ def champs(morceaux: list[dict], album: str, annee: str, jour: tuple[int, int],
     for numero, (adresse, genre) in enumerate(adresses):
         plan += [(f"urls.{numero}.url", adresse),
                  (f"urls.{numero}.link_type", RELATION[genre])]
-    plan.append((f"urls.{len(adresses)}.url", licence))
+    adresse_licence, nom_licence = licence
+    plan.append((f"urls.{len(adresses)}.url", adresse_licence))
     plan.append((f"urls.{len(adresses)}.link_type", RELATION["licence"]))
+    plan.append(("edit_note", (
+        f"Album publié par l'artiste lui-même sous {nom_licence}. "
+        "Titres, numéros de piste et durées relevés directement dans les "
+        "fichiers diffusés.")))
     return plan
 
 
@@ -149,7 +169,9 @@ def main() -> int:
     plaidoyer.add_argument("--licence", choices=sorted(LICENCES), default="by-sa")
     plaidoyer.add_argument("--jour", default="10-02", help="mois-jour de parution")
     plaidoyer.add_argument("--lien", action="append", default=[],
-                           help="adresse d'écoute, répétable")
+                           help="adresse où l'album s'écoute, répétable")
+    plaidoyer.add_argument("--lien-genre", choices=["telechargement", "ecoute"],
+                           default="ecoute")
     plaidoyer.add_argument("--sortie", type=Path, default=Path("/tmp/musicbrainz.html"))
     args = plaidoyer.parse_args()
 
@@ -169,16 +191,16 @@ def main() -> int:
     annee = annees.pop() if len(annees) == 1 else ""
     mois, jour = (int(x) for x in args.jour.split("-"))
 
-    adresses = [(lien, "ecoute") for lien in args.lien]
+    adresses = [(lien, args.lien_genre) for lien in args.lien]
     plan = champs(morceaux, album, annee, (mois, jour), LICENCES[args.licence], adresses)
     args.sortie.write_text(page(plan, album), encoding="utf-8")
 
     duree = sum(m["duree_ms"] for m in morceaux) / 60000
     print(f"{album} — {len(morceaux)} pistes, {duree:.0f} min au total, {annee or 'sans année'}")
     print(f"crédité « {CREDITE} » sur l'artiste {ARTISTE_MBID}")
-    print(f"licence : {LICENCES[args.licence]}")
-    for lien, _ in adresses:
-        print(f"lien d'écoute : {lien}")
+    print(f"licence : {LICENCES[args.licence][1]}")
+    for lien, genre in adresses:
+        print(f"lien ({genre}) : {lien}")
     print(f"\nOuvrez ceci, connecté à MusicBrainz :\n  {args.sortie}")
     return 0
 
