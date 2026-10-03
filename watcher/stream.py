@@ -145,6 +145,10 @@ def attends_la_webcam(url: str) -> tuple[str, float, float]:
 # une fois ne vaut pas qu'on crie.
 VEILLE_DIRECT_S = 600.0
 VEILLE_DIRECT_SEUIL = 2
+# Tant qu'on ignore sous quel numéro on émet, on regarde à ce rythme-là : la
+# page du site n'a rien à incruster tant qu'on ne le sait pas, et c'est juste
+# après un redémarrage qu'on ne le sait pas.
+VEILLE_DIRECT_CHERCHE_S = 20.0
 
 
 def page_du_direct(chaine: str) -> str | None:
@@ -231,17 +235,27 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     Le premier coup d'oeil se donne tout de suite et non au bout de dix minutes :
     c'est lui qui note le numéro du direct, et une page qui s'ouvre pendant ces
     dix minutes-là n'aurait rien eu à incruster.
+
+    Un seul coup d'oeil immédiat ne suffisait pas. Le numéro change au
+    redémarrage, et au redémarrage la chaîne n'est pas encore en direct : elle
+    le devient quelques secondes après que notre arrivée s'est connectée. On
+    regardait donc trop tôt, on ne trouvait rien, et le site renvoyait dix
+    minutes durant vers la diffusion morte — c'est arrivé le 3 octobre. Tant
+    qu'on n'a pas de numéro on cherche souvent ; une fois qu'on l'a, la
+    surveillance lente suffit.
     """
     absences = 0
-    premier = True
-    while premier or not coupe.wait(VEILLE_DIRECT_S):
-        premier = False
+    connu = ""
+    attente = 0.0
+    while not coupe.wait(attente):
         vu, numero = lit_le_direct(page_du_direct(chaine))
         if racine is not None and numero:
             try:
                 note_le_direct(racine, chaine, numero)
+                connu = numero
             except OSError as souci:
                 log.warning("Numéro du direct non noté : %s", souci)
+        attente = VEILLE_DIRECT_S if connu else VEILLE_DIRECT_CHERCHE_S
         if vu is None:
             continue
         if vu:
