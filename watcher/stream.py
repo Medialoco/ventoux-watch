@@ -3976,11 +3976,20 @@ def _poisson(image: np.ndarray, cx: int, cy: int, longueur: float,
     cv2.ellipse(image, (cx, cy), axes, 0, 0, 360, cerne, trait, cv2.LINE_AA)
 
     # L'œil et la bouche, du côté du museau.
-    oeil = (int(cx + sens * corps_l * 0.24), int(cy - corps_h * 0.16))
-    rayon = max(2, int(longueur * 0.055))
-    cv2.circle(image, oeil, rayon, POISSON_CREME, -1, cv2.LINE_AA)
+    # Un blanc, une pupille décalée vers le museau, un reflet. L'œil était un
+    # disque crème cerné de sombre avec un point au milieu, ce qui à cette
+    # taille ne fait pas un œil mais une cible : trois anneaux concentriques,
+    # et rien qui regarde quelque part. Une pupille qui regarde devant suffit
+    # à donner une direction à toute la bête.
+    oeil = (int(cx + sens * corps_l * 0.26), int(cy - corps_h * 0.14))
+    rayon = max(3, int(longueur * 0.075))
+    cv2.circle(image, oeil, rayon, (252, 250, 246), -1, cv2.LINE_AA)
+    pupille = (int(oeil[0] + sens * rayon * 0.30), oeil[1])
+    cv2.circle(image, pupille, max(2, int(rayon * 0.56)), cerne, -1, cv2.LINE_AA)
+    cv2.circle(image, (int(pupille[0] - sens * rayon * 0.18),
+                       int(pupille[1] - rayon * 0.26)),
+               max(1, int(rayon * 0.22)), (255, 255, 255), -1, cv2.LINE_AA)
     cv2.circle(image, oeil, rayon, cerne, max(1, trait - 1), cv2.LINE_AA)
-    cv2.circle(image, oeil, max(1, rayon // 2), cerne, -1, cv2.LINE_AA)
     museau = (int(cx + sens * corps_l * 0.46), int(cy + corps_h * 0.16))
     cv2.ellipse(image, museau, (max(2, int(longueur * 0.055)),
                                 max(2, int(longueur * 0.045))),
