@@ -2,6 +2,131 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-03T18-18-56Z-missed-29",
+      "t": "2026-10-03T18:18:56Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-03T18-18-56Z-missed-29.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.062,
+          "kept": 0.833,
+          "area_ratio": 0.00052,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.9,
+          "height_m": 3.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.075,
+          0.6917,
+          0.0187,
+          0.0278
+        ]
+      },
+      "closeup": "data/closeups/2026-10-03T18-18-56Z-missed-29.jpg"
+    },
+    {
+      "id": "2026-10-03T18-11-23Z-missed-28",
+      "t": "2026-10-03T18:11:23Z",
+      "type": "missed",
+      "label": "Décor de l'îlot",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-03T18-11-23Z-missed-28.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur l'îlot central du rond-point, et ça n'a pas bougé. Les pierres et les figures y sont plantées.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.13,
+          "kept": 1.0,
+          "area_ratio": 0.00059,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 0.8,
+          "height_m": 0.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "island",
+        "box": [
+          0.2875,
+          0.8667,
+          0.0234,
+          0.025
+        ]
+      },
+      "closeup": "data/closeups/2026-10-03T18-11-23Z-missed-28.jpg"
+    },
+    {
+      "id": "2026-10-03T18-11-16Z-motion-27",
+      "t": "2026-10-03T18:11:16Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-03T18-11-16Z-motion-27.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.142,
+          "area_grow": 1.08,
+          "clipped": true,
+          "shade": 1.096,
+          "kept": 0.918,
+          "area_ratio": 0.00061,
+          "duration_s": 7.0,
+          "frames": 8,
+          "width_m": 17.6,
+          "height_m": 10.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.064,
+          "seen_as": []
+        },
+        "box": [
+          0.0,
+          0.5556,
+          0.2328,
+          0.2472
+        ]
+      },
+      "closeup": "data/closeups/2026-10-03T18-11-16Z-motion-27.jpg"
+    },
+    {
       "id": "2026-10-03T18-02-48Z-motion-26",
       "t": "2026-10-03T18:02:48Z",
       "type": "motion",
