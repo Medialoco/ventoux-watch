@@ -2,6 +2,187 @@
   "version": "0.4.0",
   "events": [
     {
+      "id": "2026-10-03T16-49-38Z-cycle-1",
+      "t": "2026-10-03T16:49:38Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.599,
+      "thumb": "data/thumbs/2026-10-03T16-49-38Z-cycle-1.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 0.855,
+          "kept": 0.381,
+          "area_ratio": 0.00474,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 1.6,
+          "height_m": 1.1,
+          "width_named_m": 1.5,
+          "height_named_m": 0.8,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "bicycle 0.60 sur 63%",
+            "person 0.34 sur 0%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.6234,
+          0.9222,
+          0.0609,
+          0.0778
+        ]
+      },
+      "closeup": "data/closeups/2026-10-03T16-49-38Z-cycle-1.jpg"
+    },
+    {
+      "id": "2026-10-03T16-43-58Z-vehicle-29",
+      "t": "2026-10-03T16:43:59Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.87,
+      "thumb": "data/thumbs/2026-10-03T16-43-58Z-vehicle-29.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.3,
+        "height_m": 1.6,
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.991,
+          "kept": 0.29,
+          "area_ratio": 0.01172,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.3,
+          "height_m": 1.6,
+          "width_named_m": 2.8,
+          "height_named_m": 1.4,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.87 sur 79%",
+            "person 0.31 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.417,
+          0.8429,
+          0.13,
+          0.1161
+        ],
+        "count": 3,
+        "since": "2026-10-03T16:43:58Z"
+      },
+      "closeup": "data/closeups/2026-10-03T16-43-58Z-vehicle-29.jpg"
+    },
+    {
+      "id": "2026-10-03T16-41-41Z-missed-28",
+      "t": "2026-10-03T16:41:41Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-03T16-41-41Z-missed-28.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.171,
+          "area_grow": 0.75,
+          "clipped": false,
+          "shade": 0.727,
+          "kept": 0.167,
+          "area_ratio": 0.00063,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 2.6,
+          "height_m": 3.4,
+          "width_named_m": 2.5,
+          "height_named_m": 3.3,
+          "rise_ms": 3.36,
+          "drift_rate": 3.504,
+          "seen_as": [
+            "motorcycle 0.33 sur 68%"
+          ]
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.1641,
+          0.6944,
+          0.0203,
+          0.0472
+        ]
+      },
+      "closeup": "data/closeups/2026-10-03T16-41-41Z-missed-28.jpg"
+    },
+    {
+      "id": "2026-10-03T16-41-11Z-motion-26",
+      "t": "2026-10-03T16:41:38Z",
+      "type": "cycle",
+      "label": "Moto",
+      "zone": "other",
+      "confidence": 0.62,
+      "thumb": "data/thumbs/2026-10-03T16-41-11Z-motion-26.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "twilight",
+        "weather": "couvert",
+        "context": "au crépuscule, couvert",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.714,
+          "kept": 0.302,
+          "area_ratio": 0.00498,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 1.8,
+          "height_m": 1.5,
+          "width_named_m": 1.5,
+          "height_named_m": 1.5,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "motorcycle 0.62 sur 82%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4016,
+          0.825,
+          0.0578,
+          0.0861
+        ],
+        "count": 2,
+        "since": "2026-10-03T16:41:11Z"
+      },
+      "closeup": "data/closeups/2026-10-03T16-41-11Z-motion-26.jpg"
+    },
+    {
       "id": "2026-10-03T16-28-53Z-vehicle-24",
       "t": "2026-10-03T16:28:54Z",
       "type": "vehicle",
