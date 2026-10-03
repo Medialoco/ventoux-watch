@@ -1633,9 +1633,13 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     fond = image[haut:bas, 0:min(largeur, bloc_l)]
     if fond.size:
         fond[:] = (fond * 0.18).astype(np.uint8)
-    # Le liseré vert sur la tranche gauche : il dit « ceci est un appareil, et
-    # il est allumé ». C'est la seule chose verte du flux avec le vumètre.
-    cv2.rectangle(image, (0, haut), (int(6 * echelle), bas), VERT, -1)
+    # Un cadre fin plutôt qu'un liseré vert plein sur la tranche gauche. Le
+    # liseré était un aplat de six pixels, la seule surface pleine de tout le
+    # flux : il tirait l'œil vers le bord gauche, c'est-à-dire vers rien, et
+    # il ne ressemblait à aucun autre encart. Au trait, le bloc est délimité
+    # de la même main que la machine, la carte et la photo — et c'est le
+    # vumètre qui dit maintenant, tout seul, que l'appareil est allumé.
+    cadre_encart(image, (0, haut), (min(largeur, bloc_l) - 1, bas - 1), echelle)
 
     gauche = marge
     pochette = en_cours.get("pochette")
