@@ -3908,6 +3908,62 @@ class DiffusionTests(unittest.TestCase):
         self.assertLess(bord_gauche("Beaumont-du-Ventoux"), bord_gauche(""),
                         "l'encart ne fait pas de place au nom de la commune")
 
+    def test_the_two_panels_place_the_machine_and_the_camera_on_earth(self):
+        """Les deux encarts se répondent, et ne disent pas la même chose.
+
+        Celui de gauche dit où est la machine qui regarde, celui de droite où
+        est ce qu'elle regarde. Huit mille kilomètres entre les deux, et c'est
+        à peu près tout le projet. Les drapeaux sont minuscules à dessein :
+        ils disent de quel côté de la planète on est, ils ne décorent pas.
+        """
+        etat = {"degres": 46.2, "charge": 0.31, "libre": 142e9, "debout": 191000}
+
+        def dits(appel) -> list[str]:
+            mots: list[str] = []
+            vrai = cv2.putText
+
+            def espion(image, texte, *suite, **nommes):
+                mots.append(texte)
+                return vrai(image, texte, *suite, **nommes)
+
+            with mock.patch.object(stream.cv2, "putText", espion):
+                appel()
+            return mots
+
+        gauche = dits(lambda: stream.pose_machine(
+            np.zeros((400, 900, 3), np.uint8), etat, ville="Los Angeles"))
+        droite = dits(lambda: stream.pose_horloge(
+            np.zeros((400, 900, 3), np.uint8), 1_760_000_000.0,
+            commune="Beaumont-du-Ventoux"))
+        self.assertIn("LOS ANGELES", gauche)
+        self.assertIn("BEAUMONT-DU-VENTOUX", droite)
+
+        # Les deux drapeaux sont dessinés, et ne se ressemblent pas : le même
+        # des deux côtés voudrait dire que la machine est là où elle regarde.
+        def drapeau(pays: str) -> np.ndarray:
+            toile = np.zeros((40, 60, 3), np.uint8)
+            stream._drapeau(toile, 2, 2, 12, pays)
+            return toile
+
+        bleu_blanc_rouge, banniere = drapeau("FR"), drapeau("US")
+        self.assertTrue(bleu_blanc_rouge.any() and banniere.any())
+        self.assertFalse(np.array_equal(bleu_blanc_rouge, banniere))
+        # Et ils restent minuscules : un drapeau lisible de loin serait un
+        # drapeau trop gros pour ce qu'il dit.
+        peints = int((banniere.any(axis=2)).sum())
+        self.assertLess(peints, 40 * 60 * 0.12,
+                        "le drapeau prend toute la place")
+
+        # La machine est ailleurs que la caméra, et le dit depuis la
+        # configuration : une autre installation n'a qu'à changer la ligne.
+        reglages = json.loads((ROOT / "config" / "config.json")
+                              .read_text(encoding="utf-8"))
+        site = json.loads((ROOT / "config" / "scene.json")
+                          .read_text(encoding="utf-8")).get("site") or {}
+        self.assertTrue((reglages.get("machine") or {}).get("ville"))
+        self.assertNotEqual((reglages["machine"]["ville"] or "").lower(),
+                            (site.get("commune") or "").lower())
+
         # Le nom vient du site, pas du code, pour que la caméra suivante
         # n'ait qu'à relancer scripts/commune_du_site.py.
         self.assertIn("commune", inspect.getsource(stream.diffuse))

@@ -3092,7 +3092,7 @@ def cadre_encart(image: np.ndarray, coin_a: tuple[int, int],
 
 
 def pose_machine(image: np.ndarray, etat: dict | None,
-                 vignette: np.ndarray | None = None) -> None:
+                 vignette: np.ndarray | None = None, ville: str = "") -> None:
     """L'encart machine, en haut à gauche, en face de l'horloge.
 
     Une webcam qui tourne vingt-quatre heures sur vingt-quatre tient à une
@@ -3133,7 +3133,13 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     marge = int(14 * echelle)
     sommet = int(RUBAN_H * echelle)
     taille = 0.56 * echelle
-    large = max(cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] for t, _ in lignes)
+    # Les deux encarts se répondent : celui-ci dit où est la machine qui
+    # regarde, celui d'en face où est ce qu'elle regarde. Huit mille
+    # kilomètres entre les deux, et c'est à peu près tout le projet.
+    lieu = (ville or "").upper()
+    large = max([cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
+                 for t, _ in lignes]
+                + [large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle)])
     # L'encart s'élargit pour la photo si le texte ne suffit pas. À la largeur
     # des chiffres seuls, la carte faisait cent pixels de large et on n'y
     # reconnaissait rien : une tache verte sous un tableau de bord. Cent
@@ -3150,7 +3156,7 @@ def pose_machine(image: np.ndarray, etat: dict | None,
         vu_haut = int(vu_large * vignette.shape[0] / vignette.shape[1])
         photo = tamise_la_photo(
             cv2.resize(vignette, (vu_large, vu_haut), interpolation=cv2.INTER_AREA))
-    bas = sommet + pas * len(lignes) + marge
+    bas = sommet + pas * (len(lignes) + bool(lieu)) + marge
     if photo is not None:
         bas += photo.shape[0] + marge
     panneau = image[sommet:bas, 0:droite]
@@ -3160,8 +3166,11 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     for i, (texte, teinte) in enumerate(lignes):
         cv2.putText(image, texte, (marge, sommet + pas * (i + 1) - int(6 * echelle)),
                     cv2.FONT_HERSHEY_SIMPLEX, taille, teinte, 2, cv2.LINE_AA)
+    pose_lieu(image, lieu, "US", marge,
+              sommet + pas * (len(lignes) + 1) - int(6 * echelle),
+              taille * HORLOGE_LIEU, echelle)
     if photo is not None:
-        haut_photo = sommet + pas * len(lignes) + marge // 2
+        haut_photo = sommet + pas * (len(lignes) + bool(lieu)) + marge // 2
         coin = image[haut_photo:haut_photo + photo.shape[0], marge:marge + photo.shape[1]]
         if coin.shape[:2] == photo.shape[:2]:
             coin[:] = photo
@@ -3204,8 +3213,68 @@ def pose_bonjour(image: np.ndarray, nom: str, age: float) -> None:
     cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
 
 
-# La commune sous l'heure, en part de la taille des chiffres.
+# Le lieu sous les chiffres, en part de leur taille. Les deux encarts
+# emploient la même, c'est ce qui les rend symétriques.
 HORLOGE_LIEU = 0.62
+# Les drapeaux sont minuscules à dessein : ils disent de quel côté de la
+# planète on est, ils ne décorent pas. Un drapeau lisible serait un drapeau
+# trop gros pour ce qu'il dit.
+DRAPEAU_HAUT = 0.62      # en part de la hauteur des lettres du lieu
+DRAPEAU_RAPPORT = 1.5    # large sur haut, celui des deux drapeaux
+BLEU_FR = (94, 42, 0)
+ROUGE_FR = (43, 35, 206)
+BLEU_US = (102, 51, 10)
+ROUGE_US = (45, 39, 178)
+
+
+def _drapeau(image: np.ndarray, x: int, y: int, haut: int, pays: str) -> None:
+    """Un drapeau de quelques pixels, posé à gauche du nom du lieu.
+
+    Dessiné et non chargé : à cette taille une image serait une bouillie, et
+    trois rectangles valent mieux qu'un fichier. Le drapeau américain n'a pas
+    cinquante étoiles ici, il a un carré bleu — à huit pixels de haut, c'est
+    tout ce qu'un œil peut lire, et c'est assez pour ne pas le confondre avec
+    l'autre.
+    """
+    large = max(3, int(haut * DRAPEAU_RAPPORT))
+    if pays == "FR":
+        tiers = max(1, large // 3)
+        for i, teinte in enumerate((BLEU_FR, BLANC, ROUGE_FR)):
+            bout = x + large if i == 2 else x + tiers * (i + 1)
+            cv2.rectangle(image, (x + tiers * i, y), (bout, y + haut),
+                          teinte, -1)
+        return
+    bande = max(1, haut // 6)
+    for i in range(6):
+        cv2.rectangle(image, (x, y + bande * i), (x + large, y + bande * i + bande),
+                      ROUGE_US if i % 2 == 0 else BLANC, -1)
+    cv2.rectangle(image, (x, y), (x + large // 2, y + bande * 3), BLEU_US, -1)
+
+
+def _avant_le_lieu(taille: float, echelle: float) -> tuple[int, int]:
+    """La hauteur du drapeau et le décalage qu'il impose au nom."""
+    haut = max(4, int(26 * taille * DRAPEAU_HAUT))
+    return haut, int(haut * DRAPEAU_RAPPORT) + max(2, int(5 * echelle))
+
+
+def large_du_lieu(texte: str, taille: float, echelle: float) -> int:
+    """Ce que prend « drapeau + nom », pour que l'encart s'élargisse d'autant."""
+    if not texte:
+        return 0
+    _, decale = _avant_le_lieu(taille, echelle)
+    return decale + cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX,
+                                    taille, 2)[0][0]
+
+
+def pose_lieu(image: np.ndarray, texte: str, pays: str, x: int, ligne: int,
+              taille: float, echelle: float) -> None:
+    """Le nom d'un lieu précédé de son drapeau, posé sur la ligne de base."""
+    if not texte:
+        return
+    haut, decale = _avant_le_lieu(taille, echelle)
+    _drapeau(image, x, ligne - haut, haut, pays)
+    cv2.putText(image, texte, (x + decale, ligne), cv2.FONT_HERSHEY_SIMPLEX,
+                taille, CYAN, 2, cv2.LINE_AA)
 
 
 def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
@@ -3229,20 +3298,20 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     # dit où regarde la caméra, et elle donne le fuseau par surcroît.
     # Elle est en plus petit : c'est un sous-titre de l'heure, pas une
     # troisième ligne de même importance, et « Beaumont-du-Ventoux » est long.
-    lignes = [(moment.strftime("%d %b %Y").upper(), 1.0),
-              (moment.strftime("%H:%M:%S"), 1.0)]
-    if commune:
-        lignes.append((commune.upper(), HORLOGE_LIEU))
+    lignes = [moment.strftime("%d %b %Y").upper(),
+              moment.strftime("%H:%M:%S")]
     pas = int(34 * echelle)
     marge = int(14 * echelle)
     sommet = int(RUBAN_H * echelle)
     taille = 0.7 * echelle
-    large = max(cv2.getTextSize(l, cv2.FONT_HERSHEY_SIMPLEX, taille * part, 2)[0][0]
-                for l, part in lignes)
+    lieu = (commune or "").upper()
+    large = max([cv2.getTextSize(l, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
+                 for l in lignes]
+                + [large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle)])
     badge = "LIVE" if direct else autre
     large = max(large, cv2.getTextSize(badge, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] + pas)
     gauche = largeur - large - 2 * marge
-    bas = sommet + pas * (len(lignes) + 1) + marge
+    bas = sommet + pas * (len(lignes) + 1 + bool(lieu)) + marge
     coin = image[sommet:bas, gauche:largeur]
     if coin.size:
         coin[:] = (coin * 0.35).astype(np.uint8)
@@ -3256,10 +3325,12 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
         cv2.circle(image, (x + rayon, y - rayon), rayon, ROUGE, -1)
     cv2.putText(image, badge, (x + pas, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
                 BLANC if direct else ROUGE, 2, cv2.LINE_AA)
-    for i, (ligne, part) in enumerate(lignes):
+    for i, ligne in enumerate(lignes):
         cv2.putText(image, ligne, (x, sommet + pas * (i + 2) - int(6 * echelle)),
-                    cv2.FONT_HERSHEY_SIMPLEX, taille * part,
-                    BLANC if part == 1.0 else CYAN, 2, cv2.LINE_AA)
+                    cv2.FONT_HERSHEY_SIMPLEX, taille, BLANC, 2, cv2.LINE_AA)
+    pose_lieu(image, lieu, "FR", x,
+              sommet + pas * (len(lignes) + 2) - int(6 * echelle),
+              taille * HORLOGE_LIEU, echelle)
 
 
 def _entree(url: str, recul: int) -> subprocess.Popen:
@@ -3450,6 +3521,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         .get("site") or {}).get("commune")) or "")
     except (OSError, ValueError):
         commune = ""
+    ville = str((cfg.get("machine") or {}).get("ville") or "")
     # Loin en arrière, comme « bonjour » : à zéro, le flux s'ouvrirait sur
     # « BOOOOORING » pendant trois secondes, ce qui est une drôle de carte de
     # visite pour une veille qui vient de démarrer.
@@ -3710,7 +3782,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             pose_horloge(toile, quand, direct=rediff is None and survol is None,
                          autre="REPLAY" if rediff is not None else "3D MODEL",
                          commune=commune)
-            pose_machine(toile, machine, photo_machine)
+            pose_machine(toile, machine, photo_machine, ville)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             pose_bande_basse(toile, bande_du_moment(quand - origine))
             # La musique en dernier : c'est elle qu'on vient écouter, et c'est
