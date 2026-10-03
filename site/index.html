@@ -61,7 +61,16 @@
   <main id="content">
   <section class="block live" id="live" aria-labelledby="live-title">
     <h2 class="sr" id="live-title" data-i18n="live">Live</h2>
-    <video id="player" controls autoplay muted playsinline></video>
+    <!-- Notre diffusion, et non la caméra nue : c'est le même versant, nommé.
+         Le numéro de la vidéo n'est pas écrit ici parce qu'il change chaque
+         fois que YouTube termine une diffusion et qu'on en rouvre une — il est
+         lu dans data/direct.json, que la veille tient à jour. La webcam brute
+         reste en dessous, cachée, et ne reparaît que si le direct manque. -->
+    <iframe id="direct" title="Mont Serein — live" allowfullscreen
+            allow="autoplay; encrypted-media; picture-in-picture" hidden></iframe>
+    <video id="player" controls autoplay muted playsinline hidden></video>
+    <p class="sub live-link"><a id="sur-youtube" href="https://www.youtube.com/channel/UCvN0sNcj5JM9tklIkAlGi7g/live"
+       target="_blank" rel="noopener" data-i18n="onYouTube">Watch on YouTube</a></p>
   </section>
 
   <section class="block history" id="log" aria-labelledby="log-title">

@@ -265,13 +265,31 @@ h2 {
 /* Narrower than the column and centred. At full width the webcam alone was
    taller than the room left under the bar, so its own section could not be
    shown whole, which is the one thing a page like this owes a reader. */
-.live video {
-  width: min(100%, 620px);
+/* Wider than it was, because what is in it changed. Six hundred and twenty
+   pixels were enough for a bare camera: the picture was a slope, and a slope
+   reads at any size. The broadcast carries writing — the name of what just
+   passed, the track playing, the clock — and writing has a size below which it
+   is not writing any more. The second term keeps the old promise: whatever the
+   width, the player still has to fit under the bar without scrolling. */
+.live video, .live iframe {
+  width: min(100%, 980px, (100vh - 200px) * 16 / 9);
   margin: 0 auto;
   aspect-ratio: 16 / 9;
   background: #000;
   display: block;
+  border: 0;
 }
+
+.live [hidden] { display: none; }
+
+.live-link {
+  width: min(100%, 980px, (100vh - 200px) * 16 / 9);
+  margin: 10px auto 0;
+  text-align: right;
+}
+
+.live-link a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--hair); }
+.live-link a:hover { color: var(--ink); border-color: var(--ink); }
 
 .frame {
   position: relative;

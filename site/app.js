@@ -19,6 +19,7 @@ const COPY = {
     // already looking at the menu does not need "Live webcam" to guess which
     // one is the webcam.
     navLive: "Live",
+    onYouTube: "Watch on YouTube",
     navHistory: "History",
     navFigures: "Dataviz",
     navRelief: "3D",
@@ -163,6 +164,7 @@ const COPY = {
     passes: "Passages",
     namedLine: (named, habits) => `${named} nommés · ${habits} habitudes`,
     navLive: "Direct",
+    onYouTube: "Voir sur YouTube",
     navHistory: "Historique",
     navFigures: "Dataviz",
     navRelief: "3D",
@@ -646,16 +648,81 @@ const STREAM = "https://visionenvironnement.quanteec.com/contents/encodings/live
 const FALLBACK = "https://s1.vision-environnement.com/live/modules/timelapse/timelapse/montserein.mp4";
 
 const video = document.querySelector("#player");
-if (window.Hls && Hls.isSupported()) {
-  const hls = new Hls();
-  hls.loadSource(STREAM);
-  hls.attachMedia(video);
-  hls.on(Hls.Events.ERROR, (_, data) => {
-    if (data.fatal) video.src = FALLBACK;
-  });
-} else {
-  video.src = video.canPlayType("application/vnd.apple.mpegurl") ? STREAM : FALLBACK;
+const direct = document.querySelector("#direct");
+const surYouTube = document.querySelector("#sur-youtube");
+
+// The raw camera, kept as the way back. It is only ever shown if the broadcast
+// cannot be named: a page about watching a mountain that shows no mountain has
+// failed, whatever the reason.
+let secours = null;
+
+function showCamera() {
+  if (!video.hidden) return;
+  direct.hidden = true;
+  video.hidden = false;
+  if (window.Hls && Hls.isSupported()) {
+    secours = new Hls();
+    secours.loadSource(STREAM);
+    secours.attachMedia(video);
+    secours.on(Hls.Events.ERROR, (_, data) => {
+      if (data.fatal) video.src = FALLBACK;
+    });
+  } else {
+    video.src = video.canPlayType("application/vnd.apple.mpegurl") ? STREAM : FALLBACK;
+  }
 }
+
+// And stopped for good when the broadcast comes back. Hidden is not stopped:
+// a <video> behind display:none keeps pulling its segments, and a visitor who
+// opened the page during an outage would have gone on paying for a second
+// stream they were no longer being shown.
+function hideCamera() {
+  if (video.hidden) return;
+  video.pause();
+  if (secours) {
+    secours.destroy();
+    secours = null;
+  }
+  video.removeAttribute("src");
+  video.load();
+  video.hidden = true;
+}
+
+// Never written into the page. YouTube closes a broadcast and opens another
+// whenever the stream restarts, and the number changes with it; a page holding
+// yesterday's number shows a finished recording and says "live" above it. The
+// watch writes the current one into data/direct.json, so the page asks.
+let diffusion = "";
+
+async function suisLeDirect() {
+  let fiche = null;
+  try {
+    fiche = await fetch("data/direct.json", { cache: "no-store" }).then((r) => r.json());
+  } catch (_) {
+    if (!diffusion) showCamera();
+    return;
+  }
+  const numero = String(fiche.video || "");
+  if (!/^[\w-]{11}$/.test(numero)) {
+    if (!diffusion) showCamera();
+    return;
+  }
+  if (fiche.chaine) {
+    surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
+  }
+  // Only when it has actually changed. Reassigning src reloads the player, and
+  // a check every few minutes would restart the stream under the viewer.
+  if (numero === diffusion) return;
+  diffusion = numero;
+  direct.src = `https://www.youtube.com/embed/${numero}?autoplay=1&mute=1&playsinline=1&rel=0`;
+  hideCamera();
+  direct.hidden = false;
+}
+
+suisLeDirect();
+// The watch refreshes the file every few minutes; a tab left open all night
+// should follow the broadcast that replaced the one it opened on.
+setInterval(suisLeDirect, 5 * 60 * 1000);
 
 const list = document.querySelector("#list");
 const empty = document.querySelector("#empty");
