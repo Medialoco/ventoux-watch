@@ -4502,6 +4502,39 @@ class DiffusionTests(unittest.TestCase):
         self.assertIsNone(stream.batir_session(Path("/inexistant/nulle/part")))
 
 
+class IncrustationDirectTests(unittest.TestCase):
+    """Pendant le survol, la webcam doit rester visible quelque part."""
+
+    def _pose(self):
+        from watcher.stream import cadre, fenetre, pose_direct
+        survol = np.full((720, 1280, 3), 60, np.uint8)
+        camera = np.full((1080, 1920, 3), 200, np.uint8)
+        toile = cadre(survol, 1920, 1080)
+        vue = fenetre(survol.shape[:2], 1920, 1080)
+        pose_direct(toile, camera, vue, 1790000000.0)
+        return toile, vue
+
+    def test_le_direct_apparait_dans_la_fenetre(self):
+        toile, (x, y, large, haut) = self._pose()
+        # Le gris clair de la caméra ne peut venir que de l'incrustation.
+        dedans = toile[y:y + haut, x:x + large]
+        self.assertTrue((dedans == 200).any(), "la webcam n'est posée nulle part")
+
+    def test_le_direct_ne_deborde_pas_de_la_fenetre(self):
+        toile, (x, y, large, haut) = self._pose()
+        dehors = toile.copy()
+        dehors[y:y + haut, x:x + large] = 0
+        self.assertFalse((dehors == 200).any(), "l'incrustation sort de la fenêtre")
+
+    def test_une_camera_vide_ne_fait_rien_tomber(self):
+        from watcher.stream import cadre, fenetre, pose_direct
+        survol = np.full((720, 1280, 3), 60, np.uint8)
+        toile = cadre(survol, 1920, 1080)
+        vue = fenetre(survol.shape[:2], 1920, 1080)
+        pose_direct(toile, np.zeros((0, 0, 3), np.uint8), vue, 0.0)
+        pose_direct(toile, None, vue, 0.0)
+
+
 class LectureTests(unittest.TestCase):
     """Une classe qu'on ne modélise pas ne doit pas faire taire une classe qu'on modélise."""
 

@@ -3828,6 +3828,48 @@ def cadre_encart(image: np.ndarray, coin_a: tuple[int, int],
                   tuple(int(c * 0.45) for c in CYAN), max(1, int(echelle)))
 
 
+def pose_direct(toile: np.ndarray, camera: np.ndarray,
+                vue: tuple[int, int, int, int], quand: float) -> None:
+    """La webcam en petit, pendant que le relief tourne à sa place.
+
+    Le survol est le seul moment où ce flux cesse de montrer la montagne. Deux
+    minutes, ce n'est pas long, mais c'est deux minutes où quelqu'un qui passe
+    tombe sur un décor calculé et n'a aucun moyen de savoir qu'il y a une
+    caméra derrière, ni ce qu'elle voit. Le badge dit déjà « 3D MODEL » et ne
+    ment pas ; il dit ce que ce n'est pas, il ne montre pas ce que c'est.
+
+    En bas à droite, assez grande pour qu'une voiture s'y voie passer : à un
+    quart de la fenêtre, le rond-point fait encore une centaine de pixels de
+    large. Plus petite, elle ne serait qu'une preuve que la caméra tourne, et
+    une preuve n'est pas une vue.
+
+    Le point rouge bat à la seconde, comme celui de l'horloge et pour la même
+    raison : c'est lui qui distingue une image vivante d'une vignette collée.
+    """
+    if camera is None or camera.size == 0:
+        return
+    x, y, large, haut = vue
+    echelle = toile.shape[1] / 1600
+    marge = int(18 * echelle)
+    petit_l = max(96, int(large * 0.26))
+    petit_h = max(54, int(petit_l * camera.shape[0] / camera.shape[1]))
+    gx = x + large - petit_l - marge
+    gy = y + haut - petit_h - marge
+    if gx < 0 or gy < 0 or gx + petit_l > toile.shape[1] or gy + petit_h > toile.shape[0]:
+        return
+    toile[gy:gy + petit_h, gx:gx + petit_l] = cv2.resize(
+        camera, (petit_l, petit_h), interpolation=cv2.INTER_AREA)
+    cadre_encart(toile, (gx - 1, gy - 1), (gx + petit_l, gy + petit_h), echelle)
+    taille = 0.48 * echelle
+    ligne = max(1, int(echelle))
+    base = gy - int(7 * echelle)
+    cv2.putText(toile, "DIRECT", (gx + int(16 * echelle), base),
+                cv2.FONT_HERSHEY_SIMPLEX, taille, CYAN, ligne, cv2.LINE_AA)
+    if int(quand) % 2 == 0:
+        cv2.circle(toile, (gx + int(6 * echelle), base - int(4 * echelle)),
+                   max(2, int(3.5 * echelle)), (60, 60, 235), -1, cv2.LINE_AA)
+
+
 def pose_machine(image: np.ndarray, etat: dict | None,
                  vignette: np.ndarray | None = None, ville: str = "",
                  remue: float = 0.0) -> None:
@@ -4848,6 +4890,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # regarder ne doit se trouver derrière une bulle.
             pose_bulles(toile, quand - origine, cadrage)
             pose_poissons(toile, quand - origine, cadrage)
+            # La webcam reste visible pendant le survol : le relief a pris sa
+            # place dans la fenêtre, pas sa place dans l'émission.
+            if survol is not None:
+                pose_direct(toile, image, cadrage, quand)
             # Les pantins sur la toile et non sur l'image de la caméra, depuis
             # qu'ils ont le droit d'aller danser dans la bande noire : posés
             # sur la vue, ils étaient enfermés dedans par construction. Ils
