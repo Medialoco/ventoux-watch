@@ -1022,6 +1022,32 @@ def decide(obs: Observation) -> Decision:
                 ),
                 obs,
             )
+        if bus is not None and bus.conf >= conf["bus"] and bus.share >= NAMED_SHARE:
+            # Un bus lu sans horaire reste un véhicule.
+            #
+            # L'horaire n'est pas une preuve, c'est un supplément : il donne au
+            # car son numéro de ligne quand il s'en trouve un. Il servait
+            # pourtant de condition, et « bus » n'est pas dans la famille
+            # interrogée plus bas — si bien qu'une lecture franche ne sortait
+            # nulle part dès qu'aucun car n'était attendu à cette minute.
+            #
+            # Mesuré le 3 octobre sur les dix-huit passages encore muets : deux
+            # étaient des bus lus à 0,72 et 0,58, couvrant 71 % et 73 % de ce
+            # qui avait bougé. L'un faisait deux mètres soixante-dix de large,
+            # c'est-à-dire une voiture que le modèle appelle bus comme il
+            # appelle camion la moitié des voitures. La largeur au sol tranche,
+            # ici comme partout ailleurs.
+            return _stamp(
+                Decision(
+                    "publish",
+                    "vehicle",
+                    _tinted(_vehicle_word(obs, vehicle, bus), obs.colour),
+                    reason="bus_sans_horaire",
+                    detail={"width_m": round(obs.width_m, 1)} if obs.width_m else {},
+                    confidence=bus.conf,
+                ),
+                obs,
+            )
         if (vehicle is not None and vehicle.conf >= SHAPE_CONF and _car_shaped(obs)
                 and vehicle.share >= NAMED_SHARE):
             # Below the usual threshold, but the footprint settles it. Asked

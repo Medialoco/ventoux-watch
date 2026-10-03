@@ -1885,6 +1885,47 @@ class FogTests(unittest.TestCase):
         # regroupent toujours, sans quoi chaque voiture ferait trois lignes.
         self.assertIsNotNone(open_passage([voiture], autre))
 
+    def test_un_bus_lu_sans_horaire_reste_un_vehicule(self):
+        """L'horaire donne son numéro de ligne, il ne donne pas le droit d'exister.
+
+        « bus » n'est pas dans la famille interrogée pour les voitures, si bien
+        qu'un car n'avait qu'une sortie : celle qui exige un passage GTFS à la
+        minute près. Le 3 octobre, deux des dix-huit passages encore muets
+        étaient des bus lus à 0,72 et 0,58 couvrant 71 % et 73 % de ce qui
+        avait bougé — rien n'était attendu à cette heure-là, donc rien n'est
+        sorti.
+        """
+        from watcher import naming
+        from watcher.detect import Detection
+
+        def vu(metres):
+            return naming.Observation(
+                zone="road", surface="road", travel=0.3, min_travel=0.01,
+                width_m=metres, height_m=2.4, frames=12, duration_s=11.0,
+                period="day", trips=[],
+                detections=[Detection(cls="bus", conf=0.72, share=0.71)],
+                min_conf={"bus": 0.45, "bus_unnamed": 0.6, "car": 0.4})
+
+        petit = naming.decide(vu(2.7))
+        self.assertEqual(petit.type, "vehicle")
+        self.assertEqual(petit.label, "Voiture",
+                         "deux mètres soixante-dix au sol, quoi qu'en dise le mot")
+        gros = naming.decide(vu(11.0))
+        self.assertEqual(gros.label, "Camion",
+                         "au-delà de la ligne des 5,5 m, c'est un poids lourd")
+
+        # Une lecture posée à côté de ce qui a bougé ne vouche pour rien.
+        a_cote = vu(2.7)
+        a_cote.detections = [Detection(cls="bus", conf=0.72, share=0.05)]
+        self.assertNotEqual(naming.decide(a_cote).type, "vehicle")
+
+        # Et l'horaire garde la priorité quand il y en a un : il ajoute le
+        # numéro de ligne, c'est tout son intérêt.
+        source = inspect.getsource(naming.decide)
+        self.assertLess(source.index('reason="schedule"'),
+                        source.index('reason="bus_sans_horaire"'),
+                        "l'horaire doit être demandé avant qu'on s'en passe")
+
     def test_une_webcam_qui_hoquette_ne_ferme_pas_le_direct(self):
         """Rouvrir l'entrée, jamais le processus.
 

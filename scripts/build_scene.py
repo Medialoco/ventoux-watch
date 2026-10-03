@@ -486,7 +486,8 @@ def _fit_position(pose: Pose, marks: list[dict]):
     from watcher.frustum import _residual
 
     best, score = pose, _residual(pose, marks)
-    step = {"yaw": 8.0, "pitch": 6.0, "hfov": 12.0, "height_m": 4.0, "lat": 0.0003, "lon": 0.0004}
+    step = {"yaw": 8.0, "pitch": 6.0, "hfov": 12.0, "height_m": 4.0,
+            "lat": 0.0003, "lon": 0.0004}
     for _ in range(7):
         for _sweep in range(60):
             moved = False
@@ -494,7 +495,8 @@ def _fit_position(pose: Pose, marks: list[dict]):
                 for way in (1, -1):
                     values = {
                         "lat": best.lat, "lon": best.lon, "ele": best.ele, "yaw": best.yaw,
-                        "pitch": best.pitch, "hfov": best.hfov, "height_m": best.height_m,
+                        "pitch": best.pitch, "roll": best.roll, "k1": best.k1,
+                        "hfov": best.hfov, "height_m": best.height_m,
                         "aspect": best.aspect,
                     }
                     values[key] += way * size
