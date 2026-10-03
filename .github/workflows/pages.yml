@@ -57,6 +57,11 @@ jobs:
           # Le calage de la caméra : la carte y lit le cap et le champ réels
           # plutôt que de les porter en dur.
           cp config/scene.json _site/data/scene.json
+          # Le numéro du direct en cours. Le site personnel l'incruste, et il
+          # change chaque fois que YouTube termine la diffusion et qu'on en
+          # rouvre une : écrit en dur dans une page, il finirait par désigner
+          # un enregistrement fini.
+          if [ -f data/direct.json ]; then cp data/direct.json _site/data/direct.json; fi
           if [ -f data/learning.json ]; then cp data/learning.json _site/data/learning.json; fi
           if [ -f data/view.json ]; then cp data/view.json _site/data/view.json; fi
           if [ -f data/view.jpg ]; then cp data/view.jpg _site/data/view.jpg; fi
