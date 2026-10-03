@@ -1957,7 +1957,6 @@ ROSE_NUIT = (112, 70, 158)
 ROSE_OMBRE = (150, 105, 205)
 ROSE = (205, 160, 250)
 ROSE_CLAIR = (232, 206, 255)
-IVOIRE = (222, 238, 250)
 TAPIS_ETOFFE = (62, 92, 228)
 TAPIS_FRANGE = (120, 205, 250)
 
@@ -2082,14 +2081,10 @@ def _elephant(calque: np.ndarray, cx: int, sol: int, taille: float,
                  ROSE if pas > 2 else ROSE_CLAIR,
                  max(1, epais // 2), cv2.LINE_AA)
 
-    # Deux défenses, courtes. C'est le détail qui dit « dessin animé » plutôt
-    # que « animal », et il ne coûte que deux arcs.
-    for cote, longueur in ((0.0, 0.17), (0.5, 0.13)):
-        base = (int(tete[0] - taille * (0.17 + cote * 0.05)),
-                int(tete[1] + taille * 0.14))
-        cv2.ellipse(calque, base,
-                    (max(2, int(taille * longueur)), max(2, int(taille * 0.10))),
-                    0, 60, 160, IVOIRE, max(2, int(tube * 0.9)), cv2.LINE_AA)
+    # Pas de défenses : c'est un éléphanteau. Elles étaient là pour dire
+    # « dessin animé » plutôt que « animal », mais elles disaient surtout
+    # « adulte », et un adulte qui danse sur un rond-point est moins aimable
+    # qu'un petit qui danse sur un rond-point.
 
     # L'œil, en dernier et tout petit : plus il est petit, plus il est gentil.
     # Avec son reflet, qui est le seul trait de tout le dessin dont on peut
@@ -2110,35 +2105,41 @@ def _elephant(calque: np.ndarray, cx: int, sol: int, taille: float,
 # Premiers entre eux, deux d'entre eux ne se croisent qu'une fois tous les
 # trois jours.
 ELEPHANT_PERIODE_S = 661.0
-ELEPHANT_TENUE_S = 9.0
-# Sa hauteur au garrot, en parts de la hauteur du rond-point à l'image. Pas en
-# pixels : le rond-point est la seule chose dont on connaisse la taille ici, et
-# c'est ce qui permettra à une autre caméra d'avoir le sien, à l'échelle de son
-# propre rond-point, sans qu'on ait à rien régler.
-ELEPHANT_PART = 0.30
+ELEPHANT_TENUE_S = 4.0
+# Ce qu'il remplit du cadre, et son encombrement — mesuré sur soixante poses,
+# en multiples de sa hauteur au garrot. Les quatre nombres servent à le
+# centrer : le dessin n'est pas symétrique, sa trompe lui prend une taille
+# entière à gauche et sa queue une demi-taille à droite, si bien qu'un
+# éléphant posé au milieu du cadre a l'air posé à droite.
+ELEPHANT_PART = 0.95
+ELEPHANT_GAUCHE = 1.002
+ELEPHANT_DROITE = 0.578
+ELEPHANT_HAUTEUR_SOL = 1.030
+ELEPHANT_BAS = 0.120
+ELEPHANT_LARGE = ELEPHANT_GAUCHE + ELEPHANT_DROITE
+ELEPHANT_HAUT = ELEPHANT_HAUTEUR_SOL + ELEPHANT_BAS
 
 
 def pose_elephant(image: np.ndarray, seconde: float, energie: float,
-                  rond_point: list | None,
                   vue: tuple[int, int, int, int] | None = None,
                   nuit: bool = False) -> bool:
-    """Un éléphant rose vient danser sur le rond-point, de temps en temps.
+    """Un éléphanteau rose vient danser en gros plan, de temps en temps.
 
-    Sur le rond-point et non à un endroit choisi : le contour est déjà dans
-    `zones.json`, parce que la veille a besoin de savoir où est la chaussée. On
-    s'en sert pour le poser au milieu et pour le mettre à l'échelle. Une caméra
-    sans rond-point n'aura pas d'éléphant, et c'est la bonne réponse — il n'y
-    aurait nulle part où le faire danser.
+    Plein cadre et centré, quelques secondes. Il dansait d'abord sur le
+    rond-point, à sa vraie échelle, ce qui était joli et ne se voyait pas : à
+    trente pixels de haut au fond d'une image sombre, un éléphant rose n'est
+    plus un éléphant rose, c'est une tache.
 
-    L'appelant ne le propose que dans un creux, quand rien n'est à l'écran.
-    C'est le rond-point, c'est-à-dire exactement l'endroit où les choses se
-    passent : un éléphant par-dessus une voiture entourée de rouge ferait
-    passer la veille pour une plaisanterie.
+    Et c'est bien un gros plan et non une apparition : pendant quatre secondes
+    il n'y a plus rien d'autre à l'écran. C'est pour ça que l'appelant ne le
+    propose que dans un creux de cinq minutes — c'est la seule chose de tout
+    le flux qui cache la route, et elle ne le fait que quand il n'y a rien
+    dessus. Ni la nuit ni le jour ça ne doit passer devant un évènement.
 
     Rend vrai quand il est là, pour que l'appelant sache qu'il se passe
     quelque chose.
     """
-    if energie < DANSE_ARRET or not rond_point:
+    if energie < DANSE_ARRET:
         return False
     periode = ELEPHANT_PERIODE_S / (NUIT_PLUS_SOUVENT if nuit else 1.0)
     phase_cycle = seconde % periode
@@ -2146,21 +2147,23 @@ def pose_elephant(image: np.ndarray, seconde: float, energie: float,
         return False
     hauteur, largeur = image.shape[:2]
     gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
-    xs = [p[0] for p in rond_point]
-    ys = [p[1] for p in rond_point]
-    taille = (max(ys) - min(ys)) * haute_vue * ELEPHANT_PART
+    # Le dessin occupe 1,58 fois sa taille en largeur et 1,15 en hauteur,
+    # mesuré sur soixante poses. On prend la plus contraignante des deux, et
+    # il tient alors dans le cadre quelle que soit la forme de la vue.
+    taille = min(large_vue / ELEPHANT_LARGE, haute_vue / ELEPHANT_HAUT) * ELEPHANT_PART
     if taille < 12:
         return False
-    cx = int(gauche + (sum(xs) / len(xs)) * large_vue)
-    # Il pose les pieds aux trois quarts du rond-point et non sur son bord bas,
-    # qui touche le bas de l'image : plus bas, il aurait les pattes coupées.
-    sol = int(cime + (min(ys) + (max(ys) - min(ys)) * 0.75) * haute_vue)
+    cx = int(gauche + large_vue / 2 + taille * (ELEPHANT_GAUCHE - ELEPHANT_DROITE) / 2)
+    sol = int(cime + haute_vue / 2 + taille * ELEPHANT_HAUT / 2 - taille * ELEPHANT_BAS)
     calque = image.copy()
     _elephant(calque, cx, sol, taille, seconde * DANSE_PAS_S * 0.8)
     # Il arrive et repart en fondu d'une seconde. Un éléphant qui apparaît d'un
     # coup se lit comme une image sautée ; en fondu, il se lit comme un rêve.
-    bord = min(phase_cycle, ELEPHANT_TENUE_S - phase_cycle, 1.0)
-    cv2.addWeighted(calque, bord * 0.88, image, 1.0 - bord * 0.88, 0.0, dst=image)
+    # Presque opaque une fois arrivé : à quatre-vingt-huit centièmes on voyait
+    # la montagne à travers lui, ce qui allait quand il faisait trente pixels
+    # de haut et en fait un fantôme en gros plan.
+    bord = min(phase_cycle, ELEPHANT_TENUE_S - phase_cycle, 1.0) * 0.96
+    cv2.addWeighted(calque, bord, image, 1.0 - bord, 0.0, dst=image)
     return True
 
 
@@ -2407,7 +2410,9 @@ LAMPADAIRE_M = 7.0
 # qu'une lampe ait l'air allumée.
 LAMP_FER = (104, 96, 108)
 LAMP_OR = (120, 214, 252)
-LAMP_HALO = (92, 176, 232)
+# De combien on remonte la vraie lueur au plus près de l'ampoule. Un facteur
+# et non une couleur : on amplifie ce qui est là, on n'ajoute rien.
+LAMP_GAIN = 0.85
 
 
 def hampe_du_lampadaire(camera: dict, distance_m: float, rapport: float) -> float:
@@ -2447,9 +2452,14 @@ def pose_lampadaire(image: np.ndarray, tete: tuple[float, float],
     allumée. Dessiner une lampe éteinte en train d'éclairer serait le genre de
     petit mensonge dont ce flux n'a pas besoin.
 
-    Son halo respire très lentement. Pas de scintillement : une lampe qui
-    clignote se lit comme une panne, et il y a bien assez de vraies lueurs ici
-    pour qu'on n'en invente pas d'ambiguës.
+    Sa lueur n'est pas dessinée : elle est vraie, et on l'amplifie. La lampe
+    est allumée pour de bon et sa lumière est dans les pixels ; en remonter le
+    contraste autour de l'ampoule donne un halo qui respire sans qu'on ait
+    inventé une seule lueur. C'est la même règle que pour le ciel — ce flux
+    passe son temps à juger des lueurs, il n'a pas à en fabriquer.
+
+    Et le souffle est lent. Pas de scintillement : une lampe qui clignote se
+    lit comme une panne.
     """
     hauteur, largeur = image.shape[:2]
     x, y = int(tete[0] * largeur), int(tete[1] * hauteur)
@@ -2460,16 +2470,24 @@ def pose_lampadaire(image: np.ndarray, tete: tuple[float, float],
     lanterne = max(4, int(long_px * 0.055))
     souffle = 0.88 + 0.12 * math.sin(seconde * 0.5)
 
-    # Le halo s'ajoute à l'image au lieu de la recouvrir, parce que c'est ce
-    # que fait la lumière. Dessiné en disques pleins, le plus large et le plus
-    # sombre effaçait un tiers du paysage : une lampe qui fait de l'ombre.
-    lueur = np.zeros_like(image)
-    for anneau in range(6, 0, -1):
-        rayon = int(lanterne * (0.8 + anneau * 0.75) * souffle)
-        part = ((7 - anneau) / 7) ** 2
-        cv2.circle(lueur, (x, y + lanterne // 2), rayon,
-                   tuple(int(c * part * 0.5) for c in LAMP_HALO), -1, cv2.LINE_AA)
-    cv2.add(image, lueur, dst=image)
+    # Pas de halo inventé. La lampe est vraiment allumée et sa lueur est
+    # vraiment dans les pixels : on l'amplifie au lieu d'en dessiner une
+    # par-dessus. La différence n'est pas qu'esthétique — un halo dessiné est
+    # une lueur de plus dans une image où la veille passe son temps à juger
+    # des lueurs, et c'est précisément ce qu'on vient de retirer du ciel.
+    #
+    # Multiplier et non ajouter : là où il n'y a pas de lumière, rien
+    # n'apparaît. Un fond noir reste noir, et on ne peut donc pas faire naître
+    # de lueur là où il n'y en avait pas.
+    autour = max(8, int(lanterne * 5 * souffle))
+    x0, y0 = max(0, x - autour), max(0, y - autour)
+    x1, y1 = min(largeur, x + autour), min(hauteur, y + autour)
+    if x1 > x0 and y1 > y0:
+        zone = image[y0:y1, x0:x1].astype(np.float32)
+        maille_y, maille_x = np.mgrid[y0:y1, x0:x1]
+        loin = np.hypot(maille_x - x, maille_y - y) / autour
+        gain = 1.0 + LAMP_GAIN * np.clip(1.0 - loin, 0.0, 1.0) ** 2
+        image[y0:y1, x0:x1] = np.clip(zone * gain[:, :, None], 0, 255).astype(np.uint8)
     calque = image.copy()
 
     # Le mât, qui s'épaissit vers le bas comme tous les mâts dessinés, et qui
@@ -3135,9 +3153,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         contours = json.loads(
             (racine / cfg["zones"]).read_text(encoding="utf-8")).get("polygons") or {}
     except (OSError, ValueError, KeyError):
-        log.info("Pas de contours de zones : ni tapis ni éléphant")
+        log.info("Pas de contour du ciel : ni tapis ni sous-marin")
     contour_ciel = contours.get("sky")
-    contour_rond_point = contours.get("roundabout")
     # Le lampadaire du rond-point, s'il a été mesuré. Il faut les trois points :
     # la lanterne, que la carte donne, et les deux bouts du poteau, qu'on a
     # relevés sur l'image. Sans eux on ne dessine rien plutôt que de deviner.
@@ -3398,8 +3415,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # le retenir ; une image d'hier n'est pas un évènement.
                 if quand - dernier_mouvement > CREUX_S:
                     pose_elephant(toile, quand - origine, musique.pouls(),
-                                  contour_rond_point, vue=cadrage,
-                                  nuit=not fait_jour)
+                                  vue=cadrage, nuit=not fait_jour)
                 # Le sous-marin n'attend pas de creux, lui. Il ne descend
                 # jamais sous la crête, donc il ne peut pas passer devant ce
                 # qu'on surveille, et il n'a pas besoin du silence pour être

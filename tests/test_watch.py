@@ -2995,36 +2995,57 @@ class DiffusionTests(unittest.TestCase):
         self.assertFalse(stream.pose_tapis(vide, stream.TAPIS_TRAVERSEE_S + 1, 0.9, ciel))
         self.assertFalse(vide.any())
 
-    def test_the_elephant_stands_on_the_roundabout_and_yields_to_the_watch(self):
-        """Il danse à l'endroit même où les choses se passent.
+    def test_the_elephant_fills_the_picture_and_yields_to_the_watch(self):
+        """Quatre secondes de gros plan, centré, et plus rien d'autre à l'écran.
 
-        C'est tout le charme et tout le risque : un éléphant rose par-dessus
-        une voiture entourée de rouge ferait passer la veille pour une
-        plaisanterie. Il est donc posé sur le rond-point, à l'échelle du
-        rond-point, et l'appelant ne le propose que dans un creux.
+        C'est la seule chose de tout le flux qui cache la route, et c'est
+        pour ça qu'elle ne dure que quatre secondes et que l'appelant ne la
+        propose que dans un creux de cinq minutes.
+
+        Il dansait avant sur le rond-point, à sa vraie échelle. C'était joli
+        et ça ne se voyait pas : à trente pixels de haut au fond d'une image
+        sombre, un éléphant rose n'est plus un éléphant rose.
         """
-        rond = [[0.0, 0.78], [0.34, 0.72], [0.40, 0.86], [0.30, 1.0], [0.0, 1.0]]
-        toile = np.zeros((720, 1280, 3), np.uint8)
-        self.assertTrue(stream.pose_elephant(toile, 4.0, 0.9, rond))
-        pose = np.argwhere(toile.any(axis=2))
-        hauteur = pose[:, 0].max() - pose[:, 0].min()
-        # Sa taille vient du rond-point et de rien d'autre : c'est ce qui lui
-        # permettra d'exister sur une autre caméra sans qu'on règle un pixel.
-        attendu = (1.0 - 0.72) * 720 * stream.ELEPHANT_PART
-        self.assertLess(abs(hauteur - attendu) / attendu, 0.6)
-        # Il est bien sur le rond-point, pas à côté.
-        milieu = pose[:, 1].mean() / 1280
-        self.assertLess(abs(milieu - 0.208), 0.08)
-        # Sans rond-point, pas d'éléphant — et c'est la bonne réponse, il n'y
-        # aurait nulle part où le faire danser.
-        vide = np.zeros((720, 1280, 3), np.uint8)
-        self.assertFalse(stream.pose_elephant(vide, 4.0, 0.9, None))
-        self.assertFalse(vide.any())
-        # Et il ne reste pas : neuf secondes, puis onze minutes de silence.
+        for forme in ((720, 1280), (1080, 1920), (1280, 720)):
+            toile = np.zeros((*forme, 3), np.uint8)
+            self.assertTrue(stream.pose_elephant(toile, 2.0, 0.9))
+            pose = np.argwhere(toile.any(axis=2))
+            haut, bas = pose[:, 0].min(), pose[:, 0].max()
+            bord_g, bord_d = pose[:, 1].min(), pose[:, 1].max()
+            # Il remplit, sans déborder : il tient dans le cadre quelle que
+            # soit la forme de la vue, et il en occupe l'essentiel.
+            self.assertGreaterEqual(min(haut, bord_g), 0)
+            self.assertLess(bas, forme[0])
+            self.assertLess(bord_d, forme[1])
+            remplit = max((bas - haut) / forme[0], (bord_d - bord_g) / forme[1])
+            self.assertGreater(remplit, 0.75, f"trop petit sur {forme}")
+            # Et centré. Le dessin n'est pas symétrique — la trompe lui prend
+            # une taille entière à gauche et la queue une demi-taille à
+            # droite — donc le centrer sur son point d'ancrage le poserait
+            # visiblement à droite. C'est son encombrement qu'on centre.
+            for milieu, cote in (((haut + bas) / 2, forme[0]),
+                                 ((bord_g + bord_d) / 2, forme[1])):
+                self.assertLess(abs(milieu - cote / 2) / cote, 0.04,
+                                f"pas centré sur {forme}")
+        # Il se place dans la vue qu'on lui donne, pas dans l'image entière :
+        # sans ça il danserait à cheval sur les bandes noires.
+        bande = np.zeros((720, 1280, 3), np.uint8)
+        stream.pose_elephant(bande, 2.0, 0.9, vue=(175, 36, 929, 522))
+        pose = np.argwhere(bande.any(axis=2))
+        self.assertGreaterEqual(pose[:, 1].min(), 175)
+        self.assertLessEqual(pose[:, 1].max(), 175 + 929)
+        self.assertLessEqual(pose[:, 0].max(), 36 + 522)
+        # Et il ne reste pas : quatre secondes, puis onze minutes de silence.
         apres = np.zeros((720, 1280, 3), np.uint8)
         self.assertFalse(stream.pose_elephant(apres, stream.ELEPHANT_TENUE_S + 1,
-                                              0.9, rond))
+                                              0.9))
         self.assertFalse(apres.any())
+        self.assertLessEqual(stream.ELEPHANT_TENUE_S, 5.0)
+
+    def test_the_baby_elephant_has_no_tusks(self):
+        """Un adulte qui danse est moins aimable qu'un petit qui danse."""
+        self.assertNotIn("IVOIRE", dir(stream))
+        self.assertNotIn("IVOIRE", inspect.getsource(stream._elephant))
 
     def test_the_night_gets_the_turns_more_often(self):
         """Douze heures d'image fixe et sombre, c'est là qu'on en a besoin.
@@ -3034,15 +3055,13 @@ class DiffusionTests(unittest.TestCase):
         ne montre pas le relief, il montre qu'on a collé une autre vidéo.
         """
         self.assertGreater(stream.NUIT_PLUS_SOUVENT, 1.0)
-        rond = [[0.0, 0.78], [0.34, 0.72], [0.40, 0.86], [0.30, 1.0], [0.0, 1.0]]
-
         def combien(nuit):
             vus = 0
             for seconde in range(2 * 3600):
                 # Assez grande pour que l'éléphant y tienne : sous une douzaine
                 # de pixels de haut il renonce, et il aurait raison.
                 toile = np.zeros((240, 320, 3), np.uint8)
-                vus += bool(stream.pose_elephant(toile, float(seconde), 0.9, rond,
+                vus += bool(stream.pose_elephant(toile, float(seconde), 0.9,
                                                  nuit=nuit))
             return vus
 
