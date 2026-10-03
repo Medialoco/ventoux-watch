@@ -1438,26 +1438,36 @@ def pose_bloc_musique(image: np.ndarray, trio: tuple[dict | None, dict | None, d
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
     marge = int(16 * echelle)
-    pas = int(25 * echelle)
-    cote = int(104 * echelle)
-    lignes: list[tuple[str, tuple[int, int, int], float]] = [
-        ("NOW PLAYING", VERT, 0.52),
-        (_coupe(f"{en_cours['auteur']} — {en_cours['titre']}", 44), BLANC, 0.60),
-        (f"{en_cours['licence']} · {en_cours['url'].replace('https://', '')}", CYAN, 0.55),
-    ]
+    pas = int(27 * echelle)
+    cote = int(84 * echelle)
+    # Trois lignes et non cinq. Le bloc en faisait cinq, l'une sous l'autre,
+    # et montait si haut qu'il entamait l'image ; pendant ce temps la moitié
+    # droite de la bande noire était vide. Ce qui passe maintenant va à
+    # droite, et ce qui passe en ce moment reste à gauche où l'œil le cherche.
+    ici = [("NOW PLAYING", VERT, 0.50),
+           (_coupe(f"{en_cours['auteur']} — {en_cours['titre']}", 40), BLANC, 0.62),
+           (f"{en_cours['licence']} · {en_cours['url'].replace('https://', '')}",
+            CYAN, 0.52)]
+    la_suite = []
     if apres:
-        lignes.append(("UP NEXT  " + _coupe(f"{apres['auteur']} — {apres['titre']}", 44),
-                       AMBRE, 0.55))
+        la_suite.append(("UP NEXT", AMBRE,
+                         _coupe(f"{apres['auteur']} — {apres['titre']}", 38)))
     if avant:
-        lignes.append(("JUST PLAYED  " + _coupe(f"{avant['auteur']} — {avant['titre']}", 40),
-                       (170, 170, 170), 0.55))
-    bloc_h = max(cote, pas * len(lignes)) + 2 * marge
-    larges = [cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, s * echelle, 2)[0][0]
-              for t, _, s in lignes]
-    bloc_l = cote + 3 * marge + max(larges)
-    # Au-dessus du bandeau du bas, jamais dessus : la dernière ligne du bloc
-    # était avalée par la phrase qui défile, et c'était celle du morceau d'avant.
-    bas = hauteur - int(BANDE_H * echelle)
+        la_suite.append(("JUST PLAYED", (150, 150, 150),
+                         _coupe(f"{avant['auteur']} — {avant['titre']}", 38)))
+
+    def large_de(texte: str, part: float) -> int:
+        return cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX,
+                               part * echelle, 2)[0][0]
+
+    colonne = max(large_de(t_, s) for t_, _, s in ici)
+    etiquette = max([large_de(e, 0.46) for e, _, _ in la_suite] or [0])
+    suite_large = max([large_de(v, 0.52) for _, _, v in la_suite] or [0])
+    bloc_h = max(cote, pas * len(ici)) + 2 * marge
+    bloc_l = cote + 3 * marge + colonne
+    if la_suite:
+        bloc_l += marge * 2 + etiquette + marge + suite_large
+    bas = hauteur - int(SPORT_H * echelle)
     haut = bas - bloc_h
     fond = image[haut:bas, 0:min(largeur, bloc_l)]
     if fond.size:
@@ -1471,9 +1481,24 @@ def pose_bloc_musique(image: np.ndarray, trio: tuple[dict | None, dict | None, d
             vignette = cv2.resize(vignette, (cote, cote), interpolation=cv2.INTER_AREA)
             image[haut + marge:haut + marge + cote, gauche:gauche + cote] = vignette
             gauche += cote + marge
-    for i, (texte, couleur, taille) in enumerate(lignes):
-        cv2.putText(image, texte, (gauche + marge, haut + marge + pas * (i + 1) - int(8 * echelle)),
-                    cv2.FONT_HERSHEY_SIMPLEX, taille * echelle, couleur, 2, cv2.LINE_AA)
+    base = haut + marge + pas - int(9 * echelle)
+    for i, (texte, couleur, taille) in enumerate(ici):
+        cv2.putText(image, texte, (gauche + marge, base + pas * i),
+                    cv2.FONT_HERSHEY_SIMPLEX, taille * echelle, couleur, 2,
+                    cv2.LINE_AA)
+    if not la_suite:
+        return
+    # La seconde colonne, alignée sur la première : les deux étiquettes à
+    # gauche, les deux titres sur une même verticale. Alignées, on lit deux
+    # morceaux ; en escalier, on lit deux phrases.
+    droite = gauche + marge + colonne + 2 * marge
+    for i, (etiq, teinte, valeur) in enumerate(la_suite):
+        ligne = base + pas * (i + (len(ici) - len(la_suite)) // 2)
+        cv2.putText(image, etiq, (droite, ligne), cv2.FONT_HERSHEY_SIMPLEX,
+                    0.46 * echelle, teinte, 2, cv2.LINE_AA)
+        cv2.putText(image, valeur, (droite + etiquette + marge, ligne),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.52 * echelle, BLANC, 2,
+                    cv2.LINE_AA)
 
 
 # Le silence qu'il faut avant d'aller chercher dans les archives, et le temps
@@ -1713,9 +1738,13 @@ def pose_rediffusion(image: np.ndarray, fiche: dict) -> bool:
     cible_h = min(cible_h, carte_h - pied - marge)
     vignette = vignette[:cible_h]
     haut = (hauteur - carte_h) // 2
-    # À droite : le rond-point et la route occupent la gauche de l'image,
-    # et c'est d'eux qu'il s'agit quand quelque chose se passe.
-    gauche = largeur - cible_l - int(40 * echelle)
+    # Au milieu. Elle était à droite pour laisser voir le rond-point et la
+    # route, qui occupent la gauche de l'image — un bon raisonnement pour une
+    # vignette posée par-dessus le direct. Mais elle n'est pas posée par-
+    # dessus : pendant une rediffusion il n'y a rien d'autre à regarder, le
+    # direct est caché derrière de toute façon, et une image collée contre le
+    # bord droit d'un écran par ailleurs vide a juste l'air mal posée.
+    gauche = (largeur - cible_l) // 2
     fond = image[haut:haut + carte_h, max(0, gauche - marge):min(largeur, gauche + cible_l + marge)]
     if fond.size:
         fond[:] = (fond * 0.25).astype(np.uint8)
@@ -1732,47 +1761,102 @@ def pose_rediffusion(image: np.ndarray, fiche: dict) -> bool:
 # Le bandeau du bas, qui tourne. Anglais et français en alternance plutôt que
 # côte à côte : deux langues sur la même ligne tiennent en quatre mots, pas en
 # une phrase, et ce qu'il y a à dire ici tient mal en quatre mots.
-BANDES = [
-    "LIVE from Mont Serein · north face of Mont Ventoux · Vaucluse, France",
-    "Every red box was drawn by a machine that decided, on its own, that something moved",
-    "About 15 seconds behind — the time it takes to name what moves",
-    "Wrong name? Tell us. Being corrected is the whole point",
-    "All music is Creative Commons · artist, licence and source shown bottom left",
-    # Pas un mot sur le feu dans les bandeaux. Un flux qui répète qu'il guette
-    # un incendie se met à en promettre un, et le jour où il en voit vraiment
-    # un, plus personne ne distingue l'annonce de l'affiche.
-    "One mountain road, watched around the clock. Most days, nothing happens",
-    "Names are guessed in about fifteen seconds. Sometimes they are wrong. Say so",
-]
-BANDE_S = 11.0
-# La hauteur du bandeau du bas, que le bloc musique doit savoir éviter.
-BANDE_H = 42
+# Le bandeau du bas, sa hauteur et sa lenteur. Quatre pixels et demi par
+# seconde à la largeur de référence : il met six minutes à traverser l'écran,
+# et c'est voulu. Un bandeau rapide se lit par morceaux et oblige à le
+# rattraper ; celui-ci se lit par-dessus l'épaule, sans y penser, et pendant
+# six minutes il ne demande rien à personne.
+SPORT_H = 42
+SPORT_VITESSE = 4.5      # pixels par seconde, à 1600 de large
+SPORT_ECART = 70         # le blanc entre deux rencontres
+SPORT_RELIT_S = 600.0    # on relit le fichier toutes les dix minutes
 
 
-def bande_du_moment(seconde: float) -> str:
-    """Une phrase à la fois, dans l'ordre : anglais, français, anglais…"""
-    return BANDES[int(seconde // BANDE_S) % len(BANDES)]
+def pose_sport(image: np.ndarray, matchs: list, ligue: str,
+               seconde: float) -> None:
+    """Les résultats du championnat, en une ligne qui glisse très lentement."""
+    if not matchs:
+        return
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    pas = int(SPORT_H * echelle)
+    taille = 0.56 * echelle
+    base = hauteur - int(13 * echelle)
+    bande = image[hauteur - pas:hauteur, :]
+    bande[:] = (bande * 0.25).astype(np.uint8)
+    cv2.line(image, (0, hauteur - pas), (largeur, hauteur - pas),
+             tuple(int(c * 0.45) for c in CYAN), max(1, int(echelle)),
+             cv2.LINE_AA)
+
+    morceaux: list[tuple[str, tuple[int, int, int]]] = []
+    if ligue:
+        morceaux.append((f"{ligue}   ", AMBRE))
+    for match in matchs:
+        # L'équipe du coin en cyan : c'est tout l'intérêt d'un résultat
+        # sportif sur une webcam de Provence, savoir comment a joué l'équipe
+        # d'à côté. Les autres en blanc, parce qu'un classement amputé des
+        # adversaires n'est plus un classement.
+        teinte = CYAN if match.get("du_coin") else BLANC
+        milieu = match.get("score") or "vs"
+        morceaux.append((f"{match.get('chez', '')} {milieu} "
+                         f"{match.get('dehors', '')}", teinte))
+        morceaux.append(("   ·   ", (110, 110, 110)))
+    larges = [cv2.getTextSize(m, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
+              for m, _ in morceaux]
+    tour = sum(larges) + int(SPORT_ECART * echelle)
+    if tour <= 0:
+        return
+    decalage = int(seconde * SPORT_VITESSE * echelle) % tour
+    for depart in (-decalage, -decalage + tour):
+        x = depart
+        for (mot, teinte), large in zip(morceaux, larges):
+            if -large < x < largeur:
+                cv2.putText(image, mot, (x, base), cv2.FONT_HERSHEY_SIMPLEX,
+                            taille, teinte, 2, cv2.LINE_AA)
+            x += large
 
 
-def pose_bande_basse(image: np.ndarray, texte: str) -> None:
-    """Le tiers inférieur des chaînes d'information, en une ligne."""
+# Le bandeau du bas est parti. C'était la ligne des chaînes d'information,
+# filet rouge compris, et elle répétait sept phrases qui disaient toutes la
+# même chose : « regardez, il y a une machine qui regarde ». Personne n'a
+# besoin qu'on le lui dise sept fois ; le rectangle rouge autour d'une voiture
+# le dit mieux en une fois. Le bas de l'image sert maintenant à quelque chose
+# qui change vraiment — les résultats du championnat d'à côté.
+
+
+# La distance entre la machine et ce qu'elle regarde, écrite sobrement sous
+# l'image. Les deux encarts donnent les deux lieux ; celui-ci donne ce qu'il
+# y a entre, qui est la seule chose que ni l'un ni l'autre ne peut dire.
+DISTANCE_TAILLE = 0.5
+DISTANCE_GRIS = (150, 150, 150)
+
+
+def a_vol_d_oiseau(un: tuple[float, float], deux: tuple[float, float]) -> float:
+    """Les kilomètres entre deux points de la Terre, par le grand cercle."""
+    rayon = 6371.0088
+    phi1, phi2 = math.radians(un[0]), math.radians(deux[0])
+    dphi = phi2 - phi1
+    dlam = math.radians(deux[1] - un[1])
+    a = (math.sin(dphi / 2) ** 2
+         + math.cos(phi1) * math.cos(phi2) * math.sin(dlam / 2) ** 2)
+    return 2 * rayon * math.asin(math.sqrt(min(1.0, a)))
+
+
+def pose_distance(image: np.ndarray, texte: str, vue: tuple | None = None) -> None:
+    """Une ligne sobre sous l'image : d'où l'on regarde, et de combien loin."""
     if not texte:
         return
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
-    pas = int(BANDE_H * echelle)
-    marge = int(16 * echelle)
-    taille = 0.72 * echelle
-    long_px = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
-    bande = image[hauteur - pas:hauteur, 0:min(largeur, long_px + 3 * marge)]
-    if bande.size:
-        bande[:] = (bande * 0.25).astype(np.uint8)
-    # Le filet rouge à gauche, comme les chaînes en mettent : il dit où la
-    # ligne commence, et c'est le seul rouge que le flux s'autorise en dehors
-    # des rectangles.
-    cv2.rectangle(image, (0, hauteur - pas), (int(6 * echelle), hauteur), ROUGE, -1)
-    cv2.putText(image, texte, (2 * marge, hauteur - int(13 * echelle)),
-                cv2.FONT_HERSHEY_SIMPLEX, taille, BLANC, 2, cv2.LINE_AA)
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    taille = DISTANCE_TAILLE * echelle
+    long_px = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, taille, 1)[0][0]
+    x = gauche + large_vue - long_px
+    y = cime + haute_vue + int(22 * echelle)
+    if y >= hauteur:
+        return
+    cv2.putText(image, texte, (x, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
+                DISTANCE_GRIS, max(1, int(echelle)), cv2.LINE_AA)
 
 
 ATTRAPE_S = 1.6
@@ -2141,9 +2225,8 @@ def pose_elephant(image: np.ndarray, seconde: float, energie: float,
     """
     if energie < DANSE_ARRET:
         return False
-    periode = ELEPHANT_PERIODE_S / (NUIT_PLUS_SOUVENT if nuit else 1.0)
-    phase_cycle = seconde % periode
-    if phase_cycle >= ELEPHANT_TENUE_S:
+    phase_cycle = en_scene("elephant", seconde, nuit)
+    if phase_cycle is None:
         return False
     hauteur, largeur = image.shape[:2]
     gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
@@ -2181,6 +2264,66 @@ def pose_elephant(image: np.ndarray, seconde: float, energie: float,
 # qui faisait l'intérêt de nombres premiers : leur rapport ne change pas, donc
 # les deux numéros ne se mettent pas à tomber ensemble.
 NUIT_PLUS_SOUVENT = 3.0
+
+# LE PLATEAU : UN NUMÉRO À LA FOIS
+# -------------------------------
+# Chaque numéro comptait son tour tout seul, sur sa propre période. Les
+# périodes sont des nombres premiers, ce qui espace les coïncidences mais ne
+# les empêche pas : sur une journée, le tapis volant, le sous-marin et le
+# surfeur finissent par tomber ensemble, et l'écran ressemble alors à une
+# vitrine de Noël. Une fois, c'est drôle. Deux fois, on cesse de croire à
+# chacun d'eux séparément.
+#
+# La règle est donc simple et se décide sans mémoire, uniquement sur l'heure,
+# ce qui compte parce que le flux redémarre et ne doit pas rejouer deux fois
+# la même chose : un numéro ne monte en scène que si le plateau était libre
+# à l'instant précis où son tour commençait. S'il ne l'était pas, il passe
+# son tour entier — il ne s'invite pas au milieu. Un sous-marin qui
+# apparaîtrait d'un coup en plein ciel, à mi-traversée, serait pire que pas
+# de sous-marin du tout.
+#
+# L'ordre de cette table départage les ex æquo, qui existent : deux périodes
+# entières tombent sur la même seconde de temps en temps.
+# Remplie plus bas, quand les quatre numéros ont donné leurs nombres : elle
+# ne les répète pas, elle les désigne. Deux tables de périodes, c'est une
+# table de trop, et c'est celle qu'on oublie de changer.
+PLATEAU: tuple[tuple[str, float, float], ...] = ()
+
+
+def en_scene(nom: str, seconde: float, nuit: bool = False) -> float | None:
+    """Où en est ce numéro, s'il a le droit d'être à l'écran maintenant."""
+    duree = dict((a, d) for a, _, d in PLATEAU).get(nom)
+    if duree is None:
+        return None
+    # Tout le calcul se fait en millisecondes entières. La nuit les périodes
+    # sont divisées par trois et 397/3 ne tombe pas juste en binaire ; deux
+    # calculs du même instant finissaient par différer d'un milliardième de
+    # seconde, ce qui suffit à faire croire à deux numéros qu'ils sont chacun
+    # arrivés les premiers. Ils passaient alors ensemble, rarement, et c'est
+    # précisément ce qu'on cherche à supprimer. Des entiers ne mentent pas.
+    vite = NUIT_PLUS_SOUVENT if nuit else 1.0
+    tours = {a: max(1, round(p * 1000 / vite)) for a, p, _ in PLATEAU}
+    instant = round(seconde * 1000)
+    commence = instant - instant % tours[nom]
+    phase = (instant - commence) / 1000.0
+    if phase >= duree:
+        return None
+    mon_rang = [a for a, _, _ in PLATEAU].index(nom)
+    for rang, (autre, _, sa_duree) in enumerate(PLATEAU):
+        if autre == nom:
+            continue
+        sienne = (commence % tours[autre]) / 1000.0
+        if sienne >= sa_duree:
+            continue
+        # L'autre était déjà là quand mon tour a commencé. « Strictement
+        # avant » compte : sienne vaut zéro quand les deux tours commencent
+        # à la même seconde, et c'est le seul cas où l'ordre de la table
+        # tranche. Sans cette distinction, chacun se jugeait sur les seuls
+        # numéros écrits avant lui, et un numéro écrit plus haut passait
+        # par-dessus celui qui était en scène depuis cinq secondes.
+        if sienne > 0 or rang < mon_rang:
+            return None
+    return phase
 
 TAPIS_PERIODE_S = 397.0
 TAPIS_TRAVERSEE_S = 14.0
@@ -2242,9 +2385,8 @@ def pose_tapis(image: np.ndarray, seconde: float, energie: float,
     """
     if energie < DANSE_ARRET:
         return False
-    periode = TAPIS_PERIODE_S / (NUIT_PLUS_SOUVENT if nuit else 1.0)
-    phase_cycle = seconde % periode
-    if phase_cycle >= TAPIS_TRAVERSEE_S:
+    phase_cycle = en_scene("tapis", seconde, nuit)
+    if phase_cycle is None:
         return False
     hauteur, largeur = image.shape[:2]
     gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
@@ -2369,9 +2511,8 @@ def pose_sous_marin(image: np.ndarray, seconde: float,
     """
     if vignette is None:
         return False
-    periode = SOUS_MARIN_PERIODE_S / (NUIT_PLUS_SOUVENT if nuit else 1.0)
-    phase_cycle = seconde % periode
-    if phase_cycle >= SOUS_MARIN_TRAVERSEE_S:
+    phase_cycle = en_scene("sous-marin", seconde, nuit)
+    if phase_cycle is None:
         return False
     hauteur, largeur = image.shape[:2]
     gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
@@ -2409,6 +2550,17 @@ def pose_sous_marin(image: np.ndarray, seconde: float,
 # secondes. Un nombre premier de plus, pour la raison habituelle.
 PISTE_PERIODE_S = 787.0
 PISTE_DESCENTE_S = 20.0
+
+# Le plateau, maintenant que les quatre numéros ont dit leur période et leur
+# durée. L'ordre départage les ex æquo : le tapis d'abord parce qu'il passe
+# au-dessus de tout et ne cache rien, l'éléphant en dernier parce qu'il
+# occupe l'écran entier.
+PLATEAU = (
+    ("tapis", TAPIS_PERIODE_S, TAPIS_TRAVERSEE_S),
+    ("sous-marin", SOUS_MARIN_PERIODE_S, SOUS_MARIN_TRAVERSEE_S),
+    ("piste", PISTE_PERIODE_S, PISTE_DESCENTE_S),
+    ("elephant", ELEPHANT_PERIODE_S, ELEPHANT_TENUE_S),
+)
 # Ce que le surfeur fait de large : il louvoie de part et d'autre du tracé,
 # comme on descend vraiment, et jamais tout droit. En parts de sa taille.
 PISTE_LOUVOIE = 2.6
@@ -2451,35 +2603,42 @@ def _le_long(trace: list, part: float) -> tuple[float, float, float]:
 
 def _surfeur(calque: np.ndarray, x: int, y: int, taille: float, phase: float,
              penche: float) -> None:
-    """Le même pantin que les autres, mais sur une planche et penché.
+    """Le pantin des coins, sur une planche et couché dans le virage.
 
-    Penché, parce que c'est tout ce qui distingue quelqu'un qui surfe de
-    quelqu'un qui est debout : on ne tourne pas sans se coucher dans le
-    virage. L'inclinaison vient du virage lui-même et n'est pas une animation
-    à part — c'est pour ça qu'elle tombe juste.
+    Le même dessin, littéralement : il avait son propre bonhomme, fait de
+    traits droits avec une tête pleine, et à côté des trois autres il n'était
+    pas le même personnage. C'était pourtant l'idée — celui du tapis volant
+    est déjà celui du bas parti faire un tour en l'air, et celui-ci devait
+    être le même parti faire du surf.
+
+    Il est donc dessiné debout dans un carré, planche comprise, et le carré
+    tourne. L'inclinaison vient du virage et n'est pas une animation à part :
+    on ne tourne pas sans se coucher, c'est pour ça qu'elle tombe juste.
     """
-    tube = max(2, int(taille * 0.07))
-    cos, sin = math.cos(penche), math.sin(penche)
+    cote = max(8, int(taille * 2.6))
+    pieds = int(cote * 0.78)
+    bout = np.zeros((cote, cote, 3), np.uint8)
+    _danseur(bout, cote // 2, pieds, taille, phase, BLANC)
+    planche = max(2, int(taille * 0.12))
+    cv2.line(bout, (int(cote / 2 - taille * 0.55), pieds),
+             (int(cote / 2 + taille * 0.55), pieds), (0, 0, 0),
+             planche + 3, cv2.LINE_AA)
+    cv2.line(bout, (int(cote / 2 - taille * 0.55), pieds),
+             (int(cote / 2 + taille * 0.55), pieds), PISTE_PLANCHE,
+             planche, cv2.LINE_AA)
+    tourne = cv2.getRotationMatrix2D((cote / 2, pieds), math.degrees(penche), 1.0)
+    bout = cv2.warpAffine(bout, tourne, (cote, cote), flags=cv2.INTER_LINEAR)
 
-    def tourne(dx, dy):
-        return (int(x + dx * cos - dy * sin), int(y + dx * sin + dy * cos))
-
-    def trait(a, b, couleur=BLANC, epais=None):
-        cv2.line(calque, a, b, (0, 0, 0), (epais or tube) + 2, cv2.LINE_AA)
-        cv2.line(calque, a, b, couleur, epais or tube, cv2.LINE_AA)
-
-    planche = (tourne(-taille * 0.55, 0), tourne(taille * 0.55, 0))
-    trait(planche[0], planche[1], PISTE_PLANCHE, max(2, int(taille * 0.11)))
-    hanche = tourne(0, -taille * 0.42)
-    epaule = tourne(math.sin(phase) * taille * 0.07, -taille * 0.78)
-    trait(hanche, epaule)
-    for cote in (-1, 1):
-        trait(hanche, tourne(cote * taille * 0.3, -taille * 0.08))
-        trait(epaule, tourne(cote * taille * 0.45,
-                             -taille * (0.95 + 0.25 * math.sin(phase + cote))))
-    tete = tourne(0, -taille * 0.93)
-    cv2.circle(calque, tete, int(taille * 0.13) + 2, (0, 0, 0), -1, cv2.LINE_AA)
-    cv2.circle(calque, tete, int(taille * 0.13), BLANC, -1, cv2.LINE_AA)
+    x0, y0 = int(x - cote / 2), int(y - pieds)
+    hauteur, largeur = calque.shape[:2]
+    gx0, gy0 = max(0, x0), max(0, y0)
+    gx1, gy1 = min(largeur, x0 + cote), min(hauteur, y0 + cote)
+    if gx0 >= gx1 or gy0 >= gy1:
+        return
+    morceau = bout[gy0 - y0:gy1 - y0, gx0 - x0:gx1 - x0]
+    zone = calque[gy0:gy1, gx0:gx1]
+    dessine = morceau.any(axis=2)
+    zone[dessine] = morceau[dessine]
 
 
 def pose_piste(image: np.ndarray, seconde: float, trace: list | None,
@@ -2506,9 +2665,8 @@ def pose_piste(image: np.ndarray, seconde: float, trace: list | None,
     """
     if not trace or len(trace) < 2:
         return False
-    periode = PISTE_PERIODE_S / (NUIT_PLUS_SOUVENT if nuit else 1.0)
-    phase_cycle = seconde % periode
-    if phase_cycle >= PISTE_DESCENTE_S:
+    phase_cycle = en_scene("piste", seconde, nuit)
+    if phase_cycle is None:
         return False
     hauteur, largeur = image.shape[:2]
     gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
@@ -3069,6 +3227,25 @@ MACHINE_NOIR = 0.10      # le noir de la photo, en part du blanc de l'encart
 MACHINE_BLANC = 0.52     # et son blanc, qui n'est plus celui du bureau
 
 
+def _tient_dedans(image: np.ndarray, large: int, haut: int) -> np.ndarray:
+    """L'image entière, centrée dans une boîte, sans être déformée.
+
+    Contenue et non remplie. Remplir la boîte rognait la photo au centre, et
+    au centre de celle-ci il y a le ventilateur : on voyait un ventilateur,
+    plus une carte. Une bande sombre au-dessus et au-dessous ne coûte rien,
+    elle est de la couleur de l'encart.
+    """
+    facteur = min(large / image.shape[1], haut / image.shape[0])
+    petite = cv2.resize(image, (max(1, round(image.shape[1] * facteur)),
+                                max(1, round(image.shape[0] * facteur))),
+                        interpolation=cv2.INTER_AREA)
+    boite = np.zeros((haut, large, 3), image.dtype)
+    x = (large - petite.shape[1]) // 2
+    y = (haut - petite.shape[0]) // 2
+    boite[y:y + petite.shape[0], x:x + petite.shape[1]] = petite
+    return boite
+
+
 def tamise_la_photo(photo: np.ndarray) -> np.ndarray:
     """La photo au monochrome de l'encart, dans sa plage de gris."""
     gris = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
@@ -3092,7 +3269,8 @@ def cadre_encart(image: np.ndarray, coin_a: tuple[int, int],
 
 
 def pose_machine(image: np.ndarray, etat: dict | None,
-                 vignette: np.ndarray | None = None, ville: str = "") -> None:
+                 vignette: np.ndarray | None = None, ville: str = "",
+                 remue: float = 0.0) -> None:
     """L'encart machine, en haut à gauche, en face de l'horloge.
 
     Une webcam qui tourne vingt-quatre heures sur vingt-quatre tient à une
@@ -3131,7 +3309,7 @@ def pose_machine(image: np.ndarray, etat: dict | None,
               (f"UP {debout}", BLANC)]
     pas = int(28 * echelle)
     marge = int(14 * echelle)
-    sommet = int(RUBAN_H * echelle)
+    sommet = int(RUBAN_H * echelle) + int(remue)
     taille = 0.56 * echelle
     # Les deux encarts se répondent : celui-ci dit où est la machine qui
     # regarde, celui d'en face où est ce qu'elle regarde. Huit mille
@@ -3145,20 +3323,24 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     # reconnaissait rien : une tache verte sous un tableau de bord. Cent
     # soixante-dix, et on voit que c'est un Raspberry Pi avec son ventilateur,
     # ce qui est tout l'intérêt de la montrer.
-    droite = max(large + 2 * marge, int(MACHINE_PHOTO_PX * echelle) + 2 * marge)
+    droite = max(large + 2 * marge, int(ENCART_LARGE * echelle) + 2 * marge)
     # La photo de l'installation sous les chiffres. Les chiffres disent que la
     # machine va bien ; la photo dit laquelle. C'est une carte à cent euros sur
     # un bureau, et le flux a l'air d'une chaîne de télévision — autant le
     # montrer, c'est plus honnête et c'est plus intéressant.
+    haut_photo = sommet + pas * (len(lignes) + bool(lieu)) + marge // 2
+    bas = int(ENCART_BAS * echelle) + int(remue)
     photo = None
-    if vignette is not None:
+    if vignette is not None and bas - haut_photo - marge > 8:
         vu_large = droite - 2 * marge
-        vu_haut = int(vu_large * vignette.shape[0] / vignette.shape[1])
-        photo = tamise_la_photo(
-            cv2.resize(vignette, (vu_large, vu_haut), interpolation=cv2.INTER_AREA))
-    bas = sommet + pas * (len(lignes) + bool(lieu)) + marge
-    if photo is not None:
-        bas += photo.shape[0] + marge
+        vu_haut = bas - haut_photo - marge
+        # Contenue, ni déformée ni rognée. La boîte dépend du nombre de
+        # lignes écrites au-dessus, qui n'a aucune raison d'avoir le rapport
+        # de la photo : l'étirer donnait un Raspberry Pi plus long que large,
+        # la rogner donnait un gros plan sur le ventilateur.
+        photo = tamise_la_photo(_tient_dedans(vignette, vu_large, vu_haut))
+    else:
+        bas = sommet + pas * (len(lignes) + bool(lieu)) + marge
     panneau = image[sommet:bas, 0:droite]
     if panneau.size:
         panneau[:] = (panneau * 0.35).astype(np.uint8)
@@ -3166,11 +3348,10 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     for i, (texte, teinte) in enumerate(lignes):
         cv2.putText(image, texte, (marge, sommet + pas * (i + 1) - int(6 * echelle)),
                     cv2.FONT_HERSHEY_SIMPLEX, taille, teinte, 2, cv2.LINE_AA)
-    pose_lieu(image, lieu, "US", marge,
+    pose_lieu(image, lieu, marge,
               sommet + pas * (len(lignes) + 1) - int(6 * echelle),
               taille * HORLOGE_LIEU, echelle)
     if photo is not None:
-        haut_photo = sommet + pas * (len(lignes) + bool(lieu)) + marge // 2
         coin = image[haut_photo:haut_photo + photo.shape[0], marge:marge + photo.shape[1]]
         if coin.shape[:2] == photo.shape[:2]:
             coin[:] = photo
@@ -3216,69 +3397,97 @@ def pose_bonjour(image: np.ndarray, nom: str, age: float) -> None:
 # Le lieu sous les chiffres, en part de leur taille. Les deux encarts
 # emploient la même, c'est ce qui les rend symétriques.
 HORLOGE_LIEU = 0.62
-# Les drapeaux sont minuscules à dessein : ils disent de quel côté de la
-# planète on est, ils ne décorent pas. Un drapeau lisible serait un drapeau
-# trop gros pour ce qu'il dit.
-DRAPEAU_HAUT = 0.62      # en part de la hauteur des lettres du lieu
-DRAPEAU_RAPPORT = 1.5    # large sur haut, celui des deux drapeaux
-BLEU_FR = (94, 42, 0)
-ROUGE_FR = (43, 35, 206)
-BLEU_US = (102, 51, 10)
-ROUGE_US = (45, 39, 178)
+# La carte dans l'encart : une silhouette de pays avec un point dessus.
+# L'encart nommait la commune et ne disait pas où elle est. Un nom de commune
+# française ne dit rien à qui n'est pas français, et la moitié des gens qui
+# regardent une webcam ne le sont pas. Une silhouette se lit sans savoir lire.
+#
+# Il y avait un drapeau à la place, minuscule, et c'était une mauvaise
+# réponse : un drapeau dit un pays et rien de plus, alors qu'on voulait dire
+# un endroit dans un pays — et à huit pixels de haut il ne disait même pas le
+# pays, il disait « il y a quelque chose de colorié ici ».
+# Les deux encarts descendent jusqu'à la même ligne et sont au moins aussi
+# larges l'un que l'autre : c'est ce qui les rend symétriques pour de bon.
+# Chacun écrit son texte, puis son image prend tout ce qui reste jusqu'en bas.
+# Sans cette ligne commune, les deux hauteurs dépendaient du nombre de lignes
+# de texte, qui n'a aucune raison d'être le même des deux côtés.
+ENCART_BAS = 470         # depuis le haut de l'image, à la largeur de référence
+ENCART_LARGE = 170
+# De temps en temps, quand la musique pousse, les deux encarts se balancent.
+# En hauteur seulement : de côté, celui de gauche entrerait dans l'image et
+# celui de droite sortirait de l'écran, et un tableau de bord qui empiète sur
+# ce qu'on surveille est une mauvaise plaisanterie. Ils vont en sens inverse
+# l'un de l'autre — ensemble ils auraient l'air de glisser, pas de danser.
+ENCART_DANSE_PERIODE_S = 311.0
+ENCART_DANSE_S = 18.0
+ENCART_DANSE_PX = 7.0
+CARTE_TRAIT = (150, 128, 44)
+CARTE_PLEIN = (58, 50, 18)
+CARTE_POINT = (235, 215, 70)
 
 
-def _drapeau(image: np.ndarray, x: int, y: int, haut: int, pays: str) -> None:
-    """Un drapeau de quelques pixels, posé à gauche du nom du lieu.
+def pose_carte(image: np.ndarray, contours: list, lat: float, lon: float,
+               x: int, y: int, cote: int, echelle: float = 1.0) -> int:
+    """Le pays en silhouette, avec un point là où regarde la caméra.
 
-    Dessiné et non chargé : à cette taille une image serait une bouillie, et
-    trois rectangles valent mieux qu'un fichier. Le drapeau américain n'a pas
-    cinquante étoiles ici, il a un carré bleu — à huit pixels de haut, c'est
-    tout ce qu'un œil peut lire, et c'est assez pour ne pas le confondre avec
-    l'autre.
+    Rend la hauteur occupée, parce qu'elle dépend de la forme du pays et que
+    l'encart doit s'ajuster dessus : la France est à peu près carrée, le Chili
+    ne le serait pas.
     """
-    large = max(3, int(haut * DRAPEAU_RAPPORT))
-    if pays == "FR":
-        tiers = max(1, large // 3)
-        for i, teinte in enumerate((BLEU_FR, BLANC, ROUGE_FR)):
-            bout = x + large if i == 2 else x + tiers * (i + 1)
-            cv2.rectangle(image, (x + tiers * i, y), (bout, y + haut),
-                          teinte, -1)
-        return
-    bande = max(1, haut // 6)
-    for i in range(6):
-        cv2.rectangle(image, (x, y + bande * i), (x + large, y + bande * i + bande),
-                      ROUGE_US if i % 2 == 0 else BLANC, -1)
-    cv2.rectangle(image, (x, y), (x + large // 2, y + bande * 3), BLEU_US, -1)
+    if not contours:
+        return 0
+    tous = [point for anneau in contours for point in anneau]
+    ouest = min(p[0] for p in tous)
+    est = max(p[0] for p in tous)
+    sud = min(p[1] for p in tous)
+    nord = max(p[1] for p in tous)
+    # Les longitudes se resserrent avec la latitude : sans ce facteur la
+    # France est étalée d'un tiers en largeur et ne se reconnaît plus.
+    serre = math.cos(math.radians((nord + sud) / 2))
+    large_deg = max((est - ouest) * serre, 1e-6)
+    haut_deg = max(nord - sud, 1e-6)
+    pas = cote / max(large_deg, haut_deg)
+    haut = max(1, int(haut_deg * pas))
+    marge = int((cote - large_deg * pas) / 2)
 
+    def sur_la_carte(lon_p: float, lat_p: float) -> tuple[int, int]:
+        return (x + marge + int((lon_p - ouest) * serre * pas),
+                y + int((nord - lat_p) * pas))
 
-def _avant_le_lieu(taille: float, echelle: float) -> tuple[int, int]:
-    """La hauteur du drapeau et le décalage qu'il impose au nom."""
-    haut = max(4, int(26 * taille * DRAPEAU_HAUT))
-    return haut, int(haut * DRAPEAU_RAPPORT) + max(2, int(5 * echelle))
+    for anneau in contours:
+        trace = np.array([sur_la_carte(*point) for point in anneau], np.int32)
+        cv2.fillPoly(image, [trace], CARTE_PLEIN, cv2.LINE_AA)
+        cv2.polylines(image, [trace], True, CARTE_TRAIT,
+                      max(1, int(echelle)), cv2.LINE_AA)
+    px, py = sur_la_carte(lon, lat)
+    rayon = max(2, int(3.5 * echelle))
+    cv2.circle(image, (px, py), rayon + max(1, int(echelle)), (0, 0, 0), -1,
+               cv2.LINE_AA)
+    cv2.circle(image, (px, py), rayon, CARTE_POINT, -1, cv2.LINE_AA)
+    return haut
 
 
 def large_du_lieu(texte: str, taille: float, echelle: float) -> int:
-    """Ce que prend « drapeau + nom », pour que l'encart s'élargisse d'autant."""
+    """Ce que prend le nom du lieu, pour que l'encart s'élargisse d'autant."""
     if not texte:
         return 0
-    _, decale = _avant_le_lieu(taille, echelle)
-    return decale + cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX,
-                                    taille, 2)[0][0]
+    return cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
 
 
-def pose_lieu(image: np.ndarray, texte: str, pays: str, x: int, ligne: int,
+def pose_lieu(image: np.ndarray, texte: str, x: int, ligne: int,
               taille: float, echelle: float) -> None:
-    """Le nom d'un lieu précédé de son drapeau, posé sur la ligne de base."""
+    """Le nom d'un lieu, posé sur la ligne de base."""
     if not texte:
         return
-    haut, decale = _avant_le_lieu(taille, echelle)
-    _drapeau(image, x, ligne - haut, haut, pays)
-    cv2.putText(image, texte, (x + decale, ligne), cv2.FONT_HERSHEY_SIMPLEX,
+    cv2.putText(image, texte, (x, ligne), cv2.FONT_HERSHEY_SIMPLEX,
                 taille, CYAN, 2, cv2.LINE_AA)
 
 
 def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
-                 autre: str = "REPLAY", commune: str = "") -> None:
+                 autre: str = "REPLAY", commune: str = "",
+                 carte: list | None = None,
+                 ou: tuple[float, float] | None = None,
+                 remue: float = 0.0) -> None:
     """L'heure qui tourne, en haut à droite, avec le point rouge des chaînes.
 
     Le point clignote à la seconde : c'est ce qui fait qu'un écran fixe a l'air
@@ -3302,16 +3511,20 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
               moment.strftime("%H:%M:%S")]
     pas = int(34 * echelle)
     marge = int(14 * echelle)
-    sommet = int(RUBAN_H * echelle)
+    sommet = int(RUBAN_H * echelle) + int(remue)
     taille = 0.7 * echelle
     lieu = (commune or "").upper()
+    dessin = bool(carte and ou)
     large = max([cv2.getTextSize(l, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
                  for l in lignes]
-                + [large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle)])
+                + [large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle)]
+                + ([int(ENCART_LARGE * echelle)] if dessin else []))
     badge = "LIVE" if direct else autre
     large = max(large, cv2.getTextSize(badge, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] + pas)
     gauche = largeur - large - 2 * marge
-    bas = sommet + pas * (len(lignes) + 1 + bool(lieu)) + marge
+    haut_carte = sommet + pas * (len(lignes) + 1 + bool(lieu)) + marge // 2
+    bas = (int(ENCART_BAS * echelle) + int(remue) if dessin
+           else sommet + pas * (len(lignes) + 1 + bool(lieu)) + marge)
     coin = image[sommet:bas, gauche:largeur]
     if coin.size:
         coin[:] = (coin * 0.35).astype(np.uint8)
@@ -3328,9 +3541,12 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     for i, ligne in enumerate(lignes):
         cv2.putText(image, ligne, (x, sommet + pas * (i + 2) - int(6 * echelle)),
                     cv2.FONT_HERSHEY_SIMPLEX, taille, BLANC, 2, cv2.LINE_AA)
-    pose_lieu(image, lieu, "FR", x,
+    pose_lieu(image, lieu, x,
               sommet + pas * (len(lignes) + 2) - int(6 * echelle),
               taille * HORLOGE_LIEU, echelle)
+    if dessin:
+        pose_carte(image, carte, ou[0], ou[1], x, haut_carte,
+                   largeur - marge - x, echelle)
 
 
 def _entree(url: str, recul: int) -> subprocess.Popen:
@@ -3484,6 +3700,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # Le seul numéro qu'on ne dessine pas soi-même. Lu une fois, et absent sans
     # conséquence : il ne passe pas, c'est tout.
     sous_marin = charge_vignette(racine / "assets" / "sous-marin.png")
+    sport, sport_ligue, sport_lu = [], "", 0.0
     # La photo de la machine qui fait tout ça. Lue en BGR et non en BGRA :
     # c'est une photo, elle n'a pas de transparence.
     photo_machine = cv2.imread(str(racine / "assets" / "machine.jpg"))
@@ -3521,7 +3738,27 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         .get("site") or {}).get("commune")) or "")
     except (OSError, ValueError):
         commune = ""
-    ville = str((cfg.get("machine") or {}).get("ville") or "")
+    machine_ou = cfg.get("machine") or {}
+    ville = str(machine_ou.get("ville") or "")
+    try:
+        carte_pays = json.loads((racine / "assets" / "carte-pays.json")
+                                .read_text(encoding="utf-8")).get("contours")
+    except (OSError, ValueError):
+        carte_pays = None
+    try:
+        vise = json.loads((racine / "config" / "scene.json")
+                          .read_text(encoding="utf-8")).get("pose") or {}
+        ou_camera = (float(vise["lat"]), float(vise["lon"]))
+    except (OSError, ValueError, KeyError, TypeError):
+        ou_camera = None
+    # La distance entre la machine et ce qu'elle regarde. Calculée une fois :
+    # ni l'une ni l'autre ne bouge.
+    dit_la_distance = ""
+    if ou_camera and machine_ou.get("lat") is not None:
+        km = a_vol_d_oiseau((float(machine_ou["lat"]), float(machine_ou["lon"])),
+                            ou_camera)
+        dit_la_distance = (f"{ville.upper()} - {commune.upper()}  "
+                           f"{km:,.0f} KM AS THE CROW FLIES".replace(",", " "))
     # Loin en arrière, comme « bonjour » : à zéro, le flux s'ouvrirait sur
     # « BOOOOORING » pendant trois secondes, ce qui est une drôle de carte de
     # visite pour une veille qui vient de démarrer.
@@ -3779,12 +4016,36 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             elif dit == "ennui" or quand - dernier_ennui <= ENNUI_TENUE_S:
                 pose_ennui(toile, "BOOOOORING", quand - origine)
             pose_ruban(toile, ruban, quand - origine)
+            # Le balancement des deux encarts : seulement quand la musique
+            # pousse vraiment, et seulement de temps en temps. Tout le temps,
+            # ce serait un défaut d'affichage ; jamais, ce serait dommage.
+            remue = 0.0
+            if (musique.pouls() > DANSE_SEUIL
+                    and (quand - origine) % ENCART_DANSE_PERIODE_S < ENCART_DANSE_S):
+                remue = (math.sin((quand - origine) * DANSE_PAS_S * math.pi)
+                         * ENCART_DANSE_PX * (largeur / 1600)
+                         * min(2.0, musique.pouls() / DANSE_SEUIL))
             pose_horloge(toile, quand, direct=rediff is None and survol is None,
                          autre="REPLAY" if rediff is not None else "3D MODEL",
-                         commune=commune)
-            pose_machine(toile, machine, photo_machine, ville)
+                         commune=commune, carte=carte_pays, ou=ou_camera,
+                         remue=-remue)
+            pose_machine(toile, machine, photo_machine, ville, remue)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
-            pose_bande_basse(toile, bande_du_moment(quand - origine))
+            # Relu de temps en temps et jamais à chaque image : le fichier
+            # est écrit par un autre programme, et un championnat ne change
+            # pas plus d'une fois par jour.
+            if quand - sport_lu > SPORT_RELIT_S:
+                sport_lu = quand
+                try:
+                    feuille = json.loads((racine / "data" / "sport.json")
+                                         .read_text(encoding="utf-8"))
+                    sport = (feuille.get("joues") or []) + (feuille.get("a_venir") or [])
+                    sport_ligue = str(feuille.get("ligue") or "")
+                except (OSError, ValueError):
+                    sport, sport_ligue = [], ""
+            pose_sport(toile, sport, sport_ligue, quand - origine)
+            pose_distance(toile, dit_la_distance,
+                          fenetre(vue.shape[:2], largeur, hauteur))
             # La musique en dernier : c'est elle qu'on vient écouter, et c'est
             # elle que la licence oblige à nommer.
             pose_bloc_musique(toile, trio, racine / "data" / "musique")

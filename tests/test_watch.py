@@ -39,6 +39,21 @@ from watcher.store import Store, fold_events, small_jpeg
 from watcher import stream
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def un_tour_de(nom: str, nuit: bool = False) -> float:
+    """La seconde où commence un tour que ce numéro joue vraiment.
+
+    Depuis qu'un seul numéro tient le plateau à la fois, celui qui trouve la
+    place prise passe son tour entier. Les épreuves ne peuvent donc plus
+    partir de zéro — à zéro, les quatre tours commencent ensemble et c'est le
+    tapis qui gagne. Elles demandent ici un tour qui se joue.
+    """
+    from watcher import stream as _s
+    for demi in range(2 * 24 * 3600):
+        if _s.en_scene(nom, demi / 2, nuit) == 0.0:
+            return demi / 2
+    raise AssertionError(f"{nom} ne monte jamais sur le plateau")
 ZONES = json.loads((ROOT / "config" / "zones.json").read_text())
 
 
@@ -3008,7 +3023,8 @@ class DiffusionTests(unittest.TestCase):
         """
         for forme in ((720, 1280), (1080, 1920), (1280, 720)):
             toile = np.zeros((*forme, 3), np.uint8)
-            self.assertTrue(stream.pose_elephant(toile, 2.0, 0.9))
+            self.assertTrue(stream.pose_elephant(
+                toile, un_tour_de("elephant") + 2.0, 0.9))
             pose = np.argwhere(toile.any(axis=2))
             haut, bas = pose[:, 0].min(), pose[:, 0].max()
             bord_g, bord_d = pose[:, 1].min(), pose[:, 1].max()
@@ -3030,15 +3046,16 @@ class DiffusionTests(unittest.TestCase):
         # Il se place dans la vue qu'on lui donne, pas dans l'image entière :
         # sans ça il danserait à cheval sur les bandes noires.
         bande = np.zeros((720, 1280, 3), np.uint8)
-        stream.pose_elephant(bande, 2.0, 0.9, vue=(175, 36, 929, 522))
+        stream.pose_elephant(bande, un_tour_de('elephant') + 2.0, 0.9,
+                             vue=(175, 36, 929, 522))
         pose = np.argwhere(bande.any(axis=2))
         self.assertGreaterEqual(pose[:, 1].min(), 175)
         self.assertLessEqual(pose[:, 1].max(), 175 + 929)
         self.assertLessEqual(pose[:, 0].max(), 36 + 522)
         # Et il ne reste pas : quatre secondes, puis onze minutes de silence.
         apres = np.zeros((720, 1280, 3), np.uint8)
-        self.assertFalse(stream.pose_elephant(apres, stream.ELEPHANT_TENUE_S + 1,
-                                              0.9))
+        self.assertFalse(stream.pose_elephant(
+            apres, un_tour_de("elephant") + stream.ELEPHANT_TENUE_S + 1, 0.9))
         self.assertFalse(apres.any())
         self.assertLessEqual(stream.ELEPHANT_TENUE_S, 5.0)
 
@@ -3055,9 +3072,10 @@ class DiffusionTests(unittest.TestCase):
         ne montre pas le relief, il montre qu'on a collé une autre vidéo.
         """
         self.assertGreater(stream.NUIT_PLUS_SOUVENT, 1.0)
+
         def combien(nuit):
             vus = 0
-            for seconde in range(2 * 3600):
+            for seconde in range(6 * 3600):
                 # Assez grande pour que l'éléphant y tienne : sous une douzaine
                 # de pixels de haut il renonce, et il aurait raison.
                 toile = np.zeros((240, 320, 3), np.uint8)
@@ -3065,8 +3083,16 @@ class DiffusionTests(unittest.TestCase):
                                                  nuit=nuit))
             return vus
 
-        self.assertAlmostEqual(combien(True) / combien(False),
-                               stream.NUIT_PLUS_SOUVENT, delta=0.4)
+        # Nettement plus souvent, sans exiger le facteur exact. Depuis qu'un
+        # seul numéro tient le plateau, les tours refusés sont plus nombreux
+        # la nuit — les quatre numéros s'y pressent trois fois plus et se
+        # gênent d'autant. Le rapport observé est d'environ deux et demi pour
+        # un facteur nominal de trois, et c'est la bonne réponse : l'éléphant
+        # vient beaucoup plus souvent la nuit, pas exactement trois fois plus.
+        rapport = combien(True) / max(1, combien(False))
+        self.assertGreater(rapport, 2.0, "la nuit n'en profite pas assez")
+        self.assertLessEqual(rapport, stream.NUIT_PLUS_SOUVENT + 0.1,
+                             "il passe plus souvent que sa période ne permet")
 
     def test_the_elephant_waits_on_a_clock_replays_cannot_reset(self):
         """Il n'est jamais venu, et le fichier disait pourquoi trois lignes plus haut.
@@ -3119,14 +3145,16 @@ class DiffusionTests(unittest.TestCase):
         # qui fait ça, pas le surfeur, et une épreuve qui exigerait de
         # descendre à chaque image interdirait les vraies pistes.
         places = []
+        debut = un_tour_de("piste")
         for pas in range(80):
-            instant = pas * stream.PISTE_DESCENTE_S / 79
+            phase = pas * (stream.PISTE_DESCENTE_S - 0.01) / 79
             toile = np.zeros((720, 1280, 3), np.uint8)
-            if not stream.pose_piste(toile, instant, trace):
+            if not stream.pose_piste(toile, debut + phase, trace):
                 continue
             pose = np.argwhere(toile.any(axis=2))
             if len(pose):
-                places.append(stream._le_long(trace, instant / stream.PISTE_DESCENTE_S))
+                places.append(stream._le_long(
+                    trace, phase / stream.PISTE_DESCENTE_S))
         self.assertGreater(len(places), 60, "il doit descendre")
         parcouru = sum(math.dist(a[:2], b[:2]) for a, b in zip(places, places[1:]))
         attendue = stream._longueur_du_trace(trace)
@@ -3225,10 +3253,12 @@ class DiffusionTests(unittest.TestCase):
         self.assertIsNotNone(vignette, "le sous-marin est dans le d\u00e9p\u00f4t")
         ciel = [[0.0, 0.0], [1.0, 0.0], [1.0, 0.16], [0.48, 0.18],
                 [0.22, 0.26], [0.0, 0.30]]
+        depart_sm = un_tour_de("sous-marin")
         gauche_atteint = droite_atteint = False
         passages = 0
         for pas in range(90):
-            instant = pas * stream.SOUS_MARIN_TRAVERSEE_S / 89
+            instant = (depart_sm
+                       + pas * (stream.SOUS_MARIN_TRAVERSEE_S - 0.01) / 89)
             toile = np.zeros((720, 1280, 3), np.uint8)
             if not stream.pose_sous_marin(toile, instant, vignette, ciel):
                 continue
@@ -3258,40 +3288,71 @@ class DiffusionTests(unittest.TestCase):
         self.assertFalse(stream.pose_sous_marin(vide, 1.0, None, ciel))
         self.assertIsNone(stream.charge_vignette(racine / "assets" / "pas-la.png"))
 
-    def test_the_two_turns_almost_never_happen_at_once(self):
-        """Des périodes rondes les feraient tomber ensemble plusieurs fois par jour.
+    def test_only_one_act_is_ever_on_stage(self):
+        """Le tapis, le sous-marin et le surfeur ensemble font une vitrine de Noël.
 
-        Et un numéro qui revient toujours avec l'autre cesse d'être une
-        surprise : on croit à un spectacle réglé.
+        Chaque numéro comptait son tour tout seul. Les périodes sont premières
+        entre elles, ce qui espace les coïncidences sans les empêcher : sur une
+        journée ils finissaient par tomber ensemble. Une fois c'est drôle ;
+        deux fois on cesse de croire à chacun d'eux séparément.
+
+        Ce test ne demande pas qu'ils se croisent rarement, il demande qu'ils
+        ne se croisent jamais — et à la demi-seconde, parce que le flux produit
+        vingt-cinq images par seconde et qu'un chevauchement d'un tiers de
+        seconde se voit.
         """
-        numeros = {
-            "tapis": (stream.TAPIS_PERIODE_S, stream.TAPIS_TRAVERSEE_S),
-            "\u00e9l\u00e9phant": (stream.ELEPHANT_PERIODE_S, stream.ELEPHANT_TENUE_S),
-            "sous-marin": (stream.SOUS_MARIN_PERIODE_S, stream.SOUS_MARIN_TRAVERSEE_S),
-            "piste": (stream.PISTE_PERIODE_S, stream.PISTE_DESCENTE_S),
-        }
-        for periode, _ in numeros.values():
+        noms = [nom for nom, _, _ in stream.PLATEAU]
+        self.assertGreaterEqual(len(noms), 4)
+        for nuit in (False, True):
+            for demi in range(2 * 24 * 3600):
+                seconde = demi / 2
+                en_scene = [n for n in noms
+                            if stream.en_scene(n, seconde, nuit) is not None]
+                self.assertLessEqual(
+                    len(en_scene), 1,
+                    f"{' et '.join(en_scene)} ensemble à {seconde:.1f} s "
+                    f"{'de nuit' if nuit else 'de jour'}")
+
+        # Et chacun passe quand même : une exclusion qui les tairait tous
+        # réglerait le problème en supprimant le spectacle.
+        passages = {n: 0 for n in noms}
+        avant = {n: None for n in noms}
+        for seconde in range(24 * 3600):
+            for nom in noms:
+                ou = stream.en_scene(nom, seconde)
+                if ou is not None and avant[nom] is None:
+                    passages[nom] += 1
+                avant[nom] = ou
+        for nom, combien in passages.items():
+            self.assertGreater(combien, 20, f"{nom} ne passe presque jamais")
+
+        # Les périodes restent premières : c'est ce qui fait que l'exclusion
+        # refuse peu de tours plutôt que d'en refuser la moitié.
+        for _, periode, _ in stream.PLATEAU:
             entier = int(periode)
             self.assertEqual(periode, entier)
-            self.assertTrue(all(entier % d for d in range(2, int(entier ** 0.5) + 1)),
-                            f"{entier} n'est pas premier")
-        self.assertEqual(len({p for p, _ in numeros.values()}), len(numeros))
-        # Ce qu'on vérifie n'est pas qu'ils se croisent rarement — avec six
-        # numéros par heure, ils se croiseront forcément de temps en temps —
-        # mais qu'ils ne se croisent pas plus souvent que le hasard. C'est ce
-        # que le fait de ne pas avoir de diviseur commun achète, et c'est la
-        # seule chose qui se voie à l'œil : deux numéros calés l'un sur
-        # l'autre, on l'appelle un spectacle réglé.
-        for un, deux in itertools.combinations(numeros, 2):
-            (pa, da), (pb, db) = numeros[un], numeros[deux]
-            ensemble = sum(1 for s in range(24 * 3600)
-                           if s % pa < da and s % pb < db)
-            hasard = 24 * 3600 * (da / pa) * (db / pb)
-            self.assertLess(ensemble, 2.0 * hasard + 10,
-                            f"{un} et {deux} sont cal\u00e9s l'un sur l'autre")
-        # Et la preuve que l'épreuve mord : des périodes rondes se calent.
-        cales = sum(1 for s in range(24 * 3600) if s % 400 < 14 and s % 500 < 22)
-        self.assertGreater(cales, 2.0 * 24 * 3600 * (14 / 400) * (22 / 500) + 10)
+            self.assertTrue(
+                all(entier % d for d in range(2, int(entier ** 0.5) + 1)),
+                f"{entier} n'est pas premier")
+        self.assertEqual(len({p for _, p, _ in stream.PLATEAU}), len(noms))
+
+    def test_an_act_never_joins_a_turn_halfway_through(self):
+        """Un sous-marin qui apparaît en plein ciel est pire que pas de sous-marin.
+
+        Le numéro qui trouve le plateau occupé passe son tour entier. S'il
+        attendait que la place se libère, il entrerait à mi-traversée, d'un
+        coup, au milieu de l'écran.
+        """
+        for nom, _, duree in stream.PLATEAU:
+            for nuit in (False, True):
+                vu = None
+                for demi in range(2 * 6 * 3600):
+                    ou = stream.en_scene(nom, demi / 2, nuit)
+                    if ou is not None and vu is None:
+                        self.assertLess(
+                            ou, 1.0,
+                            f"{nom} entre en scène à {ou:.1f} s de son tour")
+                    vu = ou
 
     def test_fog_gets_said_in_the_words_the_watch_used(self):
         """Un mur gris sans un mot ressemble \u00e0 une cam\u00e9ra en panne.
@@ -3938,21 +3999,39 @@ class DiffusionTests(unittest.TestCase):
         self.assertIn("LOS ANGELES", gauche)
         self.assertIn("BEAUMONT-DU-VENTOUX", droite)
 
-        # Les deux drapeaux sont dessinés, et ne se ressemblent pas : le même
-        # des deux côtés voudrait dire que la machine est là où elle regarde.
-        def drapeau(pays: str) -> np.ndarray:
-            toile = np.zeros((40, 60, 3), np.uint8)
-            stream._drapeau(toile, 2, 2, 12, pays)
-            return toile
+        # La carte porte le point là où la caméra est vraiment. C'est la
+        # seule façon de vérifier qu'elle montre un endroit et pas un
+        # dessin : le point doit tomber au sud-est du centre de la France.
+        carte = json.loads((ROOT / "assets" / "carte-pays.json")
+                           .read_text(encoding="utf-8"))["contours"]
+        toile = np.zeros((200, 200, 3), np.uint8)
+        haut = stream.pose_carte(toile, carte, 44.1833, 5.2620, 10, 10, 180)
+        self.assertGreater(haut, 60, "la carte est plate")
+        jaune = np.argwhere(np.all(toile == stream.CARTE_POINT, axis=2))
+        self.assertTrue(jaune.size, "pas de point sur la carte")
+        pays = np.argwhere(toile.any(axis=2))
+        py, px = jaune.mean(axis=0)
+        self.assertGreater(px, pays[:, 1].mean(), "le point est trop à l'ouest")
+        self.assertGreater(py, pays[:, 0].mean(), "le point est trop au nord")
 
-        bleu_blanc_rouge, banniere = drapeau("FR"), drapeau("US")
-        self.assertTrue(bleu_blanc_rouge.any() and banniere.any())
-        self.assertFalse(np.array_equal(bleu_blanc_rouge, banniere))
-        # Et ils restent minuscules : un drapeau lisible de loin serait un
-        # drapeau trop gros pour ce qu'il dit.
-        peints = int((banniere.any(axis=2)).sum())
-        self.assertLess(peints, 40 * 60 * 0.12,
-                        "le drapeau prend toute la place")
+        # Et les deux encarts descendent jusqu'à la même ligne, sinon la
+        # symétrie ne tient que dans l'intention.
+        def bas_de(appel) -> int:
+            toile = np.full((500, 900, 3), 200, np.uint8)
+            appel(toile)
+            sombre = np.flatnonzero((toile < 150).any(axis=2).any(axis=1))
+            return int(sombre.max())
+
+        pose = json.loads((ROOT / "config" / "scene.json")
+                          .read_text(encoding="utf-8"))["pose"]
+        self.assertEqual(
+            bas_de(lambda t: stream.pose_machine(
+                t, etat, cv2.imread(str(ROOT / "assets" / "machine.jpg")),
+                "Los Angeles")),
+            bas_de(lambda t: stream.pose_horloge(
+                t, 1_760_000_000.0, commune="Beaumont-du-Ventoux", carte=carte,
+                ou=(float(pose["lat"]), float(pose["lon"])))),
+            "les deux encarts ne descendent pas à la même ligne")
 
         # La machine est ailleurs que la caméra, et le dit depuis la
         # configuration : une autre installation n'a qu'à changer la ligne.
