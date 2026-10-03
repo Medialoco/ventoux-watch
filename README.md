@@ -1,5 +1,7 @@
 # Mont Serein — veille
 
+*[In English](README.en.md)*
+
 Le Raspberry Pi 5 regarde la webcam du Mont Serein. Chaque mouvement est gardé et interprété avec le jour, la nuit et la météo. Un avion, une voiture, un bus ou un incendie ne sont nommés que lorsque la lecture est assez sûre. Le site est [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/).
 
 Le flux est celui déjà utilisé par [dataroads-fr84.info](https://dataroads-fr84.info/), source Vision-Environnement. Le site affiche ce direct. Il ne réhéberge pas la vidéo continue.
