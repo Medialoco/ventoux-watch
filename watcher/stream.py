@@ -246,8 +246,9 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     """
     absences = 0
     connu = ""
-    attente = 0.0
-    while not coupe.wait(attente):
+    premier = True
+    while premier or not coupe.wait(VEILLE_DIRECT_S if connu else VEILLE_DIRECT_CHERCHE_S):
+        premier = False
         vu, numero = lit_le_direct(page_du_direct(chaine))
         if racine is not None and numero:
             try:
@@ -255,7 +256,6 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
                 connu = numero
             except OSError as souci:
                 log.warning("Numéro du direct non noté : %s", souci)
-        attente = VEILLE_DIRECT_S if connu else VEILLE_DIRECT_CHERCHE_S
         if vu is None:
             continue
         if vu:
