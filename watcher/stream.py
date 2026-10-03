@@ -3059,6 +3059,22 @@ def etat_machine(racine: Path) -> dict | None:
 # La largeur de la photo de la machine, en pixels d'un cadre de mille six
 # cents. Elle commande la largeur de l'encart quand le texte est plus étroit.
 MACHINE_PHOTO_PX = 170
+# La photo passe au monochrome cyan de l'encart. En couleur, c'est une
+# photographie posée dans un tableau de bord : le blanc du bureau est le point
+# le plus clair de tout le coin de l'image, l'œil y va avant d'aller au
+# paysage, et le relief de la carte la fait ressortir comme un objet. Réduite
+# à la teinte des chiffres et à leur plage de gris, elle redevient ce qu'elle
+# doit être : une ligne de l'encart, qui se lit quand on la cherche.
+MACHINE_NOIR = 0.10      # le noir de la photo, en part du blanc de l'encart
+MACHINE_BLANC = 0.52     # et son blanc, qui n'est plus celui du bureau
+
+
+def tamise_la_photo(photo: np.ndarray) -> np.ndarray:
+    """La photo au monochrome de l'encart, dans sa plage de gris."""
+    gris = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
+    plage = MACHINE_NOIR + gris * (MACHINE_BLANC - MACHINE_NOIR)
+    teinte = np.array(CYAN, np.float32)
+    return np.clip(plage[:, :, None] * teinte, 0, 255).astype(np.uint8)
 
 
 def cadre_encart(image: np.ndarray, coin_a: tuple[int, int],
@@ -3132,7 +3148,8 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     if vignette is not None:
         vu_large = droite - 2 * marge
         vu_haut = int(vu_large * vignette.shape[0] / vignette.shape[1])
-        photo = cv2.resize(vignette, (vu_large, vu_haut), interpolation=cv2.INTER_AREA)
+        photo = tamise_la_photo(
+            cv2.resize(vignette, (vu_large, vu_haut), interpolation=cv2.INTER_AREA))
     bas = sommet + pas * len(lignes) + marge
     if photo is not None:
         bas += photo.shape[0] + marge
@@ -3147,10 +3164,7 @@ def pose_machine(image: np.ndarray, etat: dict | None,
         haut_photo = sommet + pas * len(lignes) + marge // 2
         coin = image[haut_photo:haut_photo + photo.shape[0], marge:marge + photo.shape[1]]
         if coin.shape[:2] == photo.shape[:2]:
-            # Un peu baissée : c'est une photo de bureau en plein jour, et à
-            # pleine lumière elle ferait une tache blanche dans un encart
-            # qu'on a justement assombri pour qu'il ne crève pas l'image.
-            coin[:] = (photo * 0.80).astype(np.uint8)
+            coin[:] = photo
             cadre_encart(image, (marge - 1, haut_photo - 1),
                          (marge + photo.shape[1], haut_photo + photo.shape[0]),
                          echelle)
