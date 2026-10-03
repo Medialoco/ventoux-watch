@@ -3084,6 +3084,81 @@ class DiffusionTests(unittest.TestCase):
         # Et la raison du piège est toujours écrite là où on tombe dedans.
         self.assertIn("dernier_vu", inspect.getsource(stream.diffuse))
 
+    def test_someone_snowboards_down_the_real_ski_run(self):
+        """La piste vient d'OpenStreetMap, pas de ma main.
+
+        C'est tout l'intérêt : sur une autre caméra dont on aura l'OSM local,
+        la même recette donnera sa piste à elle sans qu'on règle un pixel. Et
+        comme elle vient d'une carte, on peut vérifier qu'elle descend, qu'on
+        la parcourt en entier, et qu'elle ne va pas sur la route.
+        """
+        racine = Path(__file__).resolve().parent.parent
+        scene = json.loads((racine / "config" / "scene.json")
+                           .read_text(encoding="utf-8"))
+        piste = scene.get("piste") or {}
+        trace = piste.get("trace")
+        self.assertTrue(trace and len(trace) >= 3, "la piste est dans scene.json")
+        self.assertTrue(piste.get("osm_way"), "elle vient d'une voie OSM")
+        # Elle descend : on surfe vers le bas.
+        self.assertLess(trace[0][1], trace[-1][1])
+        # Et elle s'arrête avant la route. La vraie piste finit au parking,
+        # qui est exactement ce que la veille surveille.
+        zones = json.loads((racine / "config" / "zones.json")
+                           .read_text(encoding="utf-8"))["polygons"]
+        for nom in ("road", "roundabout"):
+            contour = np.float32(zones[nom])
+            for x, y in trace:
+                self.assertLess(cv2.pointPolygonTest(contour, (x, y), False), 0,
+                                f"la piste entre dans « {nom} »")
+
+        # On la parcourt d'un bout à l'autre, et on ne recule jamais.
+        #
+        # Mesuré le long du tracé et non en hauteur d'image : cette piste-là
+        # traverse le versant avant de plonger, si bien qu'elle remonte dans
+        # l'image pendant la première moitié de la descente. C'est la piste
+        # qui fait ça, pas le surfeur, et une épreuve qui exigerait de
+        # descendre à chaque image interdirait les vraies pistes.
+        places = []
+        for pas in range(80):
+            instant = pas * stream.PISTE_DESCENTE_S / 79
+            toile = np.zeros((720, 1280, 3), np.uint8)
+            if not stream.pose_piste(toile, instant, trace):
+                continue
+            pose = np.argwhere(toile.any(axis=2))
+            if len(pose):
+                places.append(stream._le_long(trace, instant / stream.PISTE_DESCENTE_S))
+        self.assertGreater(len(places), 60, "il doit descendre")
+        parcouru = sum(math.dist(a[:2], b[:2]) for a, b in zip(places, places[1:]))
+        attendue = stream._longueur_du_trace(trace)
+        # Toute la piste, et pas plus : la somme des petits pas vaut la
+        # longueur du tracé. S'il revenait sur ses pas elle la dépasserait,
+        # et la borne haute est donc serrée. La borne basse est lâche parce
+        # qu'on rate les toutes premières images, celles où il est encore
+        # transparent et ne laisse aucun pixel.
+        self.assertLess(parcouru / attendue, 1.02, "il revient sur ses pas")
+        self.assertGreater(parcouru / attendue, 0.90, "il coupe la piste")
+        # Il part en haut et finit en bas.
+        self.assertLess(math.dist(places[0][:2], trace[0]), 0.05)
+        self.assertLess(math.dist(places[-1][:2], trace[-1]), 0.05)
+        self.assertGreater(places[-1][1], places[0][1], "il doit finir plus bas")
+        # Le trait ne reste pas. Une ligne blanche permanente en travers de la
+        # montagne serait exactement ce qu'on s'interdit de poser sur ce que
+        # les gens regardent.
+        apres = np.zeros((720, 1280, 3), np.uint8)
+        self.assertFalse(stream.pose_piste(apres, stream.PISTE_DESCENTE_S + 1, trace))
+        self.assertFalse(apres.any())
+        # Sans tracé, personne ne descend et rien ne casse.
+        self.assertFalse(stream.pose_piste(apres, 2.0, None))
+        self.assertFalse(stream.pose_piste(apres, 2.0, [[0.1, 0.1]]))
+        # On avance à la longueur parcourue et non au numéro du point : les
+        # points d'OSM sont serrés dans les virages, et un surfeur qui ferait
+        # un point par image s'arrêterait dans les virages et foncerait dans
+        # les lignes droites, ce qui est l'inverse de ce qu'on fait à ski.
+        droit = [[0.1, 0.1], [0.2, 0.2], [0.21, 0.21], [0.22, 0.22], [0.9, 0.9]]
+        pas_a_pas = [stream._le_long(droit, p / 20)[:2] for p in range(21)]
+        ecarts = [math.dist(a, b) for a, b in zip(pas_a_pas, pas_a_pas[1:])]
+        self.assertLess(max(ecarts) / min(ecarts), 1.3, "l'allure n'est pas régulière")
+
     def test_the_drawn_lamp_covers_the_real_pole_and_only_at_night(self):
         """Un dessin posé à côté de l'objet qu'il remplace, c'est un autocollant.
 
@@ -3193,6 +3268,7 @@ class DiffusionTests(unittest.TestCase):
             "tapis": (stream.TAPIS_PERIODE_S, stream.TAPIS_TRAVERSEE_S),
             "\u00e9l\u00e9phant": (stream.ELEPHANT_PERIODE_S, stream.ELEPHANT_TENUE_S),
             "sous-marin": (stream.SOUS_MARIN_PERIODE_S, stream.SOUS_MARIN_TRAVERSEE_S),
+            "piste": (stream.PISTE_PERIODE_S, stream.PISTE_DESCENTE_S),
         }
         for periode, _ in numeros.values():
             entier = int(periode)

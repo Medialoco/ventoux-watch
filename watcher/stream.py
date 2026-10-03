@@ -2405,6 +2405,167 @@ def pose_sous_marin(image: np.ndarray, seconde: float,
     return True
 
 
+# La descente : une fois toutes les treize minutes trois, et elle dure vingt
+# secondes. Un nombre premier de plus, pour la raison habituelle.
+PISTE_PERIODE_S = 787.0
+PISTE_DESCENTE_S = 20.0
+# Ce que le surfeur fait de large : il louvoie de part et d'autre du tracé,
+# comme on descend vraiment, et jamais tout droit. En parts de sa taille.
+PISTE_LOUVOIE = 2.6
+PISTE_VIRAGES = 5.0
+# Sa taille, en parts de la hauteur de la vue. Plus petit que les pantins du
+# bas : il est au loin, sur la montagne.
+PISTE_HAUT = 0.085
+PISTE_NEIGE = (248, 250, 252)
+PISTE_PLANCHE = (64, 196, 248)
+
+
+def _longueur_du_trace(trace: list) -> float:
+    """La longueur du tracé à l'écran, en parts de cadre."""
+    return sum(math.hypot(b[0] - a[0], b[1] - a[1])
+               for a, b in zip(trace, trace[1:]))
+
+
+def _le_long(trace: list, part: float) -> tuple[float, float, float]:
+    """Où l'on est sur le tracé, et dans quelle direction il va.
+
+    Mesuré à la longueur parcourue et non au numéro du point : les points
+    d'OpenStreetMap sont serrés dans les virages et espacés dans les lignes
+    droites, et un surfeur qui avance d'un point par image accélère dans les
+    lignes droites et s'arrête dans les virages — ce qui est l'inverse.
+    """
+    pas = [math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(trace, trace[1:])]
+    total = _longueur_du_trace(trace) or 1.0
+    vise = max(0.0, min(1.0, part)) * total
+    courus = 0.0
+    for i, long_pas in enumerate(pas):
+        if courus + long_pas >= vise or i == len(pas) - 1:
+            dedans = (vise - courus) / (long_pas or 1.0)
+            a, b = trace[i], trace[i + 1]
+            return (a[0] + (b[0] - a[0]) * dedans,
+                    a[1] + (b[1] - a[1]) * dedans,
+                    math.atan2(b[1] - a[1], b[0] - a[0]))
+        courus += long_pas
+    return trace[-1][0], trace[-1][1], 0.0
+
+
+def _surfeur(calque: np.ndarray, x: int, y: int, taille: float, phase: float,
+             penche: float) -> None:
+    """Le même pantin que les autres, mais sur une planche et penché.
+
+    Penché, parce que c'est tout ce qui distingue quelqu'un qui surfe de
+    quelqu'un qui est debout : on ne tourne pas sans se coucher dans le
+    virage. L'inclinaison vient du virage lui-même et n'est pas une animation
+    à part — c'est pour ça qu'elle tombe juste.
+    """
+    tube = max(2, int(taille * 0.07))
+    cos, sin = math.cos(penche), math.sin(penche)
+
+    def tourne(dx, dy):
+        return (int(x + dx * cos - dy * sin), int(y + dx * sin + dy * cos))
+
+    def trait(a, b, couleur=BLANC, epais=None):
+        cv2.line(calque, a, b, (0, 0, 0), (epais or tube) + 2, cv2.LINE_AA)
+        cv2.line(calque, a, b, couleur, epais or tube, cv2.LINE_AA)
+
+    planche = (tourne(-taille * 0.55, 0), tourne(taille * 0.55, 0))
+    trait(planche[0], planche[1], PISTE_PLANCHE, max(2, int(taille * 0.11)))
+    hanche = tourne(0, -taille * 0.42)
+    epaule = tourne(math.sin(phase) * taille * 0.07, -taille * 0.78)
+    trait(hanche, epaule)
+    for cote in (-1, 1):
+        trait(hanche, tourne(cote * taille * 0.3, -taille * 0.08))
+        trait(epaule, tourne(cote * taille * 0.45,
+                             -taille * (0.95 + 0.25 * math.sin(phase + cote))))
+    tete = tourne(0, -taille * 0.93)
+    cv2.circle(calque, tete, int(taille * 0.13) + 2, (0, 0, 0), -1, cv2.LINE_AA)
+    cv2.circle(calque, tete, int(taille * 0.13), BLANC, -1, cv2.LINE_AA)
+
+
+def pose_piste(image: np.ndarray, seconde: float, trace: list | None,
+               vue: tuple[int, int, int, int] | None = None,
+               nuit: bool = False) -> bool:
+    """Quelqu'un descend la piste de ski, et la piste s'allume derrière lui.
+
+    Le tracé n'est pas dessiné à la main : c'est la piste « André Philip » du
+    Mont Serein, telle qu'OpenStreetMap la connaît, projetée dans l'image par
+    la pose de la caméra et l'altitude du terrain. Elle est donc là où elle
+    est vraiment, et sur une autre caméra dont on aura l'OSM local elle sera
+    là où la sienne est vraiment, sans qu'on règle un pixel.
+
+    Le trait blanc n'apparaît pas d'un coup : il se dessine derrière le
+    surfeur et s'efface devant lui. Un tracé allumé d'avance dirait « voilà où
+    il va passer », ce qui n'est pas une surprise, et un tracé qui reste
+    allumé après son passage ferait une ligne blanche permanente en travers de
+    la montagne — ce qui est exactement ce qu'on ne veut pas poser sur ce que
+    les gens regardent.
+
+    Il louvoie. Personne ne descend une piste en ligne droite, et un surfeur
+    qui suivrait le tracé d'OpenStreetMap au millimètre aurait l'air d'un
+    curseur qui glisse, pas de quelqu'un qui surfe.
+    """
+    if not trace or len(trace) < 2:
+        return False
+    periode = PISTE_PERIODE_S / (NUIT_PLUS_SOUVENT if nuit else 1.0)
+    phase_cycle = seconde % periode
+    if phase_cycle >= PISTE_DESCENTE_S:
+        return False
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    avance = phase_cycle / PISTE_DESCENTE_S
+    taille = haute_vue * PISTE_HAUT
+    if taille < 8:
+        return False
+
+    def au_cadre(part: float) -> tuple[float, float, float]:
+        x, y, cap = _le_long(trace, part)
+        return gauche + x * large_vue, cime + y * haute_vue, cap
+
+    calque = image.copy()
+    # Le trait : de l'endroit qu'il vient de quitter à celui qu'il va
+    # atteindre, et il s'efface vers l'arrière.
+    #
+    # Il s'efface, il ne s'assombrit pas. En peignant chaque morceau d'un
+    # blanc de plus en plus faible, la queue de la traînée finissait en noir
+    # — une barre sombre en travers de la forêt, soit exactement l'inverse de
+    # ce qu'on voulait. Le dégradé doit porter sur la transparence, donc la
+    # traînée se peint à part et se mélange ensuite.
+    trainee = np.zeros_like(calque)
+    voile = np.zeros(calque.shape[:2], np.float32)
+    queue = max(0.0, avance - 0.22)
+    nez = min(1.0, avance + 0.05)
+    morceaux = 14
+    epais = max(1, int(taille * 0.16))
+    for pas in range(morceaux):
+        de = queue + (nez - queue) * pas / morceaux
+        a = queue + (nez - queue) * (pas + 1) / morceaux
+        x0, y0, _ = au_cadre(de)
+        x1, y1, _ = au_cadre(a)
+        bout = ((int(x0), int(y0)), (int(x1), int(y1)))
+        cv2.line(trainee, *bout, PISTE_NEIGE, epais, cv2.LINE_AA)
+        cv2.line(voile, *bout, float((pas / morceaux) ** 0.7), epais, cv2.LINE_AA)
+    masque = voile[:, :, None]
+    calque[:] = (trainee * masque + calque * (1.0 - masque)).astype(np.uint8)
+
+    x, y, _cap = au_cadre(avance)
+    # Il louvoie en travers et jamais perpendiculairement au tracé. Vu d'ici,
+    # le versant est presque de profil : la perpendiculaire au tracé est donc
+    # presque verticale, et un louvoiement porté dessus le faisait remonter la
+    # piste à chaque virage. On traverse une piste, on ne la remonte pas.
+    balance = math.sin(avance * math.pi * 2 * PISTE_VIRAGES)
+    x += balance * taille * PISTE_LOUVOIE * 0.5
+    # Et c'est ce louvoiement qui décide de son inclinaison : il se couche du
+    # côté où il tourne, ce qui est la seule chose qui distingue quelqu'un qui
+    # surfe de quelqu'un qui est debout.
+    penche = -math.cos(avance * math.pi * 2 * PISTE_VIRAGES) * 0.45
+    _surfeur(calque, int(x), int(y - taille * 0.1), taille,
+             seconde * DANSE_PAS_S, penche)
+    # Il arrive et repart en fondu d'une seconde.
+    bord = min(phase_cycle, PISTE_DESCENTE_S - phase_cycle, 1.0)
+    cv2.addWeighted(calque, bord * 0.92, image, 1.0 - bord * 0.92, 0.0, dst=image)
+    return True
+
+
 LAMPADAIRE_M = 7.0
 # Le fer est froid, la lumière est chaude : c'est tout ce qu'il faut pour
 # qu'une lampe ait l'air allumée.
@@ -3168,6 +3329,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         pass
     if lampadaire is None:
         log.info("Lampadaire non mesuré : il restera celui de la webcam")
+    # La piste de ski, projetée hors ligne depuis OpenStreetMap par
+    # scripts/build_piste.py. Absente, personne ne descend.
+    try:
+        piste = (json.loads((racine / "config" / "scene.json")
+                            .read_text(encoding="utf-8")).get("piste")
+                 or {}).get("trace")
+    except (OSError, ValueError):
+        piste = None
+    if not piste:
+        log.info("Pas de tracé de piste : personne ne descendra")
     # Le seul numéro qu'on ne dessine pas soi-même. Lu une fois, et absent sans
     # conséquence : il ne passe pas, c'est tout.
     sous_marin = charge_vignette(racine / "assets" / "sous-marin.png")
@@ -3423,6 +3594,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # l'éléphant dansent, lui navigue.
                 pose_sous_marin(toile, quand - origine, sous_marin,
                                 contour_ciel, vue=cadrage, nuit=not fait_jour)
+                # La descente non plus n'attend pas de creux : elle se passe
+                # sur le versant, loin de la route, et le trait blanc s'efface
+                # derrière le surfeur. Rien ne reste sur l'image.
+                pose_piste(toile, quand - origine, piste, vue=cadrage,
+                           nuit=not fait_jour)
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
