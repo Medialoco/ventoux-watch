@@ -2719,6 +2719,9 @@ def pose_elephant(image: np.ndarray, seconde: float, energie: float,
 # qu'on aurait oublié d'éteindre.
 OURS_PERIODE_S = 8191.0     # deux heures et quart, et premier comme les autres
 OURS_TENUE_S = 9.0
+# Le temps qu'il faut à YouTube pour que l'image du flux qui vient de démarrer
+# arrive chez quelqu'un. Avant, l'ours danserait pour personne.
+OURS_RETARD_S = 90.0
 OURS_MARCHE_S = 2.6
 # Où il est et où il va, en parts du cadre de la caméra. Ce ne sont pas des
 # réglages : ce sont deux endroits de ce versant, relevés une fois sur un plein
@@ -2856,6 +2859,11 @@ def pose_ours(image: np.ndarray, seconde: float, sprite: np.ndarray | None,
 # qui faisait l'intérêt de nombres premiers : leur rapport ne change pas, donc
 # les deux numéros ne se mettent pas à tomber ensemble.
 NUIT_PLUS_SOUVENT = 3.0
+# Sauf pour ceux-là. L'accélération existe parce que la nuit il ne se passe
+# rien ; l'ours, lui, est rare exprès. Trois fois plus souvent ferait seize
+# cris jaunes par nuit, et seize fois n'est plus rare — c'est un gag qu'on a
+# usé. Il garde donc sa cadence du jour, de jour comme de nuit.
+PAS_PRESSES = frozenset({"ours"})
 
 # LE PLATEAU : UN NUMÉRO À LA FOIS
 # -------------------------------
@@ -2879,12 +2887,31 @@ NUIT_PLUS_SOUVENT = 3.0
 # Remplie plus bas, quand les quatre numéros ont donné leurs nombres : elle
 # ne les répète pas, elle les désigne. Deux tables de périodes, c'est une
 # table de trop, et c'est celle qu'on oublie de changer.
-PLATEAU: tuple[tuple[str, float, float], ...] = ()
+#
+# Quatrième colonne : le retard à l'allumage. Sans lui, tous les numéros ont
+# leur premier tour à l'instant zéro, l'exclusion les départage sur l'ordre de
+# la table, et seul le premier passe — les autres attendent une période entière
+# après chaque redémarrage du flux. Pour le tapis, qui revient toutes les six
+# minutes, personne ne s'en aperçoit. Pour l'ours, qui revient toutes les deux
+# heures et quart, ça voulait dire ne jamais le voir le jour où on vient de le
+# déployer. Un décalage le met en scène peu après l'ouverture, une fois, puis
+# son tour reprend sa cadence.
+PLATEAU: tuple[tuple[str, float, float, float], ...] = ()
+
+
+def _debut_du_tour(instant: int, tour: int, retard: int) -> int:
+    """Le début du tour en cours pour un numéro qui démarre avec du retard.
+
+    Avant son retard, le calcul rend un début situé une période plus tôt, donc
+    une phase plus longue que la durée du numéro : il ne se montre pas, ce qui
+    est exactement ce qu'on veut.
+    """
+    return retard + (instant - retard) // tour * tour
 
 
 def en_scene(nom: str, seconde: float, nuit: bool = False) -> float | None:
     """Où en est ce numéro, s'il a le droit d'être à l'écran maintenant."""
-    duree = dict((a, d) for a, _, d in PLATEAU).get(nom)
+    duree = dict((a, d) for a, _, d, _ in PLATEAU).get(nom)
     if duree is None:
         return None
     # Tout le calcul se fait en millisecondes entières. La nuit les périodes
@@ -2893,18 +2920,22 @@ def en_scene(nom: str, seconde: float, nuit: bool = False) -> float | None:
     # seconde, ce qui suffit à faire croire à deux numéros qu'ils sont chacun
     # arrivés les premiers. Ils passaient alors ensemble, rarement, et c'est
     # précisément ce qu'on cherche à supprimer. Des entiers ne mentent pas.
-    vite = NUIT_PLUS_SOUVENT if nuit else 1.0
-    tours = {a: max(1, round(p * 1000 / vite)) for a, p, _ in PLATEAU}
+    presse = NUIT_PLUS_SOUVENT if nuit else 1.0
+    vite = {a: 1.0 if a in PAS_PRESSES else presse for a, _, _, _ in PLATEAU}
+    tours = {a: max(1, round(p * 1000 / vite[a])) for a, p, _, _ in PLATEAU}
+    # Le retard suit la même division que la période : la nuit tout le plateau
+    # est la même journée en accéléré, et pas une autre répartition.
+    retards = {a: round(r * 1000 / vite[a]) for a, _, _, r in PLATEAU}
     instant = round(seconde * 1000)
-    commence = instant - instant % tours[nom]
+    commence = _debut_du_tour(instant, tours[nom], retards[nom])
     phase = (instant - commence) / 1000.0
     if phase >= duree:
         return None
-    mon_rang = [a for a, _, _ in PLATEAU].index(nom)
-    for rang, (autre, _, sa_duree) in enumerate(PLATEAU):
+    mon_rang = [a for a, _, _, _ in PLATEAU].index(nom)
+    for rang, (autre, _, sa_duree, _) in enumerate(PLATEAU):
         if autre == nom:
             continue
-        sienne = (commence % tours[autre]) / 1000.0
+        sienne = (commence - _debut_du_tour(commence, tours[autre], retards[autre])) / 1000.0
         if sienne >= sa_duree:
             continue
         # L'autre était déjà là quand mon tour a commencé. « Strictement
@@ -3272,14 +3303,22 @@ PISTE_DESCENTE_S = 20.0
 # au-dessus de tout et ne cache rien, l'éléphant en dernier parce qu'il
 # occupe l'écran entier.
 PLATEAU = (
-    ("tapis", TAPIS_PERIODE_S, TAPIS_TRAVERSEE_S),
-    ("sous-marin", SOUS_MARIN_PERIODE_S, SOUS_MARIN_TRAVERSEE_S),
-    ("piste", PISTE_PERIODE_S, PISTE_DESCENTE_S),
-    ("elephant", ELEPHANT_PERIODE_S, ELEPHANT_TENUE_S),
-    ("batiment", BATIMENT_PERIODE_S, BATIMENT_RELEVE_S),
+    ("tapis", TAPIS_PERIODE_S, TAPIS_TRAVERSEE_S, 0.0),
+    ("sous-marin", SOUS_MARIN_PERIODE_S, SOUS_MARIN_TRAVERSEE_S, 0.0),
+    ("piste", PISTE_PERIODE_S, PISTE_DESCENTE_S, 0.0),
+    ("elephant", ELEPHANT_PERIODE_S, ELEPHANT_TENUE_S, 0.0),
+    ("batiment", BATIMENT_PERIODE_S, BATIMENT_RELEVE_S, 0.0),
     # L'ours en dernier parce qu'il écrit en travers du ciel, et qu'il vaut
     # mieux qu'il cède le passage plutôt que de crier par-dessus le tapis.
-    ("ours", OURS_PERIODE_S, OURS_TENUE_S),
+    #
+    # Et avec quatre-vingt-dix secondes de retard, le seul du plateau qui en
+    # ait. Les autres reviennent entre six et quinze minutes : qu'ils ratent
+    # leur tour de l'instant zéro ne se voit pas. Lui revient toutes les deux
+    # heures et quart, et sans ce retard on déployait l'ours à midi sans
+    # pouvoir le regarder avant le milieu de l'après-midi. Quatre-vingt-dix
+    # secondes, c'est le temps qu'il faut à YouTube pour que l'image arrive —
+    # plus tôt, il danserait pour personne.
+    ("ours", OURS_PERIODE_S, OURS_TENUE_S, OURS_RETARD_S),
 )
 # Ce que le surfeur fait de large : il louvoie de part et d'autre du tracé,
 # comme on descend vraiment, et jamais tout droit. En parts de sa taille.
@@ -5142,23 +5181,26 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # une construction, pas sur la route, et il s'efface.
                 pose_batiments(toile, quand - origine, batiments, vue=cadrage,
                                nuit=not fait_jour)
-                # L'ours, de jour seulement : la découpe a été prise en plein
-                # midi et collée sur une image nocturne elle ne ressemble pas à
-                # un ours, elle ressemble à une vignette oubliée allumée.
-                if fait_jour:
-                    ou_en_est = pose_ours(toile, quand - origine, ours, vue=cadrage)
-                    if ou_en_est is not None:
-                        # Une fois, pas à chaque image : il grogne en
-                        # descendant, et il crie une fois arrivé sur l'îlot.
-                        tour = int((quand - origine) // OURS_PERIODE_S)
-                        if ours_dit != (tour, 0) and ou_en_est < OURS_MARCHE_S:
-                            ours_dit = (tour, 0)
-                            if musique.grognements:
-                                musique.dis(tirage.choice(musique.grognements))
-                        elif ours_dit == (tour, 0) and ou_en_est >= OURS_MARCHE_S + 1.1:
-                            ours_dit = (tour, 1)
-                            if musique.cris_dours:
-                                musique.dis(tirage.choice(musique.cris_dours))
+                # L'ours, de nuit aussi. On l'avait d'abord réservé au jour en
+                # supposant qu'une découpe prise en plein midi, collée sur une
+                # image nocturne, ressemblerait à une vignette qu'on aurait
+                # oublié d'éteindre. C'est faux ici : le rond-point est éclairé
+                # toute la nuit par le lampadaire du chalet, le double s'y pose
+                # dans la lumière et il a l'air d'un ours sous un réverbère.
+                # Vérifié sur une vraie image de nuit avant de lever la règle.
+                ou_en_est = pose_ours(toile, quand - origine, ours, vue=cadrage)
+                if ou_en_est is not None:
+                    # Une fois, pas à chaque image : il grogne en descendant,
+                    # et il crie une fois arrivé sur l'îlot.
+                    tour = int((quand - origine) // OURS_PERIODE_S)
+                    if ours_dit != (tour, 0) and ou_en_est < OURS_MARCHE_S:
+                        ours_dit = (tour, 0)
+                        if musique.grognements:
+                            musique.dis(tirage.choice(musique.grognements))
+                    elif ours_dit == (tour, 0) and ou_en_est >= OURS_MARCHE_S + 1.1:
+                        ours_dit = (tour, 1)
+                        if musique.cris_dours:
+                            musique.dis(tirage.choice(musique.cris_dours))
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser, vue=cadrage)
             # Le mot tient au moins trois secondes, et tant que la voix parle.

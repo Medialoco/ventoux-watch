@@ -3675,7 +3675,7 @@ class DiffusionTests(unittest.TestCase):
         vingt-cinq images par seconde et qu'un chevauchement d'un tiers de
         seconde se voit.
         """
-        noms = [nom for nom, _, _ in stream.PLATEAU]
+        noms = [nom for nom, _, _, _ in stream.PLATEAU]
         self.assertGreaterEqual(len(noms), 4)
         for nuit in (False, True):
             for demi in range(2 * 24 * 3600):
@@ -3704,7 +3704,7 @@ class DiffusionTests(unittest.TestCase):
         # faisant exactement ce qu'on lui demande. Ce qu'on veut vérifier ici
         # est que l'exclusion refuse peu de tours, pas que les tours sont
         # fréquents. Les trois quarts passent.
-        tours = {nom: periode for nom, periode, _ in stream.PLATEAU}
+        tours = {nom: periode for nom, periode, _, _ in stream.PLATEAU}
         for nom, combien in passages.items():
             attendus = 24 * 3600 / tours[nom]
             self.assertGreater(
@@ -3713,13 +3713,13 @@ class DiffusionTests(unittest.TestCase):
 
         # Les périodes restent premières : c'est ce qui fait que l'exclusion
         # refuse peu de tours plutôt que d'en refuser la moitié.
-        for _, periode, _ in stream.PLATEAU:
+        for _, periode, _, _ in stream.PLATEAU:
             entier = int(periode)
             self.assertEqual(periode, entier)
             self.assertTrue(
                 all(entier % d for d in range(2, int(entier ** 0.5) + 1)),
                 f"{entier} n'est pas premier")
-        self.assertEqual(len({p for _, p, _ in stream.PLATEAU}), len(noms))
+        self.assertEqual(len({p for _, p, _, _ in stream.PLATEAU}), len(noms))
 
     def test_an_act_never_joins_a_turn_halfway_through(self):
         """Un sous-marin qui apparaît en plein ciel est pire que pas de sous-marin.
@@ -3728,7 +3728,7 @@ class DiffusionTests(unittest.TestCase):
         attendait que la place se libère, il entrerait à mi-traversée, d'un
         coup, au milieu de l'écran.
         """
-        for nom, _, duree in stream.PLATEAU:
+        for nom, _, duree, _ in stream.PLATEAU:
             for nuit in (False, True):
                 vu = None
                 for demi in range(2 * 6 * 3600):
@@ -4527,6 +4527,17 @@ class OursTests(unittest.TestCase):
         decoupe[:, :, 3] = 255
         return decoupe
 
+    def _quand(self, phase):
+        """L'instant où le numéro en est à cette phase, à son deuxième tour.
+
+        Calculé et non écrit en dur : les tours ne tombent plus sur des
+        multiples de la période depuis qu'il démarre avec du retard, et des
+        tests qui réécrivent l'horloge de leur côté finissent par tester leur
+        propre copie.
+        """
+        from watcher.stream import OURS_PERIODE_S, OURS_RETARD_S
+        return OURS_RETARD_S + OURS_PERIODE_S + phase
+
     def _ou_est_il(self, toile):
         """Les pixels de la découpe seuls.
 
@@ -4540,32 +4551,62 @@ class OursTests(unittest.TestCase):
         from watcher.stream import pose_ours, OURS_PERIODE_S, OURS_TENUE_S
         toile, vue = self._scene()
         avant = toile.copy()
-        quand = OURS_PERIODE_S + OURS_TENUE_S + 1.0
+        quand = self._quand(OURS_TENUE_S + 1.0)
         self.assertIsNone(pose_ours(toile, quand, self._decoupe(), vue=vue))
         self.assertTrue((toile == avant).all(), "il a dessiné hors de son tour")
 
     def test_pendant_son_tour_il_est_la(self):
         from watcher.stream import pose_ours, OURS_PERIODE_S
         toile, vue = self._scene()
-        phase = pose_ours(toile, OURS_PERIODE_S + 0.5, self._decoupe(), vue=vue)
+        phase = pose_ours(toile, self._quand(0.5), self._decoupe(), vue=vue)
         self.assertIsNotNone(phase)
         self.assertTrue(self._ou_est_il(toile).any(), "la découpe n'est pas posée")
 
     def test_il_danse_dans_la_fenetre_et_pas_dans_les_bandes(self):
         from watcher.stream import pose_ours, OURS_PERIODE_S, OURS_MARCHE_S
         toile, (x, y, large, haut) = self._scene()
-        pose_ours(toile, OURS_PERIODE_S + OURS_MARCHE_S + 2.0, self._decoupe(),
+        pose_ours(toile, self._quand(OURS_MARCHE_S + 2.0), self._decoupe(),
                   vue=(x, y, large, haut))
         dehors = toile.copy()
         dehors[y:y + haut, x:x + large] = 0
         self.assertFalse(self._ou_est_il(dehors).any(),
                          "le double déborde sur les bandes noires")
 
+    def test_il_sort_des_louverture_et_pas_deux_heures_plus_tard(self):
+        """Sans retard, il cédait le tour de l'instant zéro et attendait 2 h 16.
+
+        Tous les numéros ont leur premier tour à zéro, l'exclusion les départage
+        sur l'ordre de la table, et seul le tapis passe. Pour un numéro qui
+        revient toutes les six minutes ça ne se voit pas ; pour celui-ci ça
+        voulait dire déployer l'ours et ne pas pouvoir le regarder.
+        """
+        from watcher.stream import en_scene, OURS_RETARD_S, OURS_PERIODE_S
+        premier = next(s for s in range(int(OURS_PERIODE_S))
+                       if en_scene("ours", float(s)) is not None)
+        self.assertGreaterEqual(premier, OURS_RETARD_S)
+        self.assertLess(premier, OURS_RETARD_S + 30)
+
+    def test_il_ne_va_pas_plus_vite_la_nuit(self):
+        """Les autres numéros triplent la nuit ; lui est rare exprès.
+
+        L'accélération existe parce que la nuit il ne se passe rien. Appliquée
+        à l'ours, elle en faisait seize par nuit — et seize fois, ce n'est plus
+        rare, c'est un gag usé.
+        """
+        from watcher.stream import en_scene
+        combien = {}
+        for nuit in (False, True):
+            combien[nuit] = sum(
+                1 for s in range(24 * 3600)
+                if en_scene("ours", float(s), nuit) is not None
+                and en_scene("ours", float(s - 1), nuit) is None)
+        self.assertLessEqual(abs(combien[True] - combien[False]), 2, combien)
+
     def test_sans_decoupe_il_ne_se_passe_rien(self):
         from watcher.stream import pose_ours, OURS_PERIODE_S
         toile, vue = self._scene()
         avant = toile.copy()
-        self.assertIsNone(pose_ours(toile, OURS_PERIODE_S + 0.5, None, vue=vue))
+        self.assertIsNone(pose_ours(toile, self._quand(0.5), None, vue=vue))
         self.assertTrue((toile == avant).all())
 
     def test_il_arrive_sur_lilot_et_pas_chez_lui(self):
@@ -4573,7 +4614,7 @@ class OursTests(unittest.TestCase):
         from watcher.stream import (pose_ours, OURS_PERIODE_S, OURS_MARCHE_S,
                                     OURS_LA, OURS_ILOT)
         toile, (x, y, large, haut) = self._scene()
-        pose_ours(toile, OURS_PERIODE_S + OURS_MARCHE_S + 2.0, self._decoupe(),
+        pose_ours(toile, self._quand(OURS_MARCHE_S + 2.0), self._decoupe(),
                   vue=(x, y, large, haut))
         colonnes = np.flatnonzero(self._ou_est_il(toile).any(axis=0))
         milieu = (colonnes[0] + colonnes[-1]) / 2
