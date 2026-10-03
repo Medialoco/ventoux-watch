@@ -361,6 +361,70 @@ def _kept(now: np.ndarray, was: np.ndarray) -> float:
     return kept / tiles
 
 
+def _masque_objet(now: np.ndarray, was: np.ndarray) -> np.ndarray | None:
+    """Carreau par carreau : vrai là où le décor d'avant a disparu.
+
+    Même question que « _kept », posée carreau par carreau et rendue en entier
+    au lieu d'être résumée en un nombre. C'est la même mesure, le même seuil,
+    la même justification — seul le résultat est gardé au lieu d'être compté.
+    """
+    hauteur = now.shape[0] // TILE
+    largeur = now.shape[1] // TILE
+    if hauteur < 1 or largeur < 1:
+        return None
+    masque = np.zeros((hauteur, largeur), np.uint8)
+    for ligne in range(hauteur):
+        for colonne in range(largeur):
+            haut, gauche = ligne * TILE, colonne * TILE
+            a = now[haut:haut + TILE, gauche:gauche + TILE]
+            b = was[haut:haut + TILE, gauche:gauche + TILE]
+            a, b = a - a.mean(), b - b.mean()
+            grain = float(np.sqrt((b * b).sum()))
+            if grain < 1e-3:
+                continue
+            trace = float(np.sqrt((a * a).sum()))
+            if trace < 1e-3:
+                masque[ligne, colonne] = 1
+                continue
+            if float((a * b).sum() / (grain * trace)) < KEPT:
+                masque[ligne, colonne] = 1
+    return masque
+
+
+def _coeur(now: np.ndarray, was: np.ndarray) -> tuple[int, int, int, int] | None:
+    """Dans la tache, la boîte de ce qui s'est vraiment mis devant le décor.
+
+    Une tache de mouvement n'est pas la forme de la chose qui a bougé : la nuit
+    elle est surtout la flaque des phares sur le bitume, qui suit la voiture et
+    fait trois fois sa taille. On mesurait alors huit mètres de large pour une
+    berline, et on montrait au détecteur une fenêtre pleine de goudron éclairé
+    où il ne lisait rien — c'est mesuré : entre vingt heures et cinq heures,
+    pas une seule lecture sur le moindre passage, toute la nuit.
+
+    La lumière et l'objet ne font pourtant pas la même chose au décor. Une
+    flaque de phares multiplie le bitume par un gain : les bandes blanches et
+    le grain restent dessous, le dessin survit. Une carrosserie le remplace.
+    C'est déjà ce que mesure « _kept » pour décider si une tache est un objet
+    ou un changement de lumière ; ici on lui demande seulement *où*, et on
+    garde cette partie-là.
+
+    Le plus grand morceau d'un seul tenant, pas tous les carreaux : une chose
+    est contiguë, et deux carreaux isolés dans un coin sont du bruit. Rien si
+    aucun morceau ne tient debout — alors la tache garde sa boîte et les règles
+    d'après la jugeront comme avant.
+    """
+    masque = _masque_objet(now, was)
+    if masque is None or not masque.any():
+        return None
+    morceaux, reperes, stats, _ = cv2.connectedComponentsWithStats(masque, 8)
+    if morceaux < 2:
+        return None
+    plus_gros = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    x, y, w, h = (int(stats[plus_gros, i]) for i in
+                  (cv2.CC_STAT_LEFT, cv2.CC_STAT_TOP, cv2.CC_STAT_WIDTH, cv2.CC_STAT_HEIGHT))
+    return x * TILE, y * TILE, w * TILE, h * TILE
+
+
 def _resize_width(frame: np.ndarray, width: int) -> tuple[np.ndarray, float]:
     height, frame_width = frame.shape[:2]
     if frame_width <= width:
