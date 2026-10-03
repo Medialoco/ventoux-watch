@@ -1,4 +1,45 @@
-# Description de la chaîne
+# Version courte en place — à compléter
+
+Les mots-dièse et la traduction anglaise de la description réellement en
+ligne. Quinze mots-dièse et pas un de plus : au-delà, YouTube cesse de tous
+les prendre en compte, les bons compris, et un seizième annulerait les quinze
+autres. Les trois premiers sont les seuls à s'afficher au-dessus du titre, ce
+qui en fait une enseigne plutôt qu'un classement.
+
+## Mots-dièse — à coller tout en bas
+
+`#FreeTechnoRadio` est déjà en tête de votre description et compte pour un :
+ne le remettez pas ici, une répétition se compte deux fois. Voici les quatorze
+autres, qui portent le total à quinze pile.
+
+#MontVentoux #SlowTV #RaspberryPi #RaspberryPi5 #ComputerVision #EdgeAI #YOLO #SelfHosted #OpenSource #Python #LiveCam #CreativeCommons #FreeMusic #Techno
+
+## À coller — traduction anglaise de la version courte
+
+Sans mot-dièse en tête, celui de la version française servant pour les deux.
+
+The camera looks down on the Mont Serein pass, at 1,389 m on Mont Ventoux, in Provence. One frame a second goes to a Raspberry Pi 5. The Pi finds what moved, cuts that patch out of the picture, asks a small neural network what it is, and then decides whether the answer can be trusted.
+
+THE MUSIC
+
+Free music only, 24 hours a day, with the licence on screen for every track.
+Most of it comes from Dogmazic, a French free-music library running since 2004. Some of it is written for this channel.
+
+thepriben: https://play.dogmazic.net/artists.php?action=show&artist=7208
+Mont Serein 002: https://play.dogmazic.net/albums.php?action=show&album=11242
+Dogmazic: https://play.dogmazic.net/
+
+THE MACHINE
+
+A Raspberry Pi 5 in Los Angeles. Four cores. It reads the webcam, runs the detector,
+keeps the archive, composes the picture you are looking at, mixes the music and pushes
+the whole thing to YouTube, without interruption.
+
+This channel is a camera and a curiosity. It is not a monitoring service and it raises no alarm of any kind.
+
+---
+
+# Description de la chaîne — version longue
 
 Texte brut, prêt à coller. Pas de markdown dans les deux blocs ci-dessous :
 YouTube n'en rend aucun, et des dièses ou des astérisques s'y afficheraient
