@@ -3878,6 +3878,169 @@ BULLE_VOILE = 0.55       # son opacité la plus forte
 BULLE_TRAIT = (236, 240, 218)
 
 
+# LES POISSONS DE L'AQUARIUM DE LA MAISON
+# --------------------------------------
+# Les mêmes que sur benoit-prieur.fr, où ils sont faits de boîtes CSS arrondies
+# et non d'un dessin : un corps ovale cerné de sombre, une queue à deux lobes,
+# trois nageoires, un œil crème et une bouche en arc. Trois exemplaires, un
+# orange, un violet, un vert, et c'est tout — pas de rayures, le site n'en a
+# pas non plus.
+#
+# Ils nagent dans les bandes noires avec les bulles, parce que c'est là qu'est
+# l'aquarium. Jamais dans la fenêtre caméra : un poisson qui traverse la
+# montagne serait exactement le genre d'apparition dont on a passé des
+# semaines à se débarrasser.
+#
+# Verticalement, et non en travers. Une bande fait deux cent vingt pixels de
+# large contre huit cents de haut : un poisson qui la traverse à l'horizontale
+# a disparu avant qu'on l'ait vu.
+#
+# En BGR, dans l'ordre : le clair du dos, le corps, le sombre du ventre, le
+# cerne. Relevés sur les variables CSS du site.
+POISSONS = (
+    ((88, 159, 255), (36, 100, 241), (22, 65, 197), (16, 26, 59)),    # orange
+    ((255, 155, 193), (255, 107, 155), (200, 64, 102), (86, 25, 44)),  # violet
+    ((154, 227, 141), (103, 181, 57), (65, 125, 31), (36, 63, 22)),    # vert
+)
+POISSON_CREME = (156, 212, 248)
+POISSON_LONG = 58.0       # de la queue au museau, à 1600 de large
+POISSON_TOUR_S = (71.0, 97.0, 127.0)   # premiers entre eux, comme le reste
+POISSON_VOILE = 0.9
+# Il ne traverse que la moitié de son tour ; l'autre moitié il n'est pas là.
+# Trois poissons en permanence dans deux bandes, c'est un fond d'écran.
+POISSON_PART = 0.45
+
+
+def _poisson(image: np.ndarray, cx: int, cy: int, longueur: float,
+             sens: int, phase: float, teintes: tuple) -> None:
+    """Un poisson, museau vers « sens » (+1 à droite, -1 à gauche).
+
+    Les proportions sont celles du site, rapportées à la longueur : le corps
+    occupe les six dixièmes de l'avant, la queue les trois dixièmes de
+    l'arrière, et l'œil est aux deux tiers du corps.
+    """
+    dos, corps, ventre, cerne = teintes
+    trait = max(1, int(longueur * 0.028))
+    demi = longueur / 2.0
+    corps_l = longueur * 0.60
+    corps_h = longueur * 0.34
+    # La queue bat, et c'est elle qui fait avancer : sans ce battement le
+    # poisson glisse, et un poisson qui glisse est un poisson en plastique.
+    bat = math.sin(phase) * 0.42
+
+    def plein(points, couleur):
+        cv2.fillPoly(image, [np.int32(points)], couleur, cv2.LINE_AA)
+
+    # La queue, derrière le corps donc avant lui.
+    pied = (int(cx - sens * corps_l * 0.46), cy)
+    bout = (cx - sens * demi, cy)
+    for haut in (-1, 1):
+        plein([pied,
+               (int(bout[0]), int(bout[1] + haut * longueur * 0.17
+                                  + bat * longueur * 0.10)),
+               (int(bout[0] + sens * longueur * 0.07),
+                int(cy + haut * longueur * 0.04))], ventre)
+    cv2.polylines(image, [np.int32([
+        (int(bout[0]), int(cy - longueur * 0.17 + bat * longueur * 0.10)),
+        pied,
+        (int(bout[0]), int(cy + longueur * 0.17 + bat * longueur * 0.10))])],
+        False, cerne, trait, cv2.LINE_AA)
+
+    # Les nageoires : dorsale, pectorale, ventrale.
+    for haut, part, taille in ((-1, 0.10, 0.22), (1, 0.14, 0.17), (0, 0.30, 0.15)):
+        if haut == 0:
+            continue
+        nx = int(cx + sens * corps_l * part)
+        ny = int(cy + haut * corps_h * 0.42)
+        cv2.ellipse(image, (nx, ny),
+                    (max(2, int(longueur * taille * 0.6)),
+                     max(2, int(longueur * taille * 0.45))),
+                    haut * 28.0, 0, 360, ventre, -1, cv2.LINE_AA)
+        cv2.ellipse(image, (nx, ny),
+                    (max(2, int(longueur * taille * 0.6)),
+                     max(2, int(longueur * taille * 0.45))),
+                    haut * 28.0, 0, 360, cerne, trait, cv2.LINE_AA)
+
+    # Le corps : plein du ventre, puis deux ellipses plus claires et plus
+    # hautes par-dessus. Trois tons empilés, c'est le dégradé du site dit avec
+    # les moyens d'OpenCV, et à cinquante pixels de long c'est tout ce qui se
+    # voit d'un dégradé.
+    axes = (max(2, int(corps_l / 2)), max(2, int(corps_h / 2)))
+    cv2.ellipse(image, (cx, cy), axes, 0, 0, 360, ventre, -1, cv2.LINE_AA)
+    cv2.ellipse(image, (cx, cy - int(corps_h * 0.10)),
+                (axes[0], max(1, int(axes[1] * 0.82))), 0, 0, 360, corps, -1,
+                cv2.LINE_AA)
+    cv2.ellipse(image, (cx, cy - int(corps_h * 0.20)),
+                (max(1, int(axes[0] * 0.90)), max(1, int(axes[1] * 0.48))),
+                0, 0, 360, dos, -1, cv2.LINE_AA)
+    cv2.ellipse(image, (cx, cy), axes, 0, 0, 360, cerne, trait, cv2.LINE_AA)
+
+    # L'œil et la bouche, du côté du museau.
+    oeil = (int(cx + sens * corps_l * 0.24), int(cy - corps_h * 0.16))
+    rayon = max(2, int(longueur * 0.055))
+    cv2.circle(image, oeil, rayon, POISSON_CREME, -1, cv2.LINE_AA)
+    cv2.circle(image, oeil, rayon, cerne, max(1, trait - 1), cv2.LINE_AA)
+    cv2.circle(image, oeil, max(1, rayon // 2), cerne, -1, cv2.LINE_AA)
+    museau = (int(cx + sens * corps_l * 0.46), int(cy + corps_h * 0.16))
+    cv2.ellipse(image, museau, (max(2, int(longueur * 0.055)),
+                                max(2, int(longueur * 0.045))),
+                0, 200.0 if sens > 0 else 300.0,
+                340.0 if sens > 0 else 440.0, cerne, trait, cv2.LINE_AA)
+
+
+def pose_poissons(image: np.ndarray, seconde: float,
+                  vue: tuple | None = None) -> None:
+    """Les trois poissons de l'aquarium traversent les bandes noires.
+
+    Chacun sur son tour, trois nombres premiers, et seulement sur une partie
+    de ce tour : trois poissons en permanence dans deux bandes, ce serait un
+    fond d'écran. Ils changent de bande d'un tour à l'autre et nagent dans le
+    sens de leur montée ou de leur descente.
+
+    Dessinés avant tout le reste, comme les bulles : les encarts, les pantins
+    et la fenêtre caméra passent par-dessus.
+    """
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    echelle = largeur / 1600
+    longueur = POISSON_LONG * echelle
+    if gauche < longueur * 0.8:
+        return
+    calque = np.zeros_like(image)
+    pose = False
+    for i, tour_s in enumerate(POISSON_TOUR_S):
+        tour, part = divmod(seconde, tour_s)
+        part /= tour_s
+        if part > POISSON_PART:
+            continue
+        avance = part / POISSON_PART
+        # Un tour sur deux il descend, et il change de bande à chaque tour.
+        descend = int(tour) % 2 == 0
+        a_droite = (int(tour) + i) % 2 == 0
+        bande_x = (gauche + large_vue + gauche // 2 if a_droite else gauche // 2)
+        # De sous la fenêtre caméra jusqu'à son sommet, avec de quoi entrer et
+        # sortir par les bords.
+        haut, bas = cime - longueur, cime + haute_vue + longueur
+        y = bas + (haut - bas) * avance if not descend else haut + (bas - haut) * avance
+        # Il louvoie : un poisson qui monte tout droit est un ascenseur.
+        x = bande_x + math.sin(avance * math.pi * 3 + i) * gauche * 0.22
+        _poisson(calque, int(x), int(y), longueur,
+                 1 if math.cos(avance * math.pi * 3 + i) > 0 else -1,
+                 seconde * 5.0 + i, POISSONS[i % len(POISSONS)])
+        pose = True
+    if not pose:
+        return
+    # Les bandes seulement : on efface tout ce qui aurait débordé sur la
+    # fenêtre caméra avant de mélanger. Plus sûr que de calculer où le poisson
+    # a le droit d'être — une nageoire se calcule mal, un rectangle se vide.
+    calque[cime:cime + haute_vue, gauche:gauche + large_vue] = 0
+    masque = calque.any(axis=2)
+    if not masque.any():
+        return
+    image[masque] = cv2.addWeighted(calque, POISSON_VOILE, image,
+                                    1.0 - POISSON_VOILE, 0.0)[masque]
+
+
 def pose_bulles(image: np.ndarray, seconde: float,
                 vue: tuple | None = None) -> None:
     """Deux colonnes de bulles qui montent dans les bandes noires.
@@ -4480,6 +4643,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # les encarts, les pantins, le fil. Rien de ce qu'on vient
             # regarder ne doit se trouver derrière une bulle.
             pose_bulles(toile, quand - origine, cadrage)
+            pose_poissons(toile, quand - origine, cadrage)
             # Les pantins sur la toile et non sur l'image de la caméra, depuis
             # qu'ils ont le droit d'aller danser dans la bande noire : posés
             # sur la vue, ils étaient enfermés dedans par construction. Ils

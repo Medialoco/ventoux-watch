@@ -3134,15 +3134,18 @@ class DiffusionTests(unittest.TestCase):
     def test_the_thread_and_the_bubbles_never_touch_the_camera_window(self):
         """Nothing decorative may be drawn over what people came to watch.
 
-        The thread hangs below the window and the bubbles rise in the black
-        bands beside it. Both are drawn from the full canvas size, so the
+        The thread hangs below the window, the bubbles rise in the black bands
+        beside it and the fish swim there too. A fish crossing the mountain
+        would be exactly the kind of apparition we spent weeks removing. Both are drawn from the full canvas size, so the
         arithmetic that keeps them out of the window is easy to get wrong and
         the mistake would show up as scratches across the mountain.
         """
         from watcher import stream
         vue = (220, 46, 1159, 651)
         for pose in (lambda t: stream.pose_fil(t, "9 610 KM", vue, 3.0),
-                     lambda t: stream.pose_bulles(t, 7.0, vue)):
+                     lambda t: stream.pose_bulles(t, 7.0, vue),
+                     lambda t: stream.pose_poissons(t, 12.0, vue),
+                     lambda t: stream.pose_poissons(t, 40.0, vue)):
             toile = np.zeros((900, 1600, 3), np.uint8)
             pose(toile)
             gauche, cime, large, haute = vue
