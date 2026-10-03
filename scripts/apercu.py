@@ -73,9 +73,13 @@ def compose(largeur: int, nuit: bool, musique: bool = True) -> np.ndarray:
     if musique:
         credits = ROOT / "data" / "musique" / "credits.json"
         if credits.is_file():
-            fiches = json.loads(credits.read_text(encoding="utf-8"))
-            trio = list(fiches.values())[:3]
-            stream.pose_bloc_musique(toile, tuple(trio), credits.parent)
+            fiches = list(json.loads(credits.read_text(encoding="utf-8")).values())
+            stream.pose_bloc_musique(
+                toile,
+                {"avant": fiches[3] if len(fiches) > 3 else None,
+                 "en_cours": fiches[0], "ecoule": 161.0, "duree": 372.0,
+                 "suite": fiches[1:3]},
+                credits.parent, energie=0.14, seconde=3.0)
     feuille = ROOT / "data" / "agenda.json"
     if feuille.is_file():
         agenda = json.loads(feuille.read_text(encoding="utf-8"))

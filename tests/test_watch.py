@@ -3034,6 +3034,56 @@ class DiffusionTests(unittest.TestCase):
         self.assertFalse(stream.pose_tapis(vide, stream.TAPIS_TRAVERSEE_S + 1, 0.9, ciel))
         self.assertFalse(vide.any())
 
+    def test_the_player_measures_the_whole_track_and_not_the_slice(self):
+        """A long set is served in slices; the gauge must span all of them.
+
+        Measured on the slice, the gauge would run to the end and start over
+        every few minutes inside the same piece of music, which says the
+        opposite of the truth: that a track is finishing when it is not. And
+        the queue would announce as « up next » what is already playing.
+        """
+        from watcher import stream
+        radio = stream.Musique.__new__(stream.Musique)
+        radio.suite = [{"f": "a.mp3", "d": 100.0}, {"f": "b.mp3", "d": 60.0},
+                       {"f": "b.mp3", "d": 60.0}, {"f": "b.mp3", "d": 60.0},
+                       {"f": "c.mp3", "d": 90.0}, {"f": "d.mp3", "d": 90.0}]
+        radio.fiches = {nom: {"auteur": "x", "titre": nom, "licence": "CC BY 4.0",
+                              "url": "https://example.org"}
+                        for nom in ("a.mp3", "b.mp3", "c.mp3", "d.mp3")}
+        # Au milieu de la deuxième tranche du set : 100 + 60 + 30.
+        radio._seconde = lambda: 190.0
+        prog = radio.programme()
+        self.assertEqual(prog["en_cours"]["titre"], "b.mp3")
+        self.assertEqual(prog["duree"], 180.0)
+        self.assertEqual(prog["ecoule"], 90.0)
+        self.assertEqual(prog["avant"]["titre"], "a.mp3")
+        self.assertEqual([f["titre"] for f in prog["suite"]], ["c.mp3", "d.mp3"])
+
+    def test_the_player_never_overflows_the_black_band(self):
+        """The player sits above the agenda ribbon and below the window.
+
+        It grew from three lines to four when the gauge arrived, and the band
+        it lives in did not grow. Nothing it draws may reach the camera
+        window, which starts at the top of the band.
+        """
+        from watcher import stream
+        for large in (1280, 1600, 1920):
+            haut_img = large * 9 // 16
+            toile = np.zeros((haut_img, large, 3), np.uint8)
+            echelle = large / 1600
+            fiche = {"auteur": "thepriben", "titre": "Mont Serein 002.01",
+                     "licence": "CC BY 4.0", "url": "https://example.org/x"}
+            stream.pose_bloc_musique(
+                toile, {"avant": fiche, "en_cours": fiche, "ecoule": 161.0,
+                        "duree": 372.0, "suite": [fiche, fiche]},
+                Path("/nonexistent"), energie=0.3, seconde=2.0)
+            encre = np.argwhere(toile.any(axis=2))
+            self.assertTrue(encre.size)
+            bas_fenetre = haut_img - int(stream.BORD_BAS * echelle)
+            self.assertGreaterEqual(int(encre[:, 0].min()), bas_fenetre)
+            self.assertLessEqual(int(encre[:, 0].max()),
+                                 haut_img - int(stream.AGENDA_H * echelle))
+
     def test_the_thread_and_the_bubbles_never_touch_the_camera_window(self):
         """Nothing decorative may be drawn over what people came to watch.
 

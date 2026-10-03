@@ -835,32 +835,57 @@ class Musique:
             seconde -= piste["d"]
         return ""
 
-    def trio(self) -> tuple[dict | None, dict | None, dict | None]:
-        """Ce qui vient de passer, ce qui passe, ce qui suit.
+    def programme(self) -> dict:
+        """Ce qui passe, où on en est dedans, et les deux morceaux qui suivent.
 
-        Trois blocs posés et lisibles valent mieux qu'un titre qui défile : on
-        ne peut pas demander à quelqu'un d'attendre qu'un ruban repasse pour
+        Des blocs posés et lisibles valent mieux qu'un titre qui défile : on ne
+        peut pas demander à quelqu'un d'attendre qu'un ruban repasse pour
         savoir ce qu'il écoute, et c'est précisément ce qu'on lui demande de
         noter s'il veut retrouver le morceau.
+
+        Deux à suivre et non un seul, et la position dans le morceau en plus.
+        Un seul titre à venir et aucune idée du temps restant, ça renseigne
+        sans donner envie d'attendre ; une file et une jauge, c'est un
+        programme — on sait qu'il va se passer quelque chose et quand.
+
+        On sait où on en est sans rien demander à personne : le son est servi
+        par tranches, donc le nombre d'octets versés divisé par le débit donne
+        les secondes écoulées, et les durées de la session disent lequel c'est.
         """
         seconde = self._seconde()
         for i, piste in enumerate(self.suite):
-            if seconde < piste["d"]:
-                def fiche(j: int) -> dict | None:
-                    if j < 0 or j >= len(self.suite):
-                        return None
-                    # Deux tranches du même set ne sont pas deux morceaux : on
-                    # remonte jusqu'à un fichier différent, sinon le bloc
-                    # « avant » affiche ce qui joue encore.
-                    pas = 1 if j > i else -1
-                    while 0 <= j < len(self.suite) and self.suite[j]["f"] == piste["f"]:
-                        j += pas
-                    if not 0 <= j < len(self.suite):
-                        return None
-                    return self.fiches.get(self.suite[j]["f"])
-                return fiche(i - 1), self.fiches.get(piste["f"]), fiche(i + 1)
-            seconde -= piste["d"]
-        return None, None, None
+            if seconde >= piste["d"]:
+                seconde -= piste["d"]
+                continue
+            # Deux tranches du même set ne sont pas deux morceaux. Tant qu'on
+            # reste sur le même fichier on est dans le même morceau : c'est
+            # vrai pour la jauge, qui doit mesurer le set entier et non la
+            # tranche en cours, et c'est vrai pour la file, qui annoncerait
+            # sinon comme « à suivre » ce qu'on est déjà en train d'écouter.
+            debut = i
+            while debut > 0 and self.suite[debut - 1]["f"] == piste["f"]:
+                debut -= 1
+            fin = i
+            while fin + 1 < len(self.suite) and self.suite[fin + 1]["f"] == piste["f"]:
+                fin += 1
+            ecoule = sum(self.suite[j]["d"] for j in range(debut, i)) + seconde
+            duree = sum(self.suite[j]["d"] for j in range(debut, fin + 1))
+
+            avant = None
+            if debut > 0:
+                avant = self.fiches.get(self.suite[debut - 1]["f"])
+            suite, j, vus = [], fin + 1, {piste["f"]}
+            while j < len(self.suite) and len(suite) < 2:
+                nom = self.suite[j]["f"]
+                if nom not in vus:
+                    vus.add(nom)
+                    fiche = self.fiches.get(nom)
+                    if fiche:
+                        suite.append(fiche)
+                j += 1
+            return {"avant": avant, "en_cours": self.fiches.get(piste["f"]),
+                    "ecoule": ecoule, "duree": duree, "suite": suite}
+        return dict(PROG_VIDE)
 
     def credit(self) -> str:
         """Qui on est en train de diffuser, en toutes lettres.
@@ -1442,82 +1467,179 @@ def _coupe(texte: str, combien: int) -> str:
     return texte if len(texte) <= combien else texte[:combien - 1] + "…"
 
 
-def pose_bloc_musique(image: np.ndarray, trio: tuple[dict | None, dict | None, dict | None],
-                      dossier: Path) -> None:
-    """Le bloc fixe de la musique : la pochette, et avant / pendant / après.
+# Ce que le player reçoit quand il n'y a pas de musique : la radio muette
+# pendant une annonce, ou la session pas encore chargée au démarrage.
+PROG_VIDE = {"avant": None, "en_cours": None, "ecoule": 0.0, "duree": 0.0,
+             "suite": []}
+
+
+def _mmss(secondes: float) -> str:
+    """Une durée comme un lecteur l'écrit, et jamais autrement."""
+    secondes = max(0, int(secondes))
+    return f"{secondes // 60}:{secondes % 60:02d}"
+
+
+# Le player, en pixels à 1600 de large.
+PLAY_MARGE = 16
+PLAY_PAS = 27           # d'une ligne à la suivante
+PLAY_POCHETTE = 94
+PLAY_JAUGE_H = 5        # l'épaisseur du rail de la jauge
+PLAY_BARRES = 5         # combien de barres au vumètre
+PLAY_BARRE_L = 3
+PLAY_BARRE_ECART = 5
+PLAY_BARRE_H = 15
+PLAY_GRIS = (120, 120, 120)
+PLAY_RAIL = (64, 64, 64)
+
+
+def _vumetre(image: np.ndarray, x: int, base: int, echelle: float,
+             energie: float, seconde: float) -> int:
+    """Cinq barres qui montent avec le son. Rend la largeur occupée.
+
+    C'est le seul endroit du flux où une chose dessinée bouge parce que le son
+    bouge, et c'est pour ça qu'il est là : la jauge dit où on en est dans le
+    morceau, le vumètre dit qu'il y a bien du son qui sort. Les deux ensemble
+    font la différence entre un bloc de texte sur la musique et un appareil
+    qui joue.
+
+    Il ne mesure rien d'utile et ne prétend pas le contraire : il est posé
+    contre l'étiquette du morceau, pas contre l'image, et personne ne peut le
+    prendre pour une lecture de la montagne.
+    """
+    large = max(1, int(PLAY_BARRE_L * echelle))
+    ecart = max(2, int(PLAY_BARRE_ECART * echelle))
+    haut_max = max(4, int(PLAY_BARRE_H * echelle))
+    for i in range(PLAY_BARRES):
+        # Chaque barre suit le son avec sa propre lenteur, sinon les cinq
+        # montent et descendent ensemble et ça fait un bloc qui respire.
+        onde = 0.55 + 0.45 * math.sin(seconde * (2.6 + i * 0.7) + i * 1.3)
+        haut = max(2, int(haut_max * (0.22 + min(1.0, energie * 6.0) * onde)))
+        cv2.rectangle(image, (x + i * (large + ecart), base - haut),
+                      (x + i * (large + ecart) + large, base), VERT, -1)
+    return PLAY_BARRES * (large + ecart) - ecart
+
+
+def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
+                      energie: float = 0.0, seconde: float = 0.0) -> None:
+    """Le player : la pochette, ce qui joue, où on en est, et ce qui suit.
 
     Fixe, et en bas à gauche, parce que c'est la seule chose du flux qu'on
     puisse avoir envie de noter. Le lien y figure en toutes lettres : CC-BY
-    demande de nommer l'auteur, l'œuvre, la licence et de renvoyer à la source,
-    et une adresse qu'on ne peut pas recopier ne renvoie nulle part.
+    demande de nommer l'auteur, l'œuvre, la licence et de renvoyer à la
+    source, et une adresse qu'on ne peut pas recopier ne renvoie nulle part.
+
+    C'était un pavé de texte : trois lignes à gauche, deux étiquettes à
+    droite, et rien qui dise que de la musique était en train de jouer plutôt
+    qu'une liste d'être affichée. Un lecteur, lui, montre trois choses — ce
+    qui passe, combien il en reste, ce qui vient — et c'est la deuxième qui
+    manquait le plus : sans elle on ne sait pas si on tombe sur la fin d'un
+    morceau ou sur son début, donc on ne sait pas s'il vaut la peine
+    d'attendre.
     """
-    avant, en_cours, apres = trio
+    en_cours = programme.get("en_cours")
     if en_cours is None:
         return
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
-    marge = int(16 * echelle)
-    pas = int(27 * echelle)
-    cote = int(84 * echelle)
-    # Trois lignes et non cinq. Le bloc en faisait cinq, l'une sous l'autre,
-    # et montait si haut qu'il entamait l'image ; pendant ce temps la moitié
-    # droite de la bande noire était vide. Ce qui passe maintenant va à
-    # droite, et ce qui passe en ce moment reste à gauche où l'œil le cherche.
-    ici = [("NOW PLAYING", VERT, 0.50),
-           (_coupe(f"{en_cours['auteur']} — {en_cours['titre']}", 40), BLANC, 0.62),
-           (f"{en_cours['licence']} · {en_cours['url'].replace('https://', '')}",
-            CYAN, 0.52)]
-    la_suite = []
-    if apres:
-        la_suite.append(("UP NEXT", AMBRE,
-                         _coupe(f"{apres['auteur']} — {apres['titre']}", 38)))
-    if avant:
-        la_suite.append(("JUST PLAYED", (150, 150, 150),
-                         _coupe(f"{avant['auteur']} — {avant['titre']}", 38)))
+    marge = int(PLAY_MARGE * echelle)
+    pas = int(PLAY_PAS * echelle)
+    cote = int(PLAY_POCHETTE * echelle)
+    duree = float(programme.get("duree") or 0.0)
+    ecoule = min(float(programme.get("ecoule") or 0.0), duree)
+    suite = list(programme.get("suite") or [])
+    avant = programme.get("avant")
+
+    titre = _coupe(f"{en_cours['auteur']} — {en_cours['titre']}", 38)
+    licence = f"{en_cours['licence']} · {en_cours['url'].replace('https://', '')}"
+    horloge = f"{_mmss(ecoule)} / {_mmss(duree)}" if duree > 0 else ""
 
     def large_de(texte: str, part: float) -> int:
         return cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX,
                                part * echelle, 2)[0][0]
 
-    colonne = max(large_de(t_, s) for t_, _, s in ici)
-    etiquette = max([large_de(e, 0.46) for e, _, _ in la_suite] or [0])
-    suite_large = max([large_de(v, 0.52) for _, _, v in la_suite] or [0])
-    bloc_h = max(cote, pas * len(ici)) + 2 * marge
-    bloc_l = cote + 3 * marge + colonne
-    if la_suite:
-        bloc_l += marge * 2 + etiquette + marge + suite_large
+    # La colonne de gauche est la plus large des trois choses qu'elle porte,
+    # et la jauge prend toute cette largeur : une jauge plus courte que le
+    # titre ressemble à un soulignement, une jauge aussi large que la colonne
+    # ressemble à une jauge.
+    horloge_l = large_de(horloge, 0.46) if horloge else 0
+    colonne = max(large_de(titre, 0.62), large_de(licence, 0.50),
+                  large_de("NOW PLAYING", 0.46) + int(36 * echelle),
+                  int(300 * echelle))
+
+    file = [("UP NEXT", AMBRE)]
+    for i, fiche in enumerate(suite):
+        file.append((f"{i + 1}  " + _coupe(f"{fiche['auteur']} — {fiche['titre']}", 34),
+                     BLANC if i == 0 else PLAY_GRIS))
+    if avant:
+        file.append(("JUST PLAYED  "
+                     + _coupe(f"{avant['auteur']} — {avant['titre']}", 28),
+                     (96, 96, 96)))
+    file_large = max([large_de(t, 0.52) for t, _ in file] or [0])
+
+    bloc_h = max(cote, pas * 4) + 2 * marge
+    bloc_l = cote + 3 * marge + colonne + marge + horloge_l
+    if file:
+        bloc_l += marge * 2 + file_large
     bas = hauteur - int(AGENDA_H * echelle)
     haut = bas - bloc_h
     fond = image[haut:bas, 0:min(largeur, bloc_l)]
     if fond.size:
-        fond[:] = (fond * 0.22).astype(np.uint8)
+        fond[:] = (fond * 0.18).astype(np.uint8)
+    # Le liseré vert sur la tranche gauche : il dit « ceci est un appareil, et
+    # il est allumé ». C'est la seule chose verte du flux avec le vumètre.
     cv2.rectangle(image, (0, haut), (int(6 * echelle), bas), VERT, -1)
+
     gauche = marge
     pochette = en_cours.get("pochette")
     if pochette:
         vignette = cv2.imread(str(dossier / pochette))
         if vignette is not None:
             vignette = cv2.resize(vignette, (cote, cote), interpolation=cv2.INTER_AREA)
-            image[haut + marge:haut + marge + cote, gauche:gauche + cote] = vignette
+            y = haut + (bloc_h - cote) // 2
+            image[y:y + cote, gauche:gauche + cote] = vignette
+            cadre_encart(image, (gauche - 1, y - 1),
+                         (gauche + cote, y + cote), echelle)
             gauche += cote + marge
+    gauche += marge
+
     base = haut + marge + pas - int(9 * echelle)
-    for i, (texte, couleur, taille) in enumerate(ici):
-        cv2.putText(image, texte, (gauche + marge, base + pas * i),
-                    cv2.FONT_HERSHEY_SIMPLEX, taille * echelle, couleur, 2,
+    pris = _vumetre(image, gauche, base, echelle, energie, seconde)
+    cv2.putText(image, "NOW PLAYING", (gauche + pris + marge, base),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.46 * echelle, VERT, 2, cv2.LINE_AA)
+    cv2.putText(image, titre, (gauche, base + pas),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.62 * echelle, BLANC, 2, cv2.LINE_AA)
+
+    # La jauge, sur la troisième ligne. Un rail sombre sur toute la colonne, la
+    # part écoulée en clair par-dessus, et un bouton rond au bout : le rail
+    # seul se lit comme un trait de séparation, c'est le bouton qui dit qu'il
+    # avance.
+    if duree > 0:
+        rail_y = base + int(pas * 1.8)
+        epais = max(2, int(PLAY_JAUGE_H * echelle))
+        cv2.rectangle(image, (gauche, rail_y), (gauche + colonne, rail_y + epais),
+                      PLAY_RAIL, -1)
+        fait = int(colonne * max(0.0, min(1.0, ecoule / duree)))
+        cv2.rectangle(image, (gauche, rail_y), (gauche + fait, rail_y + epais),
+                      BLANC, -1)
+        cv2.circle(image, (gauche + fait, rail_y + epais // 2),
+                   max(2, int(4 * echelle)), BLANC, -1, cv2.LINE_AA)
+        cv2.putText(image, horloge, (gauche + colonne + marge,
+                                     rail_y + epais // 2 + int(5 * echelle)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.46 * echelle, PLAY_GRIS, 1,
                     cv2.LINE_AA)
-    if not la_suite:
+    cv2.putText(image, licence, (gauche, base + pas * 3),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.50 * echelle, CYAN, 2, cv2.LINE_AA)
+
+    if not file:
         return
-    # La seconde colonne, alignée sur la première : les deux étiquettes à
-    # gauche, les deux titres sur une même verticale. Alignées, on lit deux
-    # morceaux ; en escalier, on lit deux phrases.
-    droite = gauche + marge + colonne + 2 * marge
-    for i, (etiq, teinte, valeur) in enumerate(la_suite):
-        ligne = base + pas * (i + (len(ici) - len(la_suite)) // 2)
-        cv2.putText(image, etiq, (droite, ligne), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.46 * echelle, teinte, 2, cv2.LINE_AA)
-        cv2.putText(image, valeur, (droite + etiquette + marge, ligne),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.52 * echelle, BLANC, 2,
-                    cv2.LINE_AA)
+    # La file à droite, une ligne par entrée et alignées entre elles. Le
+    # premier à venir est en blanc, le second en gris : c'est un ordre, et un
+    # ordre se lit mieux en deux intensités qu'en deux numéros.
+    droite = gauche + colonne + marge + horloge_l + 2 * marge
+    for i, (texte, teinte) in enumerate(file):
+        cv2.putText(image, texte, (droite, base + pas * i),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    (0.46 if i == 0 else 0.52) * echelle, teinte, 2, cv2.LINE_AA)
 
 
 # Le silence qu'il faut avant d'aller chercher dans les archives, et le temps
@@ -1961,6 +2083,39 @@ DANSE_PAS_S = 3.0
 DANSE_HAUT = 0.22
 
 
+# LES COULEURS CLAIRES DES PANTINS ET DE L'ÉLÉPHANT, en BGR.
+#
+# Toutes très pâles et toutes à peu près aussi lumineuses : ce n'est pas une
+# palette de couleurs, c'est du blanc teinté. Un pantin franchement rose ou
+# franchement bleu deviendrait une information — on croirait que la teinte dit
+# quelque chose, et rien de ce qu'on ajoute pour le plaisir n'a le droit de
+# ressembler à une mesure. Du blanc qui tire un peu vers le rose ne dit rien
+# d'autre que le plaisir de ne pas toujours être blanc.
+#
+# Elles sont aussi ce qui reste du rose de l'éléphant, qui était seul de son
+# espèce : maintenant que tout le monde est tracé de la même main, le rose
+# appartient à tout le monde et à personne en particulier.
+CLAIRS = (
+    (245, 245, 245),   # blanc
+    (228, 206, 252),   # rose
+    (252, 226, 206),   # bleu pâle
+    (198, 240, 252),   # jaune pâle
+    (214, 248, 220),   # menthe
+    (248, 218, 228),   # lavande
+)
+# Assez long pour qu'on ne surprenne jamais le changement : un numéro dure
+# quelques secondes, celui d'après tombera dans une autre teinte sans que
+# personne ait vu de transition. C'est la différence entre « ils changent de
+# couleur », qui est un effet, et « ils ne sont pas toujours de la même
+# couleur », qui est une respiration.
+CLAIR_TENUE_S = 97.0
+
+
+def un_clair(seconde: float, decalage: int = 0) -> tuple[int, int, int]:
+    """La teinte claire du moment, jamais vue en train de changer."""
+    return CLAIRS[(int(seconde / CLAIR_TENUE_S) + decalage) % len(CLAIRS)]
+
+
 def _danseur(calque: np.ndarray, x: int, sol: int, taille: float,
              phase: float, couleur: tuple[int, int, int]) -> None:
     """Un bonhomme en tubes, volontairement décousu.
@@ -2104,7 +2259,8 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
     calque = image.copy()
     for i, (chez_lui, ailleurs) in enumerate(zip(maison, dehors)):
         x = int(chez_lui + (ailleurs - chez_lui) * sortie)
-        _danseur(calque, x, pied, taille, phase + i * 2.1, BLANC)
+        _danseur(calque, x, pied, taille, phase + i * 2.1,
+                 un_clair(seconde, i))
     # Pleins dehors, voilés dedans. Le voile n'est pas une esthétique, c'est
     # une politesse envers la montagne : on ne se met pas devant ce que les gens
     # sont venus regarder. Dans la bande noire il n'y a rien derrière eux, donc
@@ -2114,64 +2270,53 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
     cv2.addWeighted(calque, opacite, image, 1.0 - opacite, 0.0, dst=image)
 
 
-# Le rose de l'éléphant et les tons du tapis, en BGR comme tout OpenCV.
-#
-# Quatre roses et non un seul, parce qu'un aplat se lit comme un autocollant.
-# Du plus sombre au plus clair, ils servent à dégrader chaque masse de son
-# dessous vers sa lumière : c'est tout ce qu'il faut pour que des ellipses
-# deviennent un volume, et à quarante pixels de haut c'est tout ce qu'on peut
-# se permettre.
-ROSE_NUIT = (112, 70, 158)
-ROSE_OMBRE = (150, 105, 205)
-ROSE = (205, 160, 250)
-ROSE_CLAIR = (232, 206, 255)
+# Les tons du tapis volant, en BGR comme tout OpenCV.
 TAPIS_ETOFFE = (62, 92, 228)
 TAPIS_FRANGE = (120, 205, 250)
 
 
 def _elephant(calque: np.ndarray, cx: int, sol: int, taille: float,
-              phase: float) -> None:
-    """Un éléphant rose en ellipses, qui danse de profil.
+              phase: float, couleur: tuple[int, int, int] = BLANC) -> None:
+    """Un éléphanteau en tubes, de la même main que les pantins qui dansent.
 
-    Tout est rond et rien n'est anatomique : des oreilles trop grandes, des
-    pattes trop courtes, une trompe qui se balance. C'est ce qui le sauve — un
-    éléphant qu'on essaierait de dessiner juste, à quatre-vingts pixels de
-    haut, ne serait qu'une tache grise de la taille d'une voiture, et on
-    croirait à un défaut de l'image plutôt qu'à une intention.
+    Il était rose et plein, modelé en ellipses dégradées. C'était joli et
+    c'était un corps étranger : tout le reste de ce qu'on ajoute à l'image —
+    les deux pantins, le surfeur sur la piste, le bonhomme du tapis — est
+    tracé au tube blanc ourlé de noir, et le seul volume peint du flux se
+    lisait comme un autocollant collé par-dessus le dessin. Un trait commun
+    dit que tout cela vient du même endroit ; c'est aussi notre logo.
+
+    Donc le même tube, le même ourlet, et le même parti pris que les pantins :
+    les membres posés un peu à côté des articulations plutôt que soudés
+    dessus. Un éléphant bien assemblé a l'air d'un schéma d'anatomie.
 
     Il regarde vers la gauche, du côté d'où viennent les voitures.
 
     « taille » est sa hauteur au garrot, « sol » la ligne où ses pieds posent.
     """
-    tube = max(2, int(taille * 0.055))
+    tube = max(2, int(taille * 0.045))
+    # Le même liseré sombre que les pantins : le blanc seul s'évanouit sur un
+    # ciel de brouillard, et c'est le fond qu'on a la moitié du temps ici.
+    ourlet = tube + max(2, tube // 2)
 
-    def rond(centre, axes, couleur, angle=0.0, epaisseur=-1):
-        cv2.ellipse(calque, centre, axes, angle, 0, 360, couleur, epaisseur,
-                    cv2.LINE_AA)
+    def trait(a, b, epais=None):
+        epais = epais or tube
+        cv2.line(calque, a, b, (0, 0, 0), epais + ourlet - tube, cv2.LINE_AA)
+        cv2.line(calque, a, b, couleur, epais, cv2.LINE_AA)
 
-    def masse(centre, axes, angle=0.0, sombre=ROSE_OMBRE, clair=ROSE_CLAIR,
-              marches=7):
-        """Une boule et non une tache : la même ellipse, de l'ombre à la lumière.
+    def masse(centre, axes, angle=0.0):
+        """Une ellipse pleine, cernée de sombre comme les membres des pantins.
 
-        Sept ellipses emboîtées qui rétrécissent vers le haut à gauche, du plus
-        sombre au plus clair. C'est un dégradé pauvre, et il suffit : l'œil
-        lit un volume dès qu'il voit une lumière décalée et un dessous plus
-        foncé, et à cette taille un vrai calcul d'éclairage ne se verrait pas.
-
-        La lumière vient d'en haut à gauche pour tout le monde, comme sur le
-        reste de l'image : la webcam regarde au nord et le soleil passe de ce
-        côté-là la plus grande partie du temps.
+        Au contour, les trois ellipses du corps, de la tête et de l'oreille se
+        croisaient en un bretzel d'anneaux où personne ne reconnaissait un
+        éléphant. Les pantins ne sont pas faits de contours : leurs membres
+        sont des capsules pleines, et c'est le liseré sombre de la suivante
+        qui détache chaque pièce de celle d'avant. Il suffit donc de dessiner
+        de l'arrière vers l'avant.
         """
-        cx, cy = centre
-        ax, ay = axes
-        for pas in range(marches):
-            part = pas / (marches - 1)
-            teinte = tuple(int(a + (b - a) * part) for a, b in zip(sombre, clair))
-            cv2.ellipse(calque,
-                        (int(cx - ax * 0.30 * part), int(cy - ay * 0.34 * part)),
-                        (max(1, int(ax * (1 - 0.46 * part))),
-                         max(1, int(ay * (1 - 0.50 * part)))),
-                        angle, 0, 360, teinte, -1, cv2.LINE_AA)
+        cv2.ellipse(calque, centre, (axes[0] + ourlet - tube, axes[1] + ourlet - tube),
+                    angle, 0, 360, (0, 0, 0), -1, cv2.LINE_AA)
+        cv2.ellipse(calque, centre, axes, angle, 0, 360, couleur, -1, cv2.LINE_AA)
 
     # Le dandinement : il se soulève sur le temps et se balance à contretemps.
     # Deux mouvements de périodes différentes, sinon il tressaute sur place
@@ -2181,51 +2326,35 @@ def _elephant(calque: np.ndarray, cx: int, sol: int, taille: float,
     pose = sol - bond
     axe = cx + int(roulis)
 
-    # L'ombre portée d'abord, et elle ne bondit pas avec lui : elle s'étale
-    # quand il retombe et se resserre quand il est en l'air. C'est ce qui le
-    # pose au sol au lieu de le laisser flotter devant.
-    au_sol = 1.0 - bond / max(1.0, taille * 0.05) * 0.18
-    rond((axe, sol), (int(taille * 0.44 * au_sol), max(2, int(taille * 0.07))),
-         (24, 18, 26))
-
-    # Les pattes, pour que le corps les recouvre à la hanche. Courtes et
-    # épaisses : des pattes à l'échelle feraient un animal juste, et un animal
-    # juste n'est pas drôle. Celles-ci sont des poteaux. Les deux du fond sont
-    # plus sombres, ce qui suffit à les mettre derrière.
+    # Les pattes d'abord, pour que le corps les recouvre à la hanche. Courtes
+    # et épaisses : des pattes à l'échelle feraient un animal juste, et un
+    # animal juste n'est pas drôle. Celles-ci sont des poteaux.
     for i, ecart in enumerate((-0.24, 0.11, -0.09, 0.26)):
-        derriere = i < 2
         balance = math.sin(phase + i * 1.7) * taille * 0.05
         pied = (int(axe + taille * ecart + balance), pose)
         haut = (int(axe + taille * ecart), int(pose - taille * 0.26))
-        teinte = ROSE_NUIT if derriere else ROSE_OMBRE
-        cv2.line(calque, haut, pied, teinte, int(tube * 2.6), cv2.LINE_AA)
-        cv2.circle(calque, pied, int(tube * 1.3), teinte, -1, cv2.LINE_AA)
-        if not derriere:
-            # Un ongle clair sur les pattes de devant.
-            cv2.circle(calque, (pied[0], pied[1] - tube // 2),
-                       max(1, int(tube * 0.6)), ROSE_CLAIR, -1, cv2.LINE_AA)
+        trait(haut, pied, int(tube * 2.0))
+        cv2.circle(calque, pied, int(tube * 1.1), couleur, -1, cv2.LINE_AA)
 
     # La queue pend derrière le corps, donc avant lui.
     fouet = math.sin(phase * 3) * 0.5
     queue = (int(axe + taille * 0.36), int(pose - taille * 0.66))
-    cv2.line(calque, queue,
-             (int(queue[0] + taille * 0.15 + fouet * taille * 0.06),
-              int(queue[1] + taille * 0.30)),
-             ROSE_NUIT, max(2, int(tube * 0.6)), cv2.LINE_AA)
+    trait(queue, (int(queue[0] + taille * 0.15 + fouet * taille * 0.06),
+                  int(queue[1] + taille * 0.30)), max(2, int(tube * 0.7)))
 
+    # Le corps puis la tête, de l'arrière vers l'avant. Le liseré sombre de la
+    # tête la détache du corps sans qu'on ait à dessiner la moindre couture.
     corps = (axe, int(pose - taille * 0.56))
     masse(corps, (int(taille * 0.40), int(taille * 0.29)))
 
     tete = (int(axe - taille * 0.44), int(pose - taille * 0.72))
     masse(tete, (int(taille * 0.27), int(taille * 0.26)))
+
     # L'oreille bat, et c'est elle qui fait tout le travail : c'est à l'oreille
-    # qu'on reconnaît un éléphant de dessin animé, pas à la trompe. Elle est
-    # derrière la joue, donc plus sombre, avec un intérieur plus clair.
+    # qu'on reconnaît un éléphant dessiné, pas à la trompe.
     bat = 18 * math.sin(phase * 2 + 0.7)
     oreille = (tete[0] + int(taille * 0.11), tete[1] - int(taille * 0.03))
-    rond(oreille, (int(taille * 0.23), int(taille * 0.18)), ROSE_NUIT, angle=bat)
-    masse(oreille, (int(taille * 0.20), int(taille * 0.15)), angle=bat,
-          sombre=ROSE_OMBRE, clair=ROSE, marches=4)
+    masse(oreille, (int(taille * 0.22), int(taille * 0.17)), angle=bat)
 
     # La trompe : un arc qui s'affine et qui se relève quand il saute.
     leve = math.sin(phase * 2) * 0.5
@@ -2238,31 +2367,20 @@ def _elephant(calque: np.ndarray, cx: int, sol: int, taille: float,
                            - taille * 0.04),
                        int(depart[1] + math.cos(angle * 0.8) * taille * 0.32 * part)))
     for pas in range(6):
-        epais = max(2, int(tube * (2.0 - pas * 0.22)))
-        cv2.line(calque, courbe[pas], courbe[pas + 1], ROSE_OMBRE, epais, cv2.LINE_AA)
-        # La lumière sur le dessus de la trompe : un trait plus fin et plus
-        # clair, décalé vers le haut. C'est le même éclairage que les masses,
-        # dit avec les moyens d'une ligne.
-        cv2.line(calque,
-                 (courbe[pas][0], courbe[pas][1] - epais // 4),
-                 (courbe[pas + 1][0], courbe[pas + 1][1] - epais // 4),
-                 ROSE if pas > 2 else ROSE_CLAIR,
-                 max(1, epais // 2), cv2.LINE_AA)
+        trait(courbe[pas], courbe[pas + 1],
+              max(2, int(tube * (1.7 - pas * 0.19))))
 
-    # Pas de défenses : c'est un éléphanteau. Elles étaient là pour dire
-    # « dessin animé » plutôt que « animal », mais elles disaient surtout
+    # Pas de défenses : c'est un éléphanteau. Elles disaient surtout
     # « adulte », et un adulte qui danse sur un rond-point est moins aimable
     # qu'un petit qui danse sur un rond-point.
 
     # L'œil, en dernier et tout petit : plus il est petit, plus il est gentil.
-    # Avec son reflet, qui est le seul trait de tout le dessin dont on peut
-    # dire qu'il sert à quelque chose — sans lui le regard est en verre.
+    # Plein et non au trait — c'est le seul endroit du dessin où une tache
+    # pleine veut dire quelque chose, et sans elle le regard est en verre.
     oeil = (tete[0] - int(taille * 0.09), tete[1] - int(taille * 0.07))
-    cv2.circle(calque, oeil, max(2, int(taille * 0.055)), BLANC, -1, cv2.LINE_AA)
-    cv2.circle(calque, oeil, max(1, int(taille * 0.026)), (20, 20, 20), -1, cv2.LINE_AA)
-    cv2.circle(calque, (oeil[0] - max(1, int(taille * 0.016)),
-                        oeil[1] - max(1, int(taille * 0.016))),
-               max(1, int(taille * 0.014)), BLANC, -1, cv2.LINE_AA)
+    cv2.circle(calque, oeil, max(2, int(taille * 0.05)), couleur, -1, cv2.LINE_AA)
+    cv2.circle(calque, oeil, max(1, int(taille * 0.024)), (20, 20, 20), -1,
+               cv2.LINE_AA)
 
 
 # L'éléphant danse onze minutes et une seconde après le précédent, le tapis
@@ -2334,7 +2452,8 @@ def pose_elephant(image: np.ndarray, seconde: float, energie: float,
     cx = int(gauche + large_vue / 2 + taille * (ELEPHANT_GAUCHE - ELEPHANT_DROITE) / 2)
     sol = int(cime + haute_vue / 2 + taille * ELEPHANT_HAUT / 2 - taille * ELEPHANT_BAS)
     calque = image.copy()
-    _elephant(calque, cx, sol, taille, seconde * DANSE_PAS_S * 0.8)
+    _elephant(calque, cx, sol, taille, seconde * DANSE_PAS_S * 0.8,
+              un_clair(seconde, 1))
     # Il arrive et repart en fondu d'une seconde. Un éléphant qui apparaît d'un
     # coup se lit comme une image sautée ; en fondu, il se lit comme un rêve.
     # Presque opaque une fois arrivé : à quatre-vingt-huit centièmes on voyait
@@ -2524,7 +2643,8 @@ def pose_tapis(image: np.ndarray, seconde: float, energie: float,
     cy = max(cy, cime + danseur * TAPIS_TETE + etoffe * TAPIS_ROULIS)
     cy = min(cy, cime + ciel_haut - etoffe * (TAPIS_FRANGE + TAPIS_ROULIS))
     calque = image.copy()
-    _tapis(calque, cx, int(cy), etoffe, seconde * DANSE_PAS_S, danseur=danseur)
+    _tapis(calque, cx, int(cy), etoffe, seconde * DANSE_PAS_S, danseur=danseur,
+           clair=un_clair(seconde, 2))
     cv2.addWeighted(calque, 0.9, image, 0.1, 0.0, dst=image)
     return True
 
@@ -2967,7 +3087,8 @@ def _courbe(points: np.ndarray, pas: int = 18) -> np.ndarray:
 
 
 def _tapis(calque: np.ndarray, cx: int, cy: int, etoffe: float,
-           phase: float, danseur: float = 0.0) -> None:
+           phase: float, danseur: float = 0.0,
+           clair: tuple[int, int, int] = BLANC) -> None:
     """Le tapis lui-même : une étoffe qui ondule, et quelqu'un debout dessus.
 
     L'ondulation court d'un bout à l'autre au lieu de monter et descendre
@@ -3012,7 +3133,7 @@ def _tapis(calque: np.ndarray, cx: int, cy: int, etoffe: float,
     # de l'étoffe, donc plus petit qu'eux, et il se lisait comme un troisième
     # personnage plutôt que comme un des trois.
     _danseur(calque, cx, int(cy + onde(0.5)), danseur or etoffe * 1.5,
-             phase + 1.1, BLANC)
+             phase + 1.1, clair)
 
 
 # Les ciels où le soleil ne passe pas. « Peu nuageux » n'en est pas un.
@@ -3859,7 +3980,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     images = 0
     vus: list[dict] = []
     ruban: list[tuple[str, tuple[int, int, int]]] = []
-    trio: tuple[dict | None, dict | None, dict | None] = (None, None, None)
+    prog: dict = dict(PROG_VIDE)
     lieu = ligne_lieu(cfg.get("camera") or {}, altitude_camera(racine))
     relu = 0.0
     # Les contours que la veille utilise pour savoir où est la chaussée servent
@@ -4030,7 +4151,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 soleil = (ou_est_le_soleil(cfg["camera"], quand, hauteur / largeur)
                           if soleil_absent(relief, cfg["camera"], quand, temps) else None)
                 mot_gris = BROUILLARD_MOTS.get(temps, "")
-                trio = (None, None, None) if muet else musique.trio()
+                prog = PROG_VIDE if muet else musique.programme()
                 relu = quand
             image = np.frombuffer(brut, np.uint8).reshape(source_h, source_l, 3).copy()
             # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.
@@ -4265,7 +4386,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             pose_fil(toile, dit_la_distance, cadrage, remue)
             # La musique en dernier : c'est elle qu'on vient écouter, et c'est
             # elle que la licence oblige à nommer.
-            pose_bloc_musique(toile, trio, racine / "data" / "musique")
+            pose_bloc_musique(toile, prog, racine / "data" / "musique",
+                              musique.pouls(), quand - origine)
             if sortie is None:
                 sortie, son = _sortie(cible, largeur, hauteur, cfg["stream_fps"],
                                       cfg["stream_bitrate"], cfg["stream_out_fps"],
