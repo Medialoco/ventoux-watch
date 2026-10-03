@@ -2423,13 +2423,25 @@ def hampe_du_lampadaire(camera: dict, distance_m: float, rapport: float) -> floa
     return (LAMPADAIRE_M / max(distance_m, 1.0)) / (2 * math.tan(vertical / 2))
 
 
-def pose_lampadaire(image: np.ndarray, tete: tuple[float, float], hampe: float,
+def pose_lampadaire(image: np.ndarray, tete: tuple[float, float],
+                    epaule: tuple[float, float], pied: tuple[float, float],
                     seconde: float) -> None:
     """Un lampadaire de livre d'images, posé sur le vrai.
 
-    Sa lanterne tombe exactement sur l'ampoule qu'OpenStreetMap place là, et
-    son mât descend de sa vraie hauteur : le dessin recouvre l'objet, il ne se
-    met pas à côté. C'est ce qui le distingue d'un autocollant.
+    Sur le vrai et non à côté : sa lanterne tombe sur l'ampoule qu'OpenStreetMap
+    place là, et son mât descend le long du vrai poteau jusqu'à son pied. C'est
+    la différence entre recouvrir un objet et coller un autocollant à côté — et
+    au premier essai, le mât descendait tout droit depuis la lanterne pendant
+    que le vrai poteau penchait, si bien qu'on voyait les deux.
+
+    Trois points et non deux : le pied et l'épaule du poteau, mesurés sur
+    l'image et notés dans `scene.json`, et la lanterne, qui vient de la carte.
+    Le mât va du pied à l'épaule, la potence de l'épaule à la lanterne. Avec
+    deux points seulement, le mât prenait la direction pied-lanterne, qui
+    comprend le déport de la potence : il penchait deux fois trop et le vrai
+    poteau ressortait de l'autre côté. Une caméra qui n'a pas mesuré son
+    poteau n'a pas de lampadaire dessiné, ce qui vaut mieux qu'un mât de
+    travers.
 
     Il ne sort que la nuit, parce que c'est la nuit que la vraie lampe est
     allumée. Dessiner une lampe éteinte en train d'éclairer serait le genre de
@@ -2440,10 +2452,10 @@ def pose_lampadaire(image: np.ndarray, tete: tuple[float, float], hampe: float,
     pour qu'on n'en invente pas d'ambiguës.
     """
     hauteur, largeur = image.shape[:2]
-    x = int(tete[0] * largeur)
-    y = int(tete[1] * hauteur)
-    long_px = max(8, int(hampe * hauteur))
-    pied = y + long_px
+    x, y = int(tete[0] * largeur), int(tete[1] * hauteur)
+    bas_x, bas_y = int(pied[0] * largeur), int(pied[1] * hauteur)
+    haut_x, haut_y = int(epaule[0] * largeur), int(epaule[1] * hauteur)
+    long_px = max(8, int(math.hypot(bas_x - haut_x, bas_y - haut_y)))
     fer = max(2, int(long_px * 0.022))
     lanterne = max(4, int(long_px * 0.055))
     souffle = 0.88 + 0.12 * math.sin(seconde * 0.5)
@@ -2460,22 +2472,36 @@ def pose_lampadaire(image: np.ndarray, tete: tuple[float, float], hampe: float,
     cv2.add(image, lueur, dst=image)
     calque = image.copy()
 
-    # Le mât, qui s'épaissit vers le bas comme tous les mâts dessinés.
+    # Le mât, qui s'épaissit vers le bas comme tous les mâts dessinés, et qui
+    # suit l'axe du vrai poteau au lieu de tomber à la verticale.
     for part in range(6):
-        depuis = y + int(long_px * part / 6)
-        jusqua = y + int(long_px * (part + 1) / 6)
+        depuis = (int(haut_x + (bas_x - haut_x) * part / 6),
+                  int(haut_y + (bas_y - haut_y) * part / 6))
+        jusqua = (int(haut_x + (bas_x - haut_x) * (part + 1) / 6),
+                  int(haut_y + (bas_y - haut_y) * (part + 1) / 6))
         epais = fer + int(fer * 0.5 * part / 5)
-        cv2.line(calque, (x, depuis), (x, jusqua), (40, 36, 44), epais + 2, cv2.LINE_AA)
-        cv2.line(calque, (x, depuis), (x, jusqua), LAMP_FER, epais, cv2.LINE_AA)
+        cv2.line(calque, depuis, jusqua, (46, 42, 52), epais + 1, cv2.LINE_AA)
+        cv2.line(calque, depuis, jusqua, LAMP_FER, epais, cv2.LINE_AA)
         # Une arête claire sur le côté éclairé, qui donne du tube au trait.
-        cv2.line(calque, (x - epais // 3, depuis), (x - epais // 3, jusqua),
+        cv2.line(calque, (depuis[0] - epais // 3, depuis[1]),
+                 (jusqua[0] - epais // 3, jusqua[1]),
                  (152, 146, 156), max(1, epais // 3), cv2.LINE_AA)
     # Un socle, pour qu'il soit planté et non suspendu.
-    cv2.ellipse(calque, (x, pied), (fer * 3, max(2, fer)), 0, 180, 360,
+    cv2.ellipse(calque, (bas_x, bas_y), (fer * 3, max(2, fer)), 0, 180, 360,
                 LAMP_FER, -1, cv2.LINE_AA)
+    # La potence, du haut du poteau à la lanterne : une courbe et non un trait,
+    # parce que c'est ce qui fait la différence entre un lampadaire de livre
+    # d'images et une perche avec une ampoule au bout.
+    potence = np.int32([[haut_x, haut_y],
+                        [haut_x, haut_y - lanterne * 2],
+                        [x, y - lanterne * 2],
+                        [x, y + lanterne]])
+    cv2.polylines(calque, [_courbe(potence)], False, (40, 36, 44),
+                  fer + 2, cv2.LINE_AA)
+    cv2.polylines(calque, [_courbe(potence)], False, LAMP_FER, fer, cv2.LINE_AA)
     # Deux volutes de ferronnerie, qui ne servent à rien et font tout.
     for cote in (-1, 1):
-        cv2.ellipse(calque, (x + cote * lanterne, y + int(lanterne * 2.4)),
+        cv2.ellipse(calque, (haut_x + cote * lanterne, haut_y + int(lanterne * 1.6)),
                     (lanterne, int(lanterne * 1.1)),
                     0, 180 if cote < 0 else 0, 270 if cote < 0 else 90,
                     LAMP_FER, max(2, fer - 1), cv2.LINE_AA)
@@ -2487,8 +2513,6 @@ def pose_lampadaire(image: np.ndarray, tete: tuple[float, float], hampe: float,
                       [x - int(lanterne * 0.62), y - int(lanterne * 0.5)]])
     cv2.fillPoly(calque, [verre], LAMP_OR, cv2.LINE_AA)
     cv2.polylines(calque, [verre], True, LAMP_FER, max(2, fer - 1), cv2.LINE_AA)
-    cv2.line(calque, (x, y + lanterne), (x, y - int(lanterne * 0.5)),
-             LAMP_FER, max(1, fer - 2), cv2.LINE_AA)
     chapeau = np.int32([[x - int(lanterne * 1.25), y - int(lanterne * 0.5)],
                         [x + int(lanterne * 1.25), y - int(lanterne * 0.5)],
                         [x, y - int(lanterne * 1.45)]])
@@ -2497,6 +2521,15 @@ def pose_lampadaire(image: np.ndarray, tete: tuple[float, float], hampe: float,
              LAMP_FER, max(2, fer - 1), cv2.LINE_AA)
     cv2.circle(calque, (x, y - int(lanterne * 2.1)), max(2, fer), LAMP_FER, -1, cv2.LINE_AA)
     cv2.addWeighted(calque, 0.80, image, 0.20, 0.0, dst=image)
+
+
+def _courbe(points: np.ndarray, pas: int = 18) -> np.ndarray:
+    """Une Bézier cubique en quelques segments, pour la potence."""
+    p0, p1, p2, p3 = points.astype(np.float64)
+    t = np.linspace(0.0, 1.0, pas).reshape(-1, 1)
+    trace = ((1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1
+             + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3)
+    return trace.astype(np.int32)
 
 
 def _tapis(calque: np.ndarray, cx: int, cy: int, etoffe: float,
@@ -3105,6 +3138,19 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         log.info("Pas de contours de zones : ni tapis ni éléphant")
     contour_ciel = contours.get("sky")
     contour_rond_point = contours.get("roundabout")
+    # Le lampadaire du rond-point, s'il a été mesuré. Il faut les trois points :
+    # la lanterne, que la carte donne, et les deux bouts du poteau, qu'on a
+    # relevés sur l'image. Sans eux on ne dessine rien plutôt que de deviner.
+    lampadaire = None
+    try:
+        lampe = (json.loads((racine / "config" / "scene.json")
+                            .read_text(encoding="utf-8")).get("lamps") or [{}])[0]
+        if all(lampe.get(coin) for coin in ("head", "shoulder", "foot")):
+            lampadaire = (lampe["head"], lampe["shoulder"], lampe["foot"])
+    except (OSError, ValueError, KeyError, IndexError, TypeError):
+        pass
+    if lampadaire is None:
+        log.info("Lampadaire non mesuré : il restera celui de la webcam")
     # Le seul numéro qu'on ne dessine pas soi-même. Lu une fois, et absent sans
     # conséquence : il ne passe pas, c'est tout.
     sous_marin = charge_vignette(racine / "assets" / "sous-marin.png")
@@ -3209,6 +3255,17 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # du ciel, donc il se pixellise et il ondule avec elle.
             if soleil is not None:
                 pose_soleil_dessine(image, soleil, quand - origine)
+            # Le lampadaire au même endroit du traitement, et pour la même
+            # raison : il n'est pas posé sur la vitre, il remplace un objet du
+            # paysage. Il doit donc prendre la teinte et le grain comme le
+            # reste de l'image, sans quoi il flotterait dessus.
+            #
+            # La nuit seulement, parce que c'est la nuit que la vraie lampe est
+            # allumée. De jour, un lampadaire de livre d'images planté au
+            # milieu d'une photo en plein soleil ne serait plus un dessin posé
+            # sur un objet, ce serait un objet en moins.
+            if lampadaire is not None and (hauteur_soleil or -90.0) <= HORIZON:
+                pose_lampadaire(image, *lampadaire, quand - origine)
             # Le grain ne tombe jamais sur une prise. Tout l'intérêt d'un
             # rectangle rouge est qu'on puisse regarder ce qu'il entoure, et
             # une voiture en gros carrés n'est plus une voiture.

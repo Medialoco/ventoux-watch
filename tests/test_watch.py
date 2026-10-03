@@ -3065,6 +3065,59 @@ class DiffusionTests(unittest.TestCase):
         # Et la raison du piège est toujours écrite là où on tombe dedans.
         self.assertIn("dernier_vu", inspect.getsource(stream.diffuse))
 
+    def test_the_drawn_lamp_covers_the_real_pole_and_only_at_night(self):
+        """Un dessin posé à côté de l'objet qu'il remplace, c'est un autocollant.
+
+        Le mât doit suivre l'axe du vrai poteau, et non la direction
+        pied-lanterne : celle-là comprend le déport de la potence, et le mât
+        penchait deux fois trop — le vrai poteau ressortait de l'autre côté.
+        """
+        racine = Path(__file__).resolve().parent.parent
+        scene = json.loads((racine / "config" / "scene.json")
+                           .read_text(encoding="utf-8"))
+        lampe = scene["lamps"][0]
+        for coin in ("head", "shoulder", "foot"):
+            self.assertIn(coin, lampe, f"{coin} est mesur\u00e9 dans scene.json")
+        tete, epaule, pied = lampe["head"], lampe["shoulder"], lampe["foot"]
+        # Le poteau descend : l'épaule est au-dessus du pied, la lanterne
+        # au-dessus de l'épaule.
+        self.assertLess(tete[1], epaule[1])
+        self.assertLess(epaule[1], pied[1])
+        # Sept mètres à vingt-cinq, vus par cet objectif : la longueur dessinée
+        # doit valoir ce que la géométrie annonce, sinon c'est qu'un des trois
+        # points est faux. Un cinquième de marge, parce que le pied est relevé
+        # à l'œil sur une image de nuit.
+        from watcher import frustum
+        pose = frustum.Pose(**{c: v for c, v in scene["pose"].items()
+                               if c in frustum.Pose.__dataclass_fields__})
+        attendue = stream.hampe_du_lampadaire(
+            {"fov": pose.hfov},
+            frustum.distance_m(pose, lampe["lat"], lampe["lon"]), 9 / 16)
+        mesuree = math.hypot((pied[0] - tete[0]) * 16 / 9, pied[1] - tete[1])
+        self.assertLess(abs(mesuree - attendue) / attendue, 0.20,
+                        f"{mesuree:.3f} dessin\u00e9 contre {attendue:.3f} calcul\u00e9")
+
+        toile = np.zeros((720, 1280, 3), np.uint8)
+        stream.pose_lampadaire(toile, tete, epaule, pied, 3.0)
+        pose_px = np.argwhere(toile.any(axis=2))
+        self.assertTrue(len(pose_px), "il doit se dessiner")
+        # Le mât est sur l'axe du poteau : à mi-hauteur entre l'épaule et le
+        # pied, le dessin doit passer là où le vrai poteau passe.
+        for part in (0.25, 0.5, 0.75):
+            y = int((epaule[1] + (pied[1] - epaule[1]) * part) * 720)
+            vise = (epaule[0] + (pied[0] - epaule[0]) * part) * 1280
+            allumes = np.nonzero(toile[y].any(axis=1))[0]
+            self.assertTrue(len(allumes), f"rien \u00e0 la hauteur {part}")
+            self.assertLess(abs(allumes.mean() - vise), 1280 * 0.004,
+                            f"le m\u00e2t quitte l'axe \u00e0 {part}")
+        # Et il ne sort que la nuit : le jour, un lampadaire de livre d'images
+        # planté dans une photo en plein soleil n'est plus un dessin posé sur
+        # un objet, c'est un objet en moins.
+        source = inspect.getsource(stream.diffuse)
+        appel = source[source.index("pose_lampadaire") - 300:
+                       source.index("pose_lampadaire")]
+        self.assertIn("HORIZON", appel)
+
     def test_the_submarine_crosses_the_sky_and_never_the_mountain(self):
         """Il traverse en entier, il reste au-dessus de la crête, et il attend.
 
