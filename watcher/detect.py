@@ -27,6 +27,26 @@ COCO = {
 }
 KEEP = set(COCO)
 
+# La part de l'image que le sujet doit occuper quand on la montre au modèle.
+#
+# Un réseau entraîné sur des photographies n'a jamais vu d'objet collé aux
+# quatre bords : il y a toujours du décor autour. On lui en donnait pourtant un
+# — la fenêtre était taillée au ras de la tache — et il répondait n'importe
+# quoi. Une Renault vue de trois quarts, pleine lucarne, se lisait « bateau » à
+# 0,77 tandis que « voiture » restait à 0,077. La même image reculée dans la
+# toile se lit « voiture » à 0,95. Ce n'est pas un seuil à baisser : c'est un
+# cadrage à rendre.
+#
+# Mesuré sur les 406 gros plans des 2 et 3 octobre, part de la toile occupée
+# contre lectures exploitables : 100 % → 57 %, 70 % → 66 %, 55 % → 69 %,
+# 45 % → 70 %, 35 % → 68 %. Le palier est large, le bord est raide, on se pose
+# au milieu du palier. La confiance moyenne suit : 0,38 contre 0,52.
+#
+# C'est une part et non un nombre de pixels, donc elle vaut pour une tache de
+# trente pixels comme pour une de six cents, et elle vaudra pour la caméra
+# suivante quelle que soit sa définition.
+SUJET_PART = 0.45
+
 
 class YoloDetector:
     def __init__(self, model_path: str):
@@ -50,8 +70,7 @@ class YoloDetector:
         left, top = 0, 0
         crop = frame
         if bbox is not None:
-            left, top, right, bottom = _crop_window(frame, bbox, margin=0.35)
-            crop = frame[top:bottom, left:right]
+            left, top, crop = _cadre(frame, bbox, SUJET_PART)
         if crop.size == 0:
             return []
         blob, gain, (pad_x, pad_y) = _letterbox(crop, 640)
@@ -155,6 +174,34 @@ def _balanced(frame: np.ndarray, crop: np.ndarray) -> np.ndarray:
         return crop
     gain = means.mean() / means
     return np.clip(crop.astype(np.float32) * gain, 0, 255).astype(np.uint8)
+
+
+def _cadre(frame: np.ndarray, bbox: tuple[int, int, int, int],
+           part: float) -> tuple[int, int, np.ndarray]:
+    """La vue à montrer au modèle, et le coin d'où elle est prise.
+
+    Carrée, parce que le modèle reçoit un carré : une fenêtre large est mise à
+    l'échelle sur sa largeur, une fenêtre haute sur sa hauteur, et le sujet s'y
+    retrouve présenté à deux tailles différentes selon qu'il est couché ou
+    debout. Ici la mise à l'échelle ne dépend plus de la forme de la tache.
+
+    Débordante, aussi : plutôt que de rogner la fenêtre contre le bord de
+    l'image — ce qui ramènerait le sujet contre le bord de la toile, c'est-à-dire
+    précisément le défaut qu'on corrige — on la laisse sortir et on complète par
+    le gris dont le modèle est coutumier. Un piéton au ras du bas de l'image
+    garde ainsi le même cadrage qu'un piéton au milieu.
+    """
+    hauteur, largeur = frame.shape[:2]
+    x, y, w, h = bbox
+    cote = max(8, int(round(max(w, h) / max(part, 0.05))))
+    x0 = int(round(x + w / 2 - cote / 2))
+    y0 = int(round(y + h / 2 - cote / 2))
+    vue = np.full((cote, cote, 3), 114, dtype=frame.dtype)
+    gx0, gy0 = max(0, x0), max(0, y0)
+    gx1, gy1 = min(largeur, x0 + cote), min(hauteur, y0 + cote)
+    if gx1 > gx0 and gy1 > gy0:
+        vue[gy0 - y0 : gy1 - y0, gx0 - x0 : gx1 - x0] = frame[gy0:gy1, gx0:gx1]
+    return x0, y0, vue
 
 
 def _crop_window(frame: np.ndarray, bbox: tuple[int, int, int, int], margin: float) -> tuple[int, int, int, int]:

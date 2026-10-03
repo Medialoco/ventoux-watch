@@ -117,9 +117,16 @@ def champs(morceaux: list[dict], album: str, annee: str, jour: tuple[int, int],
     for place, morceau in enumerate(morceaux):
         plan += [
             (f"mediums.0.track.{place}.name", morceau["titre"]),
-            (f"mediums.0.track.{place}.number", str(place + 1)),
             (f"mediums.0.track.{place}.length", str(morceau["duree_ms"])),
         ]
+    # Le numéro de piste n'est pas envoyé. L'éditeur numérote de lui-même dans
+    # l'ordre où les pistes arrivent, et le premier envoi est ressorti décalé
+    # d'un champ : les titres avaient glissé dans la colonne des numéros et les
+    # durées dans celle des titres. La donnée partait juste — « 15:00 » est le
+    # 900049 proprement converti par eux — donc c'est l'appariement qui a cédé.
+    # Un champ de moins par piste, c'est une occasion de moins de glisser.
+    # Faute de pouvoir rejouer un envoi sans publier, c'est une précaution et
+    # non un remède démontré : le prochain album se relit avant d'être validé.
     for numero, (adresse, genre) in enumerate(adresses):
         plan += [(f"urls.{numero}.url", adresse),
                  (f"urls.{numero}.link_type", RELATION[genre])]
@@ -133,7 +140,23 @@ def champs(morceaux: list[dict], album: str, annee: str, jour: tuple[int, int],
     return plan
 
 
-def page(plan: list[tuple[str, str]], album: str) -> str:
+def parseur(morceaux: list[dict]) -> str:
+    """La liste sous la forme que leur « Track Parser » sait relire.
+
+    C'est la porte de secours, et la seule qui serve à réparer : le formulaire
+    pré-rempli ne vaut que pour une publication qui n'existe pas encore, tandis
+    que ce bloc-ci se colle dans l'éditeur d'une publication déjà en ligne et
+    remplace la liste entière d'un coup. Une piste par ligne, numéro en tête et
+    durée en queue, ce qui ne laisse aucune case où se tromper de colonne.
+    """
+    lignes = []
+    for place, morceau in enumerate(morceaux, start=1):
+        secondes = round(morceau["duree_ms"] / 1000)
+        lignes.append(f"{place}. {morceau['titre']} {secondes // 60}:{secondes % 60:02d}")
+    return "\n".join(lignes)
+
+
+def page(plan: list[tuple[str, str]], album: str, liste: str = "") -> str:
     """Un formulaire qu'on relit avant de l'envoyer."""
     lignes = "\n".join(
         f'  <input type="hidden" name="{html.escape(nom)}" value="{html.escape(valeur)}">'
@@ -158,6 +181,11 @@ rempli ; rien n'est publié tant que vous n'avez pas validé chez eux.</p>
 {lignes}
   <button type="submit">Ouvrir l'éditeur MusicBrainz</button>
 </form>
+<h2>Si la liste ressort de travers</h2>
+<p>Le premier envoi de « Mont Serein 002 » est sorti décalé d'un champ. Dans ce
+cas, ouvrez la publication, onglet <em>Tracklist</em>, bouton <em>Track
+Parser</em>, et remplacez tout par ceci :</p>
+<textarea rows="17" style="width:100%; font:13px monospace">{html.escape(liste)}</textarea>
 <p>Ce qui sera envoyé, en entier :</p>
 <table>{table}</table>
 """
@@ -193,7 +221,10 @@ def main() -> int:
 
     adresses = [(lien, args.lien_genre) for lien in args.lien]
     plan = champs(morceaux, album, annee, (mois, jour), LICENCES[args.licence], adresses)
-    args.sortie.write_text(page(plan, album), encoding="utf-8")
+    liste = parseur(morceaux)
+    args.sortie.write_text(page(plan, album, liste), encoding="utf-8")
+    secours = args.sortie.with_suffix(".txt")
+    secours.write_text(liste + "\n", encoding="utf-8")
 
     duree = sum(m["duree_ms"] for m in morceaux) / 60000
     print(f"{album} — {len(morceaux)} pistes, {duree:.0f} min au total, {annee or 'sans année'}")

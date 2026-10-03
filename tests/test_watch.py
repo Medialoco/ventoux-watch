@@ -4473,6 +4473,50 @@ class DiffusionTests(unittest.TestCase):
         self.assertIsNone(stream.batir_session(Path("/inexistant/nulle/part")))
 
 
+class CadrageTests(unittest.TestCase):
+    """Le sujet doit occuper la même part de la toile, où qu'il soit dans l'image."""
+
+    def test_le_sujet_occupe_toujours_la_meme_part_du_cadre(self):
+        """Couché ou debout, grand ou petit, il arrive au modèle à la même taille.
+
+        La fenêtre d'avant ajoutait une marge proportionnelle puis laissait la
+        mise à l'échelle se faire sur la dimension la plus longue : une tache
+        large et une tache haute n'étaient donc pas présentées pareil.
+        """
+        from watcher.detect import SUJET_PART, _cadre
+
+        image = np.zeros((1080, 1920, 3), np.uint8)
+        for boite in ((900, 500, 160, 90), (900, 500, 90, 160), (900, 500, 30, 28)):
+            _, _, vue = _cadre(image, boite, SUJET_PART)
+            self.assertEqual(vue.shape[0], vue.shape[1], "le cadre doit être carré")
+            self.assertAlmostEqual(max(boite[2], boite[3]) / vue.shape[0], SUJET_PART, places=2)
+
+    def test_un_sujet_au_ras_du_bord_garde_son_cadrage(self):
+        """Là où tout se joue : plus d'un passage sur deux a son centre sous
+        quatre-vingt-cinq pour cent de la hauteur. Une fenêtre rognée contre le
+        bord de l'image recollait le sujet au bord de la toile — ce qu'on
+        corrige. Hors image, on complète par le gris du modèle."""
+        from watcher.detect import SUJET_PART, _cadre
+
+        image = np.full((1080, 1920, 3), 200, np.uint8)
+        au_bord = (40, 1020, 160, 90)
+        coin_x, coin_y, vue = _cadre(image, au_bord, SUJET_PART)
+        self.assertEqual(vue.shape[0], vue.shape[1])
+        self.assertAlmostEqual(160 / vue.shape[0], SUJET_PART, places=2)
+        self.assertLess(coin_y + vue.shape[0], 1080 + vue.shape[0])
+        self.assertTrue((vue[-1, -1] == 114).all(), "le dehors de l'image est gris, pas rogné")
+        self.assertTrue((vue[vue.shape[0] // 2, vue.shape[1] // 2] == 200).all())
+
+    def test_la_boite_revient_dans_les_pixels_de_limage(self):
+        """Le cadre peut commencer hors de l'image ; ce qu'on rend, non."""
+        from watcher.detect import SUJET_PART, _cadre
+
+        image = np.zeros((1080, 1920, 3), np.uint8)
+        coin_x, coin_y, vue = _cadre(image, (20, 1000, 200, 120), SUJET_PART)
+        self.assertLess(coin_x, 0)
+        self.assertGreater(coin_y + vue.shape[0], 1080)
+
+
 class RecouvrementTests(unittest.TestCase):
     """Une lecture qui ne recouvre rien de ce qui a bougé parle d'autre chose."""
 
