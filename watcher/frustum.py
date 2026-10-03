@@ -26,6 +26,18 @@ class Pose:
     hfov: float = 90.0
     height_m: float = 4.0
     aspect: float = 16 / 9
+    # Nobody hangs a camera straight. The bracket is tightened by hand on a
+    # pole, and a couple of degrees of tilt go unnoticed in a scene with no
+    # level thing in it — which is exactly what a mountainside is. Left out of
+    # the model, that tilt is paid at the two edges of the frame, where it
+    # lifts one side of the far field and drops the other.
+    roll: float = 0.0
+    # Un objectif qui ouvre à soixante-dix degrés n'est pas un sténopé : il
+    # ramène vers le centre ce qui est loin de l'axe, d'autant plus qu'on
+    # s'éloigne. Au milieu de l'image cela ne se voit pas, et c'est bien le
+    # problème — les amers qu'on pointe à la main sont au milieu. Cela ne se
+    # paie qu'aux coins, c'est-à-dire sur l'horizon.
+    k1: float = 0.0
 
     def as_dict(self) -> dict:
         return {
@@ -34,6 +46,8 @@ class Pose:
             "ele": self.ele,
             "yaw": round(self.yaw, 3),
             "pitch": round(self.pitch, 3),
+            "roll": round(self.roll, 3),
+            "k1": round(self.k1, 5),
             "hfov": round(self.hfov, 3),
             "height_m": round(self.height_m, 2),
         }
@@ -49,7 +63,24 @@ def enu(pose: Pose, lat: float, lon: float, ele: float) -> tuple[float, float, f
 
 def project(pose: Pose, lat: float, lon: float, ele: float) -> tuple[float, float] | None:
     """Normalized image coordinates, or None when the point is behind the camera."""
-    east, north, up = enu(pose, lat, lon, ele)
+    return place(pose, enu(pose, lat, lon, ele))
+
+
+def aim(pose: Pose, azimuth: float, elevation: float) -> tuple[float, float] | None:
+    """Where a direction falls in the picture, rather than a place on the ground.
+
+    The sun and the moon have no distance worth speaking of: all we know of them
+    is which way to look. Azimuth is counted from north through east, elevation
+    above the horizon, which is what the ephemeris gives.
+    """
+    az, el = math.radians(azimuth), math.radians(elevation)
+    flat = math.cos(el)
+    return place(pose, (flat * math.sin(az), flat * math.cos(az), math.sin(el)))
+
+
+def place(pose: Pose, point: tuple[float, float, float]) -> tuple[float, float] | None:
+    """Normalized image coordinates of an east-north-up vector."""
+    east, north, up = point
     yaw = math.radians(pose.yaw)
     pitch = math.radians(pose.pitch)
     right = (math.cos(yaw), -math.sin(yaw), 0.0)
@@ -64,14 +95,51 @@ def project(pose: Pose, lat: float, lon: float, ele: float) -> tuple[float, floa
         flat[1] * math.sin(pitch),
         math.cos(pitch),
     )
-    point = (east, north, up)
     depth = _dot(point, forward)
     if depth <= 1e-6:
         return None
     half = math.tan(math.radians(pose.hfov) / 2)
     x = (_dot(point, right) / depth) / half
     y = (_dot(point, upward) / depth) / half * pose.aspect
+    x, y = _turn(pose, x, y)
     return 0.5 + x / 2, 0.5 - y / 2
+
+
+def _turn(pose: Pose, x: float, y: float) -> tuple[float, float]:
+    """Tilt the sensor and bend the lens.
+
+    Pixels are square, so both are done in half-widths: the height is brought
+    back to that unit by the aspect, and sent out again afterwards.
+    """
+    tall = y / pose.aspect
+    if pose.k1:
+        pull = 1.0 + pose.k1 * (x * x + tall * tall)
+        x, tall = x * pull, tall * pull
+    if pose.roll:
+        angle = math.radians(pose.roll)
+        x, tall = (x * math.cos(angle) + tall * math.sin(angle),
+                   -x * math.sin(angle) + tall * math.cos(angle))
+    return x, tall * pose.aspect
+
+
+def _untwist(pose: Pose, x: float, y: float) -> tuple[float, float]:
+    """The other way round, for going from a point of the picture to a ray.
+
+    The bending has no closed inverse, so it is undone by asking the question
+    again a few times: three passes put the answer well under a pixel.
+    """
+    tall = y / pose.aspect
+    if pose.roll:
+        angle = math.radians(-pose.roll)
+        x, tall = (x * math.cos(angle) + tall * math.sin(angle),
+                   -x * math.sin(angle) + tall * math.cos(angle))
+    if pose.k1:
+        flat, high = x, tall
+        for _ in range(4):
+            pull = 1.0 + pose.k1 * (flat * flat + high * high)
+            flat, high = x / pull, tall / pull
+        x, tall = flat, high
+    return x, tall * pose.aspect
 
 
 def axes(pose: Pose) -> tuple[tuple, tuple, tuple]:
@@ -89,8 +157,9 @@ def ray(pose: Pose, sx: float, sy: float) -> tuple[float, float, float]:
     """The direction the camera looks at this point of the picture."""
     right, forward, upward = axes(pose)
     half = math.tan(math.radians(pose.hfov) / 2)
-    nx = (sx - 0.5) * 2 * half
-    ny = (0.5 - sy) * 2 * half / pose.aspect
+    flat, tall = _untwist(pose, (sx - 0.5) * 2, (0.5 - sy) * 2)
+    nx = flat * half
+    ny = tall * half / pose.aspect
     vector = tuple(forward[i] + nx * right[i] + ny * upward[i] for i in range(3))
     length = math.sqrt(sum(value * value for value in vector))
     return (vector[0] / length, vector[1] / length, vector[2] / length)
@@ -138,6 +207,12 @@ def fit(pose: Pose, marks: list[dict], rounds: int = 5) -> tuple[Pose, float]:
     `marks` are dicts with lat, lon, ele and the normalized x, y read off the
     picture. A coarse-to-fine sweep is enough: three unknowns, and the start is
     already the direction declared in OpenStreetMap.
+
+    Roll and lens curvature are deliberately left alone here. A handful of
+    landmarks pointed at by hand sit in the middle of the frame, and neither
+    of those two shows up in the middle of a frame: letting the sweep move
+    them would be letting it invent them. They are measured against the
+    skyline instead, which has a point in every column.
     """
     best = pose
     step = {"yaw": 12.0, "pitch": 12.0, "hfov": 20.0}
@@ -164,11 +239,15 @@ def _shift(pose: Pose, key: str, delta: float) -> Pose:
         "ele": pose.ele,
         "yaw": pose.yaw,
         "pitch": pose.pitch,
+        "roll": pose.roll,
+        "k1": pose.k1,
         "hfov": pose.hfov,
         "height_m": pose.height_m,
         "aspect": pose.aspect,
     }
     values[key] = values[key] + delta
+    if key == "k1":
+        values[key] = max(-0.5, min(0.5, values[key]))
     if key == "hfov":
         values[key] = max(15.0, min(150.0, values[key]))
     if key == "pitch":

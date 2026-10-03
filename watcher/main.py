@@ -307,8 +307,19 @@ def main() -> None:
 
 def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map=None) -> None:
     frame = cv2.imdecode(np.frombuffer(track.best_jpeg, dtype=np.uint8), cv2.IMREAD_COLOR) if track.best_jpeg else None
-    detections = yolo.detect(frame, track.bbox) if frame is not None else []
+    # L'image et la boîte doivent venir du même instant.
+    #
+    # « best_jpeg » est la vue où la tache était la plus grande ; « best_bbox »
+    # est son rectangle, écrit sur la même ligne. « bbox », lui, est réécrit à
+    # chaque image et désigne la dernière position connue. On découpait donc la
+    # bonne image à l'endroit où le sujet n'était plus, et le détecteur
+    # regardait de l'herbe. Sur 306 passages traversant la chaussée sans être
+    # nommés, 268 n'avaient reçu aucune lecture, pas même fausse — un réseau à
+    # qui l'on montre une voiture de cent soixante pixels ne rend pas une liste
+    # vide. C'est aussi pourquoi le gros plan, lui, se lisait : il est découpé
+    # sur « best_bbox » depuis toujours.
     moved = track.best_bbox if any(track.best_bbox) else track.bbox
+    detections = yolo.detect(frame, moved) if frame is not None else []
     detections = [replace(hit, share=_covers(hit.box, moved)) if hit.box else hit for hit in detections]
     when = datetime.fromtimestamp(track.updated, timezone.utc)
     current = scene.read(frame, when)
@@ -317,7 +328,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
     surface = scene_map.surface_under(box) if box else ""
     landmark = scene_map.landmark_at(box) if box else None
     fixture = scene_map.landmark_under(box) if box else None
-    lit = car_lights(frame, track.bbox) if frame is not None and current.period != "day" else 0.0
+    lit = car_lights(frame, moved) if frame is not None and current.period != "day" else 0.0
     aircraft = sky.ask(track.updated, cfg["opensky"]["match_window_s"]) if _crossed_sky(track, cfg) else []
     width_m = scene_map.metres_across(box) if box else 0.0
     height_m = scene_map.metres_tall(box) if box else 0.0

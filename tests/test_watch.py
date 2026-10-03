@@ -1885,6 +1885,42 @@ class FogTests(unittest.TestCase):
         # regroupent toujours, sans quoi chaque voiture ferait trois lignes.
         self.assertIsNotNone(open_passage([voiture], autre))
 
+    def test_le_detecteur_recoit_la_boite_de_limage_quon_lui_donne(self):
+        """L'image et le rectangle doivent venir du même instant.
+
+        On donnait au détecteur « best_jpeg », la vue où la tache est la plus
+        grande, découpée à « track.bbox », qui est la dernière position connue.
+        Sur 306 passages traversant la chaussée sans être nommés, 268 n'avaient
+        reçu aucune lecture, pas même fausse : le réseau regardait de l'herbe.
+        """
+        import numpy as np
+        from watcher.motion import Track
+
+        class Sentinelle(Exception):
+            pass
+
+        class FauxYolo:
+            def __init__(self):
+                self.recu = None
+
+            def detect(self, frame, bbox=None):
+                self.recu = bbox
+                raise Sentinelle
+
+        image = np.full((1080, 1920, 3), 90, np.uint8)
+        ok, encode = cv2.imencode(".jpg", image)
+        self.assertTrue(ok)
+        piste = Track(id=1, zone="road",
+                      bbox=(1500, 900, 40, 30),       # la dernière vue : loin
+                      best_bbox=(300, 500, 160, 90))  # celle de l'image gardée
+        piste.best_jpeg = encode.tobytes()
+
+        yolo = FauxYolo()
+        with self.assertRaises(Sentinelle):
+            main._on_track(piste, 0.0, {}, yolo, None, None, None, {}, [], None, None)
+        self.assertEqual(yolo.recu, (300, 500, 160, 90),
+                         "le découpage doit suivre l'image, pas la dernière position")
+
     def test_un_camion_ne_rejoint_pas_le_passage_dune_voiture(self):
         """Le regroupement doit regarder la taille, pas seulement l'heure.
 
