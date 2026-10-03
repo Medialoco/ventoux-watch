@@ -37,15 +37,23 @@ KEEP = set(COCO)
 # toile se lit « voiture » à 0,95. Ce n'est pas un seuil à baisser : c'est un
 # cadrage à rendre.
 #
-# Mesuré sur les 406 gros plans des 2 et 3 octobre, part de la toile occupée
-# contre lectures exploitables : 100 % → 57 %, 70 % → 66 %, 55 % → 69 %,
-# 45 % → 70 %, 35 % → 68 %. Le palier est large, le bord est raide, on se pose
-# au milieu du palier. La confiance moyenne suit : 0,38 contre 0,52.
+# Mesuré sur les passages des 2 et 3 octobre, chaque gros plan reposé à sa
+# place dans une vraie image de la scène — un premier balayage qui entourait le
+# sujet de gris avait fait choisir 45 %, ce qui était l'effet du gris et non
+# celui du cadrage. Part occupée contre lectures exploitables :
+#
+#                  ancien   45 %   35 %   28 %   22 %   16 %   11 %
+#   véhicules (155)   89 %   91 %   91 %   90 %   91 %   81 %   86 %
+#   piétons    (40)   72 %   80 %   85 %   88 %   90 %   95 %   88 %
+#
+# Les deux familles ne veulent pas la même chose : une voiture se lit sur sa
+# silhouette, un piéton sur ce qui l'entoure — la route sous lui, l'échelle des
+# choses à côté. Vingt-deux pour cent est le point où aucune des deux ne perd.
 #
 # C'est une part et non un nombre de pixels, donc elle vaut pour une tache de
 # trente pixels comme pour une de six cents, et elle vaudra pour la caméra
 # suivante quelle que soit sa définition.
-SUJET_PART = 0.45
+SUJET_PART = 0.22
 
 
 class YoloDetector:
@@ -193,7 +201,12 @@ def _cadre(frame: np.ndarray, bbox: tuple[int, int, int, int],
     """
     hauteur, largeur = frame.shape[:2]
     x, y, w, h = bbox
+    # Jamais plus large que l'image. Au-delà du bord il n'y a pas de décor, il
+    # n'y a que du gris, et du gris ne renseigne sur rien : il ne fait que
+    # rapetisser le sujet. Un centième des taches sont assez grandes pour
+    # réclamer trois mille pixels ici, et c'est à elles que la règle s'adresse.
     cote = max(8, int(round(max(w, h) / max(part, 0.05))))
+    cote = min(cote, max(hauteur, largeur))
     x0 = int(round(x + w / 2 - cote / 2))
     y0 = int(round(y + h / 2 - cote / 2))
     vue = np.full((cote, cote, 3), 114, dtype=frame.dtype)

@@ -4507,6 +4507,17 @@ class CadrageTests(unittest.TestCase):
         self.assertTrue((vue[-1, -1] == 114).all(), "le dehors de l'image est gris, pas rogné")
         self.assertTrue((vue[vue.shape[0] // 2, vue.shape[1] // 2] == 200).all())
 
+    def test_le_cadre_ne_depasse_jamais_limage(self):
+        """Une tache énorme réclamerait trois mille pixels dans une image qui
+        en fait mille neuf cent vingt. Le reste ne serait pas du décor, mais du
+        gris, qui ne renseigne sur rien et ne fait que rapetisser le sujet."""
+        from watcher.detect import SUJET_PART, _cadre
+
+        image = np.zeros((1080, 1920, 3), np.uint8)
+        _, _, vue = _cadre(image, (600, 300, 900, 500), SUJET_PART)
+        self.assertEqual(vue.shape[0], 1920)
+        self.assertGreater(900 / SUJET_PART, 1920, "le cas doit bien être plafonné")
+
     def test_la_boite_revient_dans_les_pixels_de_limage(self):
         """Le cadre peut commencer hors de l'image ; ce qu'on rend, non."""
         from watcher.detect import SUJET_PART, _cadre
