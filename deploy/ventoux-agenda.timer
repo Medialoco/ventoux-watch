@@ -1,0 +1,9 @@
+[Unit]
+Description=Relit l agenda une fois par jour
+[Timer]
+OnBootSec=10min
+OnCalendar=*-*-* 05:17:00
+Persistent=true
+AccuracySec=5min
+[Install]
+WantedBy=timers.target

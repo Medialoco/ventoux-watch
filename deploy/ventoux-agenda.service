@@ -1,0 +1,9 @@
+[Unit]
+Description=Moissonne l agenda de l office de tourisme
+After=network-online.target
+[Service]
+Type=oneshot
+User=ventoux
+WorkingDirectory=/opt/ventoux-watch
+ExecStart=/opt/ventoux-watch/.venv/bin/python scripts/agenda.py
+Nice=15
