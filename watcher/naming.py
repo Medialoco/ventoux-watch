@@ -14,13 +14,16 @@ NOT_DRIVABLE = {"forest", "meadow", "building", "sky", "scree", "island", "playg
 # map turns a box into ground metres, so a walker eight metres across is light
 # or shadow whatever the model reads into it.
 BIGGEST_M = {"person": 2.5, "car": 8.0, "truck": 20.0, "bus": 20.0,
-             "bicycle": 3.0, "motorcycle": 3.5, "dog": 2.0, "horse": 3.5}
+             "bicycle": 3.0, "motorcycle": 3.5, "dog": 2.0, "horse": 3.5,
+             # Un chat couché tout du long fait soixante centimètres ; un mètre
+             # laisse la marge du relevé de sol sans laisser passer un chien.
+             "cat": 1.0}
 CYCLES = {"bicycle", "motorcycle"}
-BEASTS = {"dog", "horse"}
+BEASTS = {"dog", "horse", "cat"}
 CYCLE_WORD = {"bicycle": "Vélo", "motorcycle": "Moto"}
 # A scooter and a motorbike are one class to the model and one word here. The
 # difference matters to whoever rides it and to nobody reading this page.
-BEAST_WORD = {"dog": "Chien", "horse": "Cheval"}
+BEAST_WORD = {"dog": "Chien", "horse": "Cheval", "cat": "Chat"}
 # Ce que dit le détecteur de mouvement quand il n'a pas de nom à donner : qu'il
 # a vu bouger, un point. Pas où, pas quoi — il ne le sait pas.
 MOUVEMENT = "Mouvement détecté"
@@ -1091,10 +1094,18 @@ def decide(obs: Observation) -> Decision:
                 Decision("publish", "cycle", CYCLE_WORD[cycle.cls], reason=cycle.cls, confidence=cycle.conf),
                 obs,
             )
-        if person is not None and person.conf >= 0.4:
+        if person is not None and person.conf >= 0.4 and (beast is None or person.conf >= beast.conf):
             # A dog is walked, not met: when both are in the same patch of
             # movement they are one event, and naming only the end of the lead
             # leaves out the half of it that was asked for.
+            #
+            # Mais la laisse a deux bouts, et on tenait toujours le même. Le
+            # piéton passait avant la bête quelles que soient les deux
+            # confiances, si bien qu'un chien seul, lu « chien » franchement et
+            # « piéton » de justesse, sortait quand même piéton — avec son
+            # maître nommé pareil quelques secondes plus tard, et rien pour
+            # distinguer les deux passages. Ici on lit ce qui est écrit : le
+            # mot qui gagne est celui dont le modèle est le plus sûr.
             word = f"Piéton et {BEAST_WORD[beast.cls].lower()}" if beast is not None else "Piéton"
             return _stamp(Decision("publish", "person", word, reason="person", confidence=person.conf), obs)
         if beast is not None and beast.conf >= 0.4:

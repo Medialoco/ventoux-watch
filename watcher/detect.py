@@ -23,9 +23,16 @@ COCO = {
     # Dogs are walked here all day. One was standing beside a pedestrian on the
     # crossing, unnamed, because nothing in the list could hold it.
     16: "dog",
+    # Et le chat manquait, ce qui était pire que de ne pas savoir le nommer :
+    # une ligne dont la classe de tête n'est pas des nôtres était jetée
+    # entière, si bien qu'un chat lu « chat » franchement emportait avec lui la
+    # lecture « chien » ou « piéton » qui l'accompagnait. On ne perdait pas le
+    # nom du chat, on perdait le fait qu'il y avait quelque chose.
+    15: "cat",
     17: "horse",
 }
 KEEP = set(COCO)
+_NOTRES = np.array(sorted(KEEP))
 
 # La part de l'image que le sujet doit occuper quand on la montre au modèle.
 #
@@ -253,17 +260,34 @@ def _parse(raw: np.ndarray) -> list[tuple[float, float, float, float, float, str
         return []
     if output.shape[0] < output.shape[1]:
         output = output.T
+    # La meilleure des classes qu'on sait nommer, et non la meilleure des
+    # quatre-vingts.
+    #
+    # Le modèle donne une note à chacune des quatre-vingts classes de COCO. On
+    # prenait la plus forte, et on jetait la ligne si ce n'était pas une des
+    # nôtres — ce qui revient à laisser un objet qu'on ne modélise pas opposer
+    # son veto à un objet qu'on modélise. Or la note d'un bateau ne dit rien
+    # contre un camion : elle dit seulement qu'il n'y a pas de lac ici, ce que
+    # nous savions. Mesuré sur 260 gros plans du 3 octobre : 24 lectures
+    # passaient la barre et partaient à la poubelle, dont 19 camions et 5 cars,
+    # volés dans 21 cas par « bateau » et dans 3 par « train ».
+    #
+    # Ce n'est pas un relâchement : la barre de confiance et la part de tache
+    # couverte restent les mêmes, et elles continuent de faire tout le tri. La
+    # Renault lue « bateau 0,77 / voiture 0,077 » reste écartée, parce que 0,077
+    # ne passe pas 0,25 — et c'était déjà le cadrage qu'il fallait réparer.
+    notes = output[:, 4:]
+    colonnes = _NOTRES[_NOTRES < notes.shape[1]]
+    if colonnes.size == 0:
+        return []
+    notes = notes[:, colonnes]
+    rang = notes.argmax(axis=1)
+    conf = notes[np.arange(notes.shape[0]), rang]
     boxes = []
-    for row in output:
-        scores = row[4:]
-        class_id = int(np.argmax(scores))
-        if class_id not in KEEP:
-            continue
-        conf = float(scores[class_id])
-        if conf < 0.25:
-            continue
-        cx, cy, w, h = (float(v) for v in row[:4])
-        boxes.append((cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2, conf, COCO[class_id]))
+    for i in np.flatnonzero(conf >= 0.25):
+        cx, cy, w, h = (float(v) for v in output[i, :4])
+        nom = COCO[int(colonnes[rang[i]])]
+        boxes.append((cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2, float(conf[i]), nom))
     return boxes
 
 

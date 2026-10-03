@@ -387,6 +387,35 @@ class NamingTests(unittest.TestCase):
         self.assertEqual(decision.type, "animal")
         self.assertEqual(decision.label, "Chien")
 
+    def test_le_chien_mieux_lu_que_le_pieton_sort_chien(self):
+        decision = decide(
+            Observation(zone="road", travel=0.05, width_m=0.9, height_m=0.7,
+                        detections=[Detection("dog", 0.62), Detection("person", 0.45)])
+        )
+        self.assertEqual(decision.type, "animal")
+        self.assertEqual(decision.label, "Chien")
+
+    def test_le_pieton_mieux_lu_que_son_chien_les_nomme_tous_les_deux(self):
+        decision = decide(
+            Observation(zone="road", travel=0.05, width_m=0.9, height_m=1.7,
+                        detections=[Detection("person", 0.8), Detection("dog", 0.5)])
+        )
+        self.assertEqual(decision.type, "person")
+        self.assertEqual(decision.label, "Piéton et chien")
+
+    def test_un_chat_porte_son_nom(self):
+        decision = decide(
+            Observation(zone="road", travel=0.05, width_m=0.5, height_m=0.3, detections=[Detection("cat", 0.55)])
+        )
+        self.assertEqual(decision.type, "animal")
+        self.assertEqual(decision.label, "Chat")
+
+    def test_un_chat_trop_large_au_sol_nest_pas_un_chat(self):
+        decision = decide(
+            Observation(zone="road", travel=0.5, width_m=4.0, height_m=1.5, detections=[Detection("cat", 0.9)])
+        )
+        self.assertNotEqual(decision.label, "Chat")
+
     def test_a_walker_alone_is_still_a_walker(self):
         decision = decide(
             Observation(zone="road", travel=0.05, width_m=0.7, height_m=1.7, detections=[Detection("person", 0.7)])
@@ -4471,6 +4500,37 @@ class DiffusionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as dossier:
             self.assertIsNone(stream.batir_session(Path(dossier)))
         self.assertIsNone(stream.batir_session(Path("/inexistant/nulle/part")))
+
+
+class LectureTests(unittest.TestCase):
+    """Une classe qu'on ne modélise pas ne doit pas faire taire une classe qu'on modélise."""
+
+    @staticmethod
+    def _sortie(notes: dict[int, float]) -> np.ndarray:
+        """Une sortie de modèle où une seule ancre porte les notes demandées."""
+        brut = np.zeros((1, 84, 100), dtype=np.float32)
+        brut[0, :4, 0] = (100.0, 200.0, 40.0, 60.0)
+        for classe, note in notes.items():
+            brut[0, 4 + classe, 0] = note
+        return brut
+
+    def setUp(self):
+        import watcher.detect
+        self.detect = watcher.detect
+
+    def test_un_bateau_plus_fort_nefface_pas_le_camion(self):
+        # 8 bateau, 7 camion. Le lac n'existe pas ici ; le camion, si.
+        lus = self.detect._parse(self._sortie({8: 0.77, 7: 0.60}))
+        self.assertEqual([b[5] for b in lus], ["truck"])
+        self.assertAlmostEqual(lus[0][4], 0.60, places=5)
+
+    def test_la_barre_de_confiance_fait_toujours_le_tri(self):
+        # La Renault lue « bateau 0,77 / voiture 0,077 » reste écartée.
+        self.assertEqual(self.detect._parse(self._sortie({8: 0.77, 2: 0.077})), [])
+
+    def test_le_chat_existe_pour_le_detecteur(self):
+        lus = self.detect._parse(self._sortie({15: 0.55}))
+        self.assertEqual([b[5] for b in lus], ["cat"])
 
 
 class CadrageTests(unittest.TestCase):
