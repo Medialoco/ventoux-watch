@@ -40,10 +40,25 @@ from watcher.store import floute
 
 log = logging.getLogger("ventoux.stream")
 
-# Combien de segments de retard. Un seul suffirait à la logique, deux donnent
-# de la marge quand le serveur publie en retard, et sept secondes par segment
-# tombent près des dix demandées.
-SEGMENTS_EN_ARRIERE = 2
+# COMBIEN DE SEGMENTS DE RETARD
+# -----------------------------
+# Le flux doit diffuser une image après que la veille a fini de la juger,
+# sinon le rectangle arrive en cours de route : la voiture entre dans le champ
+# sans rien autour d'elle, et le cadre ne se pose qu'à mi-parcours, quand la
+# piste se termine et que le nom tombe.
+#
+# La veille ne nomme qu'à la fin d'une piste, parce qu'il faut l'avoir vue
+# entière pour dire ce que c'est. Le retard qu'il faut est donc la durée d'une
+# piste, plus les deux images qu'elle attend avant de la déclarer finie.
+# Mesuré sur les 66 498 pistes de l'archive : médiane 7 s, p90 29 s, p95 40 s,
+# p99 72 s. Deux segments — quatorze secondes — ne couvraient entièrement que
+# la moitié des pistes.
+#
+# Sept segments font quarante-neuf secondes et couvrent 95 % des pistes du
+# premier à leur dernier instant. Soixante secondes en couvriraient 97,9 % :
+# onze secondes de plus pour trois points, et le direct doit rester un direct.
+# C'est là que la courbe s'aplatit, donc c'est là qu'on s'arrête.
+SEGMENTS_EN_ARRIERE = 7
 
 # Combien de temps un nom reste affiché après l'instant qu'il décrit. Une piste
 # ordinaire dure quelques secondes ; en deçà le rectangle clignote et l'œil n'a
@@ -341,6 +356,35 @@ def presence(vu: dict) -> tuple[float, float]:
     return debut, fin
 
 
+# UNE COULEUR PAR FAMILLE, UNE FOIS QUE LA VEILLE A NOMMÉ
+# ------------------------------------------------------
+# Tout était rouge : la voiture, le marcheur, l'oiseau, le feu, et la tache
+# dont on ne savait rien. À force, du rouge à l'écran ne voulait plus rien
+# dire — c'était l'état normal du flux. En réservant le rouge à ce qui n'est
+# pas nommé et à ce qui brûle, il redevient une information.
+#
+# Les teintes sont celles qui servent déjà ailleurs dans le flux, et c'est
+# voulu : l'ambre des encarts, le cyan des lieux. Six couleurs inventées pour
+# l'occasion auraient fait une légende à apprendre.
+TEINTE_ESPECE = {
+    "vehicle": AMBRE, "car": AMBRE, "truck": AMBRE, "bus": AMBRE,
+    "tractor": AMBRE,
+    "cycle": (120, 230, 130),      # le vert du direct : deux roues
+    "person": CYAN,
+    "bird": (210, 230, 150),
+    "plane": (235, 180, 120),
+    # Le feu reste rouge, et c'est tout l'intérêt d'avoir déteint le reste.
+    "fire": ROUGE, "smoke": ROUGE,
+}
+
+
+def teinte_de(vu: dict) -> tuple[int, int, int]:
+    """La couleur du rectangle : rouge tant qu'on ne sait pas."""
+    if not vu.get("sur"):
+        return ROUGE
+    return TEINTE_ESPECE.get(vu.get("type") or "", ROUGE)
+
+
 def dessine(image: np.ndarray, vus: list[dict], quand: float) -> int:
     """Pose un rectangle et un nom pour chaque chose vue à cet instant.
 
@@ -356,7 +400,8 @@ def dessine(image: np.ndarray, vus: list[dict], quand: float) -> int:
         x, y, w, h = suit(vu, quand)
         x1, y1 = int(x * largeur), int(y * hauteur)
         x2, y2 = int((x + w) * largeur), int((y + h) * hauteur)
-        cv2.rectangle(image, (x1, y1), (x2, y2), ROUGE, 2)
+        teinte = teinte_de(vu)
+        cv2.rectangle(image, (x1, y1), (x2, y2), teinte, 2)
         # Le mot seulement quand la veille a nommé quelque chose. « Mouvement
         # sur la route » n'est pas une identification, c'est l'aveu qu'il n'y en
         # a pas eu : écrit en blanc sur rouge à côté d'un rectangle, il se lit
@@ -367,8 +412,11 @@ def dessine(image: np.ndarray, vus: list[dict], quand: float) -> int:
             echelle = max(0.6, largeur / 1600)
             (tw, th), _ = cv2.getTextSize(nom, cv2.FONT_HERSHEY_SIMPLEX, echelle, 2)
             base = max(th + 8, y1 - 6)
-            cv2.rectangle(image, (x1, base - th - 6), (x1 + tw + 10, base + 4), ROUGE, -1)
-            cv2.putText(image, nom, (x1 + 5, base), cv2.FONT_HERSHEY_SIMPLEX, echelle, BLANC, 2, cv2.LINE_AA)
+            cv2.rectangle(image, (x1, base - th - 6), (x1 + tw + 10, base + 4), teinte, -1)
+            # Le mot en sombre sur les teintes claires, en blanc sur le rouge :
+            # « Voiture » en blanc sur ambre ne se lisait pas.
+            encre = BLANC if teinte == ROUGE else (20, 20, 20)
+            cv2.putText(image, nom, (x1 + 5, base), cv2.FONT_HERSHEY_SIMPLEX, echelle, encre, 2, cv2.LINE_AA)
         poses += 1
     return poses
 

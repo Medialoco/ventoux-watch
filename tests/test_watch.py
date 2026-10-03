@@ -3034,6 +3034,53 @@ class DiffusionTests(unittest.TestCase):
         self.assertFalse(stream.pose_tapis(vide, stream.TAPIS_TRAVERSEE_S + 1, 0.9, ciel))
         self.assertFalse(vide.any())
 
+    def test_the_box_follows_the_whole_journey_and_the_delay_allows_it(self):
+        """The watcher only names a track once it has ended.
+
+        So the stream has to be further behind the live edge than a track
+        lasts, or the rectangle appears halfway through the passage: the car
+        enters the frame bare and only gets its box when it is about to leave.
+        Measured over the 66 498 tracks in the archive, the median lasts 7 s
+        and the 95th percentile 40 s; two segments of seven seconds covered
+        barely half of them from first instant to last.
+        """
+        from watcher import stream
+        self.assertGreaterEqual(stream.SEGMENTS_EN_ARRIERE * 7, 45)
+        # Et pas davantage : un direct qui a plus d'une minute de retard
+        # n'est plus un direct.
+        self.assertLessEqual(stream.SEGMENTS_EN_ARRIERE * 7, 60)
+        vu = {"t": 120.0, "box": [0.5, 0.5, 0.1, 0.1], "label": "Voiture",
+              "type": "car", "sur": True,
+              "trace": [[100.0, 0.10, 0.50, 0.05, 0.03],
+                        [120.0, 0.70, 0.50, 0.05, 0.03]]}
+        debut, fin = stream.presence(vu)
+        self.assertEqual(debut, 100.0)
+        # Le rectangle est bien sur le sujet au début du trajet, et pas
+        # seulement à la fin quand le nom tombe.
+        self.assertAlmostEqual(stream.suit(vu, 100.0)[0], 0.10)
+        self.assertAlmostEqual(stream.suit(vu, 110.0)[0], 0.40)
+        self.assertAlmostEqual(stream.suit(vu, 120.0)[0], 0.70)
+
+    def test_red_is_kept_for_what_is_unknown_and_for_fire(self):
+        """Everything was red, so red had stopped meaning anything.
+
+        A named car, a named walker and an unidentified blob all carried the
+        same alarm colour. Reserving red for what has no name and for what
+        burns makes red an information again.
+        """
+        from watcher import stream
+        self.assertEqual(stream.teinte_de({"type": "car", "sur": False}),
+                         stream.ROUGE)
+        self.assertEqual(stream.teinte_de({"type": "fire", "sur": True}),
+                         stream.ROUGE)
+        for espece in ("car", "vehicle", "person", "cycle", "plane", "bird"):
+            self.assertNotEqual(stream.teinte_de({"type": espece, "sur": True}),
+                                stream.ROUGE, espece)
+        # Une espèce qu'on n'a pas prévue ne doit pas disparaître : faute de
+        # teinte, elle garde celle de ce qu'on ne sait pas nommer.
+        self.assertEqual(stream.teinte_de({"type": "licorne", "sur": True}),
+                         stream.ROUGE)
+
     def test_the_player_measures_the_whole_track_and_not_the_slice(self):
         """A long set is served in slices; the gauge must span all of them.
 
