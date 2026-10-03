@@ -46,7 +46,11 @@ LICENCE = "CC0"
 # L'auteur plutôt que le projet. CC0 n'oblige à rien, mais un crédit qui
 # renvoie au flux où le morceau passe ne renvoie nulle part : il faut qu'on
 # puisse remonter à qui l'a fait.
-SOURCE = "https://github.com/thepriben"
+#
+# Et on remonte à la médiathèque où l'album est déposé, pas au dépôt de code :
+# quelqu'un qui entend un morceau et clique veut l'écouter en entier, pas lire
+# du Python. Les deux sont du même auteur, un seul tient de la musique.
+SOURCE = "https://play.dogmazic.net/artists.php?action=show&artist=7208"
 
 # Un tempo de marche. Plus vite, le flux pousse ; plus lentement, il endort.
 # Chaque morceau prend le sien dans cette fourchette : à tempo unique, seize
