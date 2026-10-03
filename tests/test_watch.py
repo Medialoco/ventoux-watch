@@ -3867,13 +3867,54 @@ class DiffusionTests(unittest.TestCase):
                         float(np.abs(milieu.astype(int) - fond).mean()))
         self.assertTrue(np.array_equal(fini, fond))
 
-    def test_the_clock_names_the_city_and_not_the_abbreviation(self):
-        """« CEST » ne dit rien à personne, et change de nom deux fois par an."""
-        toile = np.zeros((300, 900, 3), np.uint8)
-        stream.pose_horloge(toile, 1_760_000_000.0)
-        source = inspect.getsource(stream.pose_horloge)
-        self.assertIn('" PARIS"', source)
-        self.assertNotIn('strftime("%Z")', source)
+    def test_the_clock_names_the_commune_the_camera_stands_in(self):
+        """Sous une image du Ventoux, « PARIS » se lit comme un lieu, et il est faux.
+
+        L'horloge portait le nom du fuseau. C'était exact et illisible : un
+        spectateur ne lit pas un fuseau sous une montagne, il lit où il est,
+        et il était à six cents kilomètres de là. La commune est vraie, elle
+        donne le fuseau par surcroît, et elle vient de la position de la
+        caméra — rien ici ne connaît le Ventoux par cœur.
+        """
+        self.assertNotIn('strftime("%Z")', inspect.getsource(stream.pose_horloge))
+
+        def ecrit(commune: str) -> list[str]:
+            """Les mots que l'horloge pose réellement sur l'image."""
+            dits: list[str] = []
+            vrai = cv2.putText
+
+            def espion(image, texte, *suite, **nommes):
+                dits.append(texte)
+                return vrai(image, texte, *suite, **nommes)
+
+            with mock.patch.object(stream.cv2, "putText", espion):
+                stream.pose_horloge(np.zeros((300, 900, 3), np.uint8),
+                                    1_760_000_000.0, commune=commune)
+            return dits
+
+        self.assertNotIn("PARIS", " ".join(ecrit("")),
+                         "l'horloge nomme encore le fuseau")
+        self.assertIn("BEAUMONT-DU-VENTOUX", ecrit("Beaumont-du-Ventoux"))
+
+        # Et l'encart s'élargit pour elle. Sinon le nom irait s'écrire par
+        # -dessus le paysage, qui est la seule chose qu'on ne doit pas couvrir.
+        def bord_gauche(commune: str) -> int:
+            """La colonne où commence l'encart, sur un fond uni."""
+            toile = np.full((300, 900, 3), 200, np.uint8)
+            stream.pose_horloge(toile, 1_760_000_000.0, commune=commune)
+            assombri = np.flatnonzero((toile < 150).any(axis=2).any(axis=0))
+            return int(assombri.min())
+
+        self.assertLess(bord_gauche("Beaumont-du-Ventoux"), bord_gauche(""),
+                        "l'encart ne fait pas de place au nom de la commune")
+
+        # Le nom vient du site, pas du code, pour que la caméra suivante
+        # n'ait qu'à relancer scripts/commune_du_site.py.
+        self.assertIn("commune", inspect.getsource(stream.diffuse))
+        site = json.loads((ROOT / "config" / "scene.json")
+                          .read_text(encoding="utf-8")).get("site") or {}
+        self.assertTrue(site.get("commune"),
+                        "config/scene.json ne nomme pas la commune")
 
     def test_boredom_is_measured_on_the_road_and_not_on_the_screen(self):
         """L'horloge de l'ennui ne doit pas être celle des rediffusions.

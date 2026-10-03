@@ -3204,8 +3204,12 @@ def pose_bonjour(image: np.ndarray, nom: str, age: float) -> None:
     cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
 
 
+# La commune sous l'heure, en part de la taille des chiffres.
+HORLOGE_LIEU = 0.62
+
+
 def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
-                 autre: str = "REPLAY") -> None:
+                 autre: str = "REPLAY", commune: str = "") -> None:
     """L'heure qui tourne, en haut à droite, avec le point rouge des chaînes.
 
     Le point clignote à la seconde : c'est ce qui fait qu'un écran fixe a l'air
@@ -3219,16 +3223,22 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     largeur = image.shape[1]
     echelle = largeur / 1600
     moment = datetime.fromtimestamp(quand, PARIS)
-    lignes = [moment.strftime("%d %b %Y").upper(),
-              # « PARIS » et non « CEST » : le fuseau dit au spectateur d'où
-              # vient l'heure, et personne ne convertit mentalement un sigle
-              # qui change de nom deux fois par an.
-              moment.strftime("%H:%M:%S") + " PARIS"]
+    # L'heure disait « PARIS », qui était le fuseau. Personne ne le lisait
+    # comme tel : sous une image du Ventoux, un spectateur lit un lieu, et
+    # celui-là était faux de six cents kilomètres. La commune est vraie, elle
+    # dit où regarde la caméra, et elle donne le fuseau par surcroît.
+    # Elle est en plus petit : c'est un sous-titre de l'heure, pas une
+    # troisième ligne de même importance, et « Beaumont-du-Ventoux » est long.
+    lignes = [(moment.strftime("%d %b %Y").upper(), 1.0),
+              (moment.strftime("%H:%M:%S"), 1.0)]
+    if commune:
+        lignes.append((commune.upper(), HORLOGE_LIEU))
     pas = int(34 * echelle)
     marge = int(14 * echelle)
     sommet = int(RUBAN_H * echelle)
     taille = 0.7 * echelle
-    large = max(cv2.getTextSize(l, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] for l in lignes)
+    large = max(cv2.getTextSize(l, cv2.FONT_HERSHEY_SIMPLEX, taille * part, 2)[0][0]
+                for l, part in lignes)
     badge = "LIVE" if direct else autre
     large = max(large, cv2.getTextSize(badge, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] + pas)
     gauche = largeur - large - 2 * marge
@@ -3246,9 +3256,10 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
         cv2.circle(image, (x + rayon, y - rayon), rayon, ROUGE, -1)
     cv2.putText(image, badge, (x + pas, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
                 BLANC if direct else ROUGE, 2, cv2.LINE_AA)
-    for i, ligne in enumerate(lignes):
+    for i, (ligne, part) in enumerate(lignes):
         cv2.putText(image, ligne, (x, sommet + pas * (i + 2) - int(6 * echelle)),
-                    cv2.FONT_HERSHEY_SIMPLEX, taille, BLANC, 2, cv2.LINE_AA)
+                    cv2.FONT_HERSHEY_SIMPLEX, taille * part,
+                    BLANC if part == 1.0 else CYAN, 2, cv2.LINE_AA)
 
 
 def _entree(url: str, recul: int) -> subprocess.Popen:
@@ -3430,6 +3441,15 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     jour_calcule = None
     bonjour = origine - 10_000.0
     nom_du_lieu = (cfg.get("camera") or {}).get("nom") or "Ventoux"
+    # La commune, résolue une fois pour toutes par scripts/commune_du_site.py
+    # depuis la position de la caméra. Une autre caméra n'a qu'à relancer le
+    # script : rien ici ne connaît le Ventoux.
+    try:
+        commune = str(((json.loads((racine / "config" / "scene.json")
+                                   .read_text(encoding="utf-8"))
+                        .get("site") or {}).get("commune")) or "")
+    except (OSError, ValueError):
+        commune = ""
     # Loin en arrière, comme « bonjour » : à zéro, le flux s'ouvrirait sur
     # « BOOOOORING » pendant trois secondes, ce qui est une drôle de carte de
     # visite pour une veille qui vient de démarrer.
@@ -3688,7 +3708,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 pose_ennui(toile, "BOOOOORING", quand - origine)
             pose_ruban(toile, ruban, quand - origine)
             pose_horloge(toile, quand, direct=rediff is None and survol is None,
-                         autre="REPLAY" if rediff is not None else "3D MODEL")
+                         autre="REPLAY" if rediff is not None else "3D MODEL",
+                         commune=commune)
             pose_machine(toile, machine, photo_machine)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             pose_bande_basse(toile, bande_du_moment(quand - origine))
