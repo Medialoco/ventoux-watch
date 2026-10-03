@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 120" fill="none">
+  <defs>
+    <linearGradient id="sub-fin-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#efbf52"/>
+      <stop offset="100%" stop-color="#9f651c"/>
+    </linearGradient>
+    <linearGradient id="sub-hull-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f6d45f"/>
+      <stop offset="55%" stop-color="#d9a63a"/>
+      <stop offset="100%" stop-color="#b57a22"/>
+    </linearGradient>
+    <linearGradient id="sub-tower-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f3dc82"/>
+      <stop offset="100%" stop-color="#c8902e"/>
+    </linearGradient>
+  </defs>
+  <path d="M37 61C26 48 24 36 31 25C44 36 48 49 47 61C48 73 44 86 31 97C24 86 26 74 37 61Z" fill="url(#sub-fin-gradient)"/>
+  <g>
+    <circle cx="26" cy="61" r="3.8" fill="#73461b"/>
+    <path d="M26 58C32 47 41 44 47 49C41 55 34 60 26 61Z" fill="#946228"/>
+    <path d="M28 63C40 66 46 74 43 81C34 77 28 70 26 62Z" fill="#946228"/>
+    <path d="M23 62C15 72 6 75 1 70C7 65 14 60 23 59Z" fill="#946228"/>
+  </g>
+  <path d="M41 61C41 45 56 34 84 34H145C174 34 194 46 200 61C194 76 174 88 145 88H84C56 88 41 77 41 61Z" fill="url(#sub-hull-gradient)"/>
+  <path d="M67 42C87 36 112 36 141 38C160 39 178 47 188 58C171 50 151 47 128 47H77C73 47 70 46 67 42Z" fill="rgba(255,255,255,0.2)"/>
+  <path d="M41 61C41 45 56 34 84 34H145C174 34 194 46 200 61C194 76 174 88 145 88H84C56 88 41 77 41 61Z" stroke="rgba(118,86,28,0.55)" stroke-width="2.2"/>
+  <path d="M106 34C106 24 115 18 128 18H146C155 18 161 24 161 34V39H106Z" fill="url(#sub-tower-gradient)"/>
+  <path d="M106 34C106 24 115 18 128 18H146C155 18 161 24 161 34V39H106Z" stroke="rgba(118,86,28,0.55)" stroke-width="2"/>
+  <path d="M139 18V9C139 6 141 4 144 4H156" stroke="rgba(120,88,39,0.7)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="158" cy="4" r="3" fill="#8a6230"/>
+  <path d="M91 88C101 98 104 104 121 101C122 94 113 89 91 88Z" fill="url(#sub-fin-gradient)"/>
+  <path d="M70 61H166" stroke="rgba(122,86,27,0.38)" stroke-width="2.1" stroke-linecap="round"/>
+  <circle cx="59" cy="61" r="2.1" fill="rgba(138,96,33,0.62)"/>
+  <circle cx="176" cy="61" r="2.1" fill="rgba(138,96,33,0.62)"/>
+  <g>
+    <circle cx="88" cy="61" r="10.5" fill="#b07a28"/>
+    <circle cx="88" cy="61" r="6.6" fill="#8fd7d6"/>
+    <circle cx="85.4" cy="58.4" r="1.7" fill="rgba(255,255,255,0.82)"/>
+    <circle cx="116" cy="61" r="10.5" fill="#b07a28"/>
+    <circle cx="116" cy="61" r="6.6" fill="#8fd7d6"/>
+    <circle cx="113.4" cy="58.4" r="1.7" fill="rgba(255,255,255,0.82)"/>
+    <circle cx="144" cy="61" r="10.5" fill="#b07a28"/>
+    <circle cx="144" cy="61" r="6.6" fill="#8fd7d6"/>
+    <circle cx="141.4" cy="58.4" r="1.7" fill="rgba(255,255,255,0.82)"/>
+  </g>
+</svg>

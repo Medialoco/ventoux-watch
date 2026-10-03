@@ -2103,10 +2103,11 @@ def _elephant(calque: np.ndarray, cx: int, sol: int, taille: float,
 
 
 # L'éléphant danse onze minutes et une seconde après le précédent, le tapis
-# passe toutes les six minutes trente-sept. Deux nombres premiers, et c'est la
-# seule raison de leur drôle de valeur : avec des périodes rondes, les deux
-# numéros tomberaient ensemble plusieurs fois par jour et on croirait à un
-# spectacle réglé. Premiers entre eux, ils ne se croisent qu'une fois tous les
+# passe toutes les six minutes trente-sept, le sous-marin toutes les huit
+# minutes quarante-trois. Trois nombres premiers, et c'est la seule raison de
+# leur drôle de valeur : avec des périodes rondes, les numéros tomberaient
+# ensemble plusieurs fois par jour et on croirait à un spectacle réglé.
+# Premiers entre eux, deux d'entre eux ne se croisent qu'une fois tous les
 # trois jours.
 ELEPHANT_PERIODE_S = 661.0
 ELEPHANT_TENUE_S = 9.0
@@ -2189,9 +2190,6 @@ TAPIS_CIEL = 0.66
 TAPIS_ONDE = 0.07
 # Faute de contour du ciel, une hauteur prudente.
 TAPIS_CIEL_SANS_CARTE = 0.14
-# Les trois mesures du pantin et de son tapis, en multiples de la taille du
-# pantin : ce qu'il occupe au-dessus de ses pieds bras levés, ce que les
-# franges pendent sous elles, et sa demi-envergure la plus grande.
 # Les quatre mesures du pantin et de son tapis. Les trois premières se
 # comptent en multiples de la taille du pantin : ce qu'il occupe au-dessus de
 # ses pieds bras levés (mesuré à 1,207 sur quatre cents poses), ce que les
@@ -2288,6 +2286,119 @@ def pose_tapis(image: np.ndarray, seconde: float, energie: float,
     calque = image.copy()
     _tapis(calque, cx, int(cy), etoffe, seconde * DANSE_PAS_S, danseur=danseur)
     cv2.addWeighted(calque, 0.9, image, 0.1, 0.0, dst=image)
+    return True
+
+
+# Le sous-marin jaune de benoit-prieur.fr, qui passe toutes les huit minutes
+# quarante-trois et met vingt-deux secondes à traverser — lentement, parce
+# qu'un sous-marin pressé n'est plus un sous-marin.
+SOUS_MARIN_PERIODE_S = 523.0
+SOUS_MARIN_TRAVERSEE_S = 22.0
+# Sa hauteur, en parts de la hauteur de la vue. Un peu moins que les pantins :
+# il est deux fois plus large que haut, et à la même hauteur qu'eux il barrerait
+# le ciel d'un bout à l'autre.
+SOUS_MARIN_HAUT = 0.17
+SOUS_MARIN_CIEL = 0.50
+# Il tangue d'un dixième de sa hauteur, deux fois et demie par traversée.
+SOUS_MARIN_TANGAGE = 0.10
+SOUS_MARIN_ROULIS = 2.5
+# La place qu'on lui garde au-dessus de la crête, en multiples de sa hauteur :
+# lui, plus de quoi tanguer des deux côtés.
+SOUS_MARIN_PLACE = 1.0 + 2 * SOUS_MARIN_TANGAGE
+
+
+def charge_vignette(chemin: Path) -> np.ndarray | None:
+    """Un dessin avec sa transparence, ou rien s'il n'est pas là.
+
+    Rien et non une erreur : un dessin manquant doit coûter un numéro, jamais
+    la diffusion. C'est la règle de tout ce dossier — ce qu'on ajoute pour le
+    plaisir n'a pas le droit de casser ce que les gens viennent regarder.
+    """
+    try:
+        vignette = cv2.imread(str(chemin), cv2.IMREAD_UNCHANGED)
+    except cv2.error:
+        vignette = None
+    if vignette is None or vignette.ndim != 3 or vignette.shape[2] != 4:
+        log.info("Vignette illisible ou sans transparence : %s", chemin.name)
+        return None
+    return vignette
+
+
+def _colle(image: np.ndarray, vignette: np.ndarray, x: int, y: int,
+           opacite: float = 1.0) -> None:
+    """Colle une vignette transparente, coin haut-gauche en (x, y).
+
+    Elle a le droit de dépasser du cadre : c'est même nécessaire, puisque le
+    sous-marin entre et sort par les côtés. On ne garde que l'intersection.
+    """
+    haut, large = vignette.shape[:2]
+    hauteur, largeur = image.shape[:2]
+    x0, y0 = max(0, x), max(0, y)
+    x1, y1 = min(largeur, x + large), min(hauteur, y + haut)
+    if x0 >= x1 or y0 >= y1:
+        return
+    bout = vignette[y0 - y:y1 - y, x0 - x:x1 - x]
+    voile = bout[:, :, 3:4].astype(np.float32) * (opacite / 255.0)
+    zone = image[y0:y1, x0:x1]
+    zone[:] = (bout[:, :, :3] * voile + zone * (1.0 - voile)).astype(np.uint8)
+
+
+def pose_sous_marin(image: np.ndarray, seconde: float,
+                    vignette: np.ndarray | None,
+                    ciel: list | None = None,
+                    vue: tuple[int, int, int, int] | None = None,
+                    nuit: bool = False) -> bool:
+    """Le sous-marin jaune traverse le ciel du Ventoux, de temps en temps.
+
+    Un sous-marin à mille quatre cents mètres d'altitude est une absurdité, et
+    c'est exactement pour ça qu'il est là : il ne peut être pris pour rien
+    d'autre. C'est la règle qu'on s'est donnée après la lune — tout ce qu'on
+    ajoute au ciel doit être impossible à confondre avec ce que la veille
+    cherche. Une lueur pâle, une traînée, un point brillant : non. Un
+    sous-marin : oui.
+
+    Il n'est pas dessiné ici. C'est celui de benoit-prieur.fr, repris tel quel
+    dans `assets/`, et s'il n'y est pas il ne passe tout simplement pas.
+
+    Comme le tapis, il suit la crête plutôt que de voler à hauteur fixe, et il
+    rapetisse là où le ciel est trop mince : il ne doit jamais passer devant le
+    sommet, qui est ce que les gens sont venus voir.
+    """
+    if vignette is None:
+        return False
+    periode = SOUS_MARIN_PERIODE_S / (NUIT_PLUS_SOUVENT if nuit else 1.0)
+    phase_cycle = seconde % periode
+    if phase_cycle >= SOUS_MARIN_TRAVERSEE_S:
+        return False
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    avance = phase_cycle / SOUS_MARIN_TRAVERSEE_S
+    rapport = vignette.shape[1] / vignette.shape[0]
+    # La plus basse des crêtes qu'il survole, mesurée à sa plus grande largeur
+    # possible : c'est par un bout qu'un dessin large mord le versant.
+    pleine_large = haute_vue * SOUS_MARIN_HAUT * rapport
+    cx = -pleine_large + avance * (largeur + 2 * pleine_large)
+    bouts = [_crete(ciel, min(1.0, max(0.0, (cx + bord * pleine_large / 2 - gauche)
+                                       / max(large_vue, 1))))
+             for bord in (-1, 0, 1)]
+    hauteurs = [c for c in bouts if c is not None]
+    ciel_haut = (min(hauteurs) if hauteurs else TAPIS_CIEL_SANS_CARTE) * haute_vue
+    facteur = min(1.0, ciel_haut / max(haute_vue * SOUS_MARIN_HAUT
+                                       * SOUS_MARIN_PLACE, 1.0))
+    haut = haute_vue * SOUS_MARIN_HAUT * facteur
+    large = haut * rapport
+    if haut < 10:
+        return False
+    tangue = math.sin(avance * math.pi * 2 * SOUS_MARIN_ROULIS) * haut * SOUS_MARIN_TANGAGE
+    milieu = cime + SOUS_MARIN_CIEL * ciel_haut + tangue
+    milieu = max(milieu, cime + haut / 2)
+    milieu = min(milieu, cime + ciel_haut - haut / 2)
+    petit = cv2.resize(vignette, (max(2, int(large)), max(2, int(haut))),
+                       interpolation=cv2.INTER_AREA)
+    # Il entre et sort en fondu d'une seconde, comme l'éléphant : apparaître
+    # d'un coup se lit comme une image sautée.
+    bord = min(phase_cycle, SOUS_MARIN_TRAVERSEE_S - phase_cycle, 1.0)
+    _colle(image, petit, int(cx - large / 2), int(milieu - haut / 2), bord)
     return True
 
 
@@ -2994,6 +3105,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         log.info("Pas de contours de zones : ni tapis ni éléphant")
     contour_ciel = contours.get("sky")
     contour_rond_point = contours.get("roundabout")
+    # Le seul numéro qu'on ne dessine pas soi-même. Lu une fois, et absent sans
+    # conséquence : il ne passe pas, c'est tout.
+    sous_marin = charge_vignette(racine / "assets" / "sous-marin.png")
     # On démarre comme si on venait de voir quelque chose : une rediffusion à
     # la première seconde du direct donnerait l'impression que rien ne marche.
     dernier_vu = origine
@@ -3229,6 +3343,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     pose_elephant(toile, quand - origine, musique.pouls(),
                                   contour_rond_point, vue=cadrage,
                                   nuit=not fait_jour)
+                # Le sous-marin n'attend pas de creux, lui. Il ne descend
+                # jamais sous la crête, donc il ne peut pas passer devant ce
+                # qu'on surveille, et il n'a pas besoin du silence pour être
+                # drôle. Il ne dépend pas non plus de la musique : le tapis et
+                # l'éléphant dansent, lui navigue.
+                pose_sous_marin(toile, quand - origine, sous_marin,
+                                contour_ciel, vue=cadrage, nuit=not fait_jour)
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser)
             # Le mot tient au moins trois secondes, et tant que la voix parle.

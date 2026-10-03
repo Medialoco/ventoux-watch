@@ -1,8 +1,8 @@
 import inspect
+import itertools
 import json
 import math
 import os
-import inspect
 import re
 import io
 import subprocess
@@ -3065,23 +3065,85 @@ class DiffusionTests(unittest.TestCase):
         # Et la raison du piège est toujours écrite là où on tombe dedans.
         self.assertIn("dernier_vu", inspect.getsource(stream.diffuse))
 
+    def test_the_submarine_crosses_the_sky_and_never_the_mountain(self):
+        """Il traverse en entier, il reste au-dessus de la crête, et il attend.
+
+        Au-dessus de la crête parce que c'est la règle de tout ce qu'on ajoute
+        au ciel : un dessin qui passe devant le sommet cache ce que les gens
+        sont venus voir. Et comme il est deux fois plus large que haut, c'est
+        par un bout qu'il mordrait le versant, pas par son milieu.
+        """
+        racine = Path(__file__).resolve().parent.parent
+        vignette = stream.charge_vignette(racine / "assets" / "sous-marin.png")
+        self.assertIsNotNone(vignette, "le sous-marin est dans le d\u00e9p\u00f4t")
+        ciel = [[0.0, 0.0], [1.0, 0.0], [1.0, 0.16], [0.48, 0.18],
+                [0.22, 0.26], [0.0, 0.30]]
+        gauche_atteint = droite_atteint = False
+        passages = 0
+        for pas in range(90):
+            instant = pas * stream.SOUS_MARIN_TRAVERSEE_S / 89
+            toile = np.zeros((720, 1280, 3), np.uint8)
+            if not stream.pose_sous_marin(toile, instant, vignette, ciel):
+                continue
+            pose = np.argwhere(toile.any(axis=2))
+            if not len(pose):
+                continue
+            passages += 1
+            haut, bas = pose[:, 0].min(), pose[:, 0].max()
+            bord_g, bord_d = pose[:, 1].min(), pose[:, 1].max()
+            self.assertGreaterEqual(haut, 0)
+            for bord in (bord_g, bord_d):
+                sol = stream._crete(ciel, bord / 1280) * 720
+                self.assertLess(bas, sol, f"dans la montagne \u00e0 {instant:.1f} s")
+            gauche_atteint = gauche_atteint or bord_g <= 1
+            droite_atteint = droite_atteint or bord_d >= 1278
+        self.assertGreater(passages, 60, "il doit traverser")
+        self.assertTrue(gauche_atteint and droite_atteint,
+                        "il entre par un bord et sort par l'autre")
+        # Et le reste du temps il n'est pas là. C'est un numéro, pas un décor :
+        # un sous-marin en permanence dans le ciel cesse d'être une surprise au
+        # bout de dix minutes et devient une gêne au bout d'une heure.
+        vide = np.zeros((720, 1280, 3), np.uint8)
+        self.assertFalse(stream.pose_sous_marin(
+            vide, stream.SOUS_MARIN_TRAVERSEE_S + 1, vignette, ciel))
+        self.assertFalse(vide.any())
+        # Sans le dessin, pas de numéro et pas de panne.
+        self.assertFalse(stream.pose_sous_marin(vide, 1.0, None, ciel))
+        self.assertIsNone(stream.charge_vignette(racine / "assets" / "pas-la.png"))
+
     def test_the_two_turns_almost_never_happen_at_once(self):
         """Des périodes rondes les feraient tomber ensemble plusieurs fois par jour.
 
         Et un numéro qui revient toujours avec l'autre cesse d'être une
         surprise : on croit à un spectacle réglé.
         """
-        for periode in (stream.TAPIS_PERIODE_S, stream.ELEPHANT_PERIODE_S):
+        numeros = {
+            "tapis": (stream.TAPIS_PERIODE_S, stream.TAPIS_TRAVERSEE_S),
+            "\u00e9l\u00e9phant": (stream.ELEPHANT_PERIODE_S, stream.ELEPHANT_TENUE_S),
+            "sous-marin": (stream.SOUS_MARIN_PERIODE_S, stream.SOUS_MARIN_TRAVERSEE_S),
+        }
+        for periode, _ in numeros.values():
             entier = int(periode)
             self.assertEqual(periode, entier)
             self.assertTrue(all(entier % d for d in range(2, int(entier ** 0.5) + 1)),
                             f"{entier} n'est pas premier")
-        self.assertNotEqual(stream.TAPIS_PERIODE_S, stream.ELEPHANT_PERIODE_S)
-        ensemble = sum(
-            1 for s in range(24 * 3600)
-            if s % stream.TAPIS_PERIODE_S < stream.TAPIS_TRAVERSEE_S
-            and s % stream.ELEPHANT_PERIODE_S < stream.ELEPHANT_TENUE_S)
-        self.assertLess(ensemble, 30, "ils se croisent trop souvent")
+        self.assertEqual(len({p for p, _ in numeros.values()}), len(numeros))
+        # Ce qu'on vérifie n'est pas qu'ils se croisent rarement — avec six
+        # numéros par heure, ils se croiseront forcément de temps en temps —
+        # mais qu'ils ne se croisent pas plus souvent que le hasard. C'est ce
+        # que le fait de ne pas avoir de diviseur commun achète, et c'est la
+        # seule chose qui se voie à l'œil : deux numéros calés l'un sur
+        # l'autre, on l'appelle un spectacle réglé.
+        for un, deux in itertools.combinations(numeros, 2):
+            (pa, da), (pb, db) = numeros[un], numeros[deux]
+            ensemble = sum(1 for s in range(24 * 3600)
+                           if s % pa < da and s % pb < db)
+            hasard = 24 * 3600 * (da / pa) * (db / pb)
+            self.assertLess(ensemble, 2.0 * hasard + 10,
+                            f"{un} et {deux} sont cal\u00e9s l'un sur l'autre")
+        # Et la preuve que l'épreuve mord : des périodes rondes se calent.
+        cales = sum(1 for s in range(24 * 3600) if s % 400 < 14 and s % 500 < 22)
+        self.assertGreater(cales, 2.0 * 24 * 3600 * (14 / 400) * (22 / 500) + 10)
 
     def test_fog_gets_said_in_the_words_the_watch_used(self):
         """Un mur gris sans un mot ressemble \u00e0 une cam\u00e9ra en panne.

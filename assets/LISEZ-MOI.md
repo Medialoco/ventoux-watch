@@ -1,0 +1,27 @@
+# Ce qui est dessiné ailleurs
+
+Presque tout ce que le flux dessine est tracé au trait dans `watcher/stream.py`
+— le soleil, les pantins, le tapis, l'éléphant. Ce dossier est pour le reste :
+les dessins qui existaient déjà et qu'on reprend tels quels.
+
+## sous-marin.svg
+
+Le sous-marin jaune de <https://benoit-prieur.fr/>, repris de
+`images/ui/submarine.svg`. C'est le dessin de l'auteur de ce dépôt, pris chez
+lui et non ailleurs ; il n'y a pas de question de droits à se poser, et c'est
+la raison pour laquelle c'est celui-là.
+
+## sous-marin.png
+
+Le même, rasterisé à cinq fois sa taille puis rogné sur ses pixels opaques.
+
+La rasterisation se fait ici, pas sur le Raspberry Pi : rendre du SVG demande
+Cairo et ses dépendances, et la machine qui diffuse n'a pas à les porter pour
+un dessin qui ne change jamais. Le PNG est donc dans le dépôt, et le SVG à
+côté pour qu'on sache d'où il vient et qu'on puisse le refaire :
+
+    scripts/rasterise.sh
+
+Rogné, parce qu'un SVG rendu garde ses marges et qu'elles décalent le dessin
+par rapport au point où le code croit le poser. Rogné une fois pour toutes
+vaut mieux qu'un décalage à corriger à la main.
