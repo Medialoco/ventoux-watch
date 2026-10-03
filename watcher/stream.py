@@ -2570,7 +2570,6 @@ LAMPADAIRE_M = 7.0
 # Le fer est froid, la lumière est chaude : c'est tout ce qu'il faut pour
 # qu'une lampe ait l'air allumée.
 LAMP_FER = (104, 96, 108)
-LAMP_OR = (120, 214, 252)
 # De combien on remonte la vraie lueur au plus près de l'ampoule. Un facteur
 # et non une couleur : on amplifie ce qui est là, on n'ajoute rien.
 LAMP_GAIN = 0.85
@@ -2690,7 +2689,10 @@ def pose_lampadaire(image: np.ndarray, tete: tuple[float, float],
                       [x + lanterne, y + lanterne],
                       [x + int(lanterne * 0.62), y - int(lanterne * 0.5)],
                       [x - int(lanterne * 0.62), y - int(lanterne * 0.5)]])
-    cv2.fillPoly(calque, [verre], LAMP_OR, cv2.LINE_AA)
+    # Le verre reste vide : c'est du verre. Il était peint en jaune plein, ce
+    # qui bouchait la lanterne et cachait la seule chose qu'on voulait voir
+    # dedans — la vraie ampoule, qui est allumée et qui est juste derrière. On
+    # ne dessine donc que la ferronnerie, et la lumière passe au travers.
     cv2.polylines(calque, [verre], True, LAMP_FER, max(2, fer - 1), cv2.LINE_AA)
     chapeau = np.int32([[x - int(lanterne * 1.25), y - int(lanterne * 0.5)],
                         [x + int(lanterne * 1.25), y - int(lanterne * 0.5)],
@@ -3054,7 +3056,27 @@ def etat_machine(racine: Path) -> dict | None:
     return etat
 
 
-def pose_machine(image: np.ndarray, etat: dict | None) -> None:
+# La largeur de la photo de la machine, en pixels d'un cadre de mille six
+# cents. Elle commande la largeur de l'encart quand le texte est plus étroit.
+MACHINE_PHOTO_PX = 170
+
+
+def cadre_encart(image: np.ndarray, coin_a: tuple[int, int],
+                 coin_b: tuple[int, int], echelle: float) -> None:
+    """Le filet des encarts : une arête, pas un cadre doré.
+
+    Assombri seul, un encart flotte sur l'image et ses limites bougent avec le
+    ciel derrière ; un filet suffit à en faire un objet posé. Dans le cyan du
+    titre mais très baissé, et le même partout — deux encarts côte à côte avec
+    deux bordures différentes, on voit la différence avant de voir les
+    encarts.
+    """
+    cv2.rectangle(image, coin_a, coin_b,
+                  tuple(int(c * 0.45) for c in CYAN), max(1, int(echelle)))
+
+
+def pose_machine(image: np.ndarray, etat: dict | None,
+                 vignette: np.ndarray | None = None) -> None:
     """L'encart machine, en haut à gauche, en face de l'horloge.
 
     Une webcam qui tourne vingt-quatre heures sur vingt-quatre tient à une
@@ -3096,20 +3118,42 @@ def pose_machine(image: np.ndarray, etat: dict | None) -> None:
     sommet = int(RUBAN_H * echelle)
     taille = 0.56 * echelle
     large = max(cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] for t, _ in lignes)
+    # L'encart s'élargit pour la photo si le texte ne suffit pas. À la largeur
+    # des chiffres seuls, la carte faisait cent pixels de large et on n'y
+    # reconnaissait rien : une tache verte sous un tableau de bord. Cent
+    # soixante-dix, et on voit que c'est un Raspberry Pi avec son ventilateur,
+    # ce qui est tout l'intérêt de la montrer.
+    droite = max(large + 2 * marge, int(MACHINE_PHOTO_PX * echelle) + 2 * marge)
+    # La photo de l'installation sous les chiffres. Les chiffres disent que la
+    # machine va bien ; la photo dit laquelle. C'est une carte à cent euros sur
+    # un bureau, et le flux a l'air d'une chaîne de télévision — autant le
+    # montrer, c'est plus honnête et c'est plus intéressant.
+    photo = None
+    if vignette is not None:
+        vu_large = droite - 2 * marge
+        vu_haut = int(vu_large * vignette.shape[0] / vignette.shape[1])
+        photo = cv2.resize(vignette, (vu_large, vu_haut), interpolation=cv2.INTER_AREA)
     bas = sommet + pas * len(lignes) + marge
-    droite = large + 2 * marge
+    if photo is not None:
+        bas += photo.shape[0] + marge
     panneau = image[sommet:bas, 0:droite]
     if panneau.size:
         panneau[:] = (panneau * 0.35).astype(np.uint8)
-        # Un trait léger pour que l'encart ait un bord. Assombri seul, il flotte
-        # sur l'image et ses limites bougent avec le ciel derrière ; un filet
-        # suffit à en faire un objet posé. Dans le cyan du titre, mais très
-        # baissé : on veut une arête, pas un cadre doré.
-        cv2.rectangle(image, (0, sommet), (droite - 1, bas - 1),
-                      tuple(int(c * 0.45) for c in CYAN), max(1, int(echelle)))
+        cadre_encart(image, (0, sommet), (droite - 1, bas - 1), echelle)
     for i, (texte, teinte) in enumerate(lignes):
         cv2.putText(image, texte, (marge, sommet + pas * (i + 1) - int(6 * echelle)),
                     cv2.FONT_HERSHEY_SIMPLEX, taille, teinte, 2, cv2.LINE_AA)
+    if photo is not None:
+        haut_photo = sommet + pas * len(lignes) + marge // 2
+        coin = image[haut_photo:haut_photo + photo.shape[0], marge:marge + photo.shape[1]]
+        if coin.shape[:2] == photo.shape[:2]:
+            # Un peu baissée : c'est une photo de bureau en plein jour, et à
+            # pleine lumière elle ferait une tache blanche dans un encart
+            # qu'on a justement assombri pour qu'il ne crève pas l'image.
+            coin[:] = (photo * 0.80).astype(np.uint8)
+            cadre_encart(image, (marge - 1, haut_photo - 1),
+                         (marge + photo.shape[1], haut_photo + photo.shape[0]),
+                         echelle)
 
 
 BONJOUR_S = 8.0
@@ -3174,9 +3218,11 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     badge = "LIVE" if direct else autre
     large = max(large, cv2.getTextSize(badge, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] + pas)
     gauche = largeur - large - 2 * marge
-    coin = image[sommet:sommet + pas * (len(lignes) + 1) + marge, gauche:largeur]
+    bas = sommet + pas * (len(lignes) + 1) + marge
+    coin = image[sommet:bas, gauche:largeur]
     if coin.size:
         coin[:] = (coin * 0.35).astype(np.uint8)
+        cadre_encart(image, (gauche, sommet), (largeur - 1, bas - 1), echelle)
     rayon = int(7 * echelle)
     x = gauche + marge
     y = sommet + pas - int(6 * echelle)
@@ -3342,6 +3388,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # Le seul numéro qu'on ne dessine pas soi-même. Lu une fois, et absent sans
     # conséquence : il ne passe pas, c'est tout.
     sous_marin = charge_vignette(racine / "assets" / "sous-marin.png")
+    # La photo de la machine qui fait tout ça. Lue en BGR et non en BGRA :
+    # c'est une photo, elle n'a pas de transparence.
+    photo_machine = cv2.imread(str(racine / "assets" / "machine.jpg"))
     # On démarre comme si on venait de voir quelque chose : une rediffusion à
     # la première seconde du direct donnerait l'impression que rien ne marche.
     dernier_vu = origine
@@ -3626,7 +3675,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             pose_ruban(toile, ruban, quand - origine)
             pose_horloge(toile, quand, direct=rediff is None and survol is None,
                          autre="REPLAY" if rediff is not None else "3D MODEL")
-            pose_machine(toile, machine)
+            pose_machine(toile, machine, photo_machine)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             pose_bande_basse(toile, bande_du_moment(quand - origine))
             # La musique en dernier : c'est elle qu'on vient écouter, et c'est
