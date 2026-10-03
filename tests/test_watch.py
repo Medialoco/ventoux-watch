@@ -3894,7 +3894,7 @@ class DiffusionTests(unittest.TestCase):
                 coupe.set()
             return coupe.is_set()
 
-        with mock.patch.object(stream, "direct_visible", lambda _: False), \
+        with mock.patch.object(stream, "page_du_direct", lambda _: "channelMetadataRenderer"), \
                 mock.patch.object(coupe, "wait", patiente), \
                 self.assertLogs(stream.log, level="ERROR") as journal:
             stream.veille_le_direct("UCxxxx", coupe)
@@ -3917,10 +3917,38 @@ class DiffusionTests(unittest.TestCase):
                 coupe.set()
             return coupe.is_set()
 
-        with mock.patch.object(stream, "direct_visible", lambda _: None), \
+        with mock.patch.object(stream, "page_du_direct", lambda _: None), \
                 mock.patch.object(coupe, "wait", patiente):
             with self.assertNoLogs(stream.log, level="ERROR"):
                 stream.veille_le_direct("UCxxxx", coupe)
+
+    def test_the_number_of_the_live_is_written_down_at_once(self):
+        """Le site incruste le direct en cours : encore faut-il lui dire lequel.
+
+        Et tout de suite, pas au bout de dix minutes : pendant ces dix minutes
+        la page n'aurait eu que l'ancien numero, c'est-a-dire un enregistrement
+        termine.
+        """
+        page = ('{"videoDetails":{"videoId":"fIcRDu-v6ww"},'
+                '"isLive":true,"microformat":{}}')
+        coupe = threading.Event()
+        with tempfile.TemporaryDirectory() as dossier:
+            racine = Path(dossier)
+            with mock.patch.object(stream, "page_du_direct", lambda _: page), \
+                    mock.patch.object(coupe, "wait", lambda _: True):
+                stream.veille_le_direct("UCxxxx", coupe, racine)
+            ecrit = json.loads((racine / "data" / "direct.json").read_text())
+        self.assertEqual(ecrit["video"], "fIcRDu-v6ww")
+        self.assertEqual(ecrit["chaine"], "UCxxxx")
+
+    def test_a_channel_that_is_dark_does_not_name_a_video(self):
+        """Une chaine qui n'emet pas n'a pas de numero a donner.
+
+        Garder le dernier connu serait pire que rien : la page croirait tenir un
+        direct et montrerait une rediffusion, ou un ecran noir.
+        """
+        self.assertEqual(stream.lit_le_direct("channelMetadataRenderer"), (False, ""))
+        self.assertEqual(stream.lit_le_direct(None), (None, ""))
 
     def test_a_refusal_never_gets_a_red_box_on_the_stream(self):
         """Un rectangle rouge dit « j'ai vu ceci », pas « je n'ai rien su lire »."""

@@ -24,6 +24,7 @@ import logging
 import math
 import os
 import random
+import re
 import subprocess
 import sys
 import threading
@@ -170,8 +171,19 @@ VEILLE_DIRECT_S = 600.0
 VEILLE_DIRECT_SEUIL = 2
 
 
-def direct_visible(chaine: str) -> bool | None:
-    """La chaîne est-elle en direct ? None quand on n'a pas su regarder.
+def page_du_direct(chaine: str) -> str | None:
+    """La page /live de la chaîne, ou None quand on n'a pas su la lire."""
+    url = f"https://www.youtube.com/channel/{chaine}/live"
+    requete = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(requete, timeout=20) as reponse:
+            return reponse.read().decode("utf-8", "replace")
+    except Exception:
+        return None
+
+
+def lit_le_direct(page: str | None) -> tuple[bool | None, str]:
+    """Ce que la page /live raconte : on émet ou non, et sous quel numéro.
 
     L'adresse /live d'une chaîne répond de deux façons, et c'est la façon qui
     porte la réponse plus que le contenu. Quand la chaîne émet, YouTube sert la
@@ -183,23 +195,53 @@ def direct_visible(chaine: str) -> bool | None:
     Ne vaut que pour un direct public : un direct privé est invisible d'ici et
     serait annoncé disparu à tort. D'où le None, qui dit « je ne sais pas » et
     non « non » ; on ne crie que sur ce qu'on a vraiment lu.
+
+    Le numéro de la vidéo sort de la même lecture, et il n'est pas décoratif :
+    il change à chaque fois que YouTube termine le direct et qu'on en rouvre un.
+    Une page qui le garderait en dur montrerait l'ancien, c'est-à-dire un
+    enregistrement fini ou rien du tout.
     """
-    url = f"https://www.youtube.com/channel/{chaine}/live"
-    requete = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    try:
-        with urllib.request.urlopen(requete, timeout=20) as reponse:
-            page = reponse.read().decode("utf-8", "replace")
-    except Exception:
-        return None
+    if not page:
+        return None, ""
+    numero = re.search(r'"videoId":"([A-Za-z0-9_-]{11})"', page)
     if "videoDetails" in page and '"isLive":true' in page:
-        return True
+        return True, numero.group(1) if numero else ""
     if "channelMetadataRenderer" in page:
-        return False
-    return None
+        return False, ""
+    return None, ""
 
 
-def veille_le_direct(chaine: str, coupe: threading.Event) -> None:
-    """Dire quand on pousse des octets dans le vide.
+def direct_visible(chaine: str) -> bool | None:
+    """La chaîne est-elle en direct ? None quand on n'a pas su regarder."""
+    return lit_le_direct(page_du_direct(chaine))[0]
+
+
+def note_le_direct(racine: Path, chaine: str, numero: str) -> None:
+    """Dit au reste du monde quel direct est en cours.
+
+    Le site personnel incruste le direct ; sans ce fichier il devrait deviner
+    l'adresse, et la seule qu'on puisse écrire sans le numéro — celle qui
+    demande à YouTube de résoudre « le direct de cette chaîne » — n'est plus
+    tenue et sert régulièrement une vidéo indisponible.
+
+    Écrit puis renommé : une page qui lit pendant qu'on écrit doit trouver
+    l'ancien fichier entier plutôt que le nouveau à moitié.
+    """
+    fichier = racine / "data" / "direct.json"
+    fichier.parent.mkdir(parents=True, exist_ok=True)
+    texte = json.dumps({
+        "chaine": chaine,
+        "video": numero,
+        "vu": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }, ensure_ascii=False, indent=2)
+    passage = fichier.with_suffix(".json.tmp")
+    passage.write_text(texte + "\n", encoding="utf-8")
+    passage.replace(fichier)
+
+
+def veille_le_direct(chaine: str, coupe: threading.Event,
+                     racine: Path | None = None) -> None:
+    """Dire quand on pousse des octets dans le vide, et sous quel numéro on émet.
 
     Une diffusion terminée par YouTube ne se voit pas d'ici : l'arrivée continue
     d'accepter tout ce qu'on lui envoie, ffmpeg ne signale rien, et le journal
@@ -209,10 +251,21 @@ def veille_le_direct(chaine: str, coupe: threading.Event) -> None:
     Alors on va regarder dehors. Ça ne répare rien — rouvrir une diffusion
     demande le compte — mais ça change « quatre heures sans le savoir » en
     « dix minutes et c'est écrit ».
+
+    Le premier coup d'oeil se donne tout de suite et non au bout de dix minutes :
+    c'est lui qui note le numéro du direct, et une page qui s'ouvre pendant ces
+    dix minutes-là n'aurait rien eu à incruster.
     """
     absences = 0
-    while not coupe.wait(VEILLE_DIRECT_S):
-        vu = direct_visible(chaine)
+    premier = True
+    while premier or not coupe.wait(VEILLE_DIRECT_S):
+        premier = False
+        vu, numero = lit_le_direct(page_du_direct(chaine))
+        if racine is not None and numero:
+            try:
+                note_le_direct(racine, chaine, numero)
+            except OSError as souci:
+                log.warning("Numéro du direct non noté : %s", souci)
         if vu is None:
             continue
         if vu:
@@ -4336,7 +4389,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     coupe = threading.Event()
     chaine = cfg.get("youtube_chaine")
     if chaine and cible.startswith("rtmp"):
-        threading.Thread(target=veille_le_direct, args=(chaine, coupe),
+        threading.Thread(target=veille_le_direct, args=(chaine, coupe, racine),
                          daemon=True).start()
     debut = _maintenant()
     # L'heure de la première image montrée : le bord du direct, moins ce qu'on

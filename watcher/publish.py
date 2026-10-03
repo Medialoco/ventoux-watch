@@ -38,6 +38,10 @@ def publish(repo: Path) -> bool:
         # rendu depuis un navigateur trois jours plus tard ne peut pas être
         # rejoué, et une faute réparée ne le reste pas.
         "data/observed.jsonl",
+        # Le numéro du direct en cours. Il change chaque fois que YouTube
+        # termine la diffusion et qu'on en rouvre une ; une page qui l'écrirait
+        # en dur finirait par incruster un enregistrement fini.
+        "data/direct.json",
     ]
     try:
         # --autostash : la veille écrit dans data/ en permanence, et un rebase
