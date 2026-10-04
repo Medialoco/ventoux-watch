@@ -4513,6 +4513,47 @@ class DiffusionTests(unittest.TestCase):
         self.assertIsNone(stream.batir_session(Path("/inexistant/nulle/part")))
 
 
+class ModeleTests(unittest.TestCase):
+    """Quel réseau on montre aux gros plans, et pourquoi celui-là."""
+
+    def test_the_detector_is_the_small_model_and_not_the_nano(self):
+        """Mesuré le 4 octobre sur 147 gros plans déjà nommés à la main et sur
+        176 passages ratés, le même jour et les mêmes images :
+
+                        d'accord   en désaccord   muet   précision
+            yolo11n           84             17     46      83,2 %
+            yolo11s          108             12     27      90,0 %
+
+        Il nomme plus et il se trompe moins : il n'y a pas d'arbitrage à faire.
+        Sur les passages qu'on ratait, il reconnaît un véhicule dans 49 % des
+        cas contre 36 %.
+
+        yolo11m ne fait pas mieux que yolo11s (49 % aussi) pour deux fois et
+        demie le temps de calcul : la taille au-dessus ne rapporte plus rien.
+
+        Et le prix est payable. Le détecteur ne tourne pas à chaque image mais
+        une fois par passage terminé : trente-trois fois dans l'heure la plus
+        chargée des cent douze mesurées. À neuf cent vingt-cinq millisecondes
+        sur le Pi, cela fait trente et une secondes par heure, soit huit
+        dixièmes de pour cent d'un cœur. L'objection du calcul n'en était pas
+        une.
+        """
+        cfg = json.loads((ROOT / "config" / "config.json").read_text(encoding="utf-8"))
+        self.assertEqual(cfg["model_path"], "models/yolo11s.onnx")
+
+    def test_the_configured_model_is_there(self):
+        """Un chemin de modèle faux ne lève rien : il rend une veille muette.
+
+        « YoloDetector » avale un fichier absent et se déclare simplement pas
+        prêt, ce qui est le bon comportement sur un portable et le pire qui
+        soit sur le Pi — le flux continuerait, l'image serait juste, et plus
+        rien ne serait jamais nommé.
+        """
+        cfg = json.loads((ROOT / "config" / "config.json").read_text(encoding="utf-8"))
+        self.assertTrue((ROOT / cfg["model_path"]).is_file(),
+                        f"{cfg['model_path']} manque")
+
+
 class EncartsTests(unittest.TestCase):
     """Les deux barres latérales : des cartes, et des jauges qui ne mentent pas."""
 
