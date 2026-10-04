@@ -1914,8 +1914,29 @@ PLAY_VOILE = 0.72
 PLAY_POLICE = cv2.FONT_HERSHEY_DUPLEX
 
 
+def _teinte_barre(i: int, n: int, forme: str, seconde: float
+                  ) -> tuple[int, int, int]:
+    """La couleur d'une barre : le filtre du moment, ou le vert et l'ambre.
+
+    Le rouge reste à LIVE. Vide, c'est l'instrument habituel. Pixel, des
+    plots qui changent par paquets. Gris, le filtre a déteint l'image : les
+    barres aussi. Ondulé, elles glissent du cyan au vert. Rien d'inventé
+    pour l'occasion — les trois couleurs du meuble, dans un autre ordre.
+    """
+    if forme == "gris":
+        v = 100 + int(110 * i / max(1, n - 1))
+        return (v, v, v)
+    if forme == "pixel":
+        return (CYAN, VERT, AMBRE)[(i // 4) % 3]
+    if forme == "ondule":
+        mix = 0.5 + 0.5 * math.sin(seconde * 1.1 + i * 0.55)
+        return tuple(int(a + (b - a) * mix) for a, b in zip(CYAN, VERT))
+    return AMBRE if i >= n - 6 else VERT
+
+
 def _vumetre(image: np.ndarray, x: int, base: int, largeur: int,
-             echelle: float, energie: float, seconde: float) -> None:
+             echelle: float, energie: float, seconde: float,
+             forme: str = "") -> None:
     """Une lame d'égaliseur, pas un mur.
 
     Trop grand, il mangeait l'artiste et le titre. Trop large, il barrissait
@@ -1939,7 +1960,7 @@ def _vumetre(image: np.ndarray, x: int, base: int, largeur: int,
         cloche = 0.55 + 0.45 * math.sin(part * math.pi)
         onde = 0.50 + 0.50 * math.sin(seconde * (2.4 + i * 0.38) + i * 0.9)
         haut = max(2, int(haut_max * (0.12 + force * cloche * onde)))
-        teinte = AMBRE if i >= n - 6 else VERT
+        teinte = _teinte_barre(i, n, forme, seconde)
         gx = x + i * (large + ecart)
         halo = tuple(int(c * 0.32) for c in teinte)
         cv2.rectangle(image, (gx - 1, base - haut - 1),
@@ -2101,27 +2122,34 @@ def _credit_piste(image: np.ndarray, fiche: dict | None, x: int, y: int,
     if not fiche or large < 8:
         return
     auteur = _coupe_police(str(fiche.get("auteur") or ""), large, echelle,
-                           corps_auteur, 1, PLAY_POLICE)
+                           corps_auteur, 1, cv2.FONT_HERSHEY_SIMPLEX)
     titre = _coupe_police(str(fiche.get("titre") or ""), large, echelle,
                           corps_titre, 2, PLAY_POLICE)
-    pas = max(15, int(24 * echelle * (corps_titre / 0.50)))
-    cv2.putText(image, auteur, (x, y), PLAY_POLICE, corps_auteur * echelle,
-                teinte_auteur, 1, cv2.LINE_AA)
+    pas = max(16, int(26 * echelle * (corps_titre / 0.50)))
+    cv2.putText(image, auteur, (x, y), cv2.FONT_HERSHEY_SIMPLEX,
+                corps_auteur * echelle, teinte_auteur, 1, cv2.LINE_AA)
     if eclate:
         _eclate(image, titre, x, y + pas, echelle, corps_titre, teinte_titre, 2)
+        (tw, _), _ = cv2.getTextSize(titre, PLAY_POLICE, corps_titre * echelle, 2)
+        trait = min(large, max(int(28 * echelle), tw))
+        yy = y + pas + max(3, int(5 * echelle))
+        cv2.line(image, (x, yy), (x + trait, yy),
+                 tuple(int(c * 0.55) for c in CYAN), 1, cv2.LINE_AA)
     else:
         cv2.putText(image, titre, (x, y + pas), PLAY_POLICE,
                     corps_titre * echelle, teinte_titre, 2, cv2.LINE_AA)
     if infos:
         meta = _coupe_police(infos, large, echelle, 0.34, 1,
                              cv2.FONT_HERSHEY_SIMPLEX)
-        cv2.putText(image, meta, (x, y + pas + max(14, int(18 * echelle))),
+        sous = pas + max(16, int(20 * echelle))
+        cv2.putText(image, meta, (x, y + sous),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.34 * echelle, PLAY_GRIS, 1,
                     cv2.LINE_AA)
 
 
 def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
-                      energie: float = 0.0, seconde: float = 0.0) -> None:
+                      energie: float = 0.0, seconde: float = 0.0,
+                      forme: str = "") -> None:
     """La console : précédent, en cours, à suivre, sur toute la largeur.
 
     Ce n'est plus un pavé de texte dans le coin. Un lecteur montre trois
@@ -2169,16 +2197,16 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     credit_w = int(200 * echelle)
 
     x = marge
+    _etiquette_bac(image, "UP PREVIOUS", x, y_mot, voisine, echelle,
+                   GRIS_ENCART)
+    _pose_pochette(image, _pochette_de(avant, dossier, voisine),
+                   x, y_vois, voisine, echelle, PLAY_VOILE)
     if avant:
-        _etiquette_bac(image, "UP PREVIOUS", x, y_mot, voisine, echelle,
-                       GRIS_ENCART)
-        _pose_pochette(image, _pochette_de(avant, dossier, voisine),
-                       x, y_vois, voisine, echelle, PLAY_VOILE)
         _credit_piste(image, avant, x + voisine + int(8 * echelle),
                       y_vois + int(16 * echelle), credit_w, echelle,
                       GRIS_ENCART, BLANC, 0.42, 0.52,
                       infos=_ligne_infos(avant))
-        x += voisine + credit_w + int(16 * echelle)
+    x += voisine + credit_w + int(16 * echelle)
 
     _pose_pochette(image, _pochette_de(en_cours, dossier, maintenant),
                    x, y_now, maintenant, echelle, 1.0)
@@ -2206,11 +2234,11 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     pose_pastille(image, marque, x + nw + int(10 * echelle), y_mot, echelle)
 
     _credit_piste(image, en_cours, x, y_now + int(22 * echelle), colonne,
-                  echelle, CYAN, BLANC, 0.50, 0.72,
+                  echelle, CYAN, BLANC, 0.50, 0.76,
                   infos=_ligne_infos(en_cours, reste), eclate=True)
     eq_base = y_now + maintenant - int(8 * echelle)
     eq_l = min(int(PLAY_EQ_L * echelle), colonne)
-    _vumetre(image, x, eq_base, eq_l, echelle, energie, seconde)
+    _vumetre(image, x, eq_base, eq_l, echelle, energie, seconde, forme=forme)
     if duree > 0:
         rail_y = min(eq_base + int(10 * echelle), bas - marge - int(16 * echelle))
         epais = max(2, int(PLAY_JAUGE_H * echelle))
@@ -2799,6 +2827,14 @@ def _danseur(calque: np.ndarray, x: int, sol: int, taille: float,
 PROMENADE_PERIODE_S = 180.0
 PROMENADE_GLISSE_S = 3.0
 PROMENADE_TENUE_S = 5.0
+# Ils se rejoignent parfois au milieu de la fenêtre. Pas pendant la
+# promenade — deux idées à la fois, on n'en lit aucune. Un décalage pour
+# que les deux cycles ne tombent pas ensemble, et une période qui n'est
+# pas un multiple de l'autre.
+RENDEZ_PERIODE_S = 419.0
+RENDEZ_DECALAGE_S = 90.0
+RENDEZ_GLISSE_S = 4.0
+RENDEZ_TENUE_S = 6.0
 
 
 def promenade(seconde: float) -> float:
@@ -2821,6 +2857,28 @@ def promenade(seconde: float) -> float:
         avance = (cycle - phase) / PROMENADE_GLISSE_S
     # Départ et arrivée en douceur : à vitesse constante, le pantin s'arrête
     # net contre le bord et repart net, ce qui se voit comme une saccade.
+    return avance * avance * (3 - 2 * avance)
+
+
+def rendez_vous(seconde: float) -> float:
+    """Où en est la rencontre : zéro chacun chez soi, un au milieu de la vue.
+
+    Ils ne sortent pas : ils se rejoignent dans la fenêtre, devant la
+    montagne, puis rentrent. Un Short n'a pas de bande, et la rencontre
+    n'y a pas non plus sa place : ils restent chez eux.
+    """
+    cycle = 2 * RENDEZ_GLISSE_S + RENDEZ_TENUE_S
+    phase = (seconde - RENDEZ_DECALAGE_S) % RENDEZ_PERIODE_S
+    if phase < 0:
+        phase += RENDEZ_PERIODE_S
+    if phase >= cycle:
+        return 0.0
+    if phase < RENDEZ_GLISSE_S:
+        avance = phase / RENDEZ_GLISSE_S
+    elif phase < RENDEZ_GLISSE_S + RENDEZ_TENUE_S:
+        return 1.0
+    else:
+        avance = (cycle - phase) / RENDEZ_GLISSE_S
     return avance * avance * (3 - 2 * avance)
 
 
@@ -2848,6 +2906,11 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
     — d'où le réglage, qui n'est pas un goût mais une géométrie.
 
     Les valeurs par défaut sont celles de l'antenne, qui ne bouge pas.
+
+    De temps en temps ils se rejoignent au milieu de la fenêtre, se
+    tiennent l'un à l'autre, et rentrent. Pas pendant un survol : l'appelant
+    ne les pose déjà pas. Pas sur un Short : il n'y a nulle part où aller,
+    et le milieu appartient encore à la montagne.
     """
     if energie < DANSE_ARRET:
         return
@@ -2879,11 +2942,18 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
     dehors = (gauche / 2, (gauche + large_vue + largeur) / 2)
     place = min(gauche, largeur - gauche - large_vue) >= taille * 0.5
     sortie = promenade(seconde) if place else 0.0
+    ensemble = rendez_vous(seconde) if place and sortie == 0.0 else 0.0
     # La cadence suit l'énergie : mou quand c'est calme, pressé quand ça tape.
     phase = seconde * DANSE_PAS_S * min(1.6, 0.5 + energie * 4)
     calque = image.copy()
+    milieu = gauche + large_vue / 2
+    ecart = taille * 0.55
     for i, (chez_lui, ailleurs) in enumerate(zip(maison, dehors)):
-        x = int(chez_lui + (ailleurs - chez_lui) * sortie)
+        if ensemble > 0:
+            cible = milieu + (-ecart if i == 0 else ecart)
+            x = int(chez_lui + (cible - chez_lui) * ensemble)
+        else:
+            x = int(chez_lui + (ailleurs - chez_lui) * sortie)
         _danseur(calque, x, pied, taille, phase + i * 2.1,
                  un_clair(seconde, i))
     # Pleins dehors, voilés dedans. Le voile n'est pas une esthétique, c'est
@@ -6262,7 +6332,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # La musique en dernier : c'est elle qu'on vient écouter, et c'est
             # elle que la licence oblige à nommer.
             pose_bloc_musique(toile, prog, racine / "data" / "musique",
-                              musique.pouls(), quand - origine)
+                              musique.pouls(), quand - origine,
+                              forme=effet_du_moment(quand - origine)[0])
             # Et le flash par-dessus tout le reste, parce qu'une prise prime
             # sur les encarts. Jamais par-dessus la montagne : il s'arrête au
             # bord de la fenêtre, où il est le plus vif.

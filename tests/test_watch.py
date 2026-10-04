@@ -1095,6 +1095,25 @@ class SkyTests(unittest.TestCase):
         self.assertEqual(detector._match(0.5, 0.42, "sky", {0}), 0)
         self.assertEqual(detector.tracks[0].zone, "slope")
 
+    def test_a_near_car_is_not_split_when_it_jumps_its_own_width(self):
+        """Le 4 octobre à 16:43, trois publications pour un seul passage.
+
+        La voiture entre par la droite, 0,14 de large, et une seconde plus
+        tard elle est 0,32 plus à gauche. Le plancher de 0,18 de champ la
+        lâchait : trop près, elle saute plus que ça en une image. Deux
+        boîtes à une longueur l'une de l'autre sont encore le même corps.
+        """
+        detector = MotionDetector(ZONES, motion_width=640, min_track_frames=1)
+        detector.tracks = [Track(
+            id=1, zone="other", frames=1, centroid=(0.9318, 0.9753),
+            bbox=(int(0.8636 * 1920), int(0.9506 * 1080),
+                  int(0.1364 * 1920), int(0.0494 * 1080)),
+        )]
+        # L'ancien plancher aurait coupé : 0,32 > 0,18.
+        self.assertGreater(0.322, 0.18)
+        self.assertEqual(
+            detector._match(0.612, 0.936, "other", {0}, 0.211, (1080, 1920)), 0)
+
     def test_only_something_longer_than_a_car_opens_the_timetable(self):
         cfg = {"min_conf": 0.35}
         road = Track(id=1, zone="road")
@@ -5375,6 +5394,39 @@ class LecteurTests(unittest.TestCase):
         self.assertTrue(any("4:00" in mot or "3:00" in mot for mot in dits),
                         "la durée des voisins doit se lire")
 
+    def test_previous_stays_even_when_the_session_has_just_begun(self):
+        """Après un redémarrage il n'y a pas d'avant. Le bac, lui, reste."""
+        dits: list[str] = []
+        vrai = cv2.putText
+
+        def espion(image, texte, *suite, **nommes):
+            dits.append(texte)
+            return vrai(image, texte, *suite, **nommes)
+
+        programme = self._programme()
+        programme["avant"] = None
+        with mock.patch.object(stream.cv2, "putText", espion):
+            stream.pose_bloc_musique(
+                np.zeros((720, 1280, 3), np.uint8), programme,
+                Path("."), 0.4, 1.0)
+        self.assertIn("UP PREVIOUS", dits)
+        self.assertIn("UP NEXT", dits)
+        self.assertIn("NOW PLAYING", dits)
+
+    def test_the_equalizer_follows_the_filter_and_never_turns_red(self):
+        """Ses couleurs changent avec le filtre. Le rouge reste à LIVE."""
+        self.assertEqual(stream._teinte_barre(0, 12, "", 0.0), stream.VERT)
+        self.assertEqual(stream._teinte_barre(11, 12, "", 0.0), stream.AMBRE)
+        gris = stream._teinte_barre(6, 12, "gris", 0.0)
+        self.assertEqual(gris[0], gris[1])
+        self.assertEqual(gris[1], gris[2])
+        pixel = [stream._teinte_barre(i, 12, "pixel", 0.0) for i in range(12)]
+        self.assertIn(stream.CYAN, pixel)
+        self.assertNotIn(stream.ROUGE, pixel)
+        ondule = stream._teinte_barre(3, 12, "ondule", 1.4)
+        self.assertNotEqual(ondule, stream.ROUGE)
+        self.assertNotEqual(ondule[0], ondule[2])
+
     def test_the_console_wears_the_release_number(self):
         """Six secondes au redémarrage, ce n'est pas assez pour le garder."""
         dits: list[str] = []
@@ -6499,12 +6551,29 @@ class LaPromenadeDesPantins(unittest.TestCase):
         plein = (0, 0, 1080, 1920)
         toile = np.zeros((1920, 1080, 3), np.uint8)
         poses = []
-        for seconde in (0.0, stream.PROMENADE_GLISSE_S + 1):
+        rencontre = stream.RENDEZ_DECALAGE_S + stream.RENDEZ_GLISSE_S + 1
+        for seconde in (0.0, stream.PROMENADE_GLISSE_S + 1, rencontre):
             toile[:] = 0
             stream.pose_danseurs(toile, seconde, 1.0, voile=1.0, vue=plein)
             colonnes = np.where(toile.max(axis=(0, 2)) > 0)[0]
             poses.append((int(colonnes.min()), int(colonnes.max())))
         self.assertEqual(poses[0], poses[1])
+        self.assertEqual(poses[0], poses[2])
+
+    def test_sometimes_they_meet_in_the_middle_of_the_window(self):
+        """Des fois les deux viennent danser ensemble au milieu."""
+        gauche, _, large, _ = self.VUE
+        rencontre = stream.RENDEZ_DECALAGE_S + stream.RENDEZ_GLISSE_S + 1
+        self.assertEqual(stream.promenade(rencontre), 0.0)
+        self.assertGreater(stream.rendez_vous(rencontre), 0.9)
+        chez_eux = self._ou(stream.PROMENADE_PERIODE_S - 1)
+        ensemble = self._ou(rencontre)
+        milieu = gauche + large / 2
+        self.assertLess(abs(ensemble[0] - milieu), abs(chez_eux[0] - milieu))
+        self.assertLess(abs(ensemble[1] - milieu), abs(chez_eux[1] - milieu))
+        self.assertLess(ensemble[1] - ensemble[0], chez_eux[1] - chez_eux[0])
+        # Et ils ne se marchent pas dessus.
+        self.assertGreater(ensemble[1] - ensemble[0], 40)
 
     def test_the_outing_is_rare_enough_to_stay_a_surprise(self):
         """Une surprise qu'on attend n'en est plus une."""

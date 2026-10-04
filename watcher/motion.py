@@ -190,7 +190,9 @@ class MotionDetector:
                 continue
             if zone != "sky" and blob["area_ratio"] < 0.0004:
                 continue
-            match = self._match(blob["cx"], blob["cy"], zone, unused)
+            span = _bbox_span(blob["bbox"], frame.shape[1], frame.shape[0])
+            match = self._match(blob["cx"], blob["cy"], zone, unused, span,
+                                frame.shape[:2])
             if match is None:
                 track = Track(
                     id=self._next_id,
@@ -256,19 +258,28 @@ class MotionDetector:
         self.tracks = kept
         return MotionStep(ended=ended)
 
-    def _match(self, cx: float, cy: float, zone: str, unused: set[int]) -> int | None:
+    def _match(self, cx: float, cy: float, zone: str, unused: set[int],
+               span: float = 0.0, frame_size: tuple[int, int] | None = None) -> int | None:
         """Nearest open track, whatever zone the blob has drifted into.
 
         A track keeps the zone it was born in. A plume climbs off the slope and
         its centre ends up in the sky, but it is the same fire, rooted in the
         same place: refusing the match would restart the clock every time and
         no fire would ever last long enough to be called one.
+
+        The floor is a share of the field of view. A thing this large can also
+        jump its own width in one second when it is close: two boxes one
+        length apart are still the same body, not two. Adding the two spans
+        is that length, in the same units, on any camera.
         """
         best_index = None
         best_distance = 0.0
+        haut, large = frame_size or (0, 0)
         for index in unused:
             track = self.tracks[index]
-            limit = 0.28 if "sky" in {zone, track.zone} else 0.18
+            other = _bbox_span(track.bbox, large, haut) if frame_size else 0.0
+            base = 0.28 if "sky" in {zone, track.zone} else 0.18
+            limit = max(base, span + other)
             distance = ((track.centroid[0] - cx) ** 2 + (track.centroid[1] - cy) ** 2) ** 0.5
             if distance > limit:
                 continue
@@ -389,6 +400,13 @@ def _masque_objet(now: np.ndarray, was: np.ndarray) -> np.ndarray | None:
             if float((a * b).sum() / (grain * trace)) < KEPT:
                 masque[ligne, colonne] = 1
     return masque
+
+
+def _bbox_span(bbox: tuple[int, int, int, int], largeur: int, hauteur: int) -> float:
+    """Le plus grand côté de la boîte, en part de l'image."""
+    if not bbox or largeur < 1 or hauteur < 1:
+        return 0.0
+    return max(bbox[2] / largeur, bbox[3] / hauteur)
 
 
 def _coeur(now: np.ndarray, was: np.ndarray) -> tuple[int, int, int, int] | None:

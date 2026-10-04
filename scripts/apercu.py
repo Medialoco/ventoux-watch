@@ -46,7 +46,9 @@ def une_vue(nuit: bool) -> np.ndarray:
 
 
 def compose(largeur: int, nuit: bool, musique: bool = True,
-            eclat: float | None = None, nom: str = "Voiture") -> np.ndarray:
+            eclat: float | None = None, nom: str = "Voiture",
+            sans_avant: bool = False, rencontre: bool = False,
+            forme: str = "") -> np.ndarray:
     hauteur = largeur * 9 // 16
     cfg = json.loads((ROOT / "config" / "config.json").read_text(encoding="utf-8"))
     scene = json.loads((ROOT / "config" / "scene.json").read_text(encoding="utf-8"))
@@ -56,7 +58,9 @@ def compose(largeur: int, nuit: bool, musique: bool = True,
     stream.pose_bulles(toile, 3.0, stream.fenetre(une_vue(nuit).shape[:2],
                                                   largeur, hauteur))
     cadrage = stream.fenetre(une_vue(nuit).shape[:2], largeur, hauteur)
-    stream.pose_danseurs(toile, 3.0, 0.2, vue=cadrage)
+    danse = (stream.RENDEZ_DECALAGE_S + stream.RENDEZ_GLISSE_S + 1
+             if rencontre else 3.0)
+    stream.pose_danseurs(toile, danse, 0.35 if rencontre else 0.2, vue=cadrage)
 
     stream.pose_ruban(toile, [("VENTOUX WATCH   ", stream.CYAN),
                               ("MONT SEREIN 1390 M   ", stream.BLANC),
@@ -85,10 +89,10 @@ def compose(largeur: int, nuit: bool, musique: bool = True,
             fiches = list(json.loads(credits.read_text(encoding="utf-8")).values())
             stream.pose_bloc_musique(
                 toile,
-                {"avant": fiches[3] if len(fiches) > 3 else None,
+                {"avant": None if sans_avant else (fiches[3] if len(fiches) > 3 else None),
                  "en_cours": fiches[0], "ecoule": 161.0, "duree": 372.0,
                  "suite": fiches[1:3]},
-                credits.parent, energie=0.14, seconde=3.0)
+                credits.parent, energie=0.14, seconde=3.0, forme=forme)
     feuille = ROOT / "data" / "agenda.json"
     if feuille.is_file():
         agenda = json.loads(feuille.read_text(encoding="utf-8"))
@@ -109,10 +113,14 @@ def main() -> int:
     sujet.add_argument("--eclat", type=float, default=None,
                        help="l'âge du flash de prise, en secondes")
     sujet.add_argument("--nom", default="Voiture")
+    sujet.add_argument("--sans-avant", action="store_true")
+    sujet.add_argument("--rencontre", action="store_true")
+    sujet.add_argument("--forme", default="", choices=["", "pixel", "gris", "ondule"])
     args = sujet.parse_args()
 
     image = compose(args.large, args.nuit, not args.sans_musique,
-                    args.eclat, args.nom)
+                    args.eclat, args.nom, args.sans_avant, args.rencontre,
+                    args.forme)
     cv2.imwrite(args.sortie, image, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
     print(f"{args.sortie}  {image.shape[1]}x{image.shape[0]}")
     return 0
