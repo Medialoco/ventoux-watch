@@ -67,9 +67,11 @@ SKY_REACH_M = 30_000
 # bright thing on blue, and a contrail belongs to the aircraft that made it.
 # Twenty-five times the area is five times across. Beyond that it is weather.
 BLOAT = 25.0
-# And the narrowest. Every vehicle ever confirmed here has measured at least
-# two metres and a half across the ground, a bus eleven. Below two metres there
-# is nothing on wheels: a walker is that wide, and so is a patch of light.
+# And the narrowest car. Every car ever confirmed here has measured at least
+# two metres across the ground, a bus eleven. Below that a car does not fit.
+# A bicycle does: it is a rider, a metre across, two metres tall. Calling
+# that « trop petit pour un véhicule » est ce qui a laissé passer les deux
+# vélos du 4 octobre à 17 h 34 — 1,2 m sur 2,4, rien de lu, au crépuscule.
 SMALLEST_M = {"car": 2.0, "truck": 2.0, "bus": 2.0}
 # How short a thing may stand on the ground and still be somebody on foot.
 # Only the width was ever asked. A white car coming into frame at the bottom
@@ -344,6 +346,30 @@ def _car_shaped(obs: Observation) -> bool:
     if not 0 < obs.height_m <= CAR_TALL_M:
         return False
     return obs.width_m > obs.height_m
+
+
+def _rider_shaped(obs: Observation) -> bool:
+    """Un corps debout trop étroit pour une voiture.
+
+    De face, un vélo et un marcheur ont la même silhouette : plus hauts
+    que larges, moins de deux mètres au sol. La voiture commence à deux
+    mètres. Le 4 octobre à 17 h 34 les deux taches faisaient 1,2 m sur
+    2,4 et 1,0 m sur 1,6 : rien de lu, et « trop petit pour un véhicule »
+    les a écartées. Un vélo roule sous deux mètres.
+
+    Quand le sol est douteux les mètres tombent — c'est déjà la règle,
+    plus haut. Il reste l'image : une tache dressée, trop petite pour
+    une flaque de phares. Même question, sans distance.
+    """
+    if obs.width_m >= SMALLEST_M["car"]:
+        return False
+    if (0 < obs.width_m < SMALLEST_M["car"]
+            and 1.4 <= obs.height_m <= CAR_TALL_M):
+        return True
+    if obs.box_w <= 0 or obs.area_ratio <= 0:
+        return False
+    haut = obs.area_ratio / obs.box_w
+    return haut >= obs.box_w * 1.6 and obs.area_ratio < 0.004
 
 
 def _fits(obs: Observation, cls: str) -> bool:
@@ -1110,11 +1136,19 @@ def decide(obs: Observation) -> Decision:
                 ),
                 obs,
             )
-        if cycle is not None and cycle.conf >= 0.35:
+        if cycle is not None and cycle.share >= NAMED_SHARE and (
+            cycle.conf >= 0.35
+            or (cycle.conf >= SHAPE_CONF and _rider_shaped(obs))
+        ):
             # Before the walker, never after. The rider is a person too, and
             # whichever of the two is read first is what the event is called:
             # asked in the other order, every scooter on this roundabout came
             # out as somebody on foot.
+            #
+            # En dessous de 0,35, l'empreinte tranche — comme pour la
+            # voiture à SHAPE_CONF. Un « motorcycle » à 0,22 sur un corps
+            # de rider n'est pas un bruit : c'est le vélo que le crépuscule
+            # rend hésitant.
             return _stamp(
                 Decision("publish", "cycle", CYCLE_WORD[cycle.cls], reason=cycle.cls, confidence=cycle.conf),
                 obs,
@@ -1136,6 +1170,23 @@ def decide(obs: Observation) -> Decision:
         if beast is not None and beast.conf >= 0.4:
             return _stamp(
                 Decision("publish", "animal", BEAST_WORD[beast.cls], reason=beast.cls, confidence=beast.conf),
+                obs,
+            )
+        if _rider_shaped(obs) and obs.travel >= obs.min_travel:
+            # Le modèle n'a rien dit, et une voiture ne tient pas. Ce qui
+            # reste, debout, sur la chaussée, est un rider. Un marcheur
+            # lu « person » à 0,4 a déjà eu la parole au-dessus ; ici il
+            # n'y a pas eu de lecture, et à cette taille le crépuscule
+            # rend le modèle muet — mesuré à 17 h 34, deux vélos, zéro nom.
+            return _stamp(
+                Decision(
+                    "publish",
+                    "cycle",
+                    "Vélo",
+                    reason="rider",
+                    detail={"width_m": round(obs.width_m, 1)} if obs.width_m else {},
+                    confidence=0.5,
+                ),
                 obs,
             )
         if obs.travel < obs.min_travel:

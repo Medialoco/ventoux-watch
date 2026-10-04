@@ -1020,6 +1020,36 @@ class SkyTests(unittest.TestCase):
                           detections=[Detection("car", 0.30)])
         self.assertEqual(decide(car).type, "vehicle")
 
+    def test_two_riders_on_the_road_are_not_too_small_for_wheels(self):
+        """Le 4 octobre à 17:34, deux vélos. Rien de lu, un mètre sur deux.
+
+        « Trop petit pour un véhicule » suppose que rien ne roule sous deux
+        mètres. Un vélo roule. Le modèle n'a rien dit : à cette taille, au
+        crépuscule, il est muet. La tache dressée sur la chaussée reste.
+        """
+        un = Observation(zone="roundabout", surface="roundabout", travel=0.0126,
+                         width_m=1.2, height_m=2.4, box_w=0.0125, area_ratio=0.00056,
+                         duration_s=1.0, frames=2, min_travel=0.01)
+        deux = Observation(zone="roundabout", surface="", travel=0.0276,
+                           width_m=1.0, height_m=1.6, box_w=0.0187, area_ratio=0.00062,
+                           duration_s=1.0, frames=2, min_travel=0.01)
+        loin = Observation(zone="roundabout", travel=0.02, width_m=0.0, height_m=0.0,
+                           box_w=0.0125, area_ratio=0.00056, distance_doubt=0.5,
+                           min_travel=0.01)
+        for obs in (un, deux, loin):
+            dit = decide(obs)
+            self.assertEqual(dit.type, "cycle", dit.reason)
+            self.assertEqual(dit.label, "Vélo")
+
+    def test_a_weak_bicycle_on_a_rider_footprint_is_still_a_bike(self):
+        """Comme la voiture à SHAPE_CONF : l'empreinte porte une lecture mince."""
+        dit = decide(Observation(
+            zone="road", surface="road", travel=0.1, width_m=1.4, height_m=1.7,
+            detections=[Detection("bicycle", 0.22, share=0.6)],
+        ))
+        self.assertEqual(dit.type, "cycle")
+        self.assertEqual(dit.label, "Vélo")
+
     def test_what_stands_still_on_the_island_is_the_furniture(self):
         planted = Observation(zone="roundabout", surface="island", travel=0.0, width_m=1.6, height_m=1.26,
                               detections=[Detection(cls="person", conf=0.73)])
