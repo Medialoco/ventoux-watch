@@ -5511,6 +5511,26 @@ class LecteurTests(unittest.TestCase):
         self.assertIn(f"v{stream.__version__}", dits)
 
 
+class PenseeTests(unittest.TestCase):
+    """Une pensée par jour, le premier soir à 22 h 30, hors du tableau."""
+
+    def test_the_first_evening_is_half_past_ten(self):
+        from datetime import date
+        self.assertEqual(stream.seconde_pensee(date(2026, 10, 4)),
+                         22 * 3600 + 30 * 60)
+
+    def test_another_day_stays_put_and_leaves_room_for_normandy(self):
+        from datetime import date
+        jour = date(2026, 10, 5)
+        self.assertEqual(stream.seconde_pensee(jour), stream.seconde_pensee(jour))
+        self.assertLess(stream.seconde_pensee(jour), 86400 - 90)
+
+    def test_the_dedication_stays_off_the_table(self):
+        page = (Path(__file__).resolve().parents[1] / "site" / "index.html").read_text()
+        self.assertNotIn("David Vincent", page)
+        self.assertNotIn("NORMANDIE", page)
+
+
 class HorlogeDuCreditTests(unittest.TestCase):
     """Le crédit date la musique entendue, pas celle qu'on vient de verser.
 

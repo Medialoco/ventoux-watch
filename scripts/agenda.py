@@ -12,9 +12,8 @@ massif. Sa page d'agenda est rendue côté serveur : un seul appel suffit, et il
 n'y a rien à exécuter.
 
 Sobre veut dire trois champs. La date, le titre, la commune. Pas les tarifs,
-pas les horaires, pas les numéros d'inscription : le bandeau glisse à quatre
-pixels et demi par seconde et personne ne recopiera un numéro de téléphone en
-regardant une webcam.
+pas les horaires, pas les numéros d'inscription : le bandeau défile, et
+personne ne recopiera un numéro de téléphone en regardant une webcam.
 
     python3 scripts/agenda.py
     python3 scripts/agenda.py --montre   (sans écrire, pour voir)

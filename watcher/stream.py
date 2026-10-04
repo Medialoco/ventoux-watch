@@ -30,7 +30,7 @@ import sys
 import threading
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
 
@@ -1020,6 +1020,9 @@ class Musique:
         self.cris_dours = repliques(self.racine / "data" / "voix", "ours_cri")
         self.remerciements = repliques(self.racine / "data" / "voix", "machine")
         self.remerciements_dogmazic = repliques(self.racine / "data" / "voix", "dogmazic")
+        # Tenues hors du tableau du site : une pensée, puis la Normandie.
+        self.pensees = repliques(self.racine / "data" / "voix", "pensee")
+        self.normandies = repliques(self.racine / "data" / "voix", "normandie")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -2470,6 +2473,41 @@ def ordre_de_rediffusion(gardees: list[dict], tirage: random.Random,
 # en UTC parce qu'une veille qui change d'heure deux fois par an se trompe deux
 # fois par an ; mais personne ne regarde une webcam du Ventoux en UTC.
 PARIS = ZoneInfo("Europe/Paris")
+
+# Une pensée par jour, tenue hors du tableau du site. Le premier soir est
+# fixé : le 4 octobre 2026 à 22 h 30, heure de la montagne. La Normandie
+# suit une minute après. Les autres jours, la seconde est tirée sur la date,
+# donc un redémarrage ne la déplace pas.
+PENSEE_PREMIER = date(2026, 10, 4)
+PENSEE_HEURE = 22 * 3600 + 30 * 60
+PENSEE_APRES_S = 60.0
+PENSEE_GRACE_S = 240
+
+
+def seconde_pensee(jour: date) -> int:
+    """La seconde du jour où l'on y pense. Stable pour toute la journée."""
+    if jour == PENSEE_PREMIER:
+        return PENSEE_HEURE
+    return random.Random(jour.toordinal()).randrange(0, 86400 - 90)
+
+
+def _pensee_lue(racine: Path) -> tuple[date | None, int, float]:
+    try:
+        morceaux = (racine / "data" / "voix" / "pensee.jour").read_text().split()
+        jour = date.fromisoformat(morceaux[0])
+        etape = int(morceaux[1])
+        feu = float(morceaux[2]) if len(morceaux) > 2 else 0.0
+        return jour, etape, feu
+    except (OSError, ValueError, IndexError):
+        return None, 0, 0.0
+
+
+def _pensee_ecrite(racine: Path, jour: date, etape: int, feu: float) -> None:
+    try:
+        (racine / "data" / "voix" / "pensee.jour").write_text(
+            f"{jour.isoformat()} {etape} {feu:.3f}\n", encoding="utf-8")
+    except OSError:
+        pass
 # L'heure de la machine, de l'autre côté. Même format, même corps : les deux
 # encarts se répondent, neuf heures d'écart entre les deux.
 LOS_ANGELES = ZoneInfo("America/Los_Angeles")
@@ -2575,23 +2613,19 @@ def pose_rediffusion(image: np.ndarray, fiche: dict,
     return True
 
 
-# Le bandeau du bas, qui tourne. Anglais et français en alternance plutôt que
-# côte à côte : deux langues sur la même ligne tiennent en quatre mots, pas en
-# une phrase, et ce qu'il y a à dire ici tient mal en quatre mots.
-# Le bandeau du bas, sa hauteur et sa lenteur. Quatre pixels et demi par
-# seconde à la largeur de référence : il met six minutes à traverser l'écran,
-# et c'est voulu. Un bandeau rapide se lit par morceaux et oblige à le
-# rattraper ; celui-ci se lit par-dessus l'épaule, sans y penser, et pendant
-# six minutes il ne demande rien à personne.
+# Le bandeau du bas, qui tourne. La date, le titre, la commune.
+# Même vitesse que le ruban du haut : quatre pixels et demi laissaient une
+# phrase six minutes dans le cadre, et un agenda qu'on ne voit pas défiler
+# n'est plus un fil d'actualité.
 AGENDA_H = 42
-AGENDA_VITESSE = 4.5      # pixels par seconde, à 1600 de large
+AGENDA_VITESSE = VITESSE_RUBAN
 AGENDA_ECART = 70         # le blanc entre deux tours de bandeau
 AGENDA_RELIT_S = 600.0    # on relit le fichier toutes les dix minutes
 
 
 def pose_agenda(image: np.ndarray, rendez_vous: list, credit: str,
                 seconde: float) -> None:
-    """Ce qui se passe autour, en une ligne qui glisse très lentement."""
+    """Ce qui se passe autour, en une ligne qui défile comme un fil d'actualité."""
     if not rendez_vous:
         return
     hauteur, largeur = image.shape[:2]
@@ -4498,6 +4532,33 @@ def pose_ennui(image: np.ndarray, mot: str, seconde: float) -> None:
     cv2.add(image, calque, dst=image)
 
 
+def pose_annonce(image: np.ndarray, vue: tuple[int, int, int, int],
+                 lignes: tuple[str, ...]) -> None:
+    """La phrase, dans la bande sous le nom, le temps que la voix la dit.
+
+    Hors de la montagne : une dédicace n'a pas à cacher la route. La police
+    du flux n'a pas les accents, donc l'écran écrit sans eux ; la voix, elle,
+    les dit.
+    """
+    gx, gy, gw, gh = vue
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    taille = 0.62 * echelle
+    trait = max(1, int(round(2 * echelle)))
+    y = gy + gh + int(round(52 * echelle))
+    for ligne in lignes:
+        (large, haut), _ = cv2.getTextSize(ligne, cv2.FONT_HERSHEY_SIMPLEX,
+                                           taille, trait)
+        if y + haut >= hauteur:
+            return
+        x = gx + max(0, (gw - large) // 2)
+        cv2.putText(image, ligne, (x, y + haut), cv2.FONT_HERSHEY_SIMPLEX,
+                    taille, (0, 0, 0), trait + 2, cv2.LINE_AA)
+        cv2.putText(image, ligne, (x, y + haut), cv2.FONT_HERSHEY_SIMPLEX,
+                    taille, BLANC, trait, cv2.LINE_AA)
+        y += int(round(26 * echelle))
+
+
 # Les seuils du Pi 5 lui-même : il réduit sa fréquence à 80 °C et se met à
 # l'abri à 85. On prévient donc avant, pas au moment où c'est fait.
 TIEDE_C = 65.0
@@ -5979,6 +6040,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # « BOOOOORING » pendant trois secondes, ce qui est une drôle de carte de
     # visite pour une veille qui vient de démarrer.
     dernier_ennui = origine - 10_000.0
+    pensee_jour, pensee_etape, pensee_feu = _pensee_lue(racine)
+    pensee_suite = pensee_feu + PENSEE_APRES_S if pensee_etape == 1 else 0.0
     # Un quart d'heure en arrière : si la vallée est déjà dans le brouillard au
     # moment où le flux démarre, on le dit tout de suite.
     gris_depuis = origine - BROUILLARD_PAUSE_S
@@ -6346,6 +6409,33 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # conditions ensemble, donc. Tenir un sous-titre plus longtemps que
             # la parole n'est pas mentir, c'est sous-titrer ; le retirer avant
             # la fin de la phrase, si.
+            # La pensée, à l'heure de la montagne et non à celle de la webcam :
+            # 22 h 30 est une heure vraie. Une fois le jour, puis la Normandie
+            # une minute après. Rien de tout cela n'entre dans le tableau.
+            ici = datetime.now(PARIS)
+            if pensee_jour != ici.date():
+                pensee_jour, pensee_etape, pensee_suite = ici.date(), 0, 0.0
+            seconde_jour = ici.hour * 3600 + ici.minute * 60 + ici.second
+            vise = seconde_pensee(ici.date())
+            if (pensee_etape == 0 and musique.pensees
+                    and vise <= seconde_jour < vise + PENSEE_GRACE_S
+                    and not musique.parle()):
+                if musique.dis(musique.pensees[0]):
+                    pensee_feu = time.time()
+                    pensee_suite = pensee_feu + PENSEE_APRES_S
+                    pensee_etape = 1
+                    _pensee_ecrite(racine, ici.date(), 1, pensee_feu)
+                    log.info("Pensée dite à %s", ici.strftime("%H:%M:%S"))
+            elif (pensee_etape == 1 and musique.normandies
+                    and pensee_suite and time.time() >= pensee_suite
+                    and not musique.parle()):
+                if time.time() > pensee_suite + PENSEE_GRACE_S:
+                    pensee_etape = 2
+                    _pensee_ecrite(racine, ici.date(), 2, pensee_feu)
+                elif musique.dis(musique.normandies[0]):
+                    pensee_etape = 2
+                    _pensee_ecrite(racine, ici.date(), 2, pensee_feu)
+                    log.info("Normandie dite à %s", ici.strftime("%H:%M:%S"))
             dit = musique.dit_quoi() if musique.parle() else ""
             if dit == "brouillard" or quand - gris_depuis <= BROUILLARD_TENUE_S:
                 # Sans voix enregistrée, le mot tient quand même trois
@@ -6354,6 +6444,14 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 pose_ennui(toile, mot_gris, quand - origine)
             elif dit == "ennui" or quand - dernier_ennui <= ENNUI_TENUE_S:
                 pose_ennui(toile, "BOOOOORING", quand - origine)
+            elif dit == "pensee":
+                pose_annonce(toile, cadrage, (
+                    "TO MY VERY GOOD FRIEND DAVID VINCENT",
+                    "OR VINCENT DAVID OR DAVID VINCENT",
+                    "JE PENSE A TOI.",
+                ))
+            elif dit == "normandie":
+                pose_annonce(toile, cadrage, ("BIG-UP A LA NORMANDIE!!!!",))
             pose_ruban(toile, ruban, quand - origine)
             # Le flottement des deux encarts, lent et continu. Il sautait
             # avant sur le beat, quelques secondes toutes les cinq minutes, et

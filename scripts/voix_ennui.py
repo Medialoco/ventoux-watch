@@ -122,6 +122,12 @@ REPLIQUES = [
     # Dogmazic, le même numéro : le logo au milieu, et on les remercie.
     ("dogmazic", CLAIRE, "Thanks Dogmazic!"),
     ("dogmazic", PLAT, "Thanks Dogmazic!"),
+    # Une pensée, dite une fois par jour et tenue hors du tableau du site.
+    # Le nom est dit dans les deux sens : on ne sait pas lequel est le sien,
+    # et c'est précisément ce qu'on lui dit.
+    ("pensee", PLAT,
+     "To my very good friend David Vincent or Vincent David or David Vincent, Je pense à toi."),
+    ("normandie", CLAIRE, "Big-UP à la Normandie !!!!"),
 ]
 
 
@@ -196,7 +202,8 @@ CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180,
             "rediff": 110,
             # Un ours ne parle pas vite.
             "ours": 100, "ours_cri": 100,
-            "machine": 170, "dogmazic": 170}
+            "machine": 170, "dogmazic": 170,
+            "pensee": 150, "normandie": 160}
 
 # La consigne de jeu, envoyée avec chaque phrase. C'est ce qu'on ne pouvait pas
 # faire avec les voix système : le ton s'y choisissait en changeant de personne,
@@ -240,6 +247,15 @@ JEU = {
                 "sincere. Say Thanks Dogmazic! with a cheerful lift. The "
                 "exclamation is energy, never the word dot. Over in a "
                 "second and a half.",
+    "pensee": "Warm, quiet, and sincere, like a letter read aloud to one "
+              "person. Say the name twice, first David Vincent, then Vincent "
+              "David, then David Vincent again, clearly, so both orders are "
+              "heard. Then the French sentence Je pense à toi, in French, "
+              "tender and unhurried. Never comic, never sung, never loud.",
+    "normandie": "A big cheerful shout, proud and bright, like a radio drop "
+                 "for home. Say Big-UP à la Normandie with four beats of joy "
+                 "on the exclamation. French on Normandie. Never ominous, "
+                 "never a whisper. Over in two seconds.",
 }
 
 # Les voix, par rôle. « ash » est celle dont medialoco-tube se sert pour sa
