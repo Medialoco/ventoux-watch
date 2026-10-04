@@ -1,6 +1,48 @@
 {
-  "version": "0.4.7",
+  "version": "0.4.8",
   "events": [
+    {
+      "id": "2026-10-04T17-56-13Z-missed-1",
+      "t": "2026-10-04T17:56:13Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-04T17-56-13Z-missed-1.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0717,
+          "area_grow": 140.44,
+          "clipped": false,
+          "shade": 0.789,
+          "kept": 0.416,
+          "area_ratio": 0.02194,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.128,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.5625,
+          0.0611,
+          0.2469,
+          0.0889
+        ]
+      },
+      "closeup": "data/closeups/2026-10-04T17-56-13Z-missed-1.jpg"
+    },
     {
       "id": "2026-10-04T17-34-52Z-missed-3",
       "t": "2026-10-04T17:34:52Z",
