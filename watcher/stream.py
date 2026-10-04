@@ -3405,22 +3405,11 @@ MACHINE_RETARD_S = 120.0
 # et les ports, pas un mur : la route reste visible autour.
 MACHINE_PORTRAIT = 0.32
 
-# L'autre carte, en disque. Vingt-et-une minutes, encore un premier, et
-# trois minutes de retard : le Raspberry a déjà eu son tour à deux minutes,
-# celui-ci n'a pas à lui voler l'ouverture.
-ARDUINO_PERIODE_S = 1277.0
-ARDUINO_TENUE_S = 7.0
-ARDUINO_RETARD_S = 180.0
-# Diamètre du disque, en part de la fenêtre. Un peu plus petit que la
-# carte du Pi : sans titre ni pied, le même diamètre ferait un mur.
-ARDUINO_PORTRAIT = 0.28
-
 # Le plateau, maintenant que les numéros ont dit leur période et leur
 # durée. L'ordre départage les ex æquo : le tapis d'abord parce qu'il passe
 # au-dessus de tout et ne cache rien, l'éléphant parce qu'il occupe l'écran
-# entier, la machine ensuite — une carte au milieu cède le passage à un
-# éléphant rose, pas l'inverse. L'Arduino de même : un disque n'est pas
-# plus urgent qu'une carte.
+# entier, la machine ensuite — un disque au milieu cède le passage à un
+# éléphant rose, pas l'inverse.
 PLATEAU = (
     ("tapis", TAPIS_PERIODE_S, TAPIS_TRAVERSEE_S, 0.0),
     ("sous-marin", SOUS_MARIN_PERIODE_S, SOUS_MARIN_TRAVERSEE_S, 0.0),
@@ -3428,7 +3417,6 @@ PLATEAU = (
     ("elephant", ELEPHANT_PERIODE_S, ELEPHANT_TENUE_S, 0.0),
     ("batiment", BATIMENT_PERIODE_S, BATIMENT_RELEVE_S, 0.0),
     ("machine", MACHINE_PERIODE_S, MACHINE_TENUE_S, MACHINE_RETARD_S),
-    ("arduino", ARDUINO_PERIODE_S, ARDUINO_TENUE_S, ARDUINO_RETARD_S),
     # L'ours en dernier parce qu'il écrit en travers du ciel, et qu'il vaut
     # mieux qu'il cède le passage plutôt que de crier par-dessus le tapis.
     #
@@ -4108,39 +4096,6 @@ MACHINE_NOIR = 0.10      # le noir de la photo, en part du blanc de l'encart
 MACHINE_BLANC = 0.52     # et son blanc, qui n'est plus celui du bureau
 
 
-def _au_plus_juste(image: np.ndarray, large: int, haut: int) -> np.ndarray:
-    """L'image entière réduite pour tenir dans une boîte, et rien autour.
-
-    Sans bandes, à la différence de _tient_dedans : ici c'est le cadre qui
-    viendra épouser la photo, et un cadre posé sur la boîte plutôt que sur la
-    photo laisse au-dessus d'elle un rectangle vide qu'on lit comme un défaut
-    d'affichage — on voit un encadrement qui n'encadre rien.
-    """
-    facteur = min(large / image.shape[1], haut / image.shape[0])
-    return cv2.resize(image, (max(1, round(image.shape[1] * facteur)),
-                              max(1, round(image.shape[0] * facteur))),
-                      interpolation=cv2.INTER_AREA)
-
-
-def _tient_dedans(image: np.ndarray, large: int, haut: int) -> np.ndarray:
-    """L'image entière, centrée dans une boîte, sans être déformée.
-
-    Contenue et non remplie. Remplir la boîte rognait la photo au centre, et
-    au centre de celle-ci il y a le ventilateur : on voyait un ventilateur,
-    plus une carte. Une bande sombre au-dessus et au-dessous ne coûte rien,
-    elle est de la couleur de l'encart.
-    """
-    facteur = min(large / image.shape[1], haut / image.shape[0])
-    petite = cv2.resize(image, (max(1, round(image.shape[1] * facteur)),
-                                max(1, round(image.shape[0] * facteur))),
-                        interpolation=cv2.INTER_AREA)
-    boite = np.zeros((haut, large, 3), image.dtype)
-    x = (large - petite.shape[1]) // 2
-    y = (haut - petite.shape[0]) // 2
-    boite[y:y + petite.shape[0], x:x + petite.shape[1]] = petite
-    return boite
-
-
 def tamise_la_photo(photo: np.ndarray) -> np.ndarray:
     """La photo au monochrome de l'encart, dans sa plage de gris."""
     gris = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
@@ -4410,7 +4365,8 @@ def pose_portrait_machine(image: np.ndarray, seconde: float,
     second est une apparition.
 
     En couleurs, pas au cyan de l'encart. L'encart est un tableau de bord ;
-    celui-ci est le portrait.
+    celui-ci est le portrait. Rond : une carte rectangulaire au milieu de
+    la montagne, c'est un encart de plus ; un disque, c'est la photo.
     """
     if photo is None or photo.size == 0:
         return False
@@ -4423,43 +4379,31 @@ def pose_portrait_machine(image: np.ndarray, seconde: float,
     hauteur, largeur = image.shape[:2]
     gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
     echelle = largeur / 1600
-    marge = int(16 * echelle)
-    titre_h = int(28 * echelle)
     pied_h = int(28 * echelle)
-    photo_l = max(8, int(large_vue * MACHINE_PORTRAIT))
-    max_h = haute_vue - 2 * marge - titre_h - pied_h
-    if max_h < 16:
+    rayon = max(8, int(large_vue * MACHINE_PORTRAIT / 2))
+    if 2 * rayon + pied_h + int(16 * echelle) > haute_vue:
         return False
-    vue_photo = _au_plus_juste(photo, photo_l, max_h)
-    ph, pl = vue_photo.shape[:2]
-    carte_l = pl + 2 * marge
-    carte_h = titre_h + ph + pied_h + 2 * marge
-    x0 = gauche + (large_vue - carte_l) // 2
-    y0 = cime + (haute_vue - carte_h) // 2
-    x1 = x0 + carte_l - 1
-    y1 = y0 + carte_h - 1
-    if x0 < gauche or y0 < cime or x1 >= gauche + large_vue or y1 >= cime + haute_vue:
+    cx = gauche + large_vue // 2
+    cy = cime + (haute_vue - pied_h) // 2
+    if (cx - rayon < gauche or cy - rayon < cime
+            or cx + rayon >= gauche + large_vue
+            or cy + rayon + pied_h >= cime + haute_vue):
         return False
     calque = image.copy()
-    fond_encart(calque, (x0, y0), (x1, y1), echelle)
-    px = x0 + (carte_l - pl) // 2
-    py = y0 + marge + titre_h
-    calque[py:py + ph, px:px + pl] = vue_photo
-    pose_titre_encart(calque, "RASPBERRY PI 5", x0 + marge, y0 + marge + int(18 * echelle),
-                      carte_l - 2 * marge, echelle)
-    # Sous la photo, pas dessus : le lieu à gauche, la température à droite.
+    pose_photo_ronde(calque, photo, cx, cy, rayon, echelle)
+    # Sous le disque, pas dessus : le lieu à gauche, la température à droite.
     # Petits, les deux — le tableau de bord est déjà à gauche, ici c'est la
     # carte qu'on est venu voir.
-    ligne = py + ph + int(20 * echelle)
+    ligne = cy + rayon + int(20 * echelle)
     if ville:
-        pose_lieu(calque, ville.upper(), x0 + marge, ligne, 0.48 * echelle, echelle)
+        pose_lieu(calque, ville.upper(), cx - rayon, ligne, 0.48 * echelle, echelle)
     if etat:
         couleur = VERT if etat["degres"] < TIEDE_C else (
             AMBRE if etat["degres"] < CHAUD_C else ROUGE)
         valeur = f"{etat['degres']:.1f} C"
         large = cv2.getTextSize(valeur, cv2.FONT_HERSHEY_SIMPLEX,
                                 0.54 * echelle, 2)[0][0]
-        cv2.putText(calque, valeur, (x1 - marge - large, ligne),
+        cv2.putText(calque, valeur, (cx + rayon - large, ligne),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.54 * echelle, couleur, 2,
                     cv2.LINE_AA)
     cv2.addWeighted(calque, 0.92 * force, image, 1.0 - 0.92 * force, 0.0, dst=image)
@@ -4503,42 +4447,6 @@ def pose_photo_ronde(image: np.ndarray, photo: np.ndarray, cx: int, cy: int,
     teinte = tuple(int(c * 0.45) for c in CYAN)
     cv2.circle(image, (cx, cy), rayon, teinte,
                max(1, int(round(echelle))), cv2.LINE_AA)
-
-
-def pose_portrait_arduino(image: np.ndarray, seconde: float,
-                          photo: np.ndarray | None,
-                          vue: tuple[int, int, int, int] | None = None,
-                          nuit: bool = False) -> bool:
-    """La photo de l'Arduino, ronde, au milieu, de temps en temps.
-
-    Le Raspberry a une carte : c'est le tableau de bord, il a des chiffres.
-    Celui-ci n'en a pas. Un disque suffit — on voit que c'est une autre
-    carte, et on voit le paysage autour.
-    """
-    if photo is None or photo.size == 0:
-        return False
-    phase = en_scene("arduino", seconde, nuit)
-    if phase is None:
-        return False
-    force = min(phase, ARDUINO_TENUE_S - phase, 1.0)
-    if force < 0.02:
-        return True
-    hauteur, largeur = image.shape[:2]
-    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
-    echelle = largeur / 1600
-    rayon = max(8, int(large_vue * ARDUINO_PORTRAIT / 2))
-    if 2 * rayon + int(16 * echelle) > haute_vue:
-        return False
-    cx = gauche + large_vue // 2
-    cy = cime + haute_vue // 2
-    if (cx - rayon < gauche or cy - rayon < cime
-            or cx + rayon >= gauche + large_vue
-            or cy + rayon >= cime + haute_vue):
-        return False
-    calque = image.copy()
-    pose_photo_ronde(calque, photo, cx, cy, rayon, echelle)
-    cv2.addWeighted(calque, 0.92 * force, image, 1.0 - 0.92 * force, 0.0, dst=image)
-    return True
 
 
 def pose_machine(image: np.ndarray, etat: dict | None,
@@ -4611,11 +4519,10 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     if vignette is not None and bas - haut_photo - marge > 8:
         vu_large = droite - 2 * marge
         vu_haut = bas - haut_photo - marge
-        # Contenue, ni déformée ni rognée. La boîte dépend du nombre de
-        # lignes écrites au-dessus, qui n'a aucune raison d'avoir le rapport
-        # de la photo : l'étirer donnait un Raspberry Pi plus long que large,
-        # la rogner donnait un gros plan sur le ventilateur.
-        photo = tamise_la_photo(_au_plus_juste(vignette, vu_large, vu_haut))
+        # Un disque dans la place qui reste. Un rectangle sous les chiffres
+        # faisait un second encart ; le cercle est la même photo, stylisée.
+        rayon_photo = max(8, min(vu_large, vu_haut) // 2)
+        photo = tamise_la_photo(vignette)
     else:
         bas = sommet + int(MACHINE_LIGNES[-1] * echelle) + marge
     fond_encart(image, (0, sommet), (droite - 1, bas - 1), echelle)
@@ -4637,17 +4544,12 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     pose_duo(image, duos[2][0], duos[2][1], marge, bord, age, echelle)
     pose_lieu(image, lieu, marge, ville_y, taille * HORLOGE_LIEU, echelle)
     if photo is not None:
-        # Centrée dans la place qui reste, et le cadre pris sur elle. La
-        # photo est large et la place est haute : il y a forcément du mou, et
-        # le mou doit se partager au-dessus et au-dessous plutôt que tomber
-        # d'un seul côté.
-        x = marge + (vu_large - photo.shape[1]) // 2
-        y = haut_photo + (vu_haut - photo.shape[0]) // 2
-        coin = image[y:y + photo.shape[0], x:x + photo.shape[1]]
-        if coin.shape[:2] == photo.shape[:2]:
-            coin[:] = photo
-            cadre_encart(image, (x - 1, y - 1),
-                         (x + photo.shape[1], y + photo.shape[0]), echelle)
+        cx = marge + vu_large // 2
+        cy = haut_photo + vu_haut // 2
+        if (cx - rayon_photo >= 0 and cy - rayon_photo >= sommet
+                and cx + rayon_photo < droite
+                and cy + rayon_photo < bas):
+            pose_photo_ronde(image, photo, cx, cy, rayon_photo, echelle)
 
 
 BONJOUR_S = 8.0
@@ -5320,7 +5222,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # La photo de la machine qui fait tout ça. Lue en BGR et non en BGRA :
     # c'est une photo, elle n'a pas de transparence.
     photo_machine = cv2.imread(str(racine / "assets" / "machine.jpg"))
-    photo_arduino = cv2.imread(str(racine / "assets" / "arduino.jpg"))
     # On démarre comme si on venait de voir quelque chose : une rediffusion à
     # la première seconde du direct donnerait l'impression que rien ne marche.
     dernier_vu = origine
@@ -5688,8 +5589,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     pose_portrait_machine(toile, quand - origine, photo_machine,
                                           machine, ville, vue=cadrage,
                                           nuit=not fait_jour)
-                    pose_portrait_arduino(toile, quand - origine, photo_arduino,
-                                          vue=cadrage, nuit=not fait_jour)
                 if ou_en_est is not None:
                     # Une fois, pas à chaque image : il grogne en descendant,
                     # et il crie une fois arrivé sur l'îlot.

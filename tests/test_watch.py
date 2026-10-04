@@ -4661,7 +4661,20 @@ class PortraitMachineTests(unittest.TestCase):
         """L'encart est un tableau de bord. Celui-ci est le portrait."""
         source = inspect.getsource(stream.pose_portrait_machine)
         self.assertNotIn("tamise_la_photo", source)
-        self.assertIn("_au_plus_juste(", source)
+        self.assertIn("pose_photo_ronde(", source)
+        self.assertNotIn("fond_encart(", source)
+
+    def test_the_portrait_is_a_disc(self):
+        """Un rectangle au milieu, c'est un encart de plus. Un disque, c'est la photo."""
+        photo = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
+        image = np.zeros((720, 1280, 3), np.uint8)
+        vue = (175, 36, 929, 522)
+        self.assertTrue(stream.pose_portrait_machine(
+            image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
+            vue=vue))
+        rayon = int(vue[2] * stream.MACHINE_PORTRAIT / 2)
+        peints = int(np.count_nonzero(image.any(axis=2)))
+        self.assertLess(peints, (2 * rayon) ** 2)
 
     def test_it_leaves_when_its_turn_is_over(self):
         """Sept secondes, puis le silence. Pas un sticker oublié."""
@@ -4677,58 +4690,8 @@ class PortraitMachineTests(unittest.TestCase):
         """Une carte au milieu ne passe pas devant un rectangle rouge."""
         source = inspect.getsource(stream.diffuse)
         self.assertIn("pose_portrait_machine(", source)
-        self.assertIn("pose_portrait_arduino(", source)
+        self.assertNotIn("pose_portrait_arduino(", source)
         self.assertIn("dernier_vu > TENUE_S", source)
-
-
-class PortraitArduinoTests(unittest.TestCase):
-    """La photo de l'Arduino : un disque, pas une carte."""
-
-    def test_no_photo_means_no_disc(self):
-        """Sans la photo on se tait : un cercle vide n'est pas un portrait."""
-        image = np.zeros((720, 1280, 3), np.uint8)
-        self.assertFalse(stream.pose_portrait_arduino(
-            image, un_tour_de("arduino") + 2.0, None, vue=(175, 36, 929, 522)))
-        self.assertEqual(int(np.count_nonzero(image)), 0)
-
-    def test_the_portrait_is_a_disc_not_a_card(self):
-        """Le Raspberry a un encart. Celui-ci n'a que le cercle."""
-        source = inspect.getsource(stream.pose_portrait_arduino)
-        self.assertNotIn("fond_encart(", source)
-        self.assertIn("pose_photo_ronde(", source)
-        photo = cv2.imread(str(ROOT / "assets" / "arduino.jpg"))
-        image = np.zeros((720, 1280, 3), np.uint8)
-        vue = (175, 36, 929, 522)
-        self.assertTrue(stream.pose_portrait_arduino(
-            image, un_tour_de("arduino") + 2.0, photo, vue=vue))
-        # Un rectangle rempli peindrait tout le carré du disque. Un cercle
-        # n'en prend que π/4, même avec le mot dessous.
-        rayon = int(vue[2] * stream.ARDUINO_PORTRAIT / 2)
-        peints = int(np.count_nonzero(image.any(axis=2)))
-        self.assertLess(peints, (2 * rayon) ** 2)
-
-    def test_the_disc_stays_inside_the_window(self):
-        """Au milieu de la vue, pas à cheval sur les bandes noires."""
-        photo = cv2.imread(str(ROOT / "assets" / "arduino.jpg"))
-        image = np.zeros((720, 1280, 3), np.uint8)
-        vue = (175, 36, 929, 522)
-        self.assertTrue(stream.pose_portrait_arduino(
-            image, un_tour_de("arduino") + 2.0, photo, vue=vue))
-        pose = np.argwhere(image.any(axis=2))
-        self.assertGreaterEqual(int(pose[:, 1].min()), vue[0])
-        self.assertLessEqual(int(pose[:, 1].max()), vue[0] + vue[2] - 1)
-        self.assertGreaterEqual(int(pose[:, 0].min()), vue[1])
-        self.assertLessEqual(int(pose[:, 0].max()), vue[1] + vue[3] - 1)
-
-    def test_it_leaves_when_its_turn_is_over(self):
-        """Sept secondes, puis le silence."""
-        photo = cv2.imread(str(ROOT / "assets" / "arduino.jpg"))
-        image = np.zeros((720, 1280, 3), np.uint8)
-        self.assertFalse(stream.pose_portrait_arduino(
-            image, un_tour_de("arduino") + stream.ARDUINO_TENUE_S + 1.0,
-            photo, vue=(175, 36, 929, 522)))
-        self.assertEqual(int(np.count_nonzero(image)), 0)
-        self.assertLessEqual(stream.ARDUINO_TENUE_S, 8.0)
 
 
 class BandeauxTests(unittest.TestCase):
