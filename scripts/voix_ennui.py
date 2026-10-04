@@ -114,6 +114,11 @@ REPLIQUES = [
     ("ours", PLAT, "Grrrrooaaarrr"),
     ("ours_cri", PLAT, "THIS IS MY HOME!"),
     ("ours_cri", PLAT, "This is my hoooome!"),
+    # Le portrait du Pi, en grand au milieu. C'est lui qui tient le flux,
+    # depuis Los Angeles, et on ne le voyait que dans un disque de cent
+    # pixels. Quand il prend enfin la place, on le remercie.
+    ("machine", CLAIRE, "Thanks Raspberry !!!"),
+    ("machine", PLAT, "Thanks Raspberry !!!"),
 ]
 
 
@@ -187,7 +192,8 @@ CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180,
             # chantera pas, mais au moins il traînera.
             "rediff": 110,
             # Un ours ne parle pas vite.
-            "ours": 100, "ours_cri": 100}
+            "ours": 100, "ours_cri": 100,
+            "machine": 170}
 
 # La consigne de jeu, envoyée avec chaque phrase. C'est ce qu'on ne pouvait pas
 # faire avec les voix système : le ton s'y choisissait en changeant de personne,
@@ -221,6 +227,10 @@ JEU = {
             "furious about it at the same time. Roll the growl deep in the "
             "chest, then wail the words out like a creature who has lived on "
             "this mountain far longer than the road has.",
+    "machine": "Warm, grateful, a little giddy. You are thanking the small "
+               "computer that watches a mountain day and night. Bright and "
+               "sincere, not sarcastic. Hit the exclamation marks. Over in "
+               "a second and a half.",
 }
 
 # Les voix, par rôle. « ash » est celle dont medialoco-tube se sert pour sa
@@ -405,7 +415,8 @@ def _encode(source: Path, cible: Path, g: float) -> None:
         check=True)
 
 
-def enregistre(dossier: Path, ecoute: bool = False, moteur: str = "openai") -> int:
+def enregistre(dossier: Path, ecoute: bool = False, moteur: str = "openai",
+               seulement: str = "") -> int:
     if moteur == "openai" and not cle_openai():
         print("Pas de clé OpenAI : poser « openai.cle » dans config/local.json,\n"
               "ou bien --moteur macos pour les voix du système.")
@@ -414,8 +425,19 @@ def enregistre(dossier: Path, ecoute: bool = False, moteur: str = "openai") -> i
         print("« say » n'existe que sur macOS : à lancer depuis le Mac, pas depuis le Pi.")
         return 1
     dossier.mkdir(parents=True, exist_ok=True)
-    fiches = []
+    # Une gravure partielle garde les répliques déjà là : on n'a pas à
+    # tout redire pour en ajouter deux.
+    deja = []
+    if seulement:
+        try:
+            deja = json.loads((dossier / "voix.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            deja = []
+        deja = [f for f in deja if f.get("quand") != seulement]
+    fiches = list(deja)
     for quand, voix, texte in REPLIQUES:
+        if seulement and quand != seulement:
+            continue
         cible = dossier / _nom(f"{quand}-{voix}", texte)
         duree = grave(voix, texte, cible, quand, moteur)
         if quand == "attrape":
@@ -433,13 +455,16 @@ def enregistre(dossier: Path, ecoute: bool = False, moteur: str = "openai") -> i
                             str(cible)], check=False)
     # Et la cloche seule, deux fois sur six environ : une prise sans commentaire
     # est plus légère qu'une prise commentée, et c'est ce qu'on cherche.
-    for nom, hauteur in (("attrape_cloche", CLOCHE_HZ), ("attrape_cloche_haute", CLOCHE_HZ * 1.5)):
-        seule = dossier / f"{nom}.raw"
-        seule.write_bytes(cloche(hauteur=hauteur).tobytes())
-        duree = seule.stat().st_size / (ECHANTILLONS_S * VOIES * 2)
-        fiches.append({"fichier": seule.name, "texte": "(cloche)", "voix": "maison",
-                       "quand": "attrape", "duree": round(duree, 3)})
-        print(f"  {duree:4.1f} s  attrape  maison     « cloche {hauteur:.0f} Hz »")
+    if not seulement or seulement == "attrape":
+        for nom, hauteur in (("attrape_cloche", CLOCHE_HZ),
+                             ("attrape_cloche_haute", CLOCHE_HZ * 1.5)):
+            seule = dossier / f"{nom}.raw"
+            seule.write_bytes(cloche(hauteur=hauteur).tobytes())
+            duree = seule.stat().st_size / (ECHANTILLONS_S * VOIES * 2)
+            fiches.append({"fichier": seule.name, "texte": "(cloche)",
+                           "voix": "maison", "quand": "attrape",
+                           "duree": round(duree, 3)})
+            print(f"  {duree:4.1f} s  attrape  maison     « cloche {hauteur:.0f} Hz »")
 
     (dossier / "voix.json").write_text(
         json.dumps(fiches, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -452,8 +477,12 @@ def main(argv: list[str] | None = None) -> int:
     parseur.add_argument("--dossier", default=str(ROOT / "data" / "voix"))
     parseur.add_argument("--ecoute", action="store_true", help="les jouer en les gravant")
     parseur.add_argument("--moteur", choices=sorted(VOIX), default="openai")
+    parseur.add_argument("--quand", default="",
+                        help="ne graver que cette occasion, et la fondre "
+                             "dans voix.json")
     args = parseur.parse_args(argv)
-    return enregistre(Path(args.dossier), args.ecoute, args.moteur)
+    return enregistre(Path(args.dossier), args.ecoute, args.moteur,
+                      seulement=args.quand)
 
 
 if __name__ == "__main__":

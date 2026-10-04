@@ -428,21 +428,31 @@ def teinte_de(vu: dict) -> tuple[int, int, int]:
     return TEINTE_ESPECE.get(vu.get("type") or "", ROUGE)
 
 
-def dessine(image: np.ndarray, vus: list[dict], quand: float) -> int:
+def dessine(image: np.ndarray, vus: list[dict], quand: float,
+            vue: tuple[int, int, int, int] | None = None) -> int:
     """Pose un rectangle et un nom pour chaque chose vue à cet instant.
 
     Trait fin et cadre un peu large : le rectangle montre où regarder, il ne
     doit pas recouvrir ce qu'on demande de regarder.
+
+    « vue » dit où est la fenêtre caméra sur la toile. Sans elle, on dessine
+    sur l'image entière — c'est le cas de l'épreuve et du premier passage,
+    avant les numéros. Avec elle, on redessine par-dessus les effets : un
+    éléphant ou un Raspberry au milieu de la route ne doit pas éteindre la
+    veille, il doit seulement passer derrière le rectangle.
     """
-    hauteur, largeur = image.shape[:2]
+    if vue is None:
+        gauche, cime, large, haut = 0, 0, image.shape[1], image.shape[0]
+    else:
+        gauche, cime, large, haut = vue
     poses = 0
     for vu in vus:
         debut, fin = presence(vu)
         if not debut <= quand <= fin:
             continue
         x, y, w, h = suit(vu, quand)
-        x1, y1 = int(x * largeur), int(y * hauteur)
-        x2, y2 = int((x + w) * largeur), int((y + h) * hauteur)
+        x1, y1 = gauche + int(x * large), cime + int(y * haut)
+        x2, y2 = gauche + int((x + w) * large), cime + int((y + h) * haut)
         teinte = teinte_de(vu)
         cv2.rectangle(image, (x1, y1), (x2, y2), teinte, 2)
         # Le mot seulement quand la veille a nommé quelque chose. « Mouvement
@@ -452,9 +462,9 @@ def dessine(image: np.ndarray, vus: list[dict], quand: float) -> int:
         # y a bien eu quelque chose à cet endroit — mais il se tait.
         nom = vu["label"] if vu.get("sur") else ""
         if nom:
-            echelle = max(0.6, largeur / 1600)
+            echelle = max(0.6, large / 1600)
             (tw, th), _ = cv2.getTextSize(nom, cv2.FONT_HERSHEY_SIMPLEX, echelle, 2)
-            base = max(th + 8, y1 - 6)
+            base = max(cime + th + 8, y1 - 6)
             cv2.rectangle(image, (x1, base - th - 6), (x1 + tw + 10, base + 4), teinte, -1)
             # Le mot en sombre sur les teintes claires, en blanc sur le rouge :
             # « Voiture » en blanc sur ambre ne se lisait pas.
@@ -866,6 +876,7 @@ class Musique:
         self.redifferes = repliques(self.racine / "data" / "voix", "rediff")
         self.grognements = repliques(self.racine / "data" / "voix", "ours")
         self.cris_dours = repliques(self.racine / "data" / "voix", "ours_cri")
+        self.remerciements = repliques(self.racine / "data" / "voix", "machine")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -3404,6 +3415,7 @@ MACHINE_RETARD_S = 120.0
 # Largeur de la photo, en part de la fenêtre caméra. Assez pour le ventilateur
 # et les ports, pas un mur : la route reste visible autour.
 MACHINE_PORTRAIT = 0.32
+MACHINE_MERCI = "Thanks Raspberry !!!"
 
 # Le plateau, maintenant que les numéros ont dit leur période et leur
 # durée. L'ordre départage les ex æquo : le tapis d'abord parce qu'il passe
@@ -4379,21 +4391,39 @@ def pose_portrait_machine(image: np.ndarray, seconde: float,
     hauteur, largeur = image.shape[:2]
     gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
     echelle = largeur / 1600
+    # Une ligne au-dessus pour le remerciement, une en dessous pour le lieu
+    # et la température. Le mot sous le disque se collait à la route et
+    # devenait illisible dès que le trait d'un rectangle passait par là.
     pied_h = int(28 * echelle)
+    tete_h = int(36 * echelle)
     rayon = max(8, int(large_vue * MACHINE_PORTRAIT / 2))
-    if 2 * rayon + pied_h + int(16 * echelle) > haute_vue:
+    if 2 * rayon + pied_h + tete_h + int(16 * echelle) > haute_vue:
         return False
     cx = gauche + large_vue // 2
-    cy = cime + (haute_vue - pied_h) // 2
-    if (cx - rayon < gauche or cy - rayon < cime
+    cy = cime + tete_h + (haute_vue - pied_h - tete_h) // 2
+    if (cx - rayon < gauche or cy - rayon < cime + tete_h
             or cx + rayon >= gauche + large_vue
             or cy + rayon + pied_h >= cime + haute_vue):
         return False
     calque = image.copy()
     pose_photo_ronde(calque, photo, cx, cy, rayon, echelle)
-    # Sous le disque, pas dessus : le lieu à gauche, la température à droite.
-    # Petits, les deux — le tableau de bord est déjà à gauche, ici c'est la
-    # carte qu'on est venu voir.
+    merci = MACHINE_MERCI
+    taille_merci = 0.70 * echelle
+    epais = max(1, int(round(2 * echelle)))
+    (mw, mh), _ = cv2.getTextSize(merci, cv2.FONT_HERSHEY_SIMPLEX,
+                                  taille_merci, epais)
+    ligne_merci = cy - rayon - int(10 * echelle)
+    ox = cx - mw // 2
+    # Un bandeau, pas un liseré : à cette taille un trait autour des
+    # lettres les dédouble, et une ombre aussi.
+    marge = max(4, int(6 * echelle))
+    cv2.rectangle(calque,
+                  (ox - marge, ligne_merci - mh - marge),
+                  (ox + mw + marge, ligne_merci + marge // 2),
+                  (10, 16, 18), -1)
+    cv2.putText(calque, merci, (ox, ligne_merci),
+                cv2.FONT_HERSHEY_SIMPLEX, taille_merci, CYAN,
+                epais, cv2.LINE_AA)
     ligne = cy + rayon + int(20 * echelle)
     if ville:
         pose_lieu(calque, ville.upper(), cx - rayon, ligne, 0.48 * echelle, echelle)
@@ -5267,6 +5297,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # chaque image.
     ours = charge_vignette(racine / "data" / "ours.png")
     ours_dit: tuple[int, int] = (-1, -1)
+    machine_dit = -1.0
     agenda, agenda_credit, agenda_lu = [], "", 0.0
     # La photo de la machine qui fait tout ça. Lue en BGR et non en BGRA :
     # c'est une photo, elle n'a pas de transparence.
@@ -5640,13 +5671,22 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # dans la lumière et il a l'air d'un ours sous un réverbère.
                 # Vérifié sur une vraie image de nuit avant de lever la règle.
                 ou_en_est = pose_ours(toile, quand - origine, ours, vue=cadrage)
-                # La photo de la machine, en grand, seulement quand rien n'est
-                # entouré : une carte au milieu de la vue ne doit pas passer
-                # devant un rectangle rouge.
-                if quand - dernier_vu > TENUE_S:
-                    pose_portrait_machine(toile, quand - origine, photo_machine,
-                                          machine, ville, vue=cadrage,
-                                          nuit=not fait_jour)
+                # La photo de la machine, en grand. Le rectangle se redessine
+                # après, sur la toile : un disque au milieu de la route ne
+                # doit pas éteindre la veille.
+                la_machine = pose_portrait_machine(
+                    toile, quand - origine, photo_machine,
+                    machine, ville, vue=cadrage, nuit=not fait_jour)
+                if la_machine:
+                    phase_machine = en_scene("machine", quand - origine,
+                                             not fait_jour) or 0.0
+                    debut_machine = round(quand - origine - phase_machine)
+                    if machine_dit != debut_machine:
+                        machine_dit = debut_machine
+                        if musique.remerciements:
+                            musique.dis(tirage.choice(musique.remerciements))
+                        log.info("Portrait de la machine : %s",
+                                 musique.voix_dit or "sans voix")
                 if ou_en_est is not None:
                     # Une fois, pas à chaque image : il grogne en descendant,
                     # et il crie une fois arrivé sur l'îlot.
@@ -5661,6 +5701,14 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                             musique.dis(tirage.choice(musique.cris_dours))
             if a_poser is not None:
                 pose_rediffusion(toile, a_poser, vue=cadrage)
+            # Les rectangles après les numéros, pas avant. Posés sur l'image
+            # de la caméra ils disparaissaient sous l'éléphant ou sous le
+            # Raspberry : on croyait la veille éteinte dès qu'un effet
+            # occupait le milieu. Ils restent donc par-dessus, dans la
+            # fenêtre. Pas sur une rediffusion ni sur le relief : ce n'est
+            # plus la vue, un rectangle y mentirait.
+            if a_poser is None and survol is None:
+                dessine(toile, vus, quand, vue=cadrage)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
             #
             # Il durait exactement la voix, ce qui semblait honnête et ne

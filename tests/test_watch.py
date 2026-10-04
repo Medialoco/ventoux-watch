@@ -4832,12 +4832,42 @@ class PortraitMachineTests(unittest.TestCase):
         self.assertEqual(int(np.count_nonzero(image)), 0)
         self.assertLessEqual(stream.MACHINE_TENUE_S, 8.0)
 
-    def test_a_catch_keeps_the_portrait_off_the_road(self):
-        """Une carte au milieu ne passe pas devant un rectangle rouge."""
+    def test_the_portrait_thanks_the_raspberry(self):
+        """Quand le Pi prend le milieu, on le dit."""
+        photo = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
+        image = np.zeros((720, 1280, 3), np.uint8)
+        self.assertTrue(stream.pose_portrait_machine(
+            image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
+            vue=(175, 36, 929, 522)))
+        self.assertEqual(stream.MACHINE_MERCI, "Thanks Raspberry !!!")
+        self.assertIn("MACHINE_MERCI", inspect.getsource(stream.pose_portrait_machine))
+
+    def test_a_catch_stays_on_top_of_the_portrait(self):
+        """Un disque au milieu ne doit pas éteindre la veille."""
         source = inspect.getsource(stream.diffuse)
         self.assertIn("pose_portrait_machine(", source)
         self.assertNotIn("pose_portrait_arduino(", source)
-        self.assertIn("dernier_vu > TENUE_S", source)
+        # Le portrait n'attend plus un creux : les rectangles se redessinent
+        # après lui, dans la fenêtre.
+        apres = source.split("pose_portrait_machine(")[-1]
+        self.assertIn("dessine(toile, vus, quand, vue=cadrage)", apres)
+
+    def test_effects_never_turn_the_watch_off(self):
+        """Un effet occupe l'écran, la veille continue de montrer ce qu'elle voit."""
+        photo = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
+        image = np.zeros((720, 1280, 3), np.uint8)
+        vue = (175, 36, 929, 522)
+        stream.pose_portrait_machine(
+            image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
+            vue=vue)
+        vu = {"t": 1000.0, "box": [0.10, 0.40, 0.20, 0.18],
+              "label": "Voiture", "sur": True, "type": "car"}
+        poses = stream.dessine(image, [vu], 1000.5, vue=vue)
+        self.assertEqual(poses, 1)
+        # Le trait du rectangle, dans la fenêtre, par-dessus le portrait.
+        x1 = vue[0] + int(0.10 * vue[2])
+        y1 = vue[1] + int(0.40 * vue[3])
+        self.assertEqual(tuple(int(c) for c in image[y1, x1]), stream.AMBRE)
 
 
 class BandeauxTests(unittest.TestCase):
