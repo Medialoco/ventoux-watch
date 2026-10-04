@@ -1809,7 +1809,19 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     avant = programme.get("avant")
 
     titre = _coupe(f"{en_cours['auteur']} — {en_cours['titre']}", 38)
-    licence = f"{en_cours['licence']} · {en_cours['url'].replace('https://', '')}"
+    # Le domaine seul, et non l'adresse entière.
+    #
+    # On écrivait « CC0 · play.dogmazic.net/artists.php?action=show&artist=7208 ».
+    # Sur un flux vidéo rien ne se clique : une adresse n'y sert que si on peut
+    # la taper, et personne ne tape une chaîne de requête. Le domaine se tape,
+    # et le nom de l'auteur est écrit juste au-dessus — ce qui suffit pour l'y
+    # retrouver. C'était en plus la ligne la plus voyante du lecteur, en cyan
+    # vif, pour le texte le moins utile de l'écran.
+    #
+    # La licence, elle, ne bouge pas : CC-BY demande l'auteur, l'œuvre et la
+    # licence, et les trois sont là.
+    licence = str(en_cours["licence"])
+    domaine = str(en_cours["url"]).split("//")[-1].split("/")[0]
     horloge = f"{_mmss(ecoule)} / {_mmss(duree)}" if duree > 0 else ""
 
     def large_de(texte: str, part: float) -> int:
@@ -1821,7 +1833,8 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     # titre ressemble à un soulignement, une jauge aussi large que la colonne
     # ressemble à une jauge.
     horloge_l = large_de(horloge, 0.46) if horloge else 0
-    colonne = max(large_de(titre, 0.62), large_de(licence, 0.50),
+    colonne = max(large_de(titre, 0.62),
+                  large_de(licence, 0.44) + large_de(domaine, 0.46) + int(28 * echelle),
                   large_de("NOW PLAYING", 0.46) + int(36 * echelle),
                   int(300 * echelle))
 
@@ -1841,16 +1854,17 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
         bloc_l += marge * 2 + file_large
     bas = hauteur - int(AGENDA_H * echelle)
     haut = bas - bloc_h
-    fond = image[haut:bas, 0:min(largeur, bloc_l)]
-    if fond.size:
-        fond[:] = (fond * 0.18).astype(np.uint8)
     # Un cadre fin plutôt qu'un liseré vert plein sur la tranche gauche. Le
     # liseré était un aplat de six pixels, la seule surface pleine de tout le
     # flux : il tirait l'œil vers le bord gauche, c'est-à-dire vers rien, et
     # il ne ressemblait à aucun autre encart. Au trait, le bloc est délimité
     # de la même main que la machine, la carte et la photo — et c'est le
     # vumètre qui dit maintenant, tout seul, que l'appareil est allumé.
-    cadre_encart(image, (0, haut), (min(largeur, bloc_l) - 1, bas - 1), echelle)
+    #
+    # Et du même fond que les deux barres latérales : dégradé et coins
+    # adoucis. Trois encarts sur le même écran avec trois fonds différents, on
+    # voit la différence avant de voir les encarts.
+    fond_encart(image, (0, haut), (min(largeur, bloc_l) - 1, bas - 1), echelle)
 
     gauche = marge
     pochette = en_cours.get("pochette")
@@ -1869,6 +1883,12 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     pris = _vumetre(image, gauche, base, echelle, energie, seconde)
     cv2.putText(image, "NOW PLAYING", (gauche + pris + marge, base),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.46 * echelle, VERT, 2, cv2.LINE_AA)
+    # Le même trait que sous le titre des deux barres : il sépare l'en-tête du
+    # contenu au lieu de laisser « NOW PLAYING » être la première ligne.
+    trait = base + int(round(8 * echelle))
+    cv2.line(image, (gauche, trait), (gauche + colonne, trait),
+             tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
+             cv2.LINE_AA)
     cv2.putText(image, titre, (gauche, base + pas),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.62 * echelle, BLANC, 2, cv2.LINE_AA)
 
@@ -1879,19 +1899,25 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     if duree > 0:
         rail_y = base + int(pas * 1.8)
         epais = max(2, int(PLAY_JAUGE_H * echelle))
-        cv2.rectangle(image, (gauche, rail_y), (gauche + colonne, rail_y + epais),
-                      PLAY_RAIL, -1)
+        # La même jauge que la température et la charge, en face. Elle mesure
+        # une part elle aussi, et trois jauges sur un écran doivent être la
+        # même jauge.
+        pose_jauge(image, gauche, rail_y, colonne,
+                   ecoule / duree, BLANC, echelle)
         fait = int(colonne * max(0.0, min(1.0, ecoule / duree)))
-        cv2.rectangle(image, (gauche, rail_y), (gauche + fait, rail_y + epais),
-                      BLANC, -1)
         cv2.circle(image, (gauche + fait, rail_y + epais // 2),
                    max(2, int(4 * echelle)), BLANC, -1, cv2.LINE_AA)
         cv2.putText(image, horloge, (gauche + colonne + marge,
                                      rail_y + epais // 2 + int(5 * echelle)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.46 * echelle, PLAY_GRIS, 1,
                     cv2.LINE_AA)
-    cv2.putText(image, licence, (gauche, base + pas * 3),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.50 * echelle, CYAN, 2, cv2.LINE_AA)
+    # La licence en pastille, le domaine en gris à côté. La licence est ce que
+    # CC-BY exige et elle tient en quatre signes : encadrée, elle se lit d'un
+    # coup d'œil et ne se confond pas avec une adresse.
+    suite_x = pose_pastille(image, licence, gauche, base + pas * 3, echelle)
+    cv2.putText(image, domaine, (suite_x + int(8 * echelle), base + pas * 3),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.46 * echelle, GRIS_ENCART, 1,
+                cv2.LINE_AA)
 
     if not file:
         return
@@ -1903,6 +1929,10 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
         cv2.putText(image, texte, (droite, base + pas * i),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     (0.46 if i == 0 else 0.52) * echelle, teinte, 2, cv2.LINE_AA)
+        if i == 0:
+            cv2.line(image, (droite, trait), (droite + file_large, trait),
+                     tuple(int(c * 0.55) for c in CYAN),
+                     max(1, int(round(echelle))), cv2.LINE_AA)
 
 
 # Le silence qu'il faut avant d'aller chercher dans les archives, et le temps
@@ -4201,6 +4231,28 @@ def pose_jauge(image: np.ndarray, x: int, y: int, large: int, part: float,
     pleine = int(round(large * min(1.0, max(0.0, part))))
     if pleine > 0:
         cv2.rectangle(image, (x, y), (x + pleine, y + epais), teinte, -1)
+
+
+def pose_pastille(image: np.ndarray, texte: str, x: int, ligne: int,
+                  echelle: float, teinte: tuple[int, int, int] = CYAN) -> int:
+    """Un mot court dans un cadre, et rend l'abscisse où il finit.
+
+    Pour les mentions qui sont des étiquettes et non des phrases — une licence,
+    un code de pays. Encadré, un mot de quatre signes se lit comme une marque ;
+    posé nu dans une ligne de texte, il se lit comme le début de la phrase
+    suivante, et c'est ce qui arrivait à « CC0 » devant une adresse.
+    """
+    taille = 0.44 * echelle
+    (large, haut), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, taille, 1)
+    marge = int(round(6 * echelle))
+    a = (x, ligne - haut - marge)
+    b = (x + large + 2 * marge, ligne + marge)
+    cv2.rectangle(image, a, b, tuple(int(c * 0.22) for c in teinte), -1)
+    cv2.rectangle(image, a, b, tuple(int(c * 0.70) for c in teinte),
+                  max(1, int(round(echelle))), cv2.LINE_AA)
+    cv2.putText(image, texte, (x + marge, ligne),
+                cv2.FONT_HERSHEY_SIMPLEX, taille, teinte, 1, cv2.LINE_AA)
+    return b[0]
 
 
 def pose_duo(image: np.ndarray, etiquette: str, valeur: str, x: int,

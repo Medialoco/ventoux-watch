@@ -4629,6 +4629,61 @@ class EncartsTests(unittest.TestCase):
         self.assertEqual(int(np.count_nonzero(vide)), 0)
 
 
+class LecteurTests(unittest.TestCase):
+    """Le lecteur de musique, dans le même langage que les deux barres."""
+
+    @staticmethod
+    def _programme(url="https://play.dogmazic.net/artists.php?action=show&artist=7208"):
+        return {"en_cours": {"auteur": "thepriben", "titre": "Mont Serein 002.01",
+                             "licence": "CC0", "url": url, "pochette": None},
+                "duree": 372.0, "ecoule": 161.0,
+                "suite": [{"auteur": "thepriben", "titre": "Mont Serein 002.02"}],
+                "avant": {"auteur": "thepriben", "titre": "Mont Serein 002.03"}}
+
+    def _rendu(self, url):
+        image = np.zeros((720, 1280, 3), np.uint8)
+        stream.pose_bloc_musique(image, self._programme(url), Path("."), 0.3, 0.0)
+        return image
+
+    def test_only_the_domain_is_shown_so_the_address_stays_typable(self):
+        """Sur un flux vidéo rien ne se clique.
+
+        Une adresse n'y sert que si on peut la taper, et personne ne tape
+        « artists.php?action=show&artist=7208 ». Deux adresses du même domaine
+        doivent donc donner exactement la même image : la queue de l'adresse ne
+        rentre pas dans le dessin, et ne peut donc ni l'élargir ni le déborder.
+        """
+        court = self._rendu("https://play.dogmazic.net")
+        long = self._rendu("https://play.dogmazic.net/artists.php?action=show&artist=7208")
+        self.assertTrue(np.array_equal(court, long),
+                        "la queue de l'adresse ne doit rien changer au dessin")
+
+    def test_the_licence_is_still_there_because_the_licence_is_the_obligation(self):
+        """CC-BY demande l'auteur, l'œuvre et la licence. Abréger ne vise que l'adresse."""
+        source = inspect.getsource(stream.pose_bloc_musique)
+        self.assertIn('en_cours["licence"]', source)
+        self.assertIn("pose_pastille(image, licence", source)
+
+    def test_the_player_wears_the_same_card_as_the_two_side_panels(self):
+        """Trois encarts sur un écran avec trois fonds, on voit les fonds."""
+        source = inspect.getsource(stream.pose_bloc_musique)
+        self.assertIn("fond_encart(", source)
+        self.assertNotIn("* 0.18).astype", source)
+        # Et la même jauge que la température et la charge, en face.
+        self.assertIn("pose_jauge(", source)
+
+    def test_the_badge_frames_the_word_and_says_where_it_ends(self):
+        """Elle rend son bord droit : ce qui suit se pose sans chevaucher."""
+        image = np.zeros((60, 300, 3), np.uint8)
+        texte, x = "CC BY-SA 4.0", 20
+        bout = stream.pose_pastille(image, texte, x, 40, 1.0)
+        large = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, 0.44, 1)[0][0]
+        self.assertGreater(bout, x + large, "le cadre doit dépasser le mot")
+        self.assertLess(bout, x + large + 20)
+        # Rien n'est écrit au-delà du bord annoncé.
+        self.assertEqual(int(np.count_nonzero(image[:, bout + 2:])), 0)
+
+
 class HorlogeDuCreditTests(unittest.TestCase):
     """Le crédit date la musique entendue, pas celle qu'on vient de verser.
 
