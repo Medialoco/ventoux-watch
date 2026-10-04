@@ -70,7 +70,8 @@ def compose(largeur: int, nuit: bool, musique: bool = True,
                         str(machine.get("ville") or ""),
                         carte=californie,
                         ou=(float(machine["lat"]), float(machine["lon"]))
-                        if machine.get("lat") is not None else None)
+                        if machine.get("lat") is not None else None,
+                        quand=QUAND)
     carte = json.loads((ROOT / "assets" / "carte-pays.json")
                        .read_text(encoding="utf-8")).get("contours")
     pose = scene.get("pose") or {}

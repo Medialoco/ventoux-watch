@@ -3962,29 +3962,37 @@ class DiffusionTests(unittest.TestCase):
         stream.pose_ennui(tait, "", 1.0)
         self.assertTrue(np.array_equal(tait, fond), "pas de mot, pas de trace")
 
-    def test_the_machine_age_is_truncated_not_rounded(self):
-        """« UP 2d 24h » : un jour n'a pas vingt-quatre heures en plus de lui-m\u00eame.
+    def test_the_left_clock_is_los_angeles_and_matches_beaumont(self):
+        """À gauche l'heure de la machine, à droite celle de la montagne.
 
-        La mise en forme arrondissait. \u00c0 quarante-sept heures et demie,
-        « heures / 24 » valait 1,98 et sortait « 2d » pendant que « heures % 24 »
-        valait 23,7 et sortait « 24h » : les deux faux \u00e0 la m\u00eame seconde.
+        Même date, même corps, mêmes lignes. Disk et Up n'avaient pas de
+        pendant : ils sont partis.
         """
-        def affiche(secondes):
-            toile = np.zeros((420, 1600, 3), np.uint8)
-            stream.pose_machine(toile, {"degres": 52.0, "charge": 0.4,
-                                        "debout": secondes, "libre": 800e9})
-            return toile
+        quand = datetime(2026, 10, 4, 15, 5, 8, tzinfo=timezone.utc).timestamp()
+        mots: list[str] = []
+        poses: dict[str, tuple[int, float]] = {}
+        vrai = cv2.putText
 
-        # Le cas qui a \u00e9t\u00e9 vu \u00e0 l'\u00e9cran : 47 h 42 doit se lire 1d 23h.
-        heure = 3600
-        for secondes in (47.7 * heure, 23.9 * heure, 24 * heure, 0.0):
-            toile = affiche(secondes)
-            self.assertTrue(toile.any(), "l'encart doit s'\u00e9crire")
-        # Deux dur\u00e9es qui diff\u00e8rent d'un jour entier ne peuvent pas s'afficher
-        # pareil ; avec l'arrondi, 47,7 h et 71,7 h donnaient toutes deux « 24h ».
-        self.assertFalse(np.array_equal(affiche(47.7 * heure), affiche(71.7 * heure)))
-        # Et une machine qui vient de d\u00e9marrer ne dit pas « 0h ».
-        self.assertFalse(np.array_equal(affiche(0.0), affiche(40 * 60)))
+        def espion(image, texte, org, font, scale, *suite, **nommes):
+            mots.append(texte)
+            if texte.count(":") == 2:
+                poses[texte] = (org[1], scale)
+            return vrai(image, texte, org, font, scale, *suite, **nommes)
+
+        etat = {"degres": 52.0, "charge": 0.4, "debout": 200000.0, "libre": 800e9}
+        with mock.patch.object(stream.cv2, "putText", espion):
+            stream.pose_machine(np.zeros((420, 1600, 3), np.uint8), etat,
+                                ville="Los Angeles", quand=quand)
+            stream.pose_horloge(np.zeros((420, 1600, 3), np.uint8), quand,
+                                commune="Beaumont-du-Ventoux")
+        self.assertNotIn("DISK", mots)
+        self.assertNotIn("UP", mots)
+        self.assertIn("08:05:08", mots)
+        self.assertIn("17:05:08", mots)
+        self.assertEqual(poses["08:05:08"][1], poses["17:05:08"][1])
+        self.assertEqual(poses["08:05:08"][0], poses["17:05:08"][0])
+        self.assertEqual(stream.MACHINE_LIGNES[1], stream.HORLOGE_LIGNES[1])
+        self.assertEqual(stream.MACHINE_LIGNES[2], stream.HORLOGE_LIGNES[2])
 
     def test_the_machine_panel_has_an_edge(self):
         """Assombri seul, l'encart flotte : ses limites bougent avec le ciel."""
@@ -4609,6 +4617,12 @@ class DiffusionTests(unittest.TestCase):
             commune="Beaumont-du-Ventoux"))
         self.assertIn("LOS ANGELES", gauche)
         self.assertIn("BEAUMONT-DU-VENTOUX", droite)
+        self.assertNotIn("DISK", gauche)
+        self.assertNotIn("UP", gauche)
+        self.assertTrue(any(m.count(":") == 2 for m in gauche),
+                        "l'encart de gauche n'a plus l'heure de Los Angeles")
+        self.assertTrue(any(m.count(":") == 2 for m in droite),
+                        "l'encart de droite n'a plus l'heure de Beaumont")
 
         # Même police, même hauteur : l'un en plus petit et plus haut, et
         # les deux noms ne se répondaient plus.

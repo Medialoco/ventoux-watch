@@ -2223,6 +2223,9 @@ def ordre_de_rediffusion(gardees: list[dict], tirage: random.Random,
 # en UTC parce qu'une veille qui change d'heure deux fois par an se trompe deux
 # fois par an ; mais personne ne regarde une webcam du Ventoux en UTC.
 PARIS = ZoneInfo("Europe/Paris")
+# L'heure de la machine, de l'autre côté. Même format, même corps : les deux
+# encarts se répondent, neuf heures d'écart entre les deux.
+LOS_ANGELES = ZoneInfo("America/Los_Angeles")
 
 MOIS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
@@ -4447,10 +4450,10 @@ def pose_direct(toile: np.ndarray, camera: np.ndarray,
 FROID_C = 20.0
 BRIDE_C = 85.0
 # Les lignes de l'encart machine, en pixels d'un cadre de mille six cents :
-# titre, chiffre héros, sa jauge, la charge, sa jauge, le disque, l'âge, la
-# ville. Écrites une fois ici plutôt que recalculées de proche en proche, pour
-# que la hauteur de la photo en dessous se déduise de la dernière.
-MACHINE_LIGNES = (22, 64, 72, 98, 106, 130, 154, 180)
+# titre, date, heure, température, sa jauge, la charge, sa jauge, la ville.
+# Date et heure sont aux mêmes cotes que l'horloge d'en face. Le disque et
+# l'âge ont sauté : ce n'était pas l'heure de Los Angeles.
+MACHINE_LIGNES = (26, 60, 96, 124, 132, 154, 162, 180)
 
 
 def pose_portrait_machine(image: np.ndarray, seconde: float,
@@ -4603,17 +4606,37 @@ def pose_carte_et_photo(image: np.ndarray, x: int, y: int, large: int,
                        cote, echelle)
 
 
+def _date_et_heure(quand: float, fuseau) -> tuple[str, str]:
+    """La date et l'heure, au même format des deux côtés de l'écran."""
+    moment = datetime.fromtimestamp(quand, fuseau)
+    return moment.strftime("%d %b %Y").upper(), moment.strftime("%H:%M:%S")
+
+
+def pose_date_heure(image: np.ndarray, x: int, date_y: int, heure_y: int,
+                    jour: str, heure: str, echelle: float) -> None:
+    """Date grise, heure blanche : le même corps à Los Angeles et à Beaumont."""
+    cv2.putText(image, jour, (x, date_y), cv2.FONT_HERSHEY_SIMPLEX,
+                0.48 * echelle, GRIS_ENCART, 1, cv2.LINE_AA)
+    cv2.putText(image, heure, (x, heure_y), cv2.FONT_HERSHEY_SIMPLEX,
+                0.95 * echelle, BLANC, 2, cv2.LINE_AA)
+
+
 def pose_machine(image: np.ndarray, etat: dict | None,
                  vignette: np.ndarray | None = None, ville: str = "",
                  remue: float = 0.0,
                  carte: list | None = None,
-                 ou: tuple[float, float] | None = None) -> None:
+                 ou: tuple[float, float] | None = None,
+                 quand: float | None = None) -> None:
     """L'encart machine, en haut à gauche, en face de l'horloge.
 
     Une webcam qui tourne vingt-quatre heures sur vingt-quatre tient à une
     chose : que la machine ne chauffe pas. Le dire à l'écran, c'est montrer
     qu'on le surveille, et c'est aussi le seul moyen de s'en apercevoir sans
     ouvrir un terminal.
+
+    L'heure est celle de Los Angeles, écrite comme celle de Beaumont : même
+    date, même corps, mêmes lignes. Disk et Up n'avaient pas de pendant
+    à droite.
     """
     if not etat:
         return
@@ -4621,32 +4644,8 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     echelle = largeur / 1600
     degres = etat["degres"]
     couleur = VERT if degres < TIEDE_C else (AMBRE if degres < CHAUD_C else ROUGE)
-    # « UP 2d 24h », qui ne veut rien dire : un jour n'a pas vingt-quatre
-    # heures en plus de lui-même.
-    #
-    # La mise en forme arrondissait au lieu de tronquer. À quarante-sept heures
-    # et demie, « heures / 24 » valait 1,98 et s'affichait « 2d », pendant que
-    # « heures % 24 » valait 23,7 et s'affichait « 24h » : les deux nombres
-    # faux à la même seconde, et la machine vieillie d'un jour entier. Une
-    # division entière ne peut pas se tromper ainsi.
-    jours, reste = divmod(int(max(0.0, etat["debout"])), 86400)
-    heures, minutes = divmod(reste // 60, 60)
-    if jours:
-        debout = f"{jours}d {heures:02d}h"
-    elif heures:
-        debout = f"{heures}h {minutes:02d}m"
-    else:
-        # Sinon la première heure après un redémarrage affiche « UP 0h », ce
-        # qui ressemble à une panne alors que c'est le contraire.
-        debout = f"{minutes}m"
-    # Le tableau se lit en trois temps : le titre, le chiffre qui compte, puis
-    # le renseignement. Avant, les cinq lignes avaient la même taille et la
-    # même graisse, donc la température d'une machine qui peut se brider se
-    # lisait aussi vite que la place qu'il reste sur le disque.
-    duos = [("LOAD", f"{etat['charge'] * 100:.0f}%"),
-            ("DISK", f"{etat['libre'] / 1e9:.0f} GB"),
-            ("UP", debout)]
-    pas = int(28 * echelle)
+    instant = time.time() if quand is None else quand
+    jour, heure = _date_et_heure(instant, LOS_ANGELES)
     marge = int(14 * echelle)
     sommet = int(RUBAN_H * echelle) + int(remue)
     taille = LIEU_CORPS * echelle
@@ -4654,42 +4653,40 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     # regarde, celui d'en face où est ce qu'elle regarde. Huit mille
     # kilomètres entre les deux, et c'est à peu près tout le projet.
     lieu = (ville or "").upper()
-    large = max([cv2.getTextSize(f"{e}   {v}", cv2.FONT_HERSHEY_SIMPLEX,
-                                 0.54 * echelle, 2)[0][0] for e, v in duos]
-                + [cv2.getTextSize("RASPBERRY PI 5", cv2.FONT_HERSHEY_SIMPLEX,
-                                   0.50 * echelle, 1)[0][0]]
-                + [large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle)])
-    # L'encart s'élargit pour la photo si le texte ne suffit pas. À la largeur
-    # des chiffres seuls, la carte faisait cent pixels de large et on n'y
-    # reconnaissait rien : une tache verte sous un tableau de bord. Cent
-    # soixante-dix, et on voit que c'est un Raspberry Pi avec son ventilateur,
-    # ce qui est tout l'intérêt de la montrer.
+    large = max(
+        cv2.getTextSize("RASPBERRY PI 5", cv2.FONT_HERSHEY_SIMPLEX,
+                        0.50 * echelle, 1)[0][0],
+        cv2.getTextSize(jour, cv2.FONT_HERSHEY_SIMPLEX, 0.48 * echelle, 1)[0][0],
+        cv2.getTextSize(heure, cv2.FONT_HERSHEY_SIMPLEX, 0.95 * echelle, 2)[0][0],
+        cv2.getTextSize(f"TEMP   {degres:.1f} C", cv2.FONT_HERSHEY_SIMPLEX,
+                        0.54 * echelle, 2)[0][0],
+        cv2.getTextSize(f"LOAD   {etat['charge'] * 100:.0f}%",
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.54 * echelle, 2)[0][0],
+        large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle),
+        int(ENCART_LARGE * echelle) if (carte and ou) or (
+            vignette is not None and vignette.size) else 0,
+    )
     droite = max(large + 2 * marge, int(ENCART_LARGE * echelle) + 2 * marge)
-    # La photo de l'installation sous les chiffres. Les chiffres disent que la
-    # machine va bien ; la photo dit laquelle. C'est une carte à cent euros sur
-    # un bureau, et le flux a l'air d'une chaîne de télévision — autant le
-    # montrer, c'est plus honnête et c'est plus intéressant.
     haut_reste = sommet + int(ENCART_DESSIN * echelle)
     bas = int(ENCART_BAS * echelle) + int(remue)
     if (vignette is None or vignette.size == 0) and not (carte and ou):
         bas = sommet + int(MACHINE_LIGNES[-1] * echelle) + marge
     fond_encart(image, (0, sommet), (droite - 1, bas - 1), echelle)
     bord = droite - marge
-    titre, heros, jauge_c, charge, jauge_l, disque, age, ville_y = (
+    titre, date_y, heure_y, temp_y, jauge_c, charge, jauge_l, ville_y = (
         sommet + int(r * echelle) for r in MACHINE_LIGNES)
     pose_titre_encart(image, "RASPBERRY PI 5", marge, titre, bord - marge, echelle)
-    pose_heros(image, f"{degres:.1f}", "C", marge, heros, couleur, echelle)
-    # Deux jauges, et deux seulement : la température et la charge sont les
-    # deux grandeurs qui ont un plafond connu et qui arrêtent la diffusion
-    # quand elles le touchent. La place sur le disque n'en a pas ici — on ne
-    # connaît que ce qu'il reste — et le temps debout n'en a pas du tout.
+    pose_date_heure(image, marge, date_y, heure_y, jour, heure, echelle)
+    # Température et charge restent : ce sont les deux grandeurs qui ont un
+    # plafond connu et qui arrêtent la diffusion. Plus de disque, plus d'âge.
+    pose_duo(image, "TEMP", f"{degres:.1f} C", marge, bord, temp_y, echelle,
+             teinte=couleur)
     pose_jauge(image, marge, jauge_c, bord - marge,
                (degres - FROID_C) / (BRIDE_C - FROID_C), couleur, echelle)
-    pose_duo(image, duos[0][0], duos[0][1], marge, bord, charge, echelle)
+    pose_duo(image, "LOAD", f"{etat['charge'] * 100:.0f}%", marge, bord,
+             charge, echelle)
     pose_jauge(image, marge, jauge_l, bord - marge, etat["charge"],
                VERT if etat["charge"] < 0.75 else AMBRE, echelle)
-    pose_duo(image, duos[1][0], duos[1][1], marge, bord, disque, echelle)
-    pose_duo(image, duos[2][0], duos[2][1], marge, bord, age, echelle)
     pose_lieu(image, lieu, marge, ville_y, taille * HORLOGE_LIEU, echelle)
     pose_carte_et_photo(
         image, marge, haut_reste, droite - 2 * marge, bas - haut_reste - marge,
@@ -5125,11 +5122,10 @@ def pose_lieu(image: np.ndarray, texte: str, x: int, ligne: int,
                 taille, CYAN, 2, cv2.LINE_AA)
 
 
-# Les lignes de l'horloge, en pixels d'un cadre de mille six cents : le badge,
-# la date, l'heure, la commune. La commune est sur la même ligne que
-# Los Angeles — MACHINE_LIGNES[-1] — pour que les deux noms se répondent.
-# La carte, elle, part à ENCART_DESSIN, comme à gauche.
-HORLOGE_LIGNES = (26, 60, 96, MACHINE_LIGNES[-1])
+# Les lignes de l'horloge : badge, date, heure, commune. Date, heure et
+# commune sont les mêmes cotes que l'encart de gauche.
+HORLOGE_LIGNES = (MACHINE_LIGNES[0], MACHINE_LIGNES[1],
+                  MACHINE_LIGNES[2], MACHINE_LIGNES[-1])
 
 
 def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
@@ -5150,7 +5146,6 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     """
     largeur = image.shape[1]
     echelle = largeur / 1600
-    moment = datetime.fromtimestamp(quand, PARIS)
     # L'heure disait « PARIS », qui était le fuseau. Personne ne le lisait
     # comme tel : sous une image du Ventoux, un spectateur lit un lieu, et
     # celui-là était faux de six cents kilomètres. La commune est vraie, elle
@@ -5160,8 +5155,7 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     # bouge — et c'est celle qui bouge qu'on vient regarder. Le lieu, lui, a
     # le corps de Los Angeles : ce n'est plus un sous-titre, c'est le
     # pendant de l'autre côté de la planète.
-    jour = moment.strftime("%d %b %Y").upper()
-    heure = moment.strftime("%H:%M:%S")
+    jour, heure = _date_et_heure(quand, PARIS)
     lignes = [jour, heure]
     pas = int(34 * echelle)
     marge = int(14 * echelle)
@@ -5203,10 +5197,7 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     cv2.line(image, (x, trait), (largeur - 1 - marge, trait),
              tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
              cv2.LINE_AA)
-    cv2.putText(image, jour, (x, date_y), cv2.FONT_HERSHEY_SIMPLEX,
-                0.48 * echelle, GRIS_ENCART, 1, cv2.LINE_AA)
-    cv2.putText(image, heure, (x, heure_y), cv2.FONT_HERSHEY_SIMPLEX,
-                0.95 * echelle, BLANC, 2, cv2.LINE_AA)
+    pose_date_heure(image, x, date_y, heure_y, jour, heure, echelle)
     pose_lieu(image, lieu, x, ville_y, LIEU_CORPS * echelle * HORLOGE_LIEU, echelle)
     if dessin:
         teinte = tamise_la_photo(photo) if photo is not None else None
@@ -5865,7 +5856,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             if machine_ou.get("lat") is not None:
                 ou_machine = (float(machine_ou["lat"]), float(machine_ou["lon"]))
             pose_machine(toile, machine, photo_machine, ville, remue,
-                         carte=carte_californie, ou=ou_machine)
+                         carte=carte_californie, ou=ou_machine, quand=quand)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             # Relu de temps en temps et jamais à chaque image : le fichier
             # est écrit par un autre programme, et un agenda ne change pas
