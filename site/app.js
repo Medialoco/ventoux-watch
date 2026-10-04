@@ -931,9 +931,28 @@ async function suisLeDirect() {
   // a check every few minutes would restart the stream under the viewer.
   if (numero === diffusion) return;
   diffusion = numero;
-  direct.src = `https://www.youtube.com/embed/${numero}?autoplay=1&mute=1&playsinline=1&rel=0`;
+  const lance = new URLSearchParams(location.search).get("play") === "1";
+  direct.src = `https://www.youtube.com/embed/${numero}?autoplay=1&mute=${lance ? 0 : 1}&playsinline=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
   hideCamera();
   direct.hidden = false;
+  if (lance) demarreLeDirect();
+}
+
+function commandeDirect(fonction, args) {
+  if (!direct || direct.hidden || !direct.contentWindow) return;
+  direct.contentWindow.postMessage(JSON.stringify({
+    event: "command", func: fonction, args: args || [],
+  }), "*");
+}
+
+function demarreLeDirect() {
+  let tours = 0;
+  const bat = setInterval(() => {
+    tours += 1;
+    commandeDirect("playVideo");
+    commandeDirect("unMute");
+    if (tours > 12) clearInterval(bat);
+  }, 700);
 }
 
 suisLeDirect();
