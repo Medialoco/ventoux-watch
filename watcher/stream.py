@@ -408,8 +408,36 @@ def _interpole(chemin: list, quand: float) -> tuple[float, float, float, float]:
     return tuple(chemin[-1][1:5])
 
 
+def _recouvre(a: tuple[float, float, float, float],
+              b: tuple[float, float, float, float]) -> float:
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    large = max(0.0, min(ax + aw, bx + bw) - max(ax, bx))
+    haut = max(0.0, min(ay + ah, by + bh) - max(ay, by))
+    union = aw * ah + bw * bh - large * haut
+    return (large * haut) / union if union > 0 else 0.0
+
+
+def _cadre_a_lechelle(cadre: tuple[float, float, float, float],
+                      tache: tuple[float, float, float, float],
+                      ref: tuple[float, float, float, float]
+                      ) -> tuple[float, float, float, float]:
+    """La taille lue, réduite à la hauteur apparente de cet instant.
+
+    Poser le rectangle du premier plan sur la voiture encore au loin, c'est
+    un carré vide. La hauteur de la tache suit la distance : on s'en sert
+    comme d'une échelle, plafonnée à la lecture — une ombre n'agrandit pas
+    la voiture.
+    """
+    _, _, cw, ch = cadre
+    ref_h = max(ref[3], 1e-6)
+    echelle = min(1.15, tache[3] / ref_h)
+    pied_x, pied_y = _pied(tache)
+    return _cadre_au_pied((0.0, 0.0, cw * echelle, ch * echelle), pied_x, pied_y)
+
+
 def suit(vu: dict, quand: float) -> tuple[float, float, float, float]:
-    """Où la chose est à cet instant, à la taille que le modèle lui a donnée.
+    """Où la chose est à cet instant, à la taille qu'elle a là.
 
     La veille suit le sujet image par image, à une image par seconde ; le flux
     en sort six. Entre deux relevés on interpole en ligne droite, ce qui est
@@ -419,8 +447,10 @@ def suit(vu: dict, quand: float) -> tuple[float, float, float, float]:
     La trajectoire est celle de la tache de mouvement, pas celle de la voiture.
     S'en servir telle quelle pose un rectangle trop grand, trop petit, ou vide :
     le 4 octobre le dernier point tombait à côté de la lecture pour six
-    passages sur dix. On garde donc la taille lue, et on la fait glisser en
-    collant les roues au bas de la tache.
+    passages sur dix. On garde donc la taille lue, on la fait glisser en
+    collant les roues au bas de la tache, et on la réduit à la hauteur que
+    cette tache a maintenant — une voiture au loin n'a pas le rectangle du
+    premier plan.
 
     Avant le premier point utile et après le dernier, on se tient au point le
     plus proche sans extrapoler. Prolonger un mouvement qu'on n'a pas mesuré,
@@ -432,7 +462,9 @@ def suit(vu: dict, quand: float) -> tuple[float, float, float, float]:
     if len(chemin) < 2:
         return cadre
     tache = _interpole(chemin, quand)
-    return _cadre_au_pied(cadre, *_pied(tache))
+    ref = max((point[1:5] for point in chemin),
+              key=lambda boite: _recouvre(cadre, tuple(boite)))
+    return _cadre_a_lechelle(cadre, tache, tuple(ref))
 
 
 def presence(vu: dict) -> tuple[float, float]:

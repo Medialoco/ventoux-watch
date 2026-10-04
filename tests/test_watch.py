@@ -464,6 +464,33 @@ class NamingTests(unittest.TestCase):
                                   detections=[Detection("person", 0.48)]))
         self.assertEqual(walk.label, "Piéton")
 
+    def test_a_car_shaped_patch_is_not_a_horse(self):
+        """4 octobre, 14:22. La voiture était lue voiture ; la tache d'à
+        côté, trois mètres sur deux, est sortie Cheval.
+
+        Quatre voitures dans le même cadre restent quatre lectures : chacune
+        a sa tache. Celle dont l'empreinte est une voiture ne devient pas
+        un animal parce que le modèle a préféré le mot.
+        """
+        tache = dict(zone="other", surface="path", near_road=True, travel=0.2,
+                     width_m=3.18, height_m=2.15, duration_s=39.0)
+        cheval = decide(Observation(detections=[Detection("horse", 0.58, share=0.35),
+                                                Detection("person", 0.45, share=0.17)],
+                                    **tache))
+        self.assertNotEqual(cheval.label, "Cheval")
+        self.assertNotEqual(cheval.label, "Piéton")
+        # Et un vrai chien, trop étroit pour une voiture, garde son nom —
+        # même si six voitures passent dans la même seconde, ailleurs.
+        chien = decide(Observation(zone="road", travel=0.05, width_m=0.9, height_m=0.7,
+                                   detections=[Detection("dog", 0.6)]))
+        self.assertEqual(chien.label, "Chien")
+        # Un piéton à côté d'un convoi aussi : sa tache à lui n'est pas
+        # une voiture.
+        pieton = decide(Observation(zone="other", surface="path", near_road=True,
+                                    travel=0.05, width_m=0.7, height_m=1.7,
+                                    detections=[Detection("person", 0.61, share=0.73)]))
+        self.assertEqual(pieton.label, "Piéton")
+
     def test_car_on_the_road_is_published(self):
         decision = decide(Observation(zone="road", travel=0.08, detections=[Detection("car", 0.8)]))
         self.assertEqual(decision.type, "vehicle")
@@ -3267,6 +3294,25 @@ class DiffusionTests(unittest.TestCase):
         self.assertEqual(fin, debut + 3.0)
         self.assertEqual(stream.dessine(np.zeros((360, 640, 3), np.uint8),
                                         [dict(vu)], debut + 6.0), 0)
+
+    def test_the_box_shrinks_when_the_car_is_still_far(self):
+        """Le rectangle du premier plan, posé sur la voiture au loin, est vide.
+
+        La lecture a la taille du passage au plus près. Plus tôt, la tache
+        est plus petite : le cadre suit cette hauteur, les roues restent
+        dessus.
+        """
+        debut = 1_000_000.0
+        vu = {"t": debut + 6.0, "label": "Voiture", "sur": True, "type": "vehicle",
+              "box": [0.50, 0.80, 0.12, 0.10],
+              "trace": [[debut, 0.20, 0.70, 0.05, 0.04],
+                        [debut + 6.0, 0.50, 0.80, 0.12, 0.10]]}
+        loin = stream.suit(vu, debut)
+        pres = stream.suit(vu, debut + 6.0)
+        self.assertLess(loin[2], pres[2] * 0.5)
+        self.assertLess(loin[3], pres[3] * 0.5)
+        self.assertAlmostEqual(pres[2], 0.12, places=3)
+        self.assertAlmostEqual(pres[3], 0.10, places=3)
 
     def test_the_word_is_written_only_when_the_watch_named_something(self):
         """« Mouvement détecté » est un aveu, pas une identification."""

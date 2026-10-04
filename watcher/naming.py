@@ -924,6 +924,14 @@ def decide(obs: Observation) -> Decision:
             # otherwise: nobody walking is four metres wide and a metre and a
             # half tall. A measurement beats a weak guess.
             person = None
+        if beast is not None and _car_shaped(obs):
+            # 4 octobre, 14:22. La voiture était lue voiture ; la tache
+            # suivante, trois mètres sur deux, est sortie « Cheval ». Un
+            # cheval n'a pas l'empreinte d'une voiture. Un piéton non plus.
+            # Quatre voitures dans le même cadre restent quatre voitures :
+            # chacune a sa tache, et seule celle qui a cette empreinte
+            # perd le mot d'animal.
+            beast = None
         if cycle is not None and not _fits(obs, cycle.cls):
             cycle = None
         if beast is not None and not _fits(obs, beast.cls):
@@ -939,6 +947,8 @@ def decide(obs: Observation) -> Decision:
             # otherwise: nobody walking is four metres wide and a metre and a
             # half tall. A measurement beats a weak guess.
             person = None
+        if animal is not None and _car_shaped(obs):
+            animal = None
         if cycle is not None and not _fits(obs, cycle.cls):
             cycle = None
         if animal is not None and not _fits(obs, animal.cls):
@@ -1087,7 +1097,8 @@ def decide(obs: Observation) -> Decision:
                 ),
                 obs,
             )
-        if vehicle is not None and vehicle.conf >= conf["car"]:
+        if (vehicle is not None and vehicle.conf >= conf["car"]
+                and vehicle.share >= NAMED_SHARE):
             return _stamp(
                 Decision(
                     "publish",
