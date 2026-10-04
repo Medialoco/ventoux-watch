@@ -1302,7 +1302,7 @@ section[id] { scroll-margin-top: 50px; }
 .effects td {
   padding: 5px 8px 5px 0;
   text-align: left;
-  vertical-align: middle;
+  vertical-align: top;
   border-bottom: 1px solid var(--hair);
 }
 
@@ -1314,7 +1314,11 @@ section[id] { scroll-margin-top: 50px; }
   font-weight: 600;
 }
 
-.effects td:first-child { width: 56px; padding-right: 10px; }
+.effects td:first-child {
+  width: 56px;
+  padding-right: 10px;
+  overflow: visible;
+}
 
 .effects img {
   display: block;
@@ -1322,7 +1326,19 @@ section[id] { scroll-margin-top: 50px; }
   height: 32px;
   object-fit: cover;
   background: #111;
+  transform-origin: left center;
+  transition: transform 0.12s ease;
+  position: relative;
 }
+
+.effects tr:hover img,
+.effects tr:focus-within img {
+  transform: scale(5);
+  z-index: 8;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.numbers { overflow: visible; }
 
 .effects td:nth-child(2) {
   white-space: nowrap;
