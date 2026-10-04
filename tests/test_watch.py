@@ -4629,6 +4629,57 @@ class EncartsTests(unittest.TestCase):
         self.assertEqual(int(np.count_nonzero(vide)), 0)
 
 
+class PortraitMachineTests(unittest.TestCase):
+    """La photo du Pi, en grand au milieu, de temps en temps."""
+
+    ETAT = {"degres": 46.2, "charge": 0.31, "debout": 190000.0,
+            "libre": 142 * 10 ** 9}
+
+    def test_no_photo_means_no_portrait(self):
+        """Sans la photo on se tait : un cadre vide n'est pas un portrait."""
+        image = np.zeros((720, 1280, 3), np.uint8)
+        self.assertFalse(stream.pose_portrait_machine(
+            image, un_tour_de("machine") + 2.0, None, self.ETAT, "Los Angeles",
+            vue=(175, 36, 929, 522)))
+        self.assertEqual(int(np.count_nonzero(image)), 0)
+
+    def test_the_portrait_stays_inside_the_window(self):
+        """Au milieu de la vue, pas à cheval sur les bandes noires."""
+        photo = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
+        image = np.zeros((720, 1280, 3), np.uint8)
+        vue = (175, 36, 929, 522)
+        self.assertTrue(stream.pose_portrait_machine(
+            image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
+            vue=vue))
+        pose = np.argwhere(image.any(axis=2))
+        self.assertGreaterEqual(int(pose[:, 1].min()), vue[0])
+        self.assertLessEqual(int(pose[:, 1].max()), vue[0] + vue[2] - 1)
+        self.assertGreaterEqual(int(pose[:, 0].min()), vue[1])
+        self.assertLessEqual(int(pose[:, 0].max()), vue[1] + vue[3] - 1)
+
+    def test_the_portrait_is_the_photograph_not_the_dashboard_tint(self):
+        """L'encart est un tableau de bord. Celui-ci est le portrait."""
+        source = inspect.getsource(stream.pose_portrait_machine)
+        self.assertNotIn("tamise_la_photo", source)
+        self.assertIn("_au_plus_juste(", source)
+
+    def test_it_leaves_when_its_turn_is_over(self):
+        """Sept secondes, puis le silence. Pas un sticker oublié."""
+        photo = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
+        image = np.zeros((720, 1280, 3), np.uint8)
+        self.assertFalse(stream.pose_portrait_machine(
+            image, un_tour_de("machine") + stream.MACHINE_TENUE_S + 1.0,
+            photo, self.ETAT, "Los Angeles", vue=(175, 36, 929, 522)))
+        self.assertEqual(int(np.count_nonzero(image)), 0)
+        self.assertLessEqual(stream.MACHINE_TENUE_S, 8.0)
+
+    def test_a_catch_keeps_the_portrait_off_the_road(self):
+        """Une carte au milieu ne passe pas devant un rectangle rouge."""
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("pose_portrait_machine(", source)
+        self.assertIn("dernier_vu > TENUE_S", source)
+
+
 class BandeauxTests(unittest.TestCase):
     """Le ruban et l'agenda : le même dégradé que les cartes, sans les coins."""
 

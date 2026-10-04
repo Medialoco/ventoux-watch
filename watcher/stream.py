@@ -3394,16 +3394,29 @@ def pose_batiments(image: np.ndarray, seconde: float, batis: list | None,
 PISTE_PERIODE_S = 787.0
 PISTE_DESCENTE_S = 20.0
 
-# Le plateau, maintenant que les quatre numéros ont dit leur période et leur
+# La photo de la machine, en grand au milieu. Dix-neuf minutes, un nombre
+# premier, et sept secondes : assez pour voir que c'est un Raspberry Pi, pas
+# assez pour oublier la montagne. Deux minutes de retard, le temps que
+# YouTube ouvre l'image — plus tôt, on la montrerait à personne.
+MACHINE_PERIODE_S = 1151.0
+MACHINE_TENUE_S = 7.0
+MACHINE_RETARD_S = 120.0
+# Largeur de la photo, en part de la fenêtre caméra. Assez pour le ventilateur
+# et les ports, pas un mur : la route reste visible autour.
+MACHINE_PORTRAIT = 0.32
+
+# Le plateau, maintenant que les numéros ont dit leur période et leur
 # durée. L'ordre départage les ex æquo : le tapis d'abord parce qu'il passe
-# au-dessus de tout et ne cache rien, l'éléphant en dernier parce qu'il
-# occupe l'écran entier.
+# au-dessus de tout et ne cache rien, l'éléphant parce qu'il occupe l'écran
+# entier, la machine ensuite — une carte au milieu cède le passage à un
+# éléphant rose, pas l'inverse.
 PLATEAU = (
     ("tapis", TAPIS_PERIODE_S, TAPIS_TRAVERSEE_S, 0.0),
     ("sous-marin", SOUS_MARIN_PERIODE_S, SOUS_MARIN_TRAVERSEE_S, 0.0),
     ("piste", PISTE_PERIODE_S, PISTE_DESCENTE_S, 0.0),
     ("elephant", ELEPHANT_PERIODE_S, ELEPHANT_TENUE_S, 0.0),
     ("batiment", BATIMENT_PERIODE_S, BATIMENT_RELEVE_S, 0.0),
+    ("machine", MACHINE_PERIODE_S, MACHINE_TENUE_S, MACHINE_RETARD_S),
     # L'ours en dernier parce qu'il écrit en travers du ciel, et qu'il vaut
     # mieux qu'il cède le passage plutôt que de crier par-dessus le tapis.
     #
@@ -4367,6 +4380,78 @@ BRIDE_C = 85.0
 # ville. Écrites une fois ici plutôt que recalculées de proche en proche, pour
 # que la hauteur de la photo en dessous se déduise de la dernière.
 MACHINE_LIGNES = (22, 64, 72, 98, 106, 130, 154, 180)
+
+
+def pose_portrait_machine(image: np.ndarray, seconde: float,
+                          photo: np.ndarray | None,
+                          etat: dict | None = None, ville: str = "",
+                          vue: tuple[int, int, int, int] | None = None,
+                          nuit: bool = False) -> bool:
+    """La photo de la machine, en grand au milieu, de temps en temps.
+
+    Dans l'encart elle fait cent pixels et on y reconnaît à peine un
+    ventilateur. Ici c'est la même photo, posée au milieu de ce qu'elle
+    regarde : on voit enfin que le flux tient à une carte sur un bureau.
+
+    L'encart de gauche reste. Comme l'ours : l'original ne bouge pas, le
+    double apparaît, et c'est voir les deux qui fait comprendre que le
+    second est une apparition.
+
+    En couleurs, pas au cyan de l'encart. L'encart est un tableau de bord ;
+    celui-ci est le portrait.
+    """
+    if photo is None or photo.size == 0:
+        return False
+    phase = en_scene("machine", seconde, nuit)
+    if phase is None:
+        return False
+    force = min(phase, MACHINE_TENUE_S - phase, 1.0)
+    if force < 0.02:
+        return True
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    echelle = largeur / 1600
+    marge = int(16 * echelle)
+    titre_h = int(28 * echelle)
+    pied_h = int(28 * echelle)
+    photo_l = max(8, int(large_vue * MACHINE_PORTRAIT))
+    max_h = haute_vue - 2 * marge - titre_h - pied_h
+    if max_h < 16:
+        return False
+    vue_photo = _au_plus_juste(photo, photo_l, max_h)
+    ph, pl = vue_photo.shape[:2]
+    carte_l = pl + 2 * marge
+    carte_h = titre_h + ph + pied_h + 2 * marge
+    x0 = gauche + (large_vue - carte_l) // 2
+    y0 = cime + (haute_vue - carte_h) // 2
+    x1 = x0 + carte_l - 1
+    y1 = y0 + carte_h - 1
+    if x0 < gauche or y0 < cime or x1 >= gauche + large_vue or y1 >= cime + haute_vue:
+        return False
+    calque = image.copy()
+    fond_encart(calque, (x0, y0), (x1, y1), echelle)
+    px = x0 + (carte_l - pl) // 2
+    py = y0 + marge + titre_h
+    calque[py:py + ph, px:px + pl] = vue_photo
+    pose_titre_encart(calque, "RASPBERRY PI 5", x0 + marge, y0 + marge + int(18 * echelle),
+                      carte_l - 2 * marge, echelle)
+    # Sous la photo, pas dessus : le lieu à gauche, la température à droite.
+    # Petits, les deux — le tableau de bord est déjà à gauche, ici c'est la
+    # carte qu'on est venu voir.
+    ligne = py + ph + int(20 * echelle)
+    if ville:
+        pose_lieu(calque, ville.upper(), x0 + marge, ligne, 0.48 * echelle, echelle)
+    if etat:
+        couleur = VERT if etat["degres"] < TIEDE_C else (
+            AMBRE if etat["degres"] < CHAUD_C else ROUGE)
+        valeur = f"{etat['degres']:.1f} C"
+        large = cv2.getTextSize(valeur, cv2.FONT_HERSHEY_SIMPLEX,
+                                0.54 * echelle, 2)[0][0]
+        cv2.putText(calque, valeur, (x1 - marge - large, ligne),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.54 * echelle, couleur, 2,
+                    cv2.LINE_AA)
+    cv2.addWeighted(calque, 0.92 * force, image, 1.0 - 0.92 * force, 0.0, dst=image)
+    return True
 
 
 def pose_machine(image: np.ndarray, etat: dict | None,
@@ -5508,6 +5593,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # dans la lumière et il a l'air d'un ours sous un réverbère.
                 # Vérifié sur une vraie image de nuit avant de lever la règle.
                 ou_en_est = pose_ours(toile, quand - origine, ours, vue=cadrage)
+                # La photo de la machine, en grand, seulement quand rien n'est
+                # entouré : une carte au milieu de la vue ne doit pas passer
+                # devant un rectangle rouge.
+                if quand - dernier_vu > TENUE_S:
+                    pose_portrait_machine(toile, quand - origine, photo_machine,
+                                          machine, ville, vue=cadrage,
+                                          nuit=not fait_jour)
                 if ou_en_est is not None:
                     # Une fois, pas à chaque image : il grogne en descendant,
                     # et il crie une fois arrivé sur l'îlot.
