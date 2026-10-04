@@ -291,6 +291,10 @@ JEU = {
              "nothing else, evenly, as one piece of a sentence that will be "
              "assembled later. No greeting, no extra word, never say the "
              "word dot.",
+    "antenne": "Adult male, warm and clear, like a radio host opening the "
+               "hour. Say the sentence in the language it is written, "
+               "naturally, in one breath. Nothing before it, nothing after "
+               "it. Never say the word dot.",
     "deploi": "Say the single word Deployed, clear and even, like a machine "
               "confirming that it has arrived. Flat, intelligible, about one "
               "second. No exclamation. Never say the word dot.",

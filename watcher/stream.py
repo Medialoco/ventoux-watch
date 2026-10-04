@@ -4800,13 +4800,11 @@ def pose_never(image: np.ndarray, vue: tuple[int, int, int, int],
 
 # Le compte, de temps en temps, dans la bande de droite. Quatre minutes :
 # assez rare pour rester une surprise, assez souvent pour qu'on l'attrape
-# en passant. Dix secondes, le temps de lire la division.
+# en passant.
 SALLE_PERIODE_S = 240.0
 SALLE_TENUE_S = 10.0
 SALLE_PREMIER_S = 25.0
 SALLE_SONDE_S = 45.0
-_BLANC_MOT = 0.07
-_SOUFFLE = 0.16
 
 
 class Salle:
@@ -4841,41 +4839,23 @@ def veille_salle(chaine: str, coupe: threading.Event, salle: Salle) -> None:
             return
 
 
-def _rogne(pcm: bytes) -> bytes:
-    """Ôte le blanc que le modèle laisse avant et après un mot isolé."""
-    x = np.frombuffer(pcm, np.int16)
-    if x.size < VOIES:
-        return pcm
-    mag = np.abs(x).reshape(-1, VOIES).max(axis=1)
-    actif = np.flatnonzero(mag > 900)
-    if actif.size == 0:
-        return pcm
-    garde = int(0.04 * ECHANTILLONS_S)
-    a = max(0, int(actif[0]) - garde)
-    b = min(mag.size, int(actif[-1]) + garde)
-    return np.ascontiguousarray(x.reshape(-1, VOIES)[a:b]).tobytes()
+def phrase_salle(racine: Path) -> Path | None:
+    """« Nous sommes en direct », puis « We are live ».
 
-
-def assemble_salle(racine: Path, n: int) -> Path | None:
-    """Colle « Nous sommes n en direct ». None si un mot manque.
-
-    La division ne se dit pas et ne s'écrit pas.
+    Deux phrases entières, pas des mots collés : « deux » raccourci
+    s'entendait « de ». None si un fichier manque.
     """
     dossier = racine / "data" / "voix" / "salle"
-    ordre = ["nous", *morceaux_nombre(n), "direct"]
-    blanc = b"\0" * int(_BLANC_MOT * ECHANTILLONS_S * VOIES * 2)
-    souffle = b"\0" * int(_SOUFFLE * ECHANTILLONS_S * VOIES * 2)
-    parts: list[bytes] = []
-    for mot in ordre:
-        if parts:
-            parts.append(souffle if mot == "direct" else blanc)
+    souffle = b"\0" * int(0.45 * ECHANTILLONS_S * VOIES * 2)
+    morceaux = []
+    for nom in ("phrase_fr", "phrase_en"):
         try:
-            parts.append(_rogne((dossier / f"{mot}.raw").read_bytes()))
+            morceaux.append((dossier / f"{nom}.raw").read_bytes())
         except OSError:
             return None
-    cible = dossier / f"salle_{n}.raw"
+    cible = dossier / "salle_phrase.raw"
     try:
-        cible.write_bytes(b"".join(parts))
+        cible.write_bytes(morceaux[0] + souffle + morceaux[1])
     except OSError:
         return None
     return cible
@@ -6882,13 +6862,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     salle_feu = time.time()
                     salle_abonnes, salle_direct = abo, directs
                     salle_tenue = SALLE_TENUE_S
+                    clip = phrase_salle(racine)
+                    if clip is not None:
+                        musique.dis(clip)
+                        salle_tenue = max(
+                            SALLE_TENUE_S,
+                            clip.stat().st_size / (ECHANTILLONS_S * VOIES * 2) + 0.6)
                     if directs is not None and directs >= 1:
-                        clip = assemble_salle(racine, directs)
-                        if clip is not None:
-                            musique.dis(clip)
-                            salle_tenue = max(
-                                SALLE_TENUE_S,
-                                clip.stat().st_size / (ECHANTILLONS_S * VOIES * 2) + 0.6)
                         log.info("Salle : %s abonnés, %s en direct", abo, directs)
                     else:
                         log.info("Salle : %s abonnés, personne en direct", abo)

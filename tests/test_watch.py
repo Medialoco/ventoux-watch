@@ -5576,17 +5576,14 @@ class SalleTests(unittest.TestCase):
         self.assertEqual(stream.morceaux_nombre(1000), ["mille"])
         self.assertEqual(stream.morceaux_nombre(2_000_000), ["deux", "millions"])
         self.assertEqual(stream.groupe(2_000_000), "2 000 000")
-        self.assertEqual(
-            ["nous", *stream.morceaux_nombre(1), "direct"],
-            ["nous", "un", "direct"])
         self.assertNotIn("DIVISES PAR",
                          Path(__file__).resolve().parents[1]
                          .joinpath("watcher/stream.py").read_text())
 
-    def test_a_missing_word_stays_silent(self):
+    def test_a_missing_phrase_stays_silent(self):
         import tempfile
         with tempfile.TemporaryDirectory() as dossier:
-            self.assertIsNone(stream.assemble_salle(Path(dossier), 1))
+            self.assertIsNone(stream.phrase_salle(Path(dossier)))
 
 
 class HorlogeDuCreditTests(unittest.TestCase):
