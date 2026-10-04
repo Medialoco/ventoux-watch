@@ -2476,39 +2476,52 @@ def ordre_de_rediffusion(gardees: list[dict], tirage: random.Random,
 # fois par an ; mais personne ne regarde une webcam du Ventoux en UTC.
 PARIS = ZoneInfo("Europe/Paris")
 
-# Une pensée par jour, tenue hors du tableau du site. Le premier soir est
-# fixé : le 4 octobre 2026 à 22 h 37, heure de la montagne. La Normandie
-# suit dix-sept secondes après, le temps que le nom reste écrit. Les autres
-# jours, la seconde est tirée sur la date,
-# donc un redémarrage ne la déplace pas.
-PENSEE_PREMIER = date(2026, 10, 4)
-PENSEE_HEURE = 22 * 3600 + 37 * 60
+# Deux pensées par jour, à l'heure de la montagne. Les deux secondes sont
+# tirées sur la date, entre 8 h et 23 h, à trois heures d'écart au moins :
+# la journée où l'on est éveillé en France, et un redémarrage ne les déplace
+# pas. Le nom reste écrit dix-sept secondes, puis la voix dit
+# « Big up to the Normandy! ».
+PENSEE_DEBUT_S = 8 * 3600
+PENSEE_FIN_S = 23 * 3600
+PENSEE_ECART_S = 3 * 3600
 PENSEE_APRES_S = 17.0
 PENSEE_GRACE_S = 240
 
 
-def seconde_pensee(jour: date) -> int:
-    """La seconde du jour où l'on y pense. Stable pour toute la journée."""
-    if jour == PENSEE_PREMIER:
-        return PENSEE_HEURE
-    return random.Random(jour.toordinal()).randrange(0, 86400 - 90)
+def secondes_pensee(jour: date) -> tuple[int, int]:
+    """Deux secondes du jour, stables, dans la journée française."""
+    tirage = random.Random(jour.toordinal())
+    premiere = tirage.randrange(PENSEE_DEBUT_S, PENSEE_FIN_S - PENSEE_ECART_S)
+    seconde = tirage.randrange(premiere + PENSEE_ECART_S, PENSEE_FIN_S)
+    return premiere, seconde
 
 
-def _pensee_lue(racine: Path) -> tuple[date | None, int, float]:
+def _pensee_lue(racine: Path) -> tuple[date | None, int, int, float]:
+    """Date, rang (0 ou 1, 2 si la journée est close), étape, instant du feu.
+
+    L'ancien fichier n'avait qu'un passage : « date étape feu ». Une étape 2
+    ferme la journée, pour ne pas en dire une seconde le soir où le format
+    a changé.
+    """
     try:
         morceaux = (racine / "data" / "voix" / "pensee.jour").read_text().split()
         jour = date.fromisoformat(morceaux[0])
+        if len(morceaux) >= 4:
+            return jour, int(morceaux[1]), int(morceaux[2]), float(morceaux[3])
         etape = int(morceaux[1])
         feu = float(morceaux[2]) if len(morceaux) > 2 else 0.0
-        return jour, etape, feu
+        if etape >= 2:
+            return jour, 2, 2, feu
+        return jour, 0, etape, feu
     except (OSError, ValueError, IndexError):
-        return None, 0, 0.0
+        return None, 0, 0, 0.0
 
 
-def _pensee_ecrite(racine: Path, jour: date, etape: int, feu: float) -> None:
+def _pensee_ecrite(racine: Path, jour: date, rang: int, etape: int,
+                   feu: float) -> None:
     try:
         (racine / "data" / "voix" / "pensee.jour").write_text(
-            f"{jour.isoformat()} {etape} {feu:.3f}\n", encoding="utf-8")
+            f"{jour.isoformat()} {rang} {etape} {feu:.3f}\n", encoding="utf-8")
     except OSError:
         pass
 # L'heure de la machine, de l'autre côté. Même format, même corps : les deux
@@ -6043,7 +6056,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # « BOOOOORING » pendant trois secondes, ce qui est une drôle de carte de
     # visite pour une veille qui vient de démarrer.
     dernier_ennui = origine - 10_000.0
-    pensee_jour, pensee_etape, pensee_feu = _pensee_lue(racine)
+    pensee_jour, pensee_rang, pensee_etape, pensee_feu = _pensee_lue(racine)
     pensee_suite = pensee_feu + PENSEE_APRES_S if pensee_etape == 1 else 0.0
     deploie_dit = False
     # Un quart d'heure en arrière : si la vallée est déjà dans le brouillard au
@@ -6414,32 +6427,46 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # la parole n'est pas mentir, c'est sous-titrer ; le retirer avant
             # la fin de la phrase, si.
             # La pensée, à l'heure de la montagne et non à celle de la webcam.
-            # Le nom reste écrit dix-sept secondes, puis la voix dit
-            # « Big up to the Normandy! ». Rien de tout cela n'entre dans le tableau.
+            # Deux fois dans la journée française. Le nom reste écrit dix-sept
+            # secondes, puis la voix dit « Big up to the Normandy! ».
             ici = datetime.now(PARIS)
             if pensee_jour != ici.date():
-                pensee_jour, pensee_etape, pensee_suite = ici.date(), 0, 0.0
+                pensee_jour, pensee_rang, pensee_etape = ici.date(), 0, 0
+                pensee_suite = 0.0
             seconde_jour = ici.hour * 3600 + ici.minute * 60 + ici.second
-            vise = seconde_pensee(ici.date())
-            if (pensee_etape == 0 and musique.pensees
-                    and vise <= seconde_jour < vise + PENSEE_GRACE_S
-                    and not musique.parle()):
-                if musique.dis(musique.pensees[0]):
-                    pensee_feu = time.time()
-                    pensee_suite = pensee_feu + PENSEE_APRES_S
-                    pensee_etape = 1
-                    _pensee_ecrite(racine, ici.date(), 1, pensee_feu)
-                    log.info("Pensée dite à %s", ici.strftime("%H:%M:%S"))
-            elif (pensee_etape == 1 and musique.normandys
-                    and pensee_suite and time.time() >= pensee_suite
-                    and not musique.parle()):
-                if time.time() > pensee_suite + PENSEE_GRACE_S:
-                    pensee_etape = 2
-                    _pensee_ecrite(racine, ici.date(), 2, pensee_feu)
-                elif musique.dis(musique.normandys[0]):
-                    pensee_etape = 2
-                    _pensee_ecrite(racine, ici.date(), 2, pensee_feu)
-                    log.info("Normandy dite à %s", ici.strftime("%H:%M:%S"))
+            heures = secondes_pensee(ici.date())
+            if pensee_rang < 2 and pensee_etape < 2:
+                vise = heures[pensee_rang]
+                if (pensee_etape == 0 and seconde_jour >= vise + PENSEE_GRACE_S):
+                    pensee_rang += 1
+                    if pensee_rang >= 2:
+                        pensee_etape = 2
+                    _pensee_ecrite(racine, ici.date(), pensee_rang, pensee_etape,
+                                   pensee_feu)
+                elif (pensee_etape == 0 and musique.pensees
+                        and vise <= seconde_jour < vise + PENSEE_GRACE_S
+                        and not musique.parle()):
+                    if musique.dis(musique.pensees[0]):
+                        pensee_feu = time.time()
+                        pensee_suite = pensee_feu + PENSEE_APRES_S
+                        pensee_etape = 1
+                        _pensee_ecrite(racine, ici.date(), pensee_rang, 1,
+                                       pensee_feu)
+                        log.info("Pensée dite à %s", ici.strftime("%H:%M:%S"))
+                elif (pensee_etape == 1 and musique.normandys
+                        and pensee_suite and time.time() >= pensee_suite
+                        and not musique.parle()):
+                    if time.time() > pensee_suite + PENSEE_GRACE_S:
+                        pensee_rang += 1
+                        pensee_etape = 2 if pensee_rang >= 2 else 0
+                        _pensee_ecrite(racine, ici.date(), pensee_rang,
+                                       pensee_etape, pensee_feu)
+                    elif musique.dis(musique.normandys[0]):
+                        pensee_rang += 1
+                        pensee_etape = 2 if pensee_rang >= 2 else 0
+                        _pensee_ecrite(racine, ici.date(), pensee_rang,
+                                       pensee_etape, pensee_feu)
+                        log.info("Normandy dite à %s", ici.strftime("%H:%M:%S"))
             dit = musique.dit_quoi() if musique.parle() else ""
             if dit == "brouillard" or quand - gris_depuis <= BROUILLARD_TENUE_S:
                 # Sans voix enregistrée, le mot tient quand même trois

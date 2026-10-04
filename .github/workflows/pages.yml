@@ -1,9 +1,8 @@
 name: pages
 
 # Le site partait à chaque poussée, donc toutes les quinze minutes quand la
-# veille publie, et il est lisible de tout le monde alors que le dépôt est
-# privé. On l'a donc mis à la demande : rien ne sort tout seul tant que la
-# reconnaissance du quotidien n'est pas fiable.
+# veille publie. On l'a donc mis à la demande : les commits ne publient pas
+# la page, l'horloge si.
 #
 # Cela a eu une conséquence que personne n'avait voulue. Le seul déclencheur
 # automatique restant était la dernière étape du workflow de relecture, si

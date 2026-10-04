@@ -5512,23 +5512,35 @@ class LecteurTests(unittest.TestCase):
 
 
 class PenseeTests(unittest.TestCase):
-    """Une pensée par jour, le premier soir à 22 h 37, hors du tableau."""
+    """Deux pensées par jour, dans la journée française, au tableau."""
 
-    def test_the_first_evening_is_twenty_three_to_eleven(self):
+    def test_two_hours_stay_inside_the_french_day(self):
         from datetime import date
-        self.assertEqual(stream.seconde_pensee(date(2026, 10, 4)),
-                         22 * 3600 + 37 * 60)
+        for jour in (date(2026, 10, 5), date(2026, 12, 21), date(2027, 6, 1)):
+            premiere, seconde = stream.secondes_pensee(jour)
+            self.assertEqual((premiere, seconde), stream.secondes_pensee(jour))
+            self.assertGreaterEqual(premiere, 8 * 3600)
+            self.assertLess(seconde, 23 * 3600)
+            self.assertGreaterEqual(seconde - premiere, 3 * 3600)
 
-    def test_another_day_stays_put_and_leaves_room_for_normandy(self):
+    def test_a_finished_day_stays_finished(self):
         from datetime import date
-        jour = date(2026, 10, 5)
-        self.assertEqual(stream.seconde_pensee(jour), stream.seconde_pensee(jour))
-        self.assertLess(stream.seconde_pensee(jour), 86400 - 90)
+        import tempfile
+        with tempfile.TemporaryDirectory() as dossier:
+            racine = Path(dossier)
+            voix = racine / "data" / "voix"
+            voix.mkdir(parents=True)
+            (voix / "pensee.jour").write_text(
+                "2026-10-04 2 1791146230.370\n", encoding="utf-8")
+            jour, rang, etape, _feu = stream._pensee_lue(racine)
+        self.assertEqual(jour, date(2026, 10, 4))
+        self.assertEqual((rang, etape), (2, 2))
 
-    def test_the_dedication_stays_off_the_table(self):
+    def test_the_dedication_is_on_the_table(self):
         page = (Path(__file__).resolve().parents[1] / "site" / "index.html").read_text()
-        self.assertNotIn("David Vincent", page)
-        self.assertNotIn("NORMANDIE", page)
+        self.assertIn("David Vincent", page)
+        self.assertIn("BIG UP TO THE NORMANDY!", page)
+        self.assertIn("Twenty ways", page)
 
 
 class HorlogeDuCreditTests(unittest.TestCase):
