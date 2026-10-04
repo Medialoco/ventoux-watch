@@ -191,6 +191,101 @@ def lit_le_direct(page: str | None) -> tuple[bool | None, str]:
     return None, ""
 
 
+def _compte(label: str) -> int | None:
+    """Un entier écrit en toutes lettres de chiffres, ou rien.
+
+    « 329 subscribers » et « 1 234 abonnés » sont des comptes. « 1.2K » n'en
+    est pas un : l'arrondi n'est pas le nombre, et ce gag ne dit que ce qu'il
+    a lu.
+    """
+    texte = label.replace("\u00a0", " ").replace("\u202f", " ").strip()
+    trouve = re.match(r"(\d{1,3}(?: \d{3})*|\d+)", texte)
+    if not trouve:
+        return None
+    suite = texte[trouve.end():].lstrip()
+    if suite[:1].lower() in ".km":
+        return None
+    return int(trouve.group(1).replace(" ", ""))
+
+
+def lit_la_salle(page: str | None) -> tuple[int | None, int | None]:
+    """Les abonnés de la chaîne, et combien de gens regardent le direct.
+
+    Deux chiffres différents. Le premier est le compte d'abonnés, le second
+    est « watching now » : c'est lui qu'on divise par lui-même.
+    """
+    if not page:
+        return None, None
+    abonnes = None
+    etiquette = re.search(
+        r'"subscriberCountText":\{"accessibility":\{"accessibilityData":'
+        r'\{"label":"([^"]+)"', page)
+    if etiquette:
+        abonnes = _compte(etiquette.group(1))
+    direct = re.search(r'"originalViewCount":"(\d+)"', page)
+    return abonnes, int(direct.group(1)) if direct else None
+
+
+def groupe(n: int) -> str:
+    """1 234, avec une espace tous les trois chiffres. La police n'a pas
+    d'espace fine, une espace ordinaire suffit."""
+    return f"{n:,}".replace(",", " ")
+
+
+# Les mots dont on a le fichier. La voix est gravée une fois, sur le Mac :
+# le Pi colle les morceaux, il ne synthétise rien.
+_UN = ("zero", "un", "deux", "trois", "quatre", "cinq", "six", "sept",
+       "huit", "neuf", "dix", "onze", "douze", "treize", "quatorze",
+       "quinze", "seize")
+_DIZ = ("", "", "vingt", "trente", "quarante", "cinquante", "soixante")
+
+
+def morceaux_nombre(n: int) -> list[str]:
+    """Les clés des fichiers qui, collées, disent n en français."""
+    if n < 0:
+        raise ValueError(n)
+    if n < 17:
+        return [_UN[n]]
+    if n < 20:
+        return [("dix_sept", "dix_huit", "dix_neuf")[n - 17]]
+    if n < 70:
+        dizaine, reste = divmod(n, 10)
+        mots = [_DIZ[dizaine]]
+        if reste == 1:
+            return mots + ["et", "un"]
+        if reste:
+            mots.append(_UN[reste])
+        return mots
+    if n < 80:
+        if n == 71:
+            return ["soixante", "et", "onze"]
+        return ["soixante", _UN[n - 60]]
+    if n < 100:
+        if n == 80:
+            return ["quatre_vingts"]
+        return ["quatre_vingt", *morceaux_nombre(n - 80)]
+    if n < 1000:
+        centaines, reste = divmod(n, 100)
+        mots = [] if centaines == 1 else morceaux_nombre(centaines)
+        mots.append("cents" if centaines > 1 and reste == 0 else "cent")
+        if reste:
+            mots.extend(morceaux_nombre(reste))
+        return mots
+    if n < 1_000_000:
+        milliers, reste = divmod(n, 1000)
+        mots = [] if milliers == 1 else morceaux_nombre(milliers)
+        mots.append("mille")
+        if reste:
+            mots.extend(morceaux_nombre(reste))
+        return mots
+    millions, reste = divmod(n, 1_000_000)
+    mots = ["un"] if millions == 1 else list(morceaux_nombre(millions))
+    mots.append("million" if millions == 1 else "millions")
+    if reste:
+        mots.extend(morceaux_nombre(reste))
+    return mots
+
+
 def direct_visible(chaine: str) -> bool | None:
     """La chaîne est-elle en direct ? None quand on n'a pas su regarder."""
     return lit_le_direct(page_du_direct(chaine))[0]
@@ -4703,6 +4798,147 @@ def pose_never(image: np.ndarray, vue: tuple[int, int, int, int],
     pose_annonce(image, vue, ("NEVER GIVE UP", "BUTTERBANE"))
 
 
+# Le compte, de temps en temps, dans la bande de droite. Quatre minutes :
+# assez rare pour rester une surprise, assez souvent pour qu'on l'attrape
+# en passant. Dix secondes, le temps de lire la division.
+SALLE_PERIODE_S = 240.0
+SALLE_TENUE_S = 10.0
+SALLE_PREMIER_S = 25.0
+SALLE_SONDE_S = 45.0
+_BLANC_MOT = 0.07
+_SOUFFLE = 0.16
+
+
+class Salle:
+    """Le dernier compte lu, partagé entre le fil qui va le chercher et
+    celui qui dessine."""
+
+    def __init__(self) -> None:
+        self.abonnes: int | None = None
+        self.en_direct: int | None = None
+        self._verrou = threading.Lock()
+
+    def note(self, abonnes: int | None, en_direct: int | None) -> None:
+        with self._verrou:
+            if abonnes is not None:
+                self.abonnes = abonnes
+            if en_direct is not None:
+                self.en_direct = en_direct
+
+    def lit(self) -> tuple[int | None, int | None]:
+        with self._verrou:
+            return self.abonnes, self.en_direct
+
+
+def veille_salle(chaine: str, coupe: threading.Event, salle: Salle) -> None:
+    """Va lire le compte, et se tait quand la page ne le donne pas."""
+    while not coupe.is_set():
+        try:
+            salle.note(*lit_la_salle(page_du_direct(chaine)))
+        except Exception:
+            log.warning("Le compte du direct n'a pas pu être lu", exc_info=True)
+        if coupe.wait(SALLE_SONDE_S):
+            return
+
+
+def _rogne(pcm: bytes) -> bytes:
+    """Ôte le blanc que le modèle laisse avant et après un mot isolé."""
+    x = np.frombuffer(pcm, np.int16)
+    if x.size < VOIES:
+        return pcm
+    mag = np.abs(x).reshape(-1, VOIES).max(axis=1)
+    actif = np.flatnonzero(mag > 900)
+    if actif.size == 0:
+        return pcm
+    garde = int(0.04 * ECHANTILLONS_S)
+    a = max(0, int(actif[0]) - garde)
+    b = min(mag.size, int(actif[-1]) + garde)
+    return np.ascontiguousarray(x.reshape(-1, VOIES)[a:b]).tobytes()
+
+
+def assemble_salle(racine: Path, n: int) -> Path | None:
+    """Colle « Nous sommes n en direct, divisés par n ». None si un mot manque."""
+    dossier = racine / "data" / "voix" / "salle"
+    ordre = ["nous", *morceaux_nombre(n), "milieu", *morceaux_nombre(n)]
+    blanc = b"\0" * int(_BLANC_MOT * ECHANTILLONS_S * VOIES * 2)
+    souffle = b"\0" * int(_SOUFFLE * ECHANTILLONS_S * VOIES * 2)
+    parts: list[bytes] = []
+    for mot in ordre:
+        if parts:
+            parts.append(souffle if mot == "milieu" else blanc)
+        try:
+            parts.append(_rogne((dossier / f"{mot}.raw").read_bytes()))
+        except OSError:
+            return None
+    cible = dossier / f"salle_{n}.raw"
+    try:
+        cible.write_bytes(b"".join(parts))
+    except OSError:
+        return None
+    return cible
+
+
+def pose_salle(image: np.ndarray, vue: tuple[int, int, int, int],
+               abonnes: int | None, en_direct: int | None, age: float,
+               tenue: float = SALLE_TENUE_S) -> None:
+    """Le compte, dans le haut de la bande où le danseur droit sort parfois.
+
+    Il danse en bas de cette bande. Le compte reste au-dessus, donc les deux
+    peuvent être là en même temps sans se marcher dessus.
+    """
+    if age < 0 or age > tenue:
+        return
+    if abonnes is None and (en_direct is None or en_direct < 1):
+        return
+    force = min(1.0, age / 0.3, (tenue - age) / 0.5)
+    gx, gy, gw, gh = vue
+    hauteur, largeur = image.shape[:2]
+    droite = gx + gw
+    barre = largeur - droite
+    if barre < 36:
+        return
+    lignes: list[tuple[str, tuple[int, int, int]]] = []
+    if abonnes is not None:
+        lignes.append((groupe(abonnes), BLANC))
+        lignes.append(("ABONNES", AMBRE))
+    if en_direct is not None and en_direct >= 1:
+        lignes.append(("NOUS SOMMES", BLANC))
+        lignes.append((groupe(en_direct), BLANC))
+        lignes.append(("EN DIRECT", AMBRE))
+        lignes.append(("DIVISES PAR", BLANC))
+        lignes.append((groupe(en_direct), BLANC))
+        lignes.append(("= 1", CYAN))
+    elif en_direct == 0 and abonnes is not None:
+        lignes.append(("0", BLANC))
+        lignes.append(("EN DIRECT", AMBRE))
+    if not lignes:
+        return
+    echelle = largeur / 1600
+    taille = 0.55 * echelle
+    trait = max(1, int(round(2 * echelle)))
+    police = cv2.FONT_HERSHEY_SIMPLEX
+    while taille > 0.28 * echelle:
+        large = max(cv2.getTextSize(texte, police, taille, trait)[0][0]
+                    for texte, _ in lignes)
+        if large <= barre * 0.90:
+            break
+        taille *= 0.9
+    pas = int(round(22 * echelle * taille / (0.55 * echelle)))
+    bloc = pas * len(lignes)
+    y = gy + max(int(8 * echelle), (gh - bloc) // 5)
+    cx = droite + barre // 2
+    for texte, couleur in lignes:
+        (lw, lh), _ = cv2.getTextSize(texte, police, taille, trait)
+        x = cx - lw // 2
+        bas = min(hauteur - 2, y + lh)
+        encre = tuple(int(c * force) for c in couleur)
+        cv2.putText(image, texte, (x, bas), police, taille,
+                    (0, 0, 0), trait + 2, cv2.LINE_AA)
+        cv2.putText(image, texte, (x, bas), police, taille,
+                    encre, trait, cv2.LINE_AA)
+        y += pas
+
+
 # Les seuils du Pi 5 lui-même : il réduit sa fréquence à 80 °C et se met à
 # l'abri à 85. On prévient donc avant, pas au moment où c'est fait.
 TIEDE_C = 65.0
@@ -6045,8 +6281,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     coupe_son = threading.Event()
     ouverte_a = 0.0
     chaine = cfg.get("youtube_chaine")
+    salle = Salle()
     if chaine and cible.startswith("rtmp"):
         threading.Thread(target=veille_le_direct, args=(chaine, coupe, racine),
+                         daemon=True).start()
+        threading.Thread(target=veille_salle, args=(chaine, coupe, salle),
                          daemon=True).start()
     debut = _maintenant()
     # L'heure de la première image montrée : le bord du direct, moins ce qu'on
@@ -6194,6 +6433,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     dijon_heure = "23:00"
     never_jour = _never_lue(racine)
     never_feu = 0.0
+    salle_feu = 0.0
+    salle_tenue = SALLE_TENUE_S
+    salle_prochain = time.time() + SALLE_PREMIER_S
+    salle_abonnes: int | None = None
+    salle_direct: int | None = None
     deploie_dit = False
     # Un quart d'heure en arrière : si la vallée est déjà dans le brouillard au
     # moment où le flux démarre, on le dit tout de suite.
@@ -6628,6 +6872,27 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     _never_ecrite(racine, never_jour)
                     log.info("Never give up à %s, heure de Los Angeles",
                              la.strftime("%H:%M:%S"))
+            if (time.time() >= salle_prochain and not musique.parle()
+                    and not (never_feu and 0 <= time.time() - never_feu <= NEVER_TENUE_S)
+                    and not (dijon_feu and 0 <= time.time() - dijon_feu <= DIJON_TENUE_S)):
+                abo, directs = salle.lit()
+                if abo is None and directs is None:
+                    salle_prochain = time.time() + 15.0
+                else:
+                    salle_feu = time.time()
+                    salle_abonnes, salle_direct = abo, directs
+                    salle_tenue = SALLE_TENUE_S
+                    if directs is not None and directs >= 1:
+                        clip = assemble_salle(racine, directs)
+                        if clip is not None:
+                            musique.dis(clip)
+                            salle_tenue = max(
+                                SALLE_TENUE_S,
+                                clip.stat().st_size / (ECHANTILLONS_S * VOIES * 2) + 0.6)
+                        log.info("Salle : %s abonnés, %s en direct", abo, directs)
+                    else:
+                        log.info("Salle : %s abonnés, personne en direct", abo)
+                    salle_prochain = time.time() + SALLE_PERIODE_S
             dit = musique.dit_quoi() if musique.parle() else ""
             age_never = time.time() - never_feu if never_feu else -1.0
             age_dijon = time.time() - dijon_feu if dijon_feu else -1.0
@@ -6649,6 +6914,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 pose_annonce(toile, cadrage, ("DAVID VINCENT OR VINCENT DAVID",))
             elif dit == "normandy":
                 pose_annonce(toile, cadrage, ("BIG UP TO THE NORMANDY!",))
+            pose_salle(toile, cadrage, salle_abonnes, salle_direct,
+                       time.time() - salle_feu if salle_feu else -1.0,
+                       salle_tenue)
             pose_ruban(toile, ruban, quand - origine)
             # Le flottement des deux encarts, lent et continu. Il sautait
             # avant sur le beat, quelques secondes toutes les cinq minutes, et

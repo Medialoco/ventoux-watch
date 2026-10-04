@@ -286,6 +286,11 @@ JEU = {
                 "radio drop for home. Say Big up to the Normandy! with a "
                 "lift on Normandy. Never ominous, never a whisper. Over in "
                 "two seconds.",
+    "salle": "Adult male, clear, and a little delighted by a very small "
+             "piece of arithmetic. French. Say exactly the words given and "
+             "nothing else, evenly, as one piece of a sentence that will be "
+             "assembled later. No greeting, no extra word, never say the "
+             "word dot.",
     "deploi": "Say the single word Deployed, clear and even, like a machine "
               "confirming that it has arrived. Flat, intelligible, about one "
               "second. No exclamation. Never say the word dot.",

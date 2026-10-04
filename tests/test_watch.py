@@ -5547,6 +5547,45 @@ class PenseeTests(unittest.TestCase):
         self.assertIn("UNE COLLAB", page)
 
 
+class SalleTests(unittest.TestCase):
+    """Le compte réel, dit deux fois, et la division qui fait un."""
+
+    PAGE = (
+        '"subscriberCountText":{"accessibility":{"accessibilityData":'
+        '{"label":"329 subscribers"}},"simpleText":"329 subscribers"}'
+        '"originalViewCount":"1"'
+    )
+
+    def test_the_page_gives_followers_and_the_live_count(self):
+        self.assertEqual(stream.lit_la_salle(self.PAGE), (329, 1))
+        self.assertEqual(stream.lit_la_salle(""), (None, None))
+        self.assertIsNone(stream._compte("1.2K subscribers"))
+        self.assertEqual(stream._compte("1 234 abonnés"), 1234)
+
+    def test_the_same_number_is_said_twice(self):
+        self.assertEqual(stream.morceaux_nombre(1), ["un"])
+        self.assertEqual(stream.morceaux_nombre(21), ["vingt", "et", "un"])
+        self.assertEqual(stream.morceaux_nombre(71), ["soixante", "et", "onze"])
+        self.assertEqual(stream.morceaux_nombre(80), ["quatre_vingts"])
+        self.assertEqual(stream.morceaux_nombre(81), ["quatre_vingt", "un"])
+        self.assertEqual(stream.morceaux_nombre(100), ["cent"])
+        self.assertEqual(stream.morceaux_nombre(200), ["deux", "cents"])
+        self.assertEqual(stream.morceaux_nombre(201), ["deux", "cent", "un"])
+        self.assertEqual(stream.morceaux_nombre(329),
+                         ["trois", "cent", "vingt", "neuf"])
+        self.assertEqual(stream.morceaux_nombre(1000), ["mille"])
+        self.assertEqual(stream.morceaux_nombre(2_000_000), ["deux", "millions"])
+        self.assertEqual(stream.groupe(2_000_000), "2 000 000")
+        self.assertEqual(
+            ["nous", *stream.morceaux_nombre(1), "milieu", *stream.morceaux_nombre(1)],
+            ["nous", "un", "milieu", "un"])
+
+    def test_a_missing_word_stays_silent(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as dossier:
+            self.assertIsNone(stream.assemble_salle(Path(dossier), 1))
+
+
 class HorlogeDuCreditTests(unittest.TestCase):
     """Le crédit date la musique entendue, pas celle qu'on vient de verser.
 
