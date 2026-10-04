@@ -4576,6 +4576,13 @@ class DiffusionTests(unittest.TestCase):
         self.assertGreater(px, pays[:, 1].mean() - 15, "Los Angeles trop à l'ouest")
         self.assertGreater(py, pays[:, 0].mean(), "Los Angeles trop au nord")
 
+    def test_both_maps_start_on_the_same_line(self):
+        """L'horloge a moins de texte : sa carte ne doit pas pour autant monter."""
+        source = inspect.getsource(stream.pose_horloge) + inspect.getsource(stream.pose_machine)
+        self.assertIn("ENCART_DESSIN", inspect.getsource(stream.pose_horloge))
+        self.assertIn("ENCART_DESSIN", inspect.getsource(stream.pose_machine))
+        self.assertEqual(stream.ENCART_DESSIN, stream.MACHINE_LIGNES[-1])
+
     def test_both_maps_sit_in_the_middle_of_their_box(self):
         """Calée à gauche, la France avait l'air de tomber ; la Californie aussi."""
         france = json.loads((ROOT / "assets" / "carte-pays.json")

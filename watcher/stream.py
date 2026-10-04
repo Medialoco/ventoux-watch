@@ -4547,7 +4547,7 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     # machine va bien ; la photo dit laquelle. C'est une carte à cent euros sur
     # un bureau, et le flux a l'air d'une chaîne de télévision — autant le
     # montrer, c'est plus honnête et c'est plus intéressant.
-    haut_reste = sommet + int(MACHINE_LIGNES[-1] * echelle) + marge // 2
+    haut_reste = sommet + int(ENCART_DESSIN * echelle)
     bas = int(ENCART_BAS * echelle) + int(remue)
     if (vignette is None or vignette.size == 0) and not (carte and ou):
         bas = sommet + int(MACHINE_LIGNES[-1] * echelle) + marge
@@ -4629,8 +4629,11 @@ HORLOGE_LIEU = 0.62
 ENCART_BAS = 470         # depuis le haut de l'image, à la largeur de référence
 ENCART_LARGE = 170
 # Sous le texte, les deux encarts ont la même recette : une silhouette de
-# pays, puis un disque. Mêmes tailles des deux côtés, le disque assis en
-# bas — c'est ça qui les rend symétriques, pas le nombre de lignes au-dessus.
+# pays, puis un disque. Même hauteur de départ, mêmes tailles, le disque
+# assis en bas — c'est ça qui les rend symétriques, pas le nombre de
+# lignes au-dessus. L'horloge a moins de texte ; sans cette ligne commune
+# sa carte commençait plus haut et l'hexagone flottait.
+ENCART_DESSIN = MACHINE_LIGNES[-1]
 ENCART_CARTE = 108.0
 ENCART_DISQUE = 112.0
 # De temps en temps, quand la musique pousse, les deux encarts se balancent.
@@ -4929,13 +4932,14 @@ def pose_carte(image: np.ndarray, contours: list, lat: float, lon: float,
     p_nord = max(p[1] for p in principal)
     # Les longitudes se resserrent avec la latitude : sans ce facteur la
     # France est étalée d'un tiers en largeur et ne se reconnaît plus.
-    serre = math.cos(math.radians((nord + sud) / 2))
-    large_deg = max((est - ouest) * serre, 1e-6)
-    haut_deg = max(nord - sud, 1e-6)
-    pas = cote / max(large_deg, haut_deg)
-    haut = max(1, int(haut_deg * pas))
-    # Recadrer : le centre du morceau principal tombe au centre de la boîte,
-    # pas le centre de la boîte englobante (Corse + hexagone, îles + État).
+    # Cadre et échelle sur le grand morceau. La Corse et les îles, prises
+    # dans la boîte, rétrécissaient la France : l'hexagone flottait dans
+    # son carré pendant que la Californie, plus haute que large, le
+    # remplissait jusqu'au disque. Les deux silhouettes doivent occuper
+    # la même place.
+    serre = math.cos(math.radians((p_nord + p_sud) / 2))
+    pas = cote / max((p_est - p_ouest) * serre, p_nord - p_sud, 1e-6)
+    haut = max(1, int((p_nord - p_sud) * pas))
     milieu_lon = (p_ouest + p_est) / 2
     milieu_lat = (p_sud + p_nord) / 2
     cx = x + cote // 2
@@ -4975,8 +4979,9 @@ def pose_lieu(image: np.ndarray, texte: str, x: int, ligne: int,
 
 
 # Les lignes de l'horloge, en pixels d'un cadre de mille six cents : le badge,
-# la date, l'heure, la commune, le haut de la carte.
-HORLOGE_LIGNES = (26, 60, 96, 122, 134)
+# la date, l'heure, la commune. La carte, elle, part à ENCART_DESSIN, comme
+# à gauche : le nombre de lignes n'a pas à décider de sa place.
+HORLOGE_LIGNES = (26, 60, 96, 122)
 
 
 def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
@@ -5026,9 +5031,9 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                                 0.95 * echelle, 2)[0][0],
                 cv2.getTextSize(badge, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] + pas)
     gauche = largeur - large - 2 * marge
-    badge_y, date_y, heure_y, ville_y, carte_y = (
+    badge_y, date_y, heure_y, ville_y = (
         sommet + int(r * echelle) for r in HORLOGE_LIGNES)
-    haut_carte = carte_y
+    haut_carte = sommet + int(ENCART_DESSIN * echelle)
     bas = (int(ENCART_BAS * echelle) + int(remue) if dessin
            else ville_y + marge)
     fond_encart(image, (gauche, sommet), (largeur - 1, bas - 1), echelle)
