@@ -247,9 +247,19 @@ GENRES_DANSE = ["Techno", "House", "Deep techno", "Trance", "Drum n Bass",
 # deux fois.
 REVENDIQUES = {"alexander blu"}
 
+# Morceaux écartés à la main. Un identifiant, parce que le titre seul
+# reviendrait sous une autre graphie ; le titre aussi, au cas où le même
+# fichier reparaîtrait sous un autre numéro.
+ECARTES_ID = {19700}
+ECARTES_TITRES = {"cum on boyz"}
+
 
 def retenu(fiche: dict, mini: float = COURT_MIN_S) -> str:
     """Vide si on le garde, sinon la raison du refus — pour pouvoir la lire."""
+    if fiche.get("id") in ECARTES_ID:
+        return "écarté à la main"
+    if (fiche.get("titre") or "").strip().lower() in ECARTES_TITRES:
+        return "écarté à la main"
     if fiche.get("auteur", "").strip().lower() in REVENDIQUES:
         return "revendiqué sur YouTube malgré la licence"
     if not licence_libre(fiche["licence"], fiche["url_licence"]):

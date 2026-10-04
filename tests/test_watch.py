@@ -2610,7 +2610,9 @@ class FogTests(unittest.TestCase):
         page = (root / "site" / "index.html").read_text(encoding="utf-8")
         self.assertIn('id="view3d"', page)
         self.assertIn('id="camera"', page)
-        self.assertIn("#FREETECHRADIO", page)
+        self.assertIn("#FREETECHNORADIO", page)
+        self.assertNotIn('id="radio"', page)
+        self.assertNotIn("Audio stream", page)
 
     def test_the_map_draws_the_aim_that_was_measured(self):
         """The cone on the map said 140° while the fit said 126,7°.
@@ -5118,6 +5120,21 @@ class EncartsTests(unittest.TestCase):
         self.assertEqual(combien(pair, stream.ROUGE), 0)
         self.assertEqual(combien(impair, stream.ROUGE), 0)
 
+    def test_the_stream_wears_its_hashtag_under_the_camera(self):
+        """YouTube ne voit pas le site : le mot est sur l'image, sous la montagne."""
+        self.assertEqual(stream.DIESE_FLUX, "#FREETECHNORADIO")
+        self.assertNotIn(" ", stream.DIESE_FLUX)
+        image = np.zeros((900, 1600, 3), np.uint8)
+        vue = (200, 46, 1200, 600)
+        image[vue[1]:vue[1] + vue[3], vue[0]:vue[0] + vue[2]] = (40, 40, 40)
+        stream.pose_diese(image, vue)
+        sous = image[vue[1] + vue[3]:, :, :]
+        dans = image[vue[1]:vue[1] + vue[3], vue[0]:vue[0] + vue[2]]
+        self.assertGreater(int(np.count_nonzero(np.all(sous == stream.CYAN, axis=2))), 80)
+        self.assertEqual(int(np.count_nonzero(np.all(dans == stream.CYAN, axis=2))), 0)
+        source = inspect.getsource(stream)
+        self.assertIn("pose_diese(toile, cadrage)", source)
+
 
 class PortraitMachineTests(unittest.TestCase):
     """La photo du Pi, en grand au milieu, de temps en temps."""
@@ -6363,6 +6380,22 @@ class LaVoixPasseAuDessusDeLaMusique(unittest.TestCase):
         self.assertIn("config/local.json",
                       (ROOT / ".gitignore").read_text().splitlines())
         self.assertIsInstance(cle_openai(), str)
+
+
+class RecolteRefuseTests(unittest.TestCase):
+    def test_cum_on_boyz_does_not_come_back(self):
+        """Sorti de l'antenne et de la playlist : une récolte ne le reprend pas."""
+        from scripts.musique_dogmazic import retenu
+        self.assertEqual(retenu({
+            "id": 19700, "titre": "Cum On Boyz", "auteur": "Hard-dd-ker",
+            "licence": "CC BY 4.0", "url_licence": "https://creativecommons.org/licenses/by/4.0/",
+            "album": "", "genres": "Techno", "duree": 180.0,
+        }), "écarté à la main")
+        self.assertEqual(retenu({
+            "id": 1, "titre": "Cum On Boyz", "auteur": "Autre",
+            "licence": "CC BY 4.0", "url_licence": "https://creativecommons.org/licenses/by/4.0/",
+            "album": "", "genres": "Techno", "duree": 180.0,
+        }), "écarté à la main")
 
 
 class UneRecolteNEffacePasLaMediatheque(unittest.TestCase):

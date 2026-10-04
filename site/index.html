@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mont Serein</title>
+  <title>#FREETECHNORADIO</title>
   <script>
     (function () {
       var q = new URLSearchParams(location.search).get("theme");
@@ -40,16 +40,10 @@
   <a class="skip" href="#content" data-i18n="skip">Skip to content</a>
   <header class="top">
     <div class="top-inner">
-      <div class="brand">
-        <p class="eyebrow">Mont Ventoux</p>
-        <h1>Mont Serein</h1>
-      </div>
-      <nav class="onpage" data-i18n-aria="sections" aria-label="Sections">
-        <a href="#live" data-i18n="navLive">Live</a>
-        <a href="#watch" data-i18n="navWatch">Watch</a>
-        <a href="#view3d" data-i18n="navRelief">3D</a>
-        <a href="#camera" data-i18n="navCamera">Camera</a>
-      </nav>
+      <h1 class="brand-hash">
+        <span class="sr">#FREETECHNORADIO</span>
+        <canvas class="hash-title" aria-hidden="true"></canvas>
+      </h1>
       <p class="langs">
         <button type="button" data-lang="en" class="on">EN</button>
         <button type="button" data-lang="fr">FR</button>
@@ -59,67 +53,74 @@
   </header>
 
   <main id="content">
-  <section class="block live hero" id="live" aria-labelledby="live-title">
-    <h2 class="sr" id="live-title" data-i18n="live">Live</h2>
-    <div class="hash-frame hash-on-video" aria-label="#FREETECHRADIO">
-      <canvas class="hash-strip hash-top" aria-hidden="true"></canvas>
-      <canvas class="hash-strip hash-bot" aria-hidden="true"></canvas>
-      <canvas class="hash-strip hash-side hash-left" aria-hidden="true"></canvas>
-      <canvas class="hash-strip hash-side hash-right" aria-hidden="true"></canvas>
-      <div class="live-hold">
-        <div class="stage-frame">
-          <iframe id="direct" title="Mont Serein — live" allowfullscreen
-                  allow="autoplay; encrypted-media; picture-in-picture" hidden></iframe>
-          <video id="player" controls autoplay muted playsinline hidden></video>
-        </div>
-      </div>
-    </div>
-    <div class="hero-bar">
-      <p class="chips" aria-label="Raspberry Pi 5">
-        <span class="chip live-chip"><i></i> LIVE</span>
-        <span class="chip pi-chip"><i></i> RASPBERRY PI 5</span>
-      </p>
-      <p class="hero-actions">
-        <button type="button" id="radio" class="play" data-i18n="radio">Audio stream</button>
-        <a class="play ghost" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803"
-           target="_blank" rel="noopener" data-i18n="listen">Listen on Dogmazic</a>
-      </p>
-    </div>
-  </section>
+  <section class="screen" id="live" aria-labelledby="live-title">
+    <h2 class="sr" id="live-title" data-i18n="live">Live webcam</h2>
+    <div class="around">
+      <aside class="box" id="pipeline" aria-labelledby="pipeline-title">
+        <h2 id="pipeline-title" data-i18n="pipeline">Pipeline</h2>
+        <p data-i18n="pipelineLead">A Raspberry Pi 5 in Los Angeles reads the Mont Serein webcam one frame a second and pushes the rebuilt picture to YouTube without a break.</p>
+        <p><strong>OpenCV</strong> <span data-i18n="watchMotion">MOG2 finds the motion on the mountain.</span></p>
+        <p><strong>YOLO11s</strong> <span data-i18n="watchClass">A small network names the crop: car, walker, bike, truck.</span></p>
+        <p><strong>YouTube</strong> <span data-i18n="watchOut">The named frame is rebuilt and pushed live.</span></p>
+      </aside>
 
-  <section class="block feature" id="watch" aria-labelledby="watch-title">
-    <div class="hash-frame" aria-label="#FREETECHRADIO">
-      <canvas class="hash-strip hash-top" aria-hidden="true"></canvas>
-      <canvas class="hash-strip hash-bot" aria-hidden="true"></canvas>
-      <canvas class="hash-strip hash-side hash-left" aria-hidden="true"></canvas>
-      <canvas class="hash-strip hash-side hash-right" aria-hidden="true"></canvas>
-      <div class="hash-inner">
-        <h2 id="watch-title" data-i18n="watch">The watch</h2>
-        <p class="feature-line" data-i18n="watchLine">OpenCV finds what moved. YOLO11s names the crop. One frame a second, on a Raspberry Pi 5 in Los Angeles. That reading is the work. The picture around it is the show.</p>
-        <div class="feature-steps">
-          <p><strong>OpenCV</strong><span data-i18n="watchMotion">MOG2 finds the motion on the mountain.</span></p>
-          <p><strong>YOLO11s</strong><span data-i18n="watchClass">A small network names the crop: car, walker, bike, truck.</span></p>
-          <p><strong>YouTube</strong><span data-i18n="watchOut">The named frame is rebuilt and pushed live.</span></p>
+      <div class="stage">
+        <div class="live-hold">
+          <div class="stage-frame">
+            <iframe id="direct" title="#FREETECHNORADIO" allowfullscreen
+                    allow="autoplay; encrypted-media; picture-in-picture" hidden></iframe>
+            <video id="player" controls autoplay muted playsinline hidden></video>
+          </div>
         </div>
+        <p class="chips" aria-label="Raspberry Pi 5">
+          <span class="chip live-chip"><i></i> LIVE</span>
+          <span class="chip pi-chip"><i></i> RASPBERRY PI 5</span>
+        </p>
       </div>
-    </div>
-    <figure class="feature-still">
-      <img src="stills/eclat.jpg" alt="">
-      <figcaption data-i18n="stillEclat">A catch: the name of what just passed lights the whole frame.</figcaption>
-    </figure>
-    <p data-i18n="heroMusic">Fourteen hours of free music play around the clock, all of it from Dogmazic. Four of those hours are the album Mont Serein, written for this slope.</p>
-  </section>
 
-  <section class="block stage" id="stage" aria-labelledby="stage-title">
-    <div class="head">
-      <h2 id="stage-title" data-i18n="stage">On the stream</h2>
-      <p class="sub" data-i18n="stageLead">Three picture effects take turns on the mountain: pixel, grey, and a slow wave. Dedicated numbers visit the same frame.</p>
-    </div>
-    <div class="stills">
-      <figure><img src="stills/console.jpg" alt=""><figcaption data-i18n="stillConsole">The music console, the LIVE and Raspberry Pi 5 badges, and the cable that ties Los Angeles to Beaumont-du-Ventoux.</figcaption></figure>
-      <figure><img src="stills/ours.jpg" alt=""><figcaption data-i18n="stillOurs">The wooden bear’s double comes down to dance on the roundabout and claims the place as home.</figcaption></figure>
-      <figure><img src="stills/machine.jpg" alt=""><figcaption data-i18n="stillMachine">Thanks Raspberry! The Pi 5 on the desk that runs the watch.</figcaption></figure>
-      <figure><img src="stills/dogmazic.jpg" alt=""><figcaption data-i18n="stillDogmazic">Thanks Dogmazic! The free-music library that fills the day.</figcaption></figure>
+      <aside class="box" id="rebuild" aria-labelledby="rebuild-title">
+        <h2 id="rebuild-title" data-i18n="rebuild">Rebuilt</h2>
+        <p data-i18n="rebuildLead">ffmpeg takes the webcam at one frame a second. OpenCV MOG2 finds what moved, on a frame scaled to 640 pixels. A compact blob held for three frames is cropped. YOLO11s, in ONNX, names only that crop. The named rectangle is drawn back onto the original picture, the overlays sit in the letterbox, and the whole frame is encoded toward YouTube. The mountain is never invented. It is read, then put back together.</p>
+      </aside>
+
+      <div class="box numbers" id="numbers" aria-labelledby="numbers-title">
+        <h2 id="numbers-title" data-i18n="numbers">On the stream</h2>
+        <p data-i18n="numbersLead">Sixteen picture modes take turns on the same frame. The mountain stays the source; each row is a way the Pi redraws it.</p>
+        <table class="effects">
+          <thead>
+            <tr>
+              <th></th>
+              <th data-i18n="effectColName">Name</th>
+              <th data-i18n="effectColWhat">What happens</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><img src="stills/pixel.jpg" alt=""></td><td data-i18n="effectPixel">Pixel</td><td data-i18n="stillPixel">The mountain is rebuilt from large squares, then returns.</td></tr>
+            <tr><td><img src="stills/gris.jpg" alt=""></td><td data-i18n="effectGrey">Grey</td><td data-i18n="stillGris">Colour drains from the slope and comes back.</td></tr>
+            <tr><td><img src="stills/ondule.jpg" alt=""></td><td data-i18n="effectWave">Wave</td><td data-i18n="stillOndule">Horizontal bands slide, as if the picture were under water.</td></tr>
+            <tr><td><img src="stills/eclat.jpg" alt=""></td><td data-i18n="effectCatch">Catch</td><td data-i18n="stillEclat">The name of what just passed lights the whole frame.</td></tr>
+            <tr><td><img src="stills/console.jpg" alt=""></td><td data-i18n="effectConsole">Console</td><td data-i18n="stillConsole">The music console, the LIVE and Raspberry Pi 5 badges, and the cable that ties Los Angeles to Beaumont-du-Ventoux.</td></tr>
+            <tr><td><img src="stills/ours.jpg" alt=""></td><td data-i18n="effectBear">Bear</td><td data-i18n="stillOurs">The wooden bear’s double comes down to dance on the roundabout and claims the place as home.</td></tr>
+            <tr><td><img src="stills/tapis.jpg" alt=""></td><td data-i18n="effectCarpet">Carpet</td><td data-i18n="stillTapis">A flying carpet follows the crest from one side of the sky to the other.</td></tr>
+            <tr><td><img src="stills/sous-marin.jpg" alt=""></td><td data-i18n="effectSub">Submarine</td><td data-i18n="stillMarin">A yellow submarine crosses the sky above the summit.</td></tr>
+            <tr><td><img src="stills/piste.jpg" alt=""></td><td data-i18n="effectPiste">Piste</td><td data-i18n="stillPiste">A surfer descends the André Philip run, the piste lighting up behind him.</td></tr>
+            <tr><td><img src="stills/elephant.jpg" alt=""></td><td data-i18n="effectElephant">Elephant</td><td data-i18n="stillElephant">A pink elephant fills the frame for a few quiet night hours.</td></tr>
+            <tr><td><img src="stills/batiment.jpg" alt=""></td><td data-i18n="effectBuilding">Building</td><td data-i18n="stillBati">A wireframe building rises from OpenStreetMap, then fades.</td></tr>
+            <tr><td><img src="stills/soleil.jpg" alt=""></td><td data-i18n="effectSun">Sun</td><td data-i18n="stillSoleil">A child’s sun is drawn where the real one sits behind the cloud.</td></tr>
+            <tr><td><img src="stills/machine.jpg" alt=""></td><td data-i18n="effectMachine">Machine</td><td data-i18n="stillMachine">Thanks Raspberry! The Pi 5 on the desk that runs the watch.</td></tr>
+            <tr><td><img src="stills/dogmazic.jpg" alt=""></td><td data-i18n="effectDogmazic">Dogmazic</td><td data-i18n="stillDogmazic">Thanks Dogmazic! The free-music library that fills the day.</td></tr>
+            <tr><td><img src="stills/replay.jpg" alt=""></td><td data-i18n="effectReplay">Replay</td><td data-i18n="stillReplay">A named passage comes back as a dated replay.</td></tr>
+            <tr><td><img src="stills/rencontre.jpg" alt=""></td><td data-i18n="effectMeet">Meeting</td><td data-i18n="stillRencontre">The two dancers leave their corners and meet in the middle of the camera window.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="box" id="music" aria-labelledby="music-title">
+        <h2 id="music-title" data-i18n="musicTitle">Dogmazic</h2>
+        <p data-i18n="musicLead">Dogmazic is a free-music library. The artists keep the rights and choose a Creative Commons licence, so a stream can play the work in public as long as it names the author, the title, the licence and a place to find the file. Fourteen hours turn here, one hundred and fifty-four tracks, all from that library. Four of those hours are the album Mont Serein, written for this slope. The playlist is public.</p>
+        <p><a class="play ghost" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803"
+             target="_blank" rel="noopener" data-i18n="listen">Listen on Dogmazic</a></p>
+      </aside>
     </div>
   </section>
 

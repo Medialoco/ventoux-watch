@@ -111,6 +111,8 @@ def main() -> int:
     partie.add_argument("--nom", default=NOM)
     partie.add_argument("--essai", action="store_true",
                         help="montrer ce qui serait publié, sans rien écrire")
+    partie.add_argument("--retire", type=int, default=0,
+                        help="retirer ce numéro de la playlist existante, sans la recréer")
     args = partie.parse_args()
 
     cle = (load_config().get("dogmazic") or {}).get("api_key") or ""
@@ -130,6 +132,24 @@ def main() -> int:
         return 0
 
     existante = site.mienne(args.nom)
+    if args.retire:
+        if existante is None:
+            print("playlist introuvable", file=sys.stderr)
+            return 1
+        identifiant = str(existante["id"])
+        reponse = site.fais("playlist_remove_song", filter=identifiant,
+                            song=str(args.retire))
+        relu = site.fais("playlist_songs", filter=identifiant, limit=500)
+        chansons = relu.get("song") or []
+        if isinstance(chansons, dict):
+            chansons = [chansons]
+        reste = [int(c.get("id")) for c in chansons]
+        encore = int(args.retire) in reste
+        print(f"playlist {identifiant} : retire {args.retire}, "
+              f"{len(reste)} morceaux, encore présent : {encore}")
+        if encore:
+            print("retrait incomplet :", reponse.get("error") or "sans détail")
+        return 0 if not encore else 1
     if existante is not None:
         # Repartir de zéro plutôt que de chercher ce qui manque : la playlist
         # doit dire ce qui tourne aujourd'hui, et un morceau retiré de la

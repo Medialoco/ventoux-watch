@@ -1850,10 +1850,11 @@ def applique_teinte(image: np.ndarray, angle: float, force: float) -> None:
 # dans une fenêtre et les encarts autour, plus rien ne peut entrer en conflit :
 # ce qui est à la caméra reste à la caméra.
 BORD_HAUT = 46
-# La bande du bas tient la console musique entière plus le bandeau. Un peu
-# plus haute qu'avant : trois pochettes côte à côte demandent de la place,
-# et le pavé d'un seul disque n'y suffisait plus.
-BORD_BAS = 228
+# La bande du bas tient la console musique entière, le bandeau, et le
+# mot-dièse sous la fenêtre caméra. Sans cette trentaine de pixels le
+# mot n'a nulle part où s'asseoir : il recouvrirait la montagne ou la
+# console.
+BORD_BAS = 258
 
 
 def fenetre(forme: tuple[int, int], largeur: int,
@@ -4681,6 +4682,56 @@ def pose_badge(image: np.ndarray, mot: str, x: int, y: int, echelle: float,
     return pas + large
 
 
+# Le seul mot qu'on laisse sur l'image. Pas un auteur, pas un dépôt : un
+# mot-dièse, en pixels, pour que le flux ait un nom sans dire qui le tient.
+DIESE_FLUX = "#FREETECHNORADIO"
+GLYPHES_DIESE = {
+    "#": ("01010", "11111", "01010", "11111", "01010", "00000", "00000"),
+    "A": ("01110", "10001", "10001", "11111", "10001", "10001", "10001"),
+    "C": ("01110", "10001", "10000", "10000", "10000", "10001", "01110"),
+    "D": ("11110", "10001", "10001", "10001", "10001", "10001", "11110"),
+    "E": ("11111", "10000", "10000", "11110", "10000", "10000", "11111"),
+    "F": ("11111", "10000", "10000", "11110", "10000", "10000", "10000"),
+    "H": ("10001", "10001", "10001", "11111", "10001", "10001", "10001"),
+    "I": ("01110", "00100", "00100", "00100", "00100", "00100", "01110"),
+    "N": ("10001", "11001", "10101", "10011", "10001", "10001", "10001"),
+    "O": ("01110", "10001", "10001", "10001", "10001", "10001", "01110"),
+    "R": ("11110", "10001", "10001", "11110", "10100", "10010", "10001"),
+    "T": ("11111", "00100", "00100", "00100", "00100", "00100", "00100"),
+}
+
+
+def pose_diese(image: np.ndarray, vue: tuple[int, int, int, int]) -> None:
+    """Le mot-dièse, en pixels, sous la fenêtre caméra.
+
+    YouTube ne voit pas le site. Sans ce mot sur l'image, le flux n'a pas
+    de nom. Il reste dans la bande noire : la montagne n'est pas un bandeau.
+    """
+    gx, gy, gw, gh = vue
+    echelle = image.shape[1] / 1600
+    cell = max(2, int(round(3 * echelle)))
+    trou = max(1, int(round(echelle)))
+    pas = cell + trou
+    large = len(DIESE_FLUX) * 6 * pas - trou
+    haut = 7 * pas - trou
+    x0 = gx + (gw - large) // 2
+    y0 = gy + gh + max(4, int(round(6 * echelle)))
+    if y0 + haut > image.shape[0]:
+        y0 = image.shape[0] - haut
+    if x0 < 0:
+        x0 = 0
+    teinte = CYAN
+    for i, signe in enumerate(DIESE_FLUX):
+        rangees = GLYPHES_DIESE.get(signe, ())
+        for y, rangee in enumerate(rangees):
+            for x, bit in enumerate(rangee):
+                if bit != "1":
+                    continue
+                px = x0 + (i * 6 + x) * pas
+                py = y0 + y * pas
+                image[py:py + cell, px:px + cell] = teinte
+
+
 def pose_titre_encart(image: np.ndarray, texte: str, x: int, ligne: int,
                       large: int, echelle: float) -> None:
     """Le nom d'un encart, souligné d'un trait court.
@@ -6336,6 +6387,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     agenda, agenda_credit = [], ""
             pose_agenda(toile, agenda, agenda_credit, quand - origine)
             pose_fil(toile, cadrage, remue)
+            # Le seul nom du flux, sous la montagne. YouTube ne voit pas le
+            # site : sans ce mot sur l'image, on n'a pas de nom.
+            pose_diese(toile, cadrage)
             # La musique en dernier : c'est elle qu'on vient écouter, et c'est
             # elle que la licence oblige à nommer.
             pose_bloc_musique(toile, prog, racine / "data" / "musique",

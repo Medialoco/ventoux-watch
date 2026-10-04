@@ -29,8 +29,35 @@ const COPY = {
     navStage: "Stage",
     navWatch: "Watch",
     navWiki: "Wiki",
+    navNumbers: "On the stream",
+    navMusic: "Dogmazic",
     watch: "The watch",
     watchLine: "OpenCV finds what moved. YOLO11s names the crop. One frame a second, on a Raspberry Pi 5 in Los Angeles. That reading is the work. The picture around it is the show.",
+    pipelineLead: "A Raspberry Pi 5 in Los Angeles reads the Mont Serein webcam one frame a second and pushes the rebuilt picture to YouTube without a break.",
+    numbers: "On the stream",
+    numbersLead: "Sixteen picture modes take turns on the same frame. The mountain stays the source; each row is a way the Pi redraws it.",
+    effectColName: "Name",
+    effectColWhat: "What happens",
+    effectPixel: "Pixel",
+    effectGrey: "Grey",
+    effectWave: "Wave",
+    effectCatch: "Catch",
+    effectConsole: "Console",
+    effectBear: "Bear",
+    effectCarpet: "Carpet",
+    effectSub: "Submarine",
+    effectPiste: "Piste",
+    effectElephant: "Elephant",
+    effectBuilding: "Building",
+    effectSun: "Sun",
+    effectMachine: "Machine",
+    effectDogmazic: "Dogmazic",
+    effectReplay: "Replay",
+    effectMeet: "Meeting",
+    musicTitle: "Dogmazic",
+    musicLead: "Dogmazic is a free-music library. The artists keep the rights and choose a Creative Commons licence, so a stream can play the work in public as long as it names the author, the title, the licence and a place to find the file. Fourteen hours turn here, one hundred and fifty-four tracks, all from that library. Four of those hours are the album Mont Serein, written for this slope. The playlist is public.",
+    rebuild: "Rebuilt",
+    rebuildLead: "ffmpeg takes the webcam at one frame a second. OpenCV MOG2 finds what moved, on a frame scaled to 640 pixels. A compact blob held for three frames is cropped. YOLO11s, in ONNX, names only that crop. The named rectangle is drawn back onto the original picture, the overlays sit in the letterbox, and the whole frame is encoded toward YouTube. The mountain is never invented. It is read, then put back together.",
     watchMotion: "MOG2 finds the motion on the mountain.",
     watchClass: "A small network names the crop: car, walker, bike, truck.",
     watchOut: "The named frame is rebuilt and pushed live.",
@@ -46,10 +73,10 @@ const COPY = {
     stage: "On the stream",
     stageLead: "Three picture effects take turns on the mountain: pixel, grey, and a slow wave. Dedicated numbers visit the same frame.",
     stillConsole: "The music console, the LIVE and Raspberry Pi 5 badges, and the cable that ties Los Angeles to Beaumont-du-Ventoux.",
-    stillPixel: "Pixel: the mountain is rebuilt from large squares, then returns.",
-    stillGris: "Grey: colour drains from the slope and comes back.",
-    stillOndule: "Wave: horizontal bands slide, as if the picture were under water.",
-    stillEclat: "A catch: the name of what just passed lights the whole frame.",
+    stillPixel: "The mountain is rebuilt from large squares, then returns.",
+    stillGris: "Colour drains from the slope and comes back.",
+    stillOndule: "Horizontal bands slide, as if the picture were under water.",
+    stillEclat: "The name of what just passed lights the whole frame.",
     stillRencontre: "The two dancers leave their corners and meet in the middle of the camera window.",
     stillTapis: "A flying carpet follows the crest from one side of the sky to the other.",
     stillMarin: "A yellow submarine crosses the sky above the summit.",
@@ -210,8 +237,35 @@ const COPY = {
     navStage: "Plateau",
     navWatch: "Veille",
     navWiki: "Wiki",
+    navNumbers: "Sur le flux",
+    navMusic: "Dogmazic",
     watch: "La veille",
     watchLine: "OpenCV trouve ce qui a bougé. YOLO11s nomme la découpe. Une image par seconde, sur un Raspberry Pi 5 à Los Angeles. Cette lecture est le travail. L’image autour est le spectacle.",
+    pipelineLead: "Un Raspberry Pi 5 à Los Angeles lit la webcam du Mont Serein, une image par seconde, et pousse l’image recomposée vers YouTube sans interruption.",
+    numbers: "Sur le flux",
+    numbersLead: "Seize modes d’image se relaient sur le même cadre. La montagne reste la source ; chaque ligne est une façon dont le Pi la redessine.",
+    effectColName: "Nom",
+    effectColWhat: "Ce qui se passe",
+    effectPixel: "Pixel",
+    effectGrey: "Gris",
+    effectWave: "Onde",
+    effectCatch: "Prise",
+    effectConsole: "Console",
+    effectBear: "Ours",
+    effectCarpet: "Tapis",
+    effectSub: "Sous-marin",
+    effectPiste: "Piste",
+    effectElephant: "Éléphant",
+    effectBuilding: "Bâtiment",
+    effectSun: "Soleil",
+    effectMachine: "Machine",
+    effectDogmazic: "Dogmazic",
+    effectReplay: "Rediffusion",
+    effectMeet: "Rencontre",
+    musicTitle: "Dogmazic",
+    musicLead: "Dogmazic est une bibliothèque de musique libre. Les artistes gardent leurs droits et choisissent une licence Creative Commons : un flux peut jouer l’œuvre en public s’il nomme l’auteur, le titre, la licence et un endroit où trouver le fichier. Quatorze heures tournent ici, cent cinquante-quatre morceaux, tous issus de cette bibliothèque. Quatre de ces heures sont l’album Mont Serein, écrit pour ce versant. La playlist est publique.",
+    rebuild: "Reconstruit",
+    rebuildLead: "ffmpeg prend la webcam à une image par seconde. OpenCV MOG2 trouve ce qui a bougé, sur une image ramenée à 640 pixels. Une tache compacte tenue trois images est découpée. YOLO11s, en ONNX, nomme seulement cette découpe. Le rectangle nommé est redessiné sur l’image d’origine, les encarts restent dans les bandes, et le cadre entier part vers YouTube. La montagne n’est jamais inventée. Elle est lue, puis remise ensemble.",
     watchMotion: "MOG2 trouve le mouvement sur la montagne.",
     watchClass: "Un petit réseau nomme la découpe : voiture, piéton, vélo, camion.",
     watchOut: "Le cadre nommé est recomposé et poussé en direct.",
@@ -227,10 +281,10 @@ const COPY = {
     stage: "Sur le flux",
     stageLead: "Trois effets d’image se relaient sur la montagne : pixel, gris, et une onde lente. Des numéros dédiés visitent le même cadre.",
     stillConsole: "La console musique, les badges LIVE et Raspberry Pi 5, et le câble qui relie Los Angeles à Beaumont-du-Ventoux.",
-    stillPixel: "Pixel : la montagne se reconstruit en grands carrés, puis redevient nette.",
-    stillGris: "Gris : la couleur quitte le versant et revient.",
-    stillOndule: "Onde : des bandes horizontales glissent, comme une image sous l’eau.",
-    stillEclat: "Une prise : le nom de ce qui vient de passer allume tout le cadre.",
+    stillPixel: "La montagne se reconstruit en grands carrés, puis redevient nette.",
+    stillGris: "La couleur quitte le versant et revient.",
+    stillOndule: "Des bandes horizontales glissent, comme une image sous l’eau.",
+    stillEclat: "Le nom de ce qui vient de passer allume tout le cadre.",
     stillRencontre: "Les deux danseurs quittent leurs coins et se rejoignent au milieu de la fenêtre caméra.",
     stillTapis: "Un tapis volant suit la crête, d’un bord du ciel à l’autre.",
     stillMarin: "Un sous-marin jaune traverse le ciel au-dessus du sommet.",
@@ -482,7 +536,7 @@ function locale() {
 const THEME_KEY = "ventoux-theme";
 let theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 
-const HASH = "#FREETECHRADIO";
+const HASH = "#FREETECHNORADIO";
 const HASH_GLYPHS = {
   "#": ["01010", "11111", "01010", "11111", "01010", "00000", "00000"],
   A: ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
@@ -492,6 +546,7 @@ const HASH_GLYPHS = {
   F: ["11111", "10000", "10000", "11110", "10000", "10000", "10000"],
   H: ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
   I: ["01110", "00100", "00100", "00100", "00100", "00100", "01110"],
+  N: ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
   O: ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
   R: ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
   T: ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
@@ -523,6 +578,15 @@ function hashTile(color) {
 function paintHash() {
   const color = getComputedStyle(document.documentElement).getPropertyValue("--pine").trim() || "#1e3a30";
   const tile = hashTile(color);
+  document.querySelectorAll("canvas.hash-title").forEach((canvas) => {
+    const scale = Math.max(2, Math.min(3, Math.floor((canvas.parentElement?.clientWidth || 720) / tile.width)));
+    canvas.width = tile.width * scale;
+    canvas.height = tile.height * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(tile, 0, 0, canvas.width, canvas.height);
+  });
   document.querySelectorAll("canvas.hash-strip").forEach((canvas) => {
     const side = canvas.classList.contains("hash-side");
     const wide = Math.max(1, canvas.clientWidth);
@@ -867,51 +931,9 @@ async function suisLeDirect() {
   // a check every few minutes would restart the stream under the viewer.
   if (numero === diffusion) return;
   diffusion = numero;
-  direct.src = `https://www.youtube.com/embed/${numero}?autoplay=1&mute=1&playsinline=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+  direct.src = `https://www.youtube.com/embed/${numero}?autoplay=1&mute=1&playsinline=1&rel=0`;
   hideCamera();
   direct.hidden = false;
-}
-
-function commandeDirect(fonction) {
-  if (!direct || direct.hidden || !direct.contentWindow) return false;
-  direct.contentWindow.postMessage(JSON.stringify({
-    event: "command", func: fonction, args: [],
-  }), "*");
-  return true;
-}
-
-const radio = document.querySelector("#radio");
-let ecoute = false;
-
-function poseRadio() {
-  if (!radio) return;
-  radio.textContent = t(ecoute ? "radioOn" : "radio");
-  radio.classList.toggle("on", ecoute);
-  radio.setAttribute("aria-pressed", String(ecoute));
-}
-
-radio?.addEventListener("click", () => {
-  ecoute = !ecoute;
-  if (ecoute) {
-    if (!commandeDirect("unMute") && video && !video.hidden) {
-      video.muted = false;
-      video.play().catch(() => {});
-    } else {
-      commandeDirect("playVideo");
-    }
-  } else if (!commandeDirect("mute") && video && !video.hidden) {
-    video.muted = true;
-  }
-  poseRadio();
-});
-document.addEventListener("ventoux-lang", poseRadio);
-
-const liveBloc = document.querySelector("#live");
-if (liveBloc && "IntersectionObserver" in window) {
-  const garde = new IntersectionObserver(([vue]) => {
-    document.body.classList.toggle("radio-docked", Boolean(vue) && !vue.isIntersecting);
-  }, { threshold: 0, rootMargin: "-48px 0px 0px 0px" });
-  garde.observe(liveBloc);
 }
 
 suisLeDirect();
