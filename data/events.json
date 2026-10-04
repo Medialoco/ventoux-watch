@@ -2,6 +2,176 @@
   "version": "0.4.8",
   "events": [
     {
+      "id": "2026-10-04T18-09-18Z-missed-5",
+      "t": "2026-10-04T18:09:18Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-04T18-09-18Z-missed-5.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2287,
+          "area_grow": 1.56,
+          "clipped": false,
+          "shade": 0.945,
+          "kept": 0.833,
+          "area_ratio": 0.00065,
+          "duration_s": 4.0,
+          "frames": 4,
+          "width_m": 0.6,
+          "height_m": 0.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 1.817,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.3859,
+          0.9583,
+          0.0234,
+          0.0278
+        ]
+      },
+      "closeup": "data/closeups/2026-10-04T18-09-18Z-missed-5.jpg"
+    },
+    {
+      "id": "2026-10-04T18-09-11Z-missed-4",
+      "t": "2026-10-04T18:09:11Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-04T18-09-11Z-missed-4.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 33 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3529,
+          "area_grow": 0.85,
+          "clipped": true,
+          "shade": 1.681,
+          "kept": 0.527,
+          "area_ratio": 0.00076,
+          "duration_s": 28.0,
+          "frames": 27,
+          "width_m": 33.2,
+          "height_m": 59.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.042,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.0,
+          0.3556,
+          0.0969,
+          0.3056
+        ]
+      },
+      "closeup": "data/closeups/2026-10-04T18-09-11Z-missed-4.jpg"
+    },
+    {
+      "id": "2026-10-04T18-09-09Z-motion-2",
+      "t": "2026-10-04T18:09:09Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-04T18-09-09Z-motion-2.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.075,
+          "area_grow": 0.01,
+          "clipped": true,
+          "shade": 1.615,
+          "kept": 0.574,
+          "area_ratio": 0.00047,
+          "duration_s": 3.0,
+          "frames": 3,
+          "width_m": 27.4,
+          "height_m": 35.7,
+          "width_named_m": 3.1,
+          "height_named_m": 1.7,
+          "rise_ms": 0.0,
+          "drift_rate": 0.204,
+          "seen_as": [
+            "car 0.31 sur 0%",
+            "person 0.25 sur 0%"
+          ]
+        },
+        "box": [
+          0.0,
+          0.3,
+          0.1938,
+          0.45
+        ]
+      },
+      "closeup": "data/closeups/2026-10-04T18-09-09Z-motion-2.jpg"
+    },
+    {
+      "id": "2026-10-04T18-09-09Z-missed-3",
+      "t": "2026-10-04T18:09:09Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-04T18-09-09Z-missed-3.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0725,
+          "area_grow": 6.01,
+          "clipped": false,
+          "shade": 1.501,
+          "kept": 0.755,
+          "area_ratio": 0.00459,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.163,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.0031,
+          0.3111,
+          0.0719,
+          0.0639
+        ]
+      },
+      "closeup": "data/closeups/2026-10-04T18-09-09Z-missed-3.jpg"
+    },
+    {
       "id": "2026-10-04T17-56-13Z-missed-1",
       "t": "2026-10-04T17:56:13Z",
       "type": "missed",
