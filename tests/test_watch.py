@@ -4574,7 +4574,10 @@ class DiffusionTests(unittest.TestCase):
             assombri = np.flatnonzero((toile < 150).any(axis=2).any(axis=0))
             return int(assombri.min())
 
-        self.assertLess(bord_gauche("Beaumont-du-Ventoux"), bord_gauche(""),
+        # Beaumont, au corps de Los Angeles, tient sous l'heure. Un nom plus
+        # long doit encore élargir l'encart, sinon il s'écrit sur le paysage.
+        self.assertLess(bord_gauche("Saint-Estève-Janson-sur-Ventoux"),
+                        bord_gauche(""),
                         "l'encart ne fait pas de place au nom de la commune")
 
     def test_the_two_panels_place_the_machine_and_the_camera_on_earth(self):
@@ -4606,6 +4609,27 @@ class DiffusionTests(unittest.TestCase):
             commune="Beaumont-du-Ventoux"))
         self.assertIn("LOS ANGELES", gauche)
         self.assertIn("BEAUMONT-DU-VENTOUX", droite)
+
+        # Même police, même hauteur : l'un en plus petit et plus haut, et
+        # les deux noms ne se répondaient plus.
+        poses = {}
+        vrai = cv2.putText
+
+        def mesure(image, texte, org, font, scale, *suite, **nommes):
+            if texte in {"LOS ANGELES", "BEAUMONT-DU-VENTOUX"}:
+                poses[texte] = (org[1], scale, font)
+            return vrai(image, texte, org, font, scale, *suite, **nommes)
+
+        etat = {"degres": 46.2, "charge": 0.31, "libre": 142e9, "debout": 191000}
+        with mock.patch.object(stream.cv2, "putText", mesure):
+            stream.pose_machine(np.zeros((400, 900, 3), np.uint8), etat,
+                                ville="Los Angeles")
+            stream.pose_horloge(np.zeros((400, 900, 3), np.uint8),
+                                1_760_000_000.0, commune="Beaumont-du-Ventoux")
+        self.assertEqual(poses["LOS ANGELES"][1], poses["BEAUMONT-DU-VENTOUX"][1])
+        self.assertEqual(poses["LOS ANGELES"][2], poses["BEAUMONT-DU-VENTOUX"][2])
+        self.assertEqual(poses["LOS ANGELES"][0], poses["BEAUMONT-DU-VENTOUX"][0])
+        self.assertEqual(stream.HORLOGE_LIGNES[-1], stream.MACHINE_LIGNES[-1])
 
         # La carte porte le point là où la caméra est vraiment. C'est la
         # seule façon de vérifier qu'elle montre un endroit et pas un

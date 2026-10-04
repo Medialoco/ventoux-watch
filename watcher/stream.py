@@ -4649,7 +4649,7 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     pas = int(28 * echelle)
     marge = int(14 * echelle)
     sommet = int(RUBAN_H * echelle) + int(remue)
-    taille = 0.56 * echelle
+    taille = LIEU_CORPS * echelle
     # Les deux encarts se répondent : celui-ci dit où est la machine qui
     # regarde, celui d'en face où est ce qu'elle regarde. Huit mille
     # kilomètres entre les deux, et c'est à peu près tout le projet.
@@ -4732,7 +4732,10 @@ def pose_bonjour(image: np.ndarray, nom: str, age: float) -> None:
 
 
 # Le lieu sous les chiffres, en part de leur taille. Les deux encarts
-# emploient la même, c'est ce qui les rend symétriques.
+# emploient le même corps et la même ligne : Los Angeles à gauche,
+# Beaumont-du-Ventoux à droite. Avant, l'horloge écrivait plus petit et
+# plus haut, parce que le nom était un sous-titre de l'heure.
+LIEU_CORPS = 0.56
 HORLOGE_LIEU = 0.62
 # La carte dans l'encart : une silhouette de pays avec un point dessus.
 # L'encart nommait la commune et ne disait pas où elle est. Un nom de commune
@@ -5123,9 +5126,10 @@ def pose_lieu(image: np.ndarray, texte: str, x: int, ligne: int,
 
 
 # Les lignes de l'horloge, en pixels d'un cadre de mille six cents : le badge,
-# la date, l'heure, la commune. La carte, elle, part à ENCART_DESSIN, comme
-# à gauche : le nombre de lignes n'a pas à décider de sa place.
-HORLOGE_LIGNES = (26, 60, 96, 122)
+# la date, l'heure, la commune. La commune est sur la même ligne que
+# Los Angeles — MACHINE_LIGNES[-1] — pour que les deux noms se répondent.
+# La carte, elle, part à ENCART_DESSIN, comme à gauche.
+HORLOGE_LIGNES = (26, 60, 96, MACHINE_LIGNES[-1])
 
 
 def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
@@ -5151,11 +5155,11 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     # comme tel : sous une image du Ventoux, un spectateur lit un lieu, et
     # celui-là était faux de six cents kilomètres. La commune est vraie, elle
     # dit où regarde la caméra, et elle donne le fuseau par surcroît.
-    # Elle est en plus petit : c'est un sous-titre de l'heure, pas une
-    # troisième ligne de même importance, et « Beaumont-du-Ventoux » est long.
     # L'heure est le sujet de cet encart, la date en est le contexte. Les deux
     # étaient écrites à la même taille, donc rien ne disait laquelle des deux
-    # bouge — et c'est celle qui bouge qu'on vient regarder.
+    # bouge — et c'est celle qui bouge qu'on vient regarder. Le lieu, lui, a
+    # le corps de Los Angeles : ce n'est plus un sous-titre, c'est le
+    # pendant de l'autre côté de la planète.
     jour = moment.strftime("%d %b %Y").upper()
     heure = moment.strftime("%H:%M:%S")
     lignes = [jour, heure]
@@ -5167,7 +5171,7 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     dessin = bool((carte and ou) or (photo is not None and photo.size))
     large = max([cv2.getTextSize(l, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
                  for l in lignes]
-                + [large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle)]
+                + [large_du_lieu(lieu, LIEU_CORPS * echelle * HORLOGE_LIEU, echelle)]
                 + ([int(ENCART_LARGE * echelle)] if dessin else []))
     badge = "LIVE" if direct else autre
     large = max(large,
@@ -5203,7 +5207,7 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                 0.48 * echelle, GRIS_ENCART, 1, cv2.LINE_AA)
     cv2.putText(image, heure, (x, heure_y), cv2.FONT_HERSHEY_SIMPLEX,
                 0.95 * echelle, BLANC, 2, cv2.LINE_AA)
-    pose_lieu(image, lieu, x, ville_y, taille * HORLOGE_LIEU, echelle)
+    pose_lieu(image, lieu, x, ville_y, LIEU_CORPS * echelle * HORLOGE_LIEU, echelle)
     if dessin:
         teinte = tamise_la_photo(photo) if photo is not None else None
         pose_carte_et_photo(
