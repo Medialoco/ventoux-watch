@@ -2476,11 +2476,11 @@ def ordre_de_rediffusion(gardees: list[dict], tirage: random.Random,
 PARIS = ZoneInfo("Europe/Paris")
 
 # Une pensée par jour, tenue hors du tableau du site. Le premier soir est
-# fixé : le 4 octobre 2026 à 22 h 30, heure de la montagne. La Normandie
+# fixé : le 4 octobre 2026 à 22 h 35, heure de la montagne. La Normandie
 # suit une minute après. Les autres jours, la seconde est tirée sur la date,
 # donc un redémarrage ne la déplace pas.
 PENSEE_PREMIER = date(2026, 10, 4)
-PENSEE_HEURE = 22 * 3600 + 30 * 60
+PENSEE_HEURE = 22 * 3600 + 35 * 60
 PENSEE_APRES_S = 60.0
 PENSEE_GRACE_S = 240
 
@@ -6412,7 +6412,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # la parole n'est pas mentir, c'est sous-titrer ; le retirer avant
             # la fin de la phrase, si.
             # La pensée, à l'heure de la montagne et non à celle de la webcam :
-            # 22 h 30 est une heure vraie. Une fois le jour, puis la Normandie
+            # 22 h 35 est une heure vraie. Une fois le jour, puis la Normandie
             # une minute après. Rien de tout cela n'entre dans le tableau.
             ici = datetime.now(PARIS)
             if pensee_jour != ici.date():
