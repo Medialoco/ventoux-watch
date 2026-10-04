@@ -4472,7 +4472,13 @@ def pose_carte_et_photo(image: np.ndarray, x: int, y: int, large: int,
     if carte and ou and haut >= 16:
         cote = min(large, haut, int(ENCART_CARTE * echelle))
         if cote >= 16:
-            pose_carte(image, carte, ou[0], ou[1], x, y, cote, echelle)
+            # Juste au-dessus du disque, centrée en largeur. Recentrer dans
+            # toute la place restante faisait flotter la France plus haut :
+            # l'horloge a moins de texte, donc plus de vide, et les deux
+            # silhouettes ne se répondaient plus.
+            pose_carte(image, carte, ou[0], ou[1],
+                       x + (large - cote) // 2, y + haut - cote,
+                       cote, echelle)
 
 
 def pose_machine(image: np.ndarray, etat: dict | None,
@@ -4913,6 +4919,14 @@ def pose_carte(image: np.ndarray, contours: list, lat: float, lon: float,
     est = max(p[0] for p in tous)
     sud = min(p[1] for p in tous)
     nord = max(p[1] for p in tous)
+    # L'œil reconnaît le plus grand morceau : la France, pas la Corse ;
+    # la Californie, pas les Channel Islands. On cadre sur lui, on dessine
+    # les autres quand même — s'ils tiennent.
+    principal = max(contours, key=len)
+    p_ouest = min(p[0] for p in principal)
+    p_est = max(p[0] for p in principal)
+    p_sud = min(p[1] for p in principal)
+    p_nord = max(p[1] for p in principal)
     # Les longitudes se resserrent avec la latitude : sans ce facteur la
     # France est étalée d'un tiers en largeur et ne se reconnaît plus.
     serre = math.cos(math.radians((nord + sud) / 2))
@@ -4920,11 +4934,16 @@ def pose_carte(image: np.ndarray, contours: list, lat: float, lon: float,
     haut_deg = max(nord - sud, 1e-6)
     pas = cote / max(large_deg, haut_deg)
     haut = max(1, int(haut_deg * pas))
-    marge = int((cote - large_deg * pas) / 2)
+    # Recadrer : le centre du morceau principal tombe au centre de la boîte,
+    # pas le centre de la boîte englobante (Corse + hexagone, îles + État).
+    milieu_lon = (p_ouest + p_est) / 2
+    milieu_lat = (p_sud + p_nord) / 2
+    cx = x + cote // 2
+    cy = y + cote // 2
 
     def sur_la_carte(lon_p: float, lat_p: float) -> tuple[int, int]:
-        return (x + marge + int((lon_p - ouest) * serre * pas),
-                y + int((nord - lat_p) * pas))
+        return (cx + int((lon_p - milieu_lon) * serre * pas),
+                cy + int((milieu_lat - lat_p) * pas))
 
     for anneau in contours:
         trace = np.array([sur_la_carte(*point) for point in anneau], np.int32)

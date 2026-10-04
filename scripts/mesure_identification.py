@@ -83,6 +83,12 @@ def main() -> int:
     # à trois heures du matin n'a pas de défaut à corriger ; une webcam qui rate
     # une voiture à midi, si. Les mélanger donne un taux qui ne veut rien dire
     # et qui monte ou descend avec la saison.
+    #
+    # C'est la ligne de fond, on n'en change pas. De jour on nomme les trois
+    # quarts ; de nuit le modèle ne pose souvent aucune lecture — et ce n'est
+    # ni l'exposition ni le cadrage, les deux ont été mesurés et écartés.
+    # Reste la taille apparente, les lampes qui vacillent, le suivi du cœur
+    # plutôt que de la flaque. On reprend ça à chaque mesure.
     periodes: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
     rates: list[tuple[str, Observation, str]] = []
     for ligne in args.journal.read_text().splitlines():

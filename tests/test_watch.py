@@ -4481,6 +4481,23 @@ class DiffusionTests(unittest.TestCase):
         self.assertGreater(px, pays[:, 1].mean() - 15, "Los Angeles trop à l'ouest")
         self.assertGreater(py, pays[:, 0].mean(), "Los Angeles trop au nord")
 
+    def test_both_maps_sit_in_the_middle_of_their_box(self):
+        """Calée à gauche, la France avait l'air de tomber ; la Californie aussi."""
+        france = json.loads((ROOT / "assets" / "carte-pays.json")
+                            .read_text(encoding="utf-8"))["contours"]
+        californie = json.loads((ROOT / "assets" / "carte-californie.json")
+                                .read_text(encoding="utf-8"))["contours"]
+        for nom, carte, lat, lon in (
+                ("France", france, 44.1833, 5.2620),
+                ("Californie", californie, 34.0537, -118.2428)):
+            toile = np.zeros((160, 160, 3), np.uint8)
+            stream.pose_carte(toile, carte, lat, lon, 10, 10, 140)
+            pays = np.argwhere(toile.any(axis=2))
+            self.assertTrue(len(pays), nom)
+            my, mx = pays.mean(axis=0)
+            self.assertAlmostEqual(mx, 80, delta=12, msg=f"{nom} trop de côté")
+            self.assertAlmostEqual(my, 80, delta=12, msg=f"{nom} trop haut ou trop bas")
+
     def test_the_french_side_has_the_trampoline_in_a_disc(self):
         """Le Raspberry a un disque ; le Ventoux aussi, c'est le trampoline."""
         photo = cv2.imread(str(ROOT / "assets" / "trampoline.jpg"))
