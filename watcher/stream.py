@@ -4579,9 +4579,9 @@ def pose_annonce(image: np.ndarray, vue: tuple[int, int, int, int],
 # La moutarde de Dijon, en BGR. Assez jaune pour se lire, assez brune pour
 # rester une moutarde et pas un soleil.
 MOUTARDE = (36, 164, 214)
-DIJON_HEURE = 23 * 3600
+DIJON_HEURE = 23 * 3600 + 15 * 60
 DIJON_GRACE_S = 240
-DIJON_TENUE_S = 8.0
+DIJON_TENUE_S = 14.0
 
 
 def moutarde(image: np.ndarray, force: float) -> None:
@@ -4640,7 +4640,20 @@ def pose_dijon(image: np.ndarray, vue: tuple[int, int, int, int],
         y = gy + (gh - lh) // 2
         dessous = image[y:y + lh, x:x + lw]
         cv2.addWeighted(cadre_photo, force, dessous, 1.0 - force, 0.0, dst=dessous)
-    pose_annonce(image, vue, ("IL EST 23 HEURES A DIJON",))
+    # L'heure en grand, dans la fenêtre : c'est elle qu'on est venu lire.
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    heure = "23:15"
+    taille_heure = 2.2 * echelle
+    trait_heure = max(2, int(6 * echelle))
+    (lh, hh), _ = cv2.getTextSize(heure, cv2.FONT_HERSHEY_DUPLEX, taille_heure, trait_heure)
+    xh = gx + (gw - lh) // 2
+    yh = gy + int(gh * 0.22)
+    cv2.putText(image, heure, (xh, yh), cv2.FONT_HERSHEY_DUPLEX, taille_heure,
+                (0, 0, 0), trait_heure + 4, cv2.LINE_AA)
+    cv2.putText(image, heure, (xh, yh), cv2.FONT_HERSHEY_DUPLEX, taille_heure,
+                MOUTARDE, trait_heure, cv2.LINE_AA)
+    pose_annonce(image, vue, ("IL EST 23 H 15 A DIJON",))
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
     taille = 0.62 * echelle
