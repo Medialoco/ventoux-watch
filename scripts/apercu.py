@@ -61,15 +61,22 @@ def compose(largeur: int, nuit: bool, musique: bool = True,
     stream.pose_ruban(toile, [("VENTOUX WATCH   ", stream.CYAN),
                               ("MONT SEREIN 1390 M   ", stream.BLANC),
                               ("OPEN DATA   ", stream.VERT)], 0.0)
+    machine = cfg.get("machine") or {}
+    californie = json.loads((ROOT / "assets" / "carte-californie.json")
+                            .read_text(encoding="utf-8")).get("contours")
     stream.pose_machine(toile, {"degres": 46.2, "charge": 0.31,
                                 "libre": 142e9, "debout": 191_000},
                         cv2.imread(str(ROOT / "assets" / "machine.jpg")),
-                        str((cfg.get("machine") or {}).get("ville") or ""))
+                        str(machine.get("ville") or ""),
+                        carte=californie,
+                        ou=(float(machine["lat"]), float(machine["lon"]))
+                        if machine.get("lat") is not None else None)
     carte = json.loads((ROOT / "assets" / "carte-pays.json")
                        .read_text(encoding="utf-8")).get("contours")
     pose = scene.get("pose") or {}
     stream.pose_horloge(toile, QUAND, True, commune=str(site.get("commune") or ""),
-                        carte=carte, ou=(float(pose["lat"]), float(pose["lon"])))
+                        carte=carte, ou=(float(pose["lat"]), float(pose["lon"])),
+                        photo=cv2.imread(str(ROOT / "assets" / "trampoline.jpg")))
 
     if musique:
         credits = ROOT / "data" / "musique" / "credits.json"
@@ -86,7 +93,6 @@ def compose(largeur: int, nuit: bool, musique: bool = True,
         agenda = json.loads(feuille.read_text(encoding="utf-8"))
         stream.pose_agenda(toile, agenda.get("evenements") or [],
                            str(agenda.get("credit") or ""), 0.0)
-    machine = cfg.get("machine") or {}
     if machine.get("lat") is not None:
         km = stream.a_vol_d_oiseau((float(machine["lat"]), float(machine["lon"])),
                                    (float(pose["lat"]), float(pose["lon"])))

@@ -12,6 +12,7 @@ il est dessiné, cent pixels de côté, c'est déjà plus fin que l'écran.
 
     python3 scripts/carte_du_pays.py
     python3 scripts/carte_du_pays.py --pays "Switzerland"
+    python3 scripts/carte_du_pays.py --pays "California" --sortie assets/carte-californie.json
 """
 from __future__ import annotations
 
@@ -62,6 +63,7 @@ def contours(geojson: dict) -> list[list[list[float]]]:
 def main() -> int:
     sujet = argparse.ArgumentParser(description=__doc__)
     sujet.add_argument("--pays", default="France métropolitaine")
+    sujet.add_argument("--sortie", type=Path, default=CIBLE)
     args = sujet.parse_args()
 
     trouve = cherche(args.pays)
@@ -70,8 +72,9 @@ def main() -> int:
         print(f"OpenStreetMap ne rend pas de contour pour « {args.pays} »")
         return 1
 
-    CIBLE.parent.mkdir(parents=True, exist_ok=True)
-    CIBLE.write_text(json.dumps({
+    cible = args.sortie if args.sortie.is_absolute() else ROOT / args.sortie
+    cible.parent.mkdir(parents=True, exist_ok=True)
+    cible.write_text(json.dumps({
         "pays": trouve.get("display_name") or args.pays,
         "osm": f"{trouve.get('osm_type')}/{trouve.get('osm_id')}",
         "finesse_deg": FINESSE,
@@ -80,8 +83,8 @@ def main() -> int:
     }, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"{trouve.get('display_name')}")
     print(f"  {len(anneaux)} morceaux, {sum(len(a) for a in anneaux)} points")
-    print(f"  écrit dans {CIBLE.relative_to(ROOT)} "
-          f"({CIBLE.stat().st_size // 1024} ko)")
+    print(f"  écrit dans {cible.relative_to(ROOT)} "
+          f"({cible.stat().st_size // 1024} ko)")
     return 0
 
 

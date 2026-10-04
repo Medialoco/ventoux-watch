@@ -25,3 +25,14 @@ côté pour qu'on sache d'où il vient et qu'on puisse le refaire :
 Rogné, parce qu'un SVG rendu garde ses marges et qu'elles décalent le dessin
 par rapport au point où le code croit le poser. Rogné une fois pour toutes
 vaut mieux qu'un décalage à corriger à la main.
+
+## trampoline.jpg
+
+Le trampoline élastique du Mont Serein, photographié le 28 juin 2026
+par Marianne Casamance. Wikimedia Commons, CC BY-SA 3.0.
+
+https://commons.wikimedia.org/wiki/File:Acivit%C3%A9s_estavales_(88728).jpg
+
+Recadré sur le V jaune et le tapis. À l'écran il est teinté comme la
+photo du Raspberry : c'est le disque français, en face du disque de
+Los Angeles.

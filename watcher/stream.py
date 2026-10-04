@@ -4449,9 +4449,37 @@ def pose_photo_ronde(image: np.ndarray, photo: np.ndarray, cx: int, cy: int,
                max(1, int(round(echelle))), cv2.LINE_AA)
 
 
+def pose_carte_et_photo(image: np.ndarray, x: int, y: int, large: int,
+                        haut: int, carte: list | None,
+                        ou: tuple[float, float] | None,
+                        photo: np.ndarray | None, echelle: float) -> None:
+    """La silhouette du pays, puis le disque. Même recette des deux côtés.
+
+    Le disque s'assoit en bas de la place, la carte se pose au-dessus. Les
+    deux ont une taille fixe — celle de l'autre encart — pour que Los
+    Angeles et le trampoline se répondent, plutôt qu'un côté mange tout
+    l'espace parce qu'il a moins de texte.
+    """
+    if large < 16 or haut < 16:
+        return
+    rayon = min(large // 2, int(ENCART_DISQUE * echelle / 2), max(8, haut // 4))
+    cx = x + large // 2
+    if photo is not None and photo.size and rayon >= 8:
+        cy = y + haut - rayon
+        if cy - rayon >= y:
+            pose_photo_ronde(image, photo, cx, cy, rayon, echelle)
+            haut = cy - rayon - y - max(4, int(6 * echelle))
+    if carte and ou and haut >= 16:
+        cote = min(large, haut, int(ENCART_CARTE * echelle))
+        if cote >= 16:
+            pose_carte(image, carte, ou[0], ou[1], x, y, cote, echelle)
+
+
 def pose_machine(image: np.ndarray, etat: dict | None,
                  vignette: np.ndarray | None = None, ville: str = "",
-                 remue: float = 0.0) -> None:
+                 remue: float = 0.0,
+                 carte: list | None = None,
+                 ou: tuple[float, float] | None = None) -> None:
     """L'encart machine, en haut à gauche, en face de l'horloge.
 
     Une webcam qui tourne vingt-quatre heures sur vingt-quatre tient à une
@@ -4513,17 +4541,9 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     # machine va bien ; la photo dit laquelle. C'est une carte à cent euros sur
     # un bureau, et le flux a l'air d'une chaîne de télévision — autant le
     # montrer, c'est plus honnête et c'est plus intéressant.
-    haut_photo = sommet + int(MACHINE_LIGNES[-1] * echelle) + marge // 2
+    haut_reste = sommet + int(MACHINE_LIGNES[-1] * echelle) + marge // 2
     bas = int(ENCART_BAS * echelle) + int(remue)
-    photo = None
-    if vignette is not None and bas - haut_photo - marge > 8:
-        vu_large = droite - 2 * marge
-        vu_haut = bas - haut_photo - marge
-        # Un disque dans la place qui reste. Un rectangle sous les chiffres
-        # faisait un second encart ; le cercle est la même photo, stylisée.
-        rayon_photo = max(8, min(vu_large, vu_haut) // 2)
-        photo = tamise_la_photo(vignette)
-    else:
+    if (vignette is None or vignette.size == 0) and not (carte and ou):
         bas = sommet + int(MACHINE_LIGNES[-1] * echelle) + marge
     fond_encart(image, (0, sommet), (droite - 1, bas - 1), echelle)
     bord = droite - marge
@@ -4543,13 +4563,10 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     pose_duo(image, duos[1][0], duos[1][1], marge, bord, disque, echelle)
     pose_duo(image, duos[2][0], duos[2][1], marge, bord, age, echelle)
     pose_lieu(image, lieu, marge, ville_y, taille * HORLOGE_LIEU, echelle)
-    if photo is not None:
-        cx = marge + vu_large // 2
-        cy = haut_photo + vu_haut // 2
-        if (cx - rayon_photo >= 0 and cy - rayon_photo >= sommet
-                and cx + rayon_photo < droite
-                and cy + rayon_photo < bas):
-            pose_photo_ronde(image, photo, cx, cy, rayon_photo, echelle)
+    pose_carte_et_photo(
+        image, marge, haut_reste, droite - 2 * marge, bas - haut_reste - marge,
+        carte, ou, tamise_la_photo(vignette) if vignette is not None else None,
+        echelle)
 
 
 BONJOUR_S = 8.0
@@ -4605,6 +4622,11 @@ HORLOGE_LIEU = 0.62
 # de texte, qui n'a aucune raison d'être le même des deux côtés.
 ENCART_BAS = 470         # depuis le haut de l'image, à la largeur de référence
 ENCART_LARGE = 170
+# Sous le texte, les deux encarts ont la même recette : une silhouette de
+# pays, puis un disque. Mêmes tailles des deux côtés, le disque assis en
+# bas — c'est ça qui les rend symétriques, pas le nombre de lignes au-dessus.
+ENCART_CARTE = 108.0
+ENCART_DISQUE = 112.0
 # De temps en temps, quand la musique pousse, les deux encarts se balancent.
 # En hauteur seulement : de côté, celui de gauche entrerait dans l'image et
 # celui de droite sortirait de l'écran, et un tableau de bord qui empiète sur
@@ -4878,7 +4900,7 @@ CARTE_POINT = (235, 215, 70)
 
 def pose_carte(image: np.ndarray, contours: list, lat: float, lon: float,
                x: int, y: int, cote: int, echelle: float = 1.0) -> int:
-    """Le pays en silhouette, avec un point là où regarde la caméra.
+    """Le pays en silhouette, avec un point là où on est.
 
     Rend la hauteur occupée, parce qu'elle dépend de la forme du pays et que
     l'encart doit s'ajuster dessus : la France est à peu près carrée, le Chili
@@ -4942,7 +4964,8 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                  autre: str = "REPLAY", commune: str = "",
                  carte: list | None = None,
                  ou: tuple[float, float] | None = None,
-                 remue: float = 0.0) -> None:
+                 remue: float = 0.0,
+                 photo: np.ndarray | None = None) -> None:
     """L'heure qui tourne, en haut à droite, avec le point rouge des chaînes.
 
     Le point clignote à la seconde : c'est ce qui fait qu'un écran fixe a l'air
@@ -4973,7 +4996,7 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     sommet = int(RUBAN_H * echelle) + int(remue)
     taille = 0.7 * echelle
     lieu = (commune or "").upper()
-    dessin = bool(carte and ou)
+    dessin = bool((carte and ou) or (photo is not None and photo.size))
     large = max([cv2.getTextSize(l, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
                  for l in lignes]
                 + [large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle)]
@@ -5014,8 +5037,10 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                 0.95 * echelle, BLANC, 2, cv2.LINE_AA)
     pose_lieu(image, lieu, x, ville_y, taille * HORLOGE_LIEU, echelle)
     if dessin:
-        pose_carte(image, carte, ou[0], ou[1], x, haut_carte,
-                   largeur - marge - x, echelle)
+        teinte = tamise_la_photo(photo) if photo is not None else None
+        pose_carte_et_photo(
+            image, x, haut_carte, largeur - marge - x,
+            bas - haut_carte - marge, carte, ou, teinte, echelle)
 
 
 def _entree(url: str, recul: int) -> subprocess.Popen:
@@ -5222,6 +5247,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # La photo de la machine qui fait tout ça. Lue en BGR et non en BGRA :
     # c'est une photo, elle n'a pas de transparence.
     photo_machine = cv2.imread(str(racine / "assets" / "machine.jpg"))
+    # Le trampoline du village, côté français : le pendant du disque de
+    # gauche. Recadré une fois, teinté à chaque image comme le Raspberry.
+    photo_trampoline = cv2.imread(str(racine / "assets" / "trampoline.jpg"))
     # On démarre comme si on venait de voir quelque chose : une rediffusion à
     # la première seconde du direct donnerait l'impression que rien ne marche.
     dernier_vu = origine
@@ -5264,6 +5292,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                                 .read_text(encoding="utf-8")).get("contours")
     except (OSError, ValueError):
         carte_pays = None
+    try:
+        carte_californie = json.loads(
+            (racine / "assets" / "carte-californie.json")
+            .read_text(encoding="utf-8")).get("contours")
+    except (OSError, ValueError):
+        carte_californie = None
     try:
         vise = json.loads((racine / "config" / "scene.json")
                           .read_text(encoding="utf-8")).get("pose") or {}
@@ -5636,8 +5670,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             pose_horloge(toile, quand, direct=rediff is None and survol is None,
                          autre="REPLAY" if rediff is not None else "3D MODEL",
                          commune=commune, carte=carte_pays, ou=ou_camera,
-                         remue=-remue)
-            pose_machine(toile, machine, photo_machine, ville, remue)
+                         remue=-remue, photo=photo_trampoline)
+            ou_machine = None
+            if machine_ou.get("lat") is not None:
+                ou_machine = (float(machine_ou["lat"]), float(machine_ou["lon"]))
+            pose_machine(toile, machine, photo_machine, ville, remue,
+                         carte=carte_californie, ou=ou_machine)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             # Relu de temps en temps et jamais à chaque image : le fichier
             # est écrit par un autre programme, et un agenda ne change pas

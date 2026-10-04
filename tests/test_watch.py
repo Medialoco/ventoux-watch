@@ -4465,6 +4465,33 @@ class DiffusionTests(unittest.TestCase):
         self.assertTrue(site.get("commune"),
                         "config/scene.json ne nomme pas la commune")
 
+    def test_los_angeles_is_a_point_on_california(self):
+        """Le Raspberry est à Los Angeles, pas « quelque part aux États-Unis »."""
+        californie = json.loads((ROOT / "assets" / "carte-californie.json")
+                                .read_text(encoding="utf-8"))["contours"]
+        reglages = json.loads((ROOT / "config" / "config.json")
+                              .read_text(encoding="utf-8"))["machine"]
+        toile = np.zeros((200, 200, 3), np.uint8)
+        stream.pose_carte(toile, californie, float(reglages["lat"]),
+                          float(reglages["lon"]), 10, 10, 180)
+        jaune = np.argwhere(np.all(toile == stream.CARTE_POINT, axis=2))
+        self.assertTrue(jaune.size, "pas de point sur la Californie")
+        pays = np.argwhere(toile.any(axis=2))
+        py, px = jaune.mean(axis=0)
+        self.assertGreater(px, pays[:, 1].mean() - 15, "Los Angeles trop à l'ouest")
+        self.assertGreater(py, pays[:, 0].mean(), "Los Angeles trop au nord")
+
+    def test_the_french_side_has_the_trampoline_in_a_disc(self):
+        """Le Raspberry a un disque ; le Ventoux aussi, c'est le trampoline."""
+        photo = cv2.imread(str(ROOT / "assets" / "trampoline.jpg"))
+        self.assertIsNotNone(photo)
+        source = inspect.getsource(stream.pose_horloge)
+        self.assertIn("pose_carte_et_photo(", source)
+        self.assertIn("tamise_la_photo(", source)
+        lisez = (ROOT / "assets" / "LISEZ-MOI.md").read_text(encoding="utf-8")
+        self.assertIn("Marianne Casamance", lisez)
+        self.assertIn("CC BY-SA 3.0", lisez)
+
     def test_boredom_is_measured_on_the_road_and_not_on_the_screen(self):
         """L'horloge de l'ennui ne doit pas être celle des rediffusions.
 
