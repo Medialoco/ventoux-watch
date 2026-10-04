@@ -5189,10 +5189,13 @@ class LecteurTests(unittest.TestCase):
     @staticmethod
     def _programme(url="https://play.dogmazic.net/artists.php?action=show&artist=7208"):
         return {"en_cours": {"auteur": "thepriben", "titre": "Mont Serein 002.01",
-                             "licence": "CC0", "url": url, "pochette": None},
+                             "licence": "CC0", "url": url, "pochette": None,
+                             "duree": 372.0},
                 "duree": 372.0, "ecoule": 161.0,
-                "suite": [{"auteur": "thepriben", "titre": "Mont Serein 002.02"}],
-                "avant": {"auteur": "thepriben", "titre": "Mont Serein 002.03"}}
+                "suite": [{"auteur": "thepriben", "titre": "Mont Serein 002.02",
+                           "duree": 240.0, "licence": "CC BY"}],
+                "avant": {"auteur": "thepriben", "titre": "Mont Serein 002.03",
+                          "duree": 180.0, "licence": "CC0"}}
 
     def _rendu(self, url):
         image = np.zeros((720, 1280, 3), np.uint8)
@@ -5299,14 +5302,52 @@ class LecteurTests(unittest.TestCase):
         self.assertFalse(any(" — " in mot for mot in dits),
                          "artiste et titre ne doivent plus être collés")
 
-    def test_the_equalizer_fills_the_empty_middle(self):
-        """Le trou du milieu, c'est là que les barres doivent être."""
+    def test_the_equalizer_is_a_strip_under_the_titles(self):
+        """Trop grand, il mangeait ce qu'on venait d'écrire."""
         image = np.zeros((720, 1280, 3), np.uint8)
         stream.pose_bloc_musique(image, self._programme(), Path("."), 0.5, 1.2)
-        milieu = image[520:680, 420:860]
-        verts = int(np.count_nonzero(np.all(milieu == stream.VERT, axis=2)))
-        ambres = int(np.count_nonzero(np.all(milieu == stream.AMBRE, axis=2)))
-        self.assertGreater(verts + ambres, 200, "l'égaliseur n'occupe pas le centre")
+
+        def barres(zone):
+            return (int(np.count_nonzero(np.all(zone == stream.VERT, axis=2)))
+                    + int(np.count_nonzero(np.all(zone == stream.AMBRE, axis=2))))
+
+        self.assertLess(barres(image[530:600, 420:860]), 80,
+                        "l'égaliseur mange encore les titres")
+        self.assertGreater(barres(image[610:670, 360:900]), 60,
+                           "l'égaliseur a disparu du milieu")
+
+    def test_the_console_shows_what_is_left_and_where_it_comes_from(self):
+        """Un titre sans le reste du temps, on ne sait pas si on reste."""
+        dits: list[str] = []
+        vrai = cv2.putText
+
+        def espion(image, texte, *suite, **nommes):
+            dits.append(texte)
+            return vrai(image, texte, *suite, **nommes)
+
+        with mock.patch.object(stream.cv2, "putText", espion):
+            stream.pose_bloc_musique(
+                np.zeros((720, 1280, 3), np.uint8), self._programme(),
+                Path("."), 0.4, 1.0)
+        self.assertTrue(any("3:31 left" in mot for mot in dits))
+        self.assertTrue(any("Dogmazic" in mot for mot in dits))
+        self.assertTrue(any("4:00" in mot or "3:00" in mot for mot in dits),
+                        "la durée des voisins doit se lire")
+
+    def test_the_console_wears_the_release_number(self):
+        """Six secondes au redémarrage, ce n'est pas assez pour le garder."""
+        dits: list[str] = []
+        vrai = cv2.putText
+
+        def espion(image, texte, *suite, **nommes):
+            dits.append(texte)
+            return vrai(image, texte, *suite, **nommes)
+
+        with mock.patch.object(stream.cv2, "putText", espion):
+            stream.pose_bloc_musique(
+                np.zeros((720, 1280, 3), np.uint8), self._programme(),
+                Path("."), 0.4, 1.0)
+        self.assertIn(f"v{stream.__version__}", dits)
 
 
 class HorlogeDuCreditTests(unittest.TestCase):
