@@ -3405,11 +3405,22 @@ MACHINE_RETARD_S = 120.0
 # et les ports, pas un mur : la route reste visible autour.
 MACHINE_PORTRAIT = 0.32
 
+# L'autre carte, en disque. Vingt-et-une minutes, encore un premier, et
+# trois minutes de retard : le Raspberry a déjà eu son tour à deux minutes,
+# celui-ci n'a pas à lui voler l'ouverture.
+ARDUINO_PERIODE_S = 1277.0
+ARDUINO_TENUE_S = 7.0
+ARDUINO_RETARD_S = 180.0
+# Diamètre du disque, en part de la fenêtre. Un peu plus petit que la
+# carte du Pi : sans titre ni pied, le même diamètre ferait un mur.
+ARDUINO_PORTRAIT = 0.28
+
 # Le plateau, maintenant que les numéros ont dit leur période et leur
 # durée. L'ordre départage les ex æquo : le tapis d'abord parce qu'il passe
 # au-dessus de tout et ne cache rien, l'éléphant parce qu'il occupe l'écran
 # entier, la machine ensuite — une carte au milieu cède le passage à un
-# éléphant rose, pas l'inverse.
+# éléphant rose, pas l'inverse. L'Arduino de même : un disque n'est pas
+# plus urgent qu'une carte.
 PLATEAU = (
     ("tapis", TAPIS_PERIODE_S, TAPIS_TRAVERSEE_S, 0.0),
     ("sous-marin", SOUS_MARIN_PERIODE_S, SOUS_MARIN_TRAVERSEE_S, 0.0),
@@ -3417,6 +3428,7 @@ PLATEAU = (
     ("elephant", ELEPHANT_PERIODE_S, ELEPHANT_TENUE_S, 0.0),
     ("batiment", BATIMENT_PERIODE_S, BATIMENT_RELEVE_S, 0.0),
     ("machine", MACHINE_PERIODE_S, MACHINE_TENUE_S, MACHINE_RETARD_S),
+    ("arduino", ARDUINO_PERIODE_S, ARDUINO_TENUE_S, ARDUINO_RETARD_S),
     # L'ours en dernier parce qu'il écrit en travers du ciel, et qu'il vaut
     # mieux qu'il cède le passage plutôt que de crier par-dessus le tapis.
     #
@@ -4454,6 +4466,81 @@ def pose_portrait_machine(image: np.ndarray, seconde: float,
     return True
 
 
+def _carre_plein(image: np.ndarray, cote: int) -> np.ndarray:
+    """Remplit un carré, rogne le trop-plein.
+
+    Pour un disque, contenir laisserait un croissant vide de chaque côté :
+    on verrait le cercle avant de voir la carte. Remplir, et le cadre est
+    le cercle.
+    """
+    haut, large = image.shape[:2]
+    src = min(haut, large)
+    x = (large - src) // 2
+    y = (haut - src) // 2
+    return cv2.resize(image[y:y + src, x:x + src], (max(1, cote), max(1, cote)),
+                      interpolation=cv2.INTER_AREA)
+
+
+def pose_photo_ronde(image: np.ndarray, photo: np.ndarray, cx: int, cy: int,
+                     rayon: int, echelle: float) -> None:
+    """Une photo dans un disque. Le cadre est le cercle, pas un rectangle."""
+    if rayon < 4:
+        return
+    cote = 2 * rayon + 1
+    carre = _carre_plein(photo, cote)
+    x0, y0 = cx - rayon, cy - rayon
+    if x0 < 0 or y0 < 0 or x0 + cote > image.shape[1] or y0 + cote > image.shape[0]:
+        return
+    yy, xx = np.ogrid[:cote, :cote]
+    dist = np.sqrt((xx.astype(np.float32) - rayon) ** 2
+                   + (yy.astype(np.float32) - rayon) ** 2)
+    # Un pixel et demi de fondu : un cercle OpenCV rempli a les dents, et
+    # on lit un défaut avant de lire la carte.
+    alpha = np.clip((rayon - dist) / 1.5, 0.0, 1.0)
+    coin = image[y0:y0 + cote, x0:x0 + cote].astype(np.float32)
+    coin[:] = coin * (1.0 - alpha[:, :, None]) + carre.astype(np.float32) * alpha[:, :, None]
+    image[y0:y0 + cote, x0:x0 + cote] = np.clip(coin, 0, 255).astype(np.uint8)
+    teinte = tuple(int(c * 0.45) for c in CYAN)
+    cv2.circle(image, (cx, cy), rayon, teinte,
+               max(1, int(round(echelle))), cv2.LINE_AA)
+
+
+def pose_portrait_arduino(image: np.ndarray, seconde: float,
+                          photo: np.ndarray | None,
+                          vue: tuple[int, int, int, int] | None = None,
+                          nuit: bool = False) -> bool:
+    """La photo de l'Arduino, ronde, au milieu, de temps en temps.
+
+    Le Raspberry a une carte : c'est le tableau de bord, il a des chiffres.
+    Celui-ci n'en a pas. Un disque suffit — on voit que c'est une autre
+    carte, et on voit le paysage autour.
+    """
+    if photo is None or photo.size == 0:
+        return False
+    phase = en_scene("arduino", seconde, nuit)
+    if phase is None:
+        return False
+    force = min(phase, ARDUINO_TENUE_S - phase, 1.0)
+    if force < 0.02:
+        return True
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    echelle = largeur / 1600
+    rayon = max(8, int(large_vue * ARDUINO_PORTRAIT / 2))
+    if 2 * rayon + int(16 * echelle) > haute_vue:
+        return False
+    cx = gauche + large_vue // 2
+    cy = cime + haute_vue // 2
+    if (cx - rayon < gauche or cy - rayon < cime
+            or cx + rayon >= gauche + large_vue
+            or cy + rayon >= cime + haute_vue):
+        return False
+    calque = image.copy()
+    pose_photo_ronde(calque, photo, cx, cy, rayon, echelle)
+    cv2.addWeighted(calque, 0.92 * force, image, 1.0 - 0.92 * force, 0.0, dst=image)
+    return True
+
+
 def pose_machine(image: np.ndarray, etat: dict | None,
                  vignette: np.ndarray | None = None, ville: str = "",
                  remue: float = 0.0) -> None:
@@ -5233,6 +5320,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # La photo de la machine qui fait tout ça. Lue en BGR et non en BGRA :
     # c'est une photo, elle n'a pas de transparence.
     photo_machine = cv2.imread(str(racine / "assets" / "machine.jpg"))
+    photo_arduino = cv2.imread(str(racine / "assets" / "arduino.jpg"))
     # On démarre comme si on venait de voir quelque chose : une rediffusion à
     # la première seconde du direct donnerait l'impression que rien ne marche.
     dernier_vu = origine
@@ -5600,6 +5688,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     pose_portrait_machine(toile, quand - origine, photo_machine,
                                           machine, ville, vue=cadrage,
                                           nuit=not fait_jour)
+                    pose_portrait_arduino(toile, quand - origine, photo_arduino,
+                                          vue=cadrage, nuit=not fait_jour)
                 if ou_en_est is not None:
                     # Une fois, pas à chaque image : il grogne en descendant,
                     # et il crie une fois arrivé sur l'îlot.
