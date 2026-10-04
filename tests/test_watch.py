@@ -2630,6 +2630,8 @@ class FogTests(unittest.TestCase):
             self.assertIsNotNone(found, key)
             self.assertAlmostEqual(float(found.group(1)), value, places=2, msg=key)
         self.assertNotIn("VIEW_ANGLE", script)
+        self.assertIn("function viewWedge()", script)
+        self.assertIn("L.polygon(viewWedge()", script)
 
     def test_every_landmark_falls_inside_the_cone_the_map_draws(self):
         """They are all visible in the picture, so all must be in the cone.

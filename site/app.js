@@ -1555,6 +1555,15 @@ function offset(lat, lon, bearing, meters) {
   return [lat2 / rad, lon2 / rad];
 }
 
+function viewWedge() {
+  const points = [[aim.lat, aim.lon]];
+  const start = aim.yaw - aim.hfov / 2;
+  for (let step = 0; step <= 28; step += 1) {
+    points.push(offset(aim.lat, aim.lon, start + (aim.hfov * step) / 28, aim.reach));
+  }
+  return points;
+}
+
 // La portée du calage est de deux kilomètres et demi, mais ce qui a vraiment
 // été reconnu tient entre 106 et 830 m : les trois niveaux cadrent sur cette
 // bande-là, pas sur le bout du cône.
@@ -1578,6 +1587,12 @@ L.control.attribution({ prefix: false }).addTo(map);
 L.tileLayer("https://data.geopf.fr/wmts?LAYER=ORTHOIMAGERY.ORTHOPHOTOS&FORMAT=image/jpeg&SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}", {
   maxZoom: 19,
   attribution: "© IGN",
+}).addTo(map);
+const wedge = L.polygon(viewWedge(), {
+  color: "#c4b094",
+  weight: 2,
+  fillColor: "#e8dcc4",
+  fillOpacity: 0.28,
 }).addTo(map);
 const axis = L.polyline([
   [aim.lat, aim.lon],
@@ -1603,7 +1618,18 @@ document.querySelectorAll(".zooms button").forEach((button) => {
   button.addEventListener("click", () => showZoom(Number(button.dataset.zoom)));
 });
 showZoom(1);
-requestAnimationFrame(() => map.invalidateSize());
+function sizeMap() {
+  map.invalidateSize();
+}
+requestAnimationFrame(sizeMap);
+if (window.IntersectionObserver) {
+  const cadre = document.querySelector("#camera");
+  if (cadre) {
+    new IntersectionObserver((vues) => {
+      if (vues.some((vue) => vue.isIntersecting)) sizeMap();
+    }, { threshold: 0.05 }).observe(cadre);
+  }
+}
 
 async function loadAim() {
   // Relu à chaque visite plutôt que recopié dans ce fichier : le jour où la
@@ -1623,8 +1649,9 @@ async function loadAim() {
       rms: pose.rms || 0,
     };
   } catch (_) {
-    /* Le point reste sur le dernier calage connu. */
+    /* Le cône reste sur le dernier calage connu. */
   }
+  wedge.setLatLngs(viewWedge());
   axis.setLatLngs([[aim.lat, aim.lon], offset(aim.lat, aim.lon, aim.yaw, aim.reach)]);
   cameraMark.setLatLng([aim.lat, aim.lon]);
   showZoom(1);
