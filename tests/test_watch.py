@@ -5512,12 +5512,12 @@ class LecteurTests(unittest.TestCase):
 
 
 class PenseeTests(unittest.TestCase):
-    """Une pensée par jour, le premier soir à 22 h 35, hors du tableau."""
+    """Une pensée par jour, le premier soir à 22 h 37, hors du tableau."""
 
-    def test_the_first_evening_is_twenty_five_to_eleven(self):
+    def test_the_first_evening_is_twenty_three_to_eleven(self):
         from datetime import date
         self.assertEqual(stream.seconde_pensee(date(2026, 10, 4)),
-                         22 * 3600 + 35 * 60)
+                         22 * 3600 + 37 * 60)
 
     def test_another_day_stays_put_and_leaves_room_for_normandy(self):
         from datetime import date

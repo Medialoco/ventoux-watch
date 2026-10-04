@@ -1023,6 +1023,7 @@ class Musique:
         # Tenues hors du tableau du site : une pensée, puis la Normandie.
         self.pensees = repliques(self.racine / "data" / "voix", "pensee")
         self.normandies = repliques(self.racine / "data" / "voix", "normandie")
+        self.normandys = repliques(self.racine / "data" / "voix", "normandy")
         self.deplois = repliques(self.racine / "data" / "voix", "deploi")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
@@ -2476,12 +2477,13 @@ def ordre_de_rediffusion(gardees: list[dict], tirage: random.Random,
 PARIS = ZoneInfo("Europe/Paris")
 
 # Une pensée par jour, tenue hors du tableau du site. Le premier soir est
-# fixé : le 4 octobre 2026 à 22 h 35, heure de la montagne. La Normandie
-# suit une minute après. Les autres jours, la seconde est tirée sur la date,
+# fixé : le 4 octobre 2026 à 22 h 37, heure de la montagne. La Normandie
+# suit dix-sept secondes après, le temps que le nom reste écrit. Les autres
+# jours, la seconde est tirée sur la date,
 # donc un redémarrage ne la déplace pas.
 PENSEE_PREMIER = date(2026, 10, 4)
-PENSEE_HEURE = 22 * 3600 + 35 * 60
-PENSEE_APRES_S = 60.0
+PENSEE_HEURE = 22 * 3600 + 37 * 60
+PENSEE_APRES_S = 17.0
 PENSEE_GRACE_S = 240
 
 
@@ -6411,9 +6413,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # conditions ensemble, donc. Tenir un sous-titre plus longtemps que
             # la parole n'est pas mentir, c'est sous-titrer ; le retirer avant
             # la fin de la phrase, si.
-            # La pensée, à l'heure de la montagne et non à celle de la webcam :
-            # 22 h 35 est une heure vraie. Une fois le jour, puis la Normandie
-            # une minute après. Rien de tout cela n'entre dans le tableau.
+            # La pensée, à l'heure de la montagne et non à celle de la webcam.
+            # Le nom reste écrit dix-sept secondes, puis la voix dit
+            # « Big up to the Normandy! ». Rien de tout cela n'entre dans le tableau.
             ici = datetime.now(PARIS)
             if pensee_jour != ici.date():
                 pensee_jour, pensee_etape, pensee_suite = ici.date(), 0, 0.0
@@ -6428,16 +6430,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     pensee_etape = 1
                     _pensee_ecrite(racine, ici.date(), 1, pensee_feu)
                     log.info("Pensée dite à %s", ici.strftime("%H:%M:%S"))
-            elif (pensee_etape == 1 and musique.normandies
+            elif (pensee_etape == 1 and musique.normandys
                     and pensee_suite and time.time() >= pensee_suite
                     and not musique.parle()):
                 if time.time() > pensee_suite + PENSEE_GRACE_S:
                     pensee_etape = 2
                     _pensee_ecrite(racine, ici.date(), 2, pensee_feu)
-                elif musique.dis(musique.normandies[0]):
+                elif musique.dis(musique.normandys[0]):
                     pensee_etape = 2
                     _pensee_ecrite(racine, ici.date(), 2, pensee_feu)
-                    log.info("Normandie dite à %s", ici.strftime("%H:%M:%S"))
+                    log.info("Normandy dite à %s", ici.strftime("%H:%M:%S"))
             dit = musique.dit_quoi() if musique.parle() else ""
             if dit == "brouillard" or quand - gris_depuis <= BROUILLARD_TENUE_S:
                 # Sans voix enregistrée, le mot tient quand même trois
@@ -6446,14 +6448,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 pose_ennui(toile, mot_gris, quand - origine)
             elif dit == "ennui" or quand - dernier_ennui <= ENNUI_TENUE_S:
                 pose_ennui(toile, "BOOOOORING", quand - origine)
-            elif dit == "pensee":
-                pose_annonce(toile, cadrage, (
-                    "TO MY VERY GOOD FRIEND DAVID VINCENT",
-                    "OR VINCENT DAVID OR DAVID VINCENT",
-                    "JE PENSE A TOI.",
-                ))
-            elif dit == "normandie":
-                pose_annonce(toile, cadrage, ("BIG-UP A LA NORMANDIE!!!!",))
+            elif (pensee_feu and time.time() - pensee_feu < PENSEE_APRES_S
+                    and pensee_etape >= 1):
+                pose_annonce(toile, cadrage, ("DAVID VINCENT OR VINCENT DAVID",))
+            elif dit == "normandy":
+                pose_annonce(toile, cadrage, ("BIG UP TO THE NORMANDY!",))
             pose_ruban(toile, ruban, quand - origine)
             # Le flottement des deux encarts, lent et continu. Il sautait
             # avant sur le beat, quelques secondes toutes les cinq minutes, et

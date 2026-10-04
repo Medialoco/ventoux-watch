@@ -128,6 +128,7 @@ REPLIQUES = [
     ("pensee", PLAT,
      "To my very good friend David Vincent or Vincent David or David Vincent, Je pense à toi."),
     ("normandie", CLAIRE, "Big-UP à la Normandie !!!!"),
+    ("normandy", CLAIRE, "Big up to the Normandy!"),
     # Le mot du redémarrage. La porteuse est ajoutée après, dans le fichier :
     # le modèle dit le mot clairement, le traitement le rend un peu électronique.
     ("deploi", PLAT, "Deployed"),
@@ -228,7 +229,7 @@ CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180,
             # Un ours ne parle pas vite.
             "ours": 100, "ours_cri": 100,
             "machine": 170, "dogmazic": 170,
-            "pensee": 150, "normandie": 160, "deploi": 150}
+            "pensee": 150, "normandie": 160, "normandy": 160, "deploi": 150}
 
 # La consigne de jeu, envoyée avec chaque phrase. C'est ce qu'on ne pouvait pas
 # faire avec les voix système : le ton s'y choisissait en changeant de personne,
@@ -281,6 +282,10 @@ JEU = {
                  "for home. Say Big-UP à la Normandie with four beats of joy "
                  "on the exclamation. French on Normandie. Never ominous, "
                  "never a whisper. Over in two seconds.",
+    "normandy": "A big cheerful shout in English, proud and bright, like a "
+                "radio drop for home. Say Big up to the Normandy! with a "
+                "lift on Normandy. Never ominous, never a whisper. Over in "
+                "two seconds.",
     "deploi": "Say the single word Deployed, clear and even, like a machine "
               "confirming that it has arrived. Flat, intelligible, about one "
               "second. No exclamation. Never say the word dot.",
