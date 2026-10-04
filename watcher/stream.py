@@ -4585,6 +4585,10 @@ MOUTARDE = (36, 164, 214)
 DIJON_HEURES = (23 * 3600, 23 * 3600 + 15 * 60)
 DIJON_GRACE_S = 240
 DIJON_TENUE_S = 14.0
+# Une fois, à 14 h 25, heure de Los Angeles. Le mème, puis le crédit.
+NEVER_HEURE = 14 * 3600 + 25 * 60
+NEVER_GRACE_S = 600
+NEVER_TENUE_S = 12.0
 
 
 def moutarde(image: np.ndarray, force: float) -> None:
@@ -4652,6 +4656,51 @@ def pose_dijon(image: np.ndarray, vue: tuple[int, int, int, int],
     cv2.putText(image, heure, (xh, yh), cv2.FONT_HERSHEY_DUPLEX, taille_heure,
                 MOUTARDE, trait_heure, cv2.LINE_AA)
     pose_annonce(image, vue, ("UNE COLLAB", "AVEC BUTTERBANE"))
+
+
+def _never_lue(racine: Path) -> date | None:
+    try:
+        return date.fromisoformat(
+            (racine / "data" / "voix" / "never.jour").read_text().strip())
+    except (OSError, ValueError):
+        return None
+
+
+def _never_ecrite(racine: Path, jour: date) -> None:
+    try:
+        (racine / "data" / "voix" / "never.jour").write_text(
+            jour.isoformat() + "\n", encoding="utf-8")
+    except OSError:
+        pass
+
+
+def pose_never(image: np.ndarray, vue: tuple[int, int, int, int],
+               photo: np.ndarray | None, logo: np.ndarray | None,
+               age: float) -> None:
+    """Le mème, douze secondes, et le crédit de Butterbane sur son icône."""
+    if age < 0 or age > NEVER_TENUE_S or photo is None:
+        return
+    force = min(1.0, age / 0.4, (NEVER_TENUE_S - age) / 0.6)
+    gx, gy, gw, gh = vue
+    if gw < 8 or gh < 8:
+        return
+    ph, pl = photo.shape[:2]
+    echelle_photo = min(gw * 0.92 / pl, gh * 0.78 / ph)
+    lw = max(1, int(pl * echelle_photo))
+    lh = max(1, int(ph * echelle_photo))
+    cadre_photo = cv2.resize(photo, (lw, lh), interpolation=cv2.INTER_AREA)
+    x = gx + (gw - lw) // 2
+    y = gy + (gh - lh) // 2
+    dessous = image[y:y + lh, x:x + lw]
+    cv2.addWeighted(cadre_photo, force, dessous, 1.0 - force, 0.0, dst=dessous)
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    if logo is not None:
+        rayon = int(min(gw, gh) * 0.09)
+        pose_photo_ronde(image, logo, gx + gw - rayon - int(12 * echelle),
+                         gy + gh - rayon - int(12 * echelle), rayon, echelle,
+                         anneau=MOUTARDE)
+    pose_annonce(image, vue, ("NEVER GIVE UP", "BUTTERBANE"))
 
 
 # Les seuils du Pi 5 lui-même : il réduit sa fréquence à 80 °C et se met à
@@ -6076,6 +6125,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     photo_dogmazic = cv2.imread(str(racine / "assets" / "dogmazic.png"),
                                cv2.IMREAD_UNCHANGED)
     photo_butterbane = cv2.imread(str(racine / "assets" / "butterbane-logo.jpg"))
+    photo_never = cv2.imread(str(racine / "assets" / "never.jpg"))
     # Le trampoline du village, côté français : le pendant du disque de
     # gauche. Recadré une fois, teinté à chaque image comme le Raspberry.
     photo_trampoline = cv2.imread(str(racine / "assets" / "trampoline.jpg"))
@@ -6142,6 +6192,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     dijon_jour, dijon_rang = _dijon_lue(racine)
     dijon_feu = 0.0
     dijon_heure = "23:00"
+    never_jour = _never_lue(racine)
+    never_feu = 0.0
     deploie_dit = False
     # Un quart d'heure en arrière : si la vallée est déjà dans le brouillard au
     # moment où le flux démarre, on le dit tout de suite.
@@ -6566,9 +6618,23 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     dijon_rang += 1
                     _dijon_ecrite(racine, ici.date(), dijon_rang)
                     log.info("Dijon dit à %s", ici.strftime("%H:%M:%S"))
+            la = datetime.now(LOS_ANGELES)
+            if never_jour != la.date():
+                seconde_la = la.hour * 3600 + la.minute * 60 + la.second
+                if (NEVER_HEURE <= seconde_la < NEVER_HEURE + NEVER_GRACE_S
+                        and not musique.parle()):
+                    never_feu = time.time()
+                    never_jour = la.date()
+                    _never_ecrite(racine, never_jour)
+                    log.info("Never give up à %s, heure de Los Angeles",
+                             la.strftime("%H:%M:%S"))
             dit = musique.dit_quoi() if musique.parle() else ""
+            age_never = time.time() - never_feu if never_feu else -1.0
             age_dijon = time.time() - dijon_feu if dijon_feu else -1.0
-            if 0 <= age_dijon <= DIJON_TENUE_S:
+            if 0 <= age_never <= NEVER_TENUE_S:
+                pose_never(toile, cadrage, photo_never, photo_butterbane,
+                           age_never)
+            elif 0 <= age_dijon <= DIJON_TENUE_S:
                 pose_dijon(toile, cadrage, photo_butterbane, age_dijon,
                            dijon_heure)
             elif dit == "brouillard" or quand - gris_depuis <= BROUILLARD_TENUE_S:
