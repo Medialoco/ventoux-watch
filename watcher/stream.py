@@ -4937,6 +4937,43 @@ CARTE_PLEIN = (58, 50, 18)
 CARTE_POINT = (235, 215, 70)
 
 
+# Un point dans le coin du pays ne doit pas finir dans le coin du carré.
+# Au-delà de cette part, sur les deux axes à la fois, on n'est plus « au
+# sud » : on est coincé. Los Angeles est au sud de la Californie, pas dans
+# un coin — on n'y touche pas. Beaumont est au sud-est de l'hexagone, et
+# sans ce tirage il tombait hors cadre.
+CARTE_COIN = 0.72
+# Jusqu'où tirer le cadre vers le lieu, une fois qu'on est dans un coin.
+# Assez pour que le point rentre, pas assez pour rapetisser le pays.
+CARTE_TIRAGE = 0.40
+
+
+def _cadre_du_pays(principal: list, lat: float, lon: float, cote: int
+                   ) -> tuple[float, float, float, float]:
+    """L'échelle et le centre : le grand morceau remplit le carré, le lieu aussi.
+
+    Rend serre, pas, milieu_lon, milieu_lat.
+    """
+    p_ouest = min(p[0] for p in principal)
+    p_est = max(p[0] for p in principal)
+    p_sud = min(p[1] for p in principal)
+    p_nord = max(p[1] for p in principal)
+    serre = math.cos(math.radians((p_nord + p_sud) / 2))
+    milieu_lon = (p_ouest + p_est) / 2
+    milieu_lat = (p_sud + p_nord) / 2
+    fx = (lon - p_ouest) / max(p_est - p_ouest, 1e-6)
+    fy = (p_nord - lat) / max(p_nord - p_sud, 1e-6)
+    dans_un_coin = ((fx < 1.0 - CARTE_COIN or fx > CARTE_COIN)
+                    and (fy < 1.0 - CARTE_COIN or fy > CARTE_COIN))
+    if dans_un_coin:
+        milieu_lon += CARTE_TIRAGE * (lon - milieu_lon)
+        milieu_lat += CARTE_TIRAGE * (lat - milieu_lat)
+    max_dx = max(abs((p[0] - milieu_lon) * serre) for p in principal)
+    max_dy = max(abs(p[1] - milieu_lat) for p in principal)
+    pas = (cote / 2) / max(max_dx, max_dy, 1e-6)
+    return serre, pas, milieu_lon, milieu_lat
+
+
 def pose_carte(image: np.ndarray, contours: list, lat: float, lon: float,
                x: int, y: int, cote: int, echelle: float = 1.0) -> int:
     """Le pays en silhouette, avec un point là où on est.
@@ -4947,31 +4984,16 @@ def pose_carte(image: np.ndarray, contours: list, lat: float, lon: float,
     """
     if not contours:
         return 0
-    tous = [point for anneau in contours for point in anneau]
-    ouest = min(p[0] for p in tous)
-    est = max(p[0] for p in tous)
-    sud = min(p[1] for p in tous)
-    nord = max(p[1] for p in tous)
     # L'œil reconnaît le plus grand morceau : la France, pas la Corse ;
     # la Californie, pas les Channel Islands. On cadre sur lui, on dessine
     # les autres quand même — s'ils tiennent.
     principal = max(contours, key=len)
-    p_ouest = min(p[0] for p in principal)
-    p_est = max(p[0] for p in principal)
-    p_sud = min(p[1] for p in principal)
-    p_nord = max(p[1] for p in principal)
     # Les longitudes se resserrent avec la latitude : sans ce facteur la
     # France est étalée d'un tiers en largeur et ne se reconnaît plus.
-    # Cadre et échelle sur le grand morceau. La Corse et les îles, prises
-    # dans la boîte, rétrécissaient la France : l'hexagone flottait dans
-    # son carré pendant que la Californie, plus haute que large, le
-    # remplissait jusqu'au disque. Les deux silhouettes doivent occuper
-    # la même place.
-    serre = math.cos(math.radians((p_nord + p_sud) / 2))
-    pas = cote / max((p_est - p_ouest) * serre, p_nord - p_sud, 1e-6)
+    serre, pas, milieu_lon, milieu_lat = _cadre_du_pays(principal, lat, lon, cote)
+    p_sud = min(p[1] for p in principal)
+    p_nord = max(p[1] for p in principal)
     haut = max(1, int((p_nord - p_sud) * pas))
-    milieu_lon = (p_ouest + p_est) / 2
-    milieu_lat = (p_sud + p_nord) / 2
     cx = x + cote // 2
     cy = y + cote // 2
 

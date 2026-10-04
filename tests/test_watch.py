@@ -4597,8 +4597,37 @@ class DiffusionTests(unittest.TestCase):
             pays = np.argwhere(toile.any(axis=2))
             self.assertTrue(len(pays), nom)
             my, mx = pays.mean(axis=0)
-            self.assertAlmostEqual(mx, 80, delta=12, msg=f"{nom} trop de côté")
-            self.assertAlmostEqual(my, 80, delta=12, msg=f"{nom} trop haut ou trop bas")
+            self.assertAlmostEqual(mx, 80, delta=16, msg=f"{nom} trop de côté")
+            self.assertAlmostEqual(my, 80, delta=16, msg=f"{nom} trop haut ou trop bas")
+
+    def test_beaumont_is_not_stuck_in_the_corner(self):
+        """Beaumont est au sud-est de la France, pas au coin du carré.
+
+        Los Angeles est au sud de la Californie et ça se lit. Le même cadre
+        sans tirage posait Beaumont à 78 % sud-est : on le perdait. Le tirage
+        ne s'applique que dans un coin, donc Los Angeles ne bouge pas.
+        """
+        france = json.loads((ROOT / "assets" / "carte-pays.json")
+                            .read_text(encoding="utf-8"))["contours"]
+        californie = json.loads((ROOT / "assets" / "carte-californie.json")
+                                .read_text(encoding="utf-8"))["contours"]
+        cote, x, y = 160, 20, 20
+
+        def point(carte, lat, lon):
+            toile = np.zeros((200, 200, 3), np.uint8)
+            stream.pose_carte(toile, carte, lat, lon, x, y, cote)
+            jaune = np.argwhere(np.all(toile == stream.CARTE_POINT, axis=2))
+            py, px = jaune.mean(axis=0)
+            return (px - x) / cote, (py - y) / cote
+
+        fx, fy = point(france, 44.1833, 5.2620)
+        self.assertLess(fx, stream.CARTE_COIN, "Beaumont trop à l'est du carré")
+        self.assertLess(fy, stream.CARTE_COIN, "Beaumont trop au sud du carré")
+        self.assertGreater(fx, 0.50, "Beaumont n'est plus à l'est")
+        self.assertGreater(fy, 0.50, "Beaumont n'est plus au sud")
+        lx, ly = point(californie, 34.0537, -118.2428)
+        self.assertGreater(ly, 0.75, "Los Angeles a quitté le sud")
+        self.assertLess(abs(lx - 0.59), 0.08, "Los Angeles a bougé en longitude")
 
     def test_the_french_side_has_the_trampoline_in_a_disc(self):
         """Le Raspberry a un disque ; le Ventoux aussi, c'est le trampoline."""
