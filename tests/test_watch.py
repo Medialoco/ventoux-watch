@@ -977,6 +977,51 @@ class SkyTests(unittest.TestCase):
                                detections=[Detection(cls="car", conf=0.8)], min_conf={"car": 0.4})
         self.assertEqual(decide(crossing).type, "vehicle")
 
+    def test_a_car_on_the_island_is_still_on_the_road(self):
+        """L'îlot est le milieu du rond-point, pas un pré.
+
+        Le 4 octobre à 06:32 une voiture lue à 0,81 sur 64 % de sa tache,
+        2,6 m, sept images, a été publiée « hors chaussée » parce que le pied
+        de la boîte tombait sur les cailloux et que 2,5 % du cadre ne
+        rejoignaient pas l'anneau. La même erreur le 3 à 17:20 sur une
+        lecture à 0,74. Un camion à 0,40, une image, sortait « décor de
+        l'îlot ». Les figures de bois, elles, restent plantées : ça se lit
+        piéton, et ça ne roule pas.
+        """
+        vu = dict(zone="roundabout", surface="island", near_road=False,
+                  width_m=2.6, height_m=2.6, min_conf={"car": 0.4})
+        self.assertEqual(
+            decide(Observation(**vu, travel=0.23, detections=[Detection("car", 0.81)])).type,
+            "vehicle")
+        self.assertEqual(
+            decide(Observation(**vu, travel=0.0, detections=[Detection("car", 0.74)])).type,
+            "vehicle")
+        self.assertEqual(
+            decide(Observation(**vu, travel=0.0, detections=[Detection("truck", 0.40)])).type,
+            "vehicle")
+        self.assertEqual(
+            decide(Observation(**vu, travel=0.0, detections=[Detection("person", 0.73)])).reason,
+            "island")
+
+    def test_a_fire_waits_its_turn_without_erasing_the_clock(self):
+        """Le délai du feu ne doit plus voler la durée du passage."""
+        common = dict(zone="slope", surface="forest", duration_s=30, warm_ratio=0.5,
+                      area_grow=4.0, travel=0.0, period="night", width_m=6.0)
+        self.assertEqual(decide(Observation(**common)).type, "fire")
+        attente = decide(Observation(**common, fire_ready=False))
+        self.assertNotEqual(attente.type, "fire")
+        self.assertFalse(attente.publish)
+
+    def test_the_island_counts_as_the_road_beside_it(self):
+        from watcher.scenemap import SceneMap
+        anneau = "r" + "i" * 5 + "r"
+        carte = SceneMap({"grid": ["r" * 7, anneau, anneau, anneau, anneau, anneau, "r" * 7]})
+        au_centre = (0.40, 0.40, 0.20, 0.20)
+        self.assertEqual(carte.surface_under(au_centre), "island")
+        self.assertTrue(carte.drivable_near(au_centre))
+        en_foret = SceneMap({"grid": ["f" * 7] * 7})
+        self.assertFalse(en_foret.drivable_near(au_centre))
+
     def test_the_lamp_of_the_summit_mast_is_not_a_fire(self):
         common = dict(zone="slope", surface="forest", duration_s=30, warm_ratio=0.5,
                       area_grow=4.0, travel=0.0, period="night", width_m=6.0)

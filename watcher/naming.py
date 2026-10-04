@@ -9,6 +9,11 @@ from watcher.scenemap import DRIVABLE, FLAMMABLE
 from watcher.store import BUS_LENGTH_M
 
 NOT_DRIVABLE = {"forest", "meadow", "building", "sky", "scree", "island", "playground", "pool"}
+# L'îlot est planté au milieu de la chaussée, pas à côté. Une voiture dont la
+# boîte tombe dessus roule encore : elle tourne, ou ses roues sont sur l'anneau
+# et le toit sur les cailloux. « Hors chaussée » est pour la forêt, le pré, le
+# toit — pas pour le centre d'un rond-point.
+HORS_CHAUSSEE = NOT_DRIVABLE - {"island"}
 
 # The widest a thing of that kind can be where it stands, in metres. The scene
 # map turns a box into ground metres, so a walker eight metres across is light
@@ -121,6 +126,12 @@ class Observation:
     travel: float = 0.0
     area_ratio: float = 0.0
     duration_s: float = 0.0
+    # Vrai dès que le feu a le droit de parler : sol inflammable, et le délai
+    # depuis le dernier départ est écoulé. La durée, elle, est toujours la
+    # durée — s'en servir comme verrou faisait durer zéro seconde chaque
+    # passage de route, et la règle de nuit qui demande trois secondes ne
+    # voyait plus la nuit.
+    fire_ready: bool = True
     warm_ratio: float = 0.0
     smoke_ratio: float = 0.0
     rise: float = 0.0
@@ -656,7 +667,7 @@ def decide(obs: Observation) -> Decision:
     # fires, and what produced them — the beam of the chalet lamp in suspended
     # water — does not need the crest to be gone, only the air to be thick.
     aveugle_au_feu = obs.fogged and obs.period != "day"
-    if (not aveugle_au_feu
+    if (obs.fire_ready and not aveugle_au_feu
             and (obs.surface in FLAMMABLE or (obs.zone == "slope" and not obs.surface))
             and obs.duration_s >= obs.fire_sustain_s):
         flame = obs.warm_ratio >= obs.fire_warm
@@ -952,9 +963,12 @@ def decide(obs: Observation) -> Decision:
                 "Repère éclairé",
                 f"{obs.landmark} n'a pas bougé. Une lumière est passée dessus.",
             )
-        if obs.surface in NOT_DRIVABLE and not obs.near_road and vehicle is not None and person is None:
+        if obs.surface in HORS_CHAUSSEE and not obs.near_road and vehicle is not None and person is None:
             return _motion(obs, "off_road", "Mouvement hors chaussée", "Aucune voiture ne roule là.")
-        if obs.surface == "island" and obs.travel < obs.min_travel:
+        if (obs.surface == "island" and obs.travel < obs.min_travel
+                and vehicle is None and bus is None):
+            # Les figures de bois se lisent « piéton ». Une voiture lue
+            # voiture, même une seule image, n'est pas plantée là.
             return _motion(
                 obs,
                 "island",

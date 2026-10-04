@@ -352,7 +352,10 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         trips=trips,
         travel=track.travel,
         area_ratio=track.area_ratio,
-        duration_s=duration if fire_ready else 0.0,
+        # La durée est le temps regardé, toujours. Le verrou du feu est
+        # fire_ready, pas un zéro ici : ce zéro faisait taire la nuit.
+        duration_s=duration,
+        fire_ready=fire_ready,
         warm_ratio=warm_ratio(track.best_jpeg, track.best_bbox) if fire_ready else 0.0,
         smoke_ratio=smoke_ratio(track.best_jpeg, track.best_bbox) if fire_ready else 0.0,
         rise=track.rise,

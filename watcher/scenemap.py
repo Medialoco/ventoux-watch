@@ -158,22 +158,30 @@ class SceneMap:
         across = 1.0 / (2 * span * math.tan(math.radians(hfov) / 2))
         return (across, across * aspect)
 
-    def drivable_near(self, box: tuple[float, float, float, float], slack: float = 0.025) -> bool:
-        """Is there roadway close enough that a car here would still be on it?
+    def drivable_near(self, box: tuple[float, float, float, float], slack_m: float = 3.0) -> bool:
+        """Is there roadway within a lane-width of this box?
 
-        The map is drawn from centre lines and the view is fitted to about a
-        hundredth of the frame. A car a few pixels off the painted tarmac is
-        driving, not flying, so the answer has to be generous.
+        Three metres is a lane, wherever the camera sits. A share of the
+        frame is not: the same 2.5 % is half a metre at the roundabout and
+        thirty metres on the far slope, which answers the opposite question.
+
+        The island is the planted middle of the ring. Standing on it is
+        standing on the road system — the tarmac is a few metres away by
+        construction, not by a search.
         """
         if not self.ready:
             return True
+        if self.surface_under(box) == "island":
+            return True
         x, y, w, h = box
         foot = min(0.999, y + h)
+        across_share, _ = self.share_per_metre(min(0.999, x + w / 2), foot)
+        slack = slack_m * across_share if across_share > 0 else 0.025
         steps = [-slack, -slack / 2, 0.0, slack / 2, slack]
         for down in steps:
-            for across in steps:
+            for sideways in steps:
                 sample = self.surface_at(
-                    min(0.999, max(0.0, x + w / 2 + across)),
+                    min(0.999, max(0.0, x + w / 2 + sideways)),
                     min(0.999, max(0.0, foot + down)),
                 )
                 if sample in DRIVABLE:
