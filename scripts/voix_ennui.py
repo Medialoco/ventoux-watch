@@ -128,6 +128,9 @@ REPLIQUES = [
     ("pensee", PLAT,
      "To my very good friend David Vincent or Vincent David or David Vincent, Je pense à toi."),
     ("normandie", CLAIRE, "Big-UP à la Normandie !!!!"),
+    # Le mot du redémarrage. La porteuse est ajoutée après, dans le fichier :
+    # le modèle dit le mot clairement, le traitement le rend un peu électronique.
+    ("deploi", PLAT, "Deployed"),
 ]
 
 
@@ -163,6 +166,28 @@ def cloche(duree: float = 1.9, hauteur: float = CLOCHE_HZ) -> np.ndarray:
     onde[:attaque] *= np.linspace(0.0, 1.0, attaque, dtype=np.float32)
     onde *= 0.55 / max(float(np.abs(onde).max()), 1e-6)
     return np.repeat((onde * 32767).astype(np.int16), VOIES)
+
+
+def electronise(pcm: bytes, profondeur: float = 0.22, hz: float = 90.0) -> bytes:
+    """Un filet de porteuse à quatre-vingt-dix hertz.
+
+    Le mot reste un mot : les quatre cinquièmes du signal passent tels quels,
+    le reste est multiplié par une sinusoïde. C'est une modulation en anneau
+    tenue très en retrait, assez pour qu'on entende une machine, pas assez
+    pour qu'on cesse de comprendre.
+    """
+    son = np.frombuffer(pcm, np.int16).astype(np.float32)
+    n = son.size // VOIES
+    if n == 0:
+        return pcm
+    porteuse = np.sin(2 * np.pi * hz * np.arange(n, dtype=np.float32) / ECHANTILLONS_S)
+    for voie in range(VOIES):
+        sec = son[voie::VOIES]
+        son[voie::VOIES] = sec * (1.0 - profondeur) + sec * porteuse * profondeur
+    crete = float(np.abs(son).max())
+    if crete > 32767 * 0.92:
+        son *= (32767 * 0.92) / crete
+    return np.clip(son, -32768, 32767).astype(np.int16).tobytes()
 
 
 def _mele(cloche_pcm: np.ndarray, voix: bytes, retard_s: float) -> bytes:
@@ -203,7 +228,7 @@ CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180,
             # Un ours ne parle pas vite.
             "ours": 100, "ours_cri": 100,
             "machine": 170, "dogmazic": 170,
-            "pensee": 150, "normandie": 160}
+            "pensee": 150, "normandie": 160, "deploi": 150}
 
 # La consigne de jeu, envoyée avec chaque phrase. C'est ce qu'on ne pouvait pas
 # faire avec les voix système : le ton s'y choisissait en changeant de personne,
@@ -256,6 +281,9 @@ JEU = {
                  "for home. Say Big-UP à la Normandie with four beats of joy "
                  "on the exclamation. French on Normandie. Never ominous, "
                  "never a whisper. Over in two seconds.",
+    "deploi": "Say the single word Deployed, clear and even, like a machine "
+              "confirming that it has arrived. Flat, intelligible, about one "
+              "second. No exclamation. Never say the word dot.",
 }
 
 # Les voix, par rôle. « ash » est celle dont medialoco-tube se sert pour sa
@@ -465,6 +493,9 @@ def enregistre(dossier: Path, ecoute: bool = False, moteur: str = "openai",
             continue
         cible = dossier / _nom(f"{quand}-{voix}", texte)
         duree = grave(voix, texte, cible, quand, moteur)
+        if quand == "deploi":
+            cible.write_bytes(electronise(cible.read_bytes()))
+            duree = cible.stat().st_size / (ECHANTILLONS_S * VOIES * 2)
         if quand == "attrape":
             # La cloche d'abord, la voix dans sa résonance. L'inverse ferait
             # une annonce suivie d'un bruit ; là, c'est un sourire.

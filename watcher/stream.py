@@ -1023,6 +1023,7 @@ class Musique:
         # Tenues hors du tableau du site : une pensée, puis la Normandie.
         self.pensees = repliques(self.racine / "data" / "voix", "pensee")
         self.normandies = repliques(self.racine / "data" / "voix", "normandie")
+        self.deplois = repliques(self.racine / "data" / "voix", "deploi")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -6042,6 +6043,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     dernier_ennui = origine - 10_000.0
     pensee_jour, pensee_etape, pensee_feu = _pensee_lue(racine)
     pensee_suite = pensee_feu + PENSEE_APRES_S if pensee_etape == 1 else 0.0
+    deploie_dit = False
     # Un quart d'heure en arrière : si la vallée est déjà dans le brouillard au
     # moment où le flux démarre, on le dit tout de suite.
     gris_depuis = origine - BROUILLARD_PAUSE_S
@@ -6471,6 +6473,14 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                          carte=carte_californie, ou=ou_machine, quand=quand)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             pose_deploiement(toile, __version__, quand - ouvert)
+            # La voix part avec le mot, une fois, dans les premières secondes.
+            # Elle dit « Deployed » ; le numéro, lui, reste écrit, parce qu'il
+            # change à chaque livraison et qu'une voix gravée ne peut pas le suivre.
+            if (not deploie_dit and musique.deplois
+                    and 0 <= quand - ouvert < 1.5 and not musique.parle()):
+                if musique.dis(musique.deplois[0]):
+                    deploie_dit = True
+                    log.info("Déploiement dit")
             # Relu de temps en temps et jamais à chaque image : le fichier
             # est écrit par un autre programme, et un agenda ne change pas
             # plus d'une fois par jour.
