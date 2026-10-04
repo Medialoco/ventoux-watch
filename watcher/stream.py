@@ -351,32 +351,88 @@ def nomme(label: str, confiance: float) -> bool:
             and confiance >= CONFIANCE_MOT)
 
 
+# Une tache de mouvement qui n'occupe plus le cinquième de la chose nommée,
+# ni le tiers d'un de ses côtés, n'est plus cette chose : c'est le reliquat
+# qu'elle laisse sur l'asphalte. Proportion de la boîte du modèle, pas de
+# cette caméra.
+TRACE_AIRE = 0.20
+TRACE_COTE = 0.35
+
+
+def _pied(boite: tuple[float, float, float, float]) -> tuple[float, float]:
+    """Le milieu du bas : les roues, pas le centre du rectangle."""
+    x, y, w, h = boite
+    return x + w / 2, y + h
+
+
+def _cadre_au_pied(cadre: tuple[float, float, float, float],
+                   pied_x: float, pied_y: float) -> tuple[float, float, float, float]:
+    """La taille que le modèle a lue, posée où les roues sont maintenant."""
+    _, _, w, h = cadre
+    return pied_x - w / 2, pied_y - h, w, h
+
+
+def _trace_utile(vu: dict) -> list:
+    """Le trajet tant que la tache est encore le sujet, plus dès qu'elle n'est plus que du vide.
+
+    Le 4 octobre, 172 des 284 passages du jour avaient un dernier point de
+    trajectoire sans aucun recouvrement avec la chose nommée : la voiture
+    était partie, il restait une flaque de quelques pixels, et le rectangle
+    allait s'y installer. On garde les points où la tache a encore la taille
+    de ce qui a été lu.
+    """
+    cadre = tuple(vu["box"])
+    aire = max(cadre[2] * cadre[3], 1e-9)
+    large, haut = max(cadre[2], 1e-9), max(cadre[3], 1e-9)
+    gardes = []
+    for point in vu.get("trace") or []:
+        if len(point) < 5:
+            continue
+        _, x, y, w, h = point[:5]
+        if w * h >= TRACE_AIRE * aire or w >= TRACE_COTE * large or h >= TRACE_COTE * haut:
+            gardes.append(point)
+    return gardes
+
+
+def _interpole(chemin: list, quand: float) -> tuple[float, float, float, float]:
+    """Entre deux relevés, en ligne droite, sans sortir du trajet mesuré."""
+    if quand <= chemin[0][0]:
+        return tuple(chemin[0][1:5])
+    if quand >= chemin[-1][0]:
+        return tuple(chemin[-1][1:5])
+    for avant, apres in zip(chemin, chemin[1:]):
+        if avant[0] <= quand <= apres[0]:
+            ecart = apres[0] - avant[0]
+            part = 0.0 if ecart <= 0 else (quand - avant[0]) / ecart
+            return tuple(a + (b - a) * part for a, b in zip(avant[1:5], apres[1:5]))
+    return tuple(chemin[-1][1:5])
+
+
 def suit(vu: dict, quand: float) -> tuple[float, float, float, float]:
-    """Où la chose est à cet instant, entre deux points de sa trajectoire.
+    """Où la chose est à cet instant, à la taille que le modèle lui a donnée.
 
     La veille suit le sujet image par image, à une image par seconde ; le flux
     en sort six. Entre deux relevés on interpole en ligne droite, ce qui est
     exact pour une voiture sur une route et bien assez pour le reste — à cette
     distance, une seconde de trajet tient dans la largeur du rectangle.
 
-    Avant le premier point et après le dernier, on se tient au point le plus
-    proche sans extrapoler. Prolonger un mouvement qu'on n'a pas mesuré, c'est
-    inventer, et le rectangle inventé se poserait sur du vide avec le même
-    aplomb que les autres.
+    La trajectoire est celle de la tache de mouvement, pas celle de la voiture.
+    S'en servir telle quelle pose un rectangle trop grand, trop petit, ou vide :
+    le 4 octobre le dernier point tombait à côté de la lecture pour six
+    passages sur dix. On garde donc la taille lue, et on la fait glisser en
+    collant les roues au bas de la tache.
+
+    Avant le premier point utile et après le dernier, on se tient au point le
+    plus proche sans extrapoler. Prolonger un mouvement qu'on n'a pas mesuré,
+    c'est inventer, et le rectangle inventé se poserait sur du vide avec le
+    même aplomb que les autres.
     """
-    chemin = vu.get("trace") or []
+    cadre = tuple(vu["box"])
+    chemin = _trace_utile(vu)
     if len(chemin) < 2:
-        return tuple(vu["box"])
-    if quand <= chemin[0][0]:
-        return tuple(chemin[0][1:])
-    if quand >= chemin[-1][0]:
-        return tuple(chemin[-1][1:])
-    for avant, apres in zip(chemin, chemin[1:]):
-        if avant[0] <= quand <= apres[0]:
-            ecart = apres[0] - avant[0]
-            part = 0.0 if ecart <= 0 else (quand - avant[0]) / ecart
-            return tuple(a + (b - a) * part for a, b in zip(avant[1:], apres[1:]))
-    return tuple(vu["box"])
+        return cadre
+    tache = _interpole(chemin, quand)
+    return _cadre_au_pied(cadre, *_pied(tache))
 
 
 def presence(vu: dict) -> tuple[float, float]:
@@ -393,10 +449,11 @@ def presence(vu: dict) -> tuple[float, float]:
     Le plancher reste pour les prises d'une seule image : sans lui, elles
     auraient une fenêtre nulle et ne s'afficheraient jamais.
     """
-    chemin = vu.get("trace") or []
-    debut = min(vu["t"], chemin[0][0]) if chemin else vu["t"]
-    fin = max(chemin[-1][0], debut + TENUE_S) if chemin else debut + TENUE_S
-    return debut, fin
+    chemin = _trace_utile(vu)
+    if len(chemin) < 2:
+        return vu["t"], vu["t"] + TENUE_S
+    debut = min(vu["t"], chemin[0][0])
+    return debut, chemin[-1][0]
 
 
 # UNE COULEUR PAR FAMILLE, UNE FOIS QUE LA VEILLE A NOMMÉ
@@ -2825,16 +2882,19 @@ def pose_elephant(image: np.ndarray, seconde: float, energie: float,
 # nocturne elle ne ressemble pas à un ours, elle ressemble à une vignette
 # qu'on aurait oublié d'éteindre.
 OURS_PERIODE_S = 8191.0     # deux heures et quart, et premier comme les autres
-OURS_TENUE_S = 9.0
+# Il marche jusqu'à l'îlot, puis il y danse. La danse est le numéro : dix
+# secondes au centre du rond-point, pas un passage éclair.
+OURS_MARCHE_S = 2.6
+OURS_DANSE_S = 10.0
+OURS_TENUE_S = OURS_MARCHE_S + OURS_DANSE_S
 # Le temps qu'il faut à YouTube pour que l'image du flux qui vient de démarrer
 # arrive chez quelqu'un. Avant, l'ours danserait pour personne.
 OURS_RETARD_S = 90.0
-OURS_MARCHE_S = 2.6
-# Où il est et où il va, en parts du cadre de la caméra. Ce ne sont pas des
-# réglages : ce sont deux endroits de ce versant, relevés une fois sur un plein
-# cadre de jour. Sur une autre caméra il n'y a pas d'ours, donc rien à régler.
+# Où il est et où il va, en parts du cadre de la caméra. Chez lui, relevé
+# une fois. Au centre de l'îlot, lu sur la carte de scène : le barycentre
+# des cellules « island », pas un point choisi à l'œil.
 OURS_LA = (0.5698, 0.8593)
-OURS_ILOT = (0.2448, 0.8472)
+OURS_ILOT = (0.2304, 0.8706)
 # Sa taille dans l'image d'origine, d'où la découpe a été prise.
 OURS_LARGE = 72 / 1920
 OURS_HAUT = 140 / 1080
@@ -2843,11 +2903,9 @@ OURS_HAUT = 140 / 1080
 # n'est donc pas dessiné à une taille choisie, il est dessiné à la taille qu'un
 # ours aurait là-bas.
 OURS_ECHELLE_ILOT = 43.0 / 47.0
-# Puis il enfle. Un ours de 1,73 m dansant à vingt-sept mètres fait quatre-
-# vingt-quinze pixels de haut : exact, et illisible. Celui-ci est un double et
-# non un relevé, et qu'il enfle le dit tout seul — personne ne prendra un ours
-# de quatre mètres pour une mesure.
-OURS_ENFLE = 2.5
+# Un peu plus grand que le vrai, pour qu'on le lise. Pas assez pour qu'il
+# quitte l'îlot : à 2,5 fois il sautait hors du rond-point.
+OURS_ENFLE = 1.35
 OURS_CRI = "THIS IS MY HOME!!!!!"
 OURS_JAUNE = (40, 230, 250)
 OURS_LARME = (235, 190, 120)
@@ -2931,13 +2989,15 @@ def pose_ours(image: np.ndarray, seconde: float, sprite: np.ndarray | None,
     uy = OURS_LA[1] + (OURS_ILOT[1] - OURS_LA[1]) * douce
     echelle = 1.0 + (OURS_ECHELLE_ILOT - 1.0) * douce
     if marche < 1.0:
-        saut, penche, aplat = abs(math.sin(phase * 7)) * 5, math.sin(phase * 7) * 4, 1.0
+        saut, penche, aplat = abs(math.sin(phase * 7)) * 3, math.sin(phase * 7) * 3, 1.0
     else:
+        # Sur l'îlot il danse, il ne saute plus : un balancement, les pieds
+        # restent au centre du rond-point.
         depuis = phase - OURS_MARCHE_S
         echelle *= 1.0 + (OURS_ENFLE - 1.0) * min(1.0, depuis / 1.1)
-        saut = abs(math.sin(depuis * 6)) * 16 * echelle
-        penche = math.sin(depuis * 3) * 11
-        aplat = 1.0 - 0.1 * abs(math.sin(depuis * 6))
+        saut = abs(math.sin(depuis * 5)) * 4
+        penche = math.sin(depuis * 2.4) * 6
+        aplat = 1.0 - 0.04 * abs(math.sin(depuis * 5))
     large = OURS_LARGE * large_vue * echelle
     haut = OURS_HAUT * haute_vue * echelle
     if large < 6 or haut < 12:
@@ -3415,7 +3475,7 @@ MACHINE_RETARD_S = 120.0
 # Largeur de la photo, en part de la fenêtre caméra. Assez pour le ventilateur
 # et les ports, pas un mur : la route reste visible autour.
 MACHINE_PORTRAIT = 0.32
-MACHINE_MERCI = "Thanks Raspberry !!!"
+MACHINE_MERCI = "Thanks Raspberry"
 
 # Le plateau, maintenant que les numéros ont dit leur période et leur
 # durée. L'ordre départage les ex æquo : le tapis d'abord parce qu'il passe

@@ -117,8 +117,8 @@ REPLIQUES = [
     # Le portrait du Pi, en grand au milieu. C'est lui qui tient le flux,
     # depuis Los Angeles, et on ne le voyait que dans un disque de cent
     # pixels. Quand il prend enfin la place, on le remercie.
-    ("machine", CLAIRE, "Thanks Raspberry !!!"),
-    ("machine", PLAT, "Thanks Raspberry !!!"),
+    ("machine", CLAIRE, "Thanks Raspberry"),
+    ("machine", PLAT, "Thanks Raspberry"),
 ]
 
 

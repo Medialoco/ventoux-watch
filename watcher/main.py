@@ -643,6 +643,7 @@ NAMED_BY = {
     "vehicle": {"car", "truck", "bus", "motorcycle", "bicycle"},
     "car": {"car", "truck"},
     "bus": {"bus", "truck"},
+    "cycle": {"motorcycle", "bicycle"},
     "person": {"person"},
     "animal": {"dog", "horse"},
 }
@@ -663,6 +664,21 @@ def _overlap(box, other) -> float:
     wide = max(0, min(ax + aw, bx + bw) - max(ax, bx))
     tall = max(0, min(ay + ah, by + bh) - max(ay, by))
     return (wide * tall) / float(max(1, aw * ah))
+
+
+def _pieds_sur_la_tache(box, moved) -> bool:
+    """Les roues de la chose lue sont-elles encore sur la tache, même sans recouvrement ?
+
+    Le modèle cadre serré, la tache traîne derrière : leurs rectangles peuvent
+    ne plus se toucher alors que c'est la même voiture, une longueur plus loin.
+    Une voiture à l'arrêt au bord, elle, a les roues ailleurs.
+    """
+    ax, ay, aw, ah = box
+    bx, by, bw, bh = moved
+    dx = abs((ax + aw / 2) - (bx + bw / 2))
+    dy = abs((ay + ah) - (by + bh))
+    portee = 1.5 * max(aw, bw)
+    return dx <= portee and dy <= portee
 
 
 # Ce que la veille écarte est plus nombreux que ce qu'elle publie, d'un facteur
@@ -762,7 +778,8 @@ def _box_of_the_named(frame, decision, detections, moved=None) -> tuple[float, f
         return None
     hits = [hit for hit in detections if hit.cls in wanted and hit.box]
     if moved:
-        hits = [hit for hit in hits if _overlap(hit.box, moved) >= BOX_OVERLAP]
+        recouvre = [hit for hit in hits if _overlap(hit.box, moved) >= BOX_OVERLAP]
+        hits = recouvre or [hit for hit in hits if _pieds_sur_la_tache(hit.box, moved)]
     if not hits:
         return None
     x, y, w, h = max(hits, key=lambda hit: (round(_overlap(hit.box, moved), 2) if moved else 0, hit.conf)).box

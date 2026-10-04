@@ -1487,6 +1487,27 @@ class FogTests(unittest.TestCase):
         self.assertIsNone(_box_of_the_named(frame, Decision("publish", "vehicle", "Voiture", "x", {}, 0.5), seen))
         self.assertIsNone(_box_of_the_named(frame, Decision("publish", "fire", "Départ de feu", "x", {}, 0.5), seen))
 
+    def test_a_motorcycle_keeps_the_model_box(self):
+        """Le type publié est « cycle » ; sans lui dans NAMED_BY, le rectangle
+        était celui de la tache, trop grand ou déjà vide."""
+        frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        seen = [Detection("motorcycle", 0.72, box=(1000, 950, 80, 100))]
+        box = _box_of_the_named(frame, Decision("publish", "cycle", "Moto", "x", {}, 0.7), seen,
+                                (990, 940, 100, 120))
+        self.assertIsNotNone(box)
+        self.assertAlmostEqual(box[0] + box[2] / 2, 1040 / 1920, places=2)
+
+    def test_the_car_ahead_of_the_smear_is_still_the_one_marked(self):
+        """Le modèle cadre serré, la tache traîne : plus aucun recouvrement,
+        et c'est pourtant la même voiture, une longueur plus loin."""
+        frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        seen = [Detection("car", 0.70, box=(1100, 940, 180, 90)),
+                Detection("car", 0.82, box=(200, 600, 180, 90))]  # à l'arrêt
+        box = _box_of_the_named(frame, Decision("publish", "vehicle", "Voiture", "x", {}, 0.5), seen,
+                                (800, 930, 200, 100))
+        self.assertIsNotNone(box)
+        self.assertAlmostEqual(box[0] + box[2] / 2, 1190 / 1920, places=2)
+
     def test_a_cloud_drifting_over_the_slope_is_not_a_start_of_fire(self):
         """The three false starts of 27 September, by their own measurements.
 
@@ -3222,6 +3243,31 @@ class DiffusionTests(unittest.TestCase):
         seul = {"t": debut, "box": [0.2, 0.3, 0.1, 0.1], "trace": []}
         self.assertEqual(stream.suit(seul, debut + 2.0), (0.2, 0.3, 0.1, 0.1))
 
+    def test_the_box_keeps_the_named_size_when_the_smear_shrinks(self):
+        """4 octobre, 14:05. La voiture est nommée ; le dernier point de la
+        trajectoire est une flaque vide, loin derrière. Le rectangle allait
+        s'y poser, trop petit et à côté.
+
+        La taille lue reste celle de la voiture. La flaque n'allonge plus le
+        trajet : dès qu'elle n'a plus la taille du sujet, le rectangle s'arrête.
+        """
+        debut = 1_000_000.0
+        vu = {"t": debut + 6.0, "label": "Voiture", "sur": True, "type": "vehicle",
+              "box": [0.40, 0.80, 0.117, 0.094],
+              "trace": [[debut, 0.40, 0.80, 0.117, 0.094],
+                        [debut + 3.0, 0.50, 0.80, 0.117, 0.094],
+                        [debut + 6.0, 0.38, 0.80, 0.022, 0.028]]}
+        x, y, w, h = stream.suit(vu, debut + 6.0)
+        self.assertAlmostEqual(w, 0.117, places=3)
+        self.assertAlmostEqual(h, 0.094, places=3)
+        # Posé au dernier endroit où la tache était encore la voiture, pas
+        # sur la flaque à 0,38.
+        self.assertAlmostEqual(x, 0.50, places=2)
+        _, fin = stream.presence(vu)
+        self.assertEqual(fin, debut + 3.0)
+        self.assertEqual(stream.dessine(np.zeros((360, 640, 3), np.uint8),
+                                        [dict(vu)], debut + 6.0), 0)
+
     def test_the_word_is_written_only_when_the_watch_named_something(self):
         """« Mouvement détecté » est un aveu, pas une identification."""
         sur = 0.9
@@ -3359,11 +3405,18 @@ class DiffusionTests(unittest.TestCase):
                         [120.0, 0.70, 0.50, 0.05, 0.03]]}
         debut, fin = stream.presence(vu)
         self.assertEqual(debut, 100.0)
+        self.assertEqual(fin, 120.0)
         # Le rectangle est bien sur le sujet au début du trajet, et pas
-        # seulement à la fin quand le nom tombe.
-        self.assertAlmostEqual(stream.suit(vu, 100.0)[0], 0.10)
-        self.assertAlmostEqual(stream.suit(vu, 110.0)[0], 0.40)
-        self.assertAlmostEqual(stream.suit(vu, 120.0)[0], 0.70)
+        # seulement à la fin quand le nom tombe. Sa taille est celle de la
+        # lecture, pas celle de la tache — qui ici est deux fois plus petite.
+        x0, _, w0, h0 = stream.suit(vu, 100.0)
+        x1, _, _, _ = stream.suit(vu, 110.0)
+        x2, _, w2, h2 = stream.suit(vu, 120.0)
+        self.assertAlmostEqual(w0, 0.1)
+        self.assertAlmostEqual(h0, 0.1)
+        self.assertEqual((w2, h2), (w0, h0))
+        self.assertLess(x0, x1)
+        self.assertLess(x1, x2)
 
     def test_red_is_kept_for_what_is_unknown_and_for_fire(self):
         """Everything was red, so red had stopped meaning anything.
@@ -4868,7 +4921,7 @@ class PortraitMachineTests(unittest.TestCase):
         self.assertTrue(stream.pose_portrait_machine(
             image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
             vue=(175, 36, 929, 522)))
-        self.assertEqual(stream.MACHINE_MERCI, "Thanks Raspberry !!!")
+        self.assertEqual(stream.MACHINE_MERCI, "Thanks Raspberry")
         self.assertIn("MACHINE_MERCI", inspect.getsource(stream.pose_portrait_machine))
 
     def test_a_catch_stays_on_top_of_the_portrait(self):
@@ -5197,6 +5250,20 @@ class OursTests(unittest.TestCase):
         chez_lui = x + OURS_LA[0] * large
         self.assertLess(abs(milieu - vise), large * 0.04)
         self.assertGreater(abs(milieu - chez_lui), large * 0.2)
+
+    def test_il_danse_dix_secondes_au_centre_du_rond_point(self):
+        """Le numéro, c'est la danse sur l'îlot, pas le trajet pour y aller."""
+        from watcher.stream import (OURS_DANSE_S, OURS_MARCHE_S, OURS_TENUE_S,
+                                    OURS_ILOT, OURS_LA, pose_ours)
+        self.assertGreaterEqual(OURS_DANSE_S, 10.0)
+        self.assertGreaterEqual(OURS_TENUE_S, OURS_MARCHE_S + 10.0)
+        toile, (x, y, large, haut) = self._scene()
+        pose_ours(toile, self._quand(OURS_MARCHE_S + 9.0), self._decoupe(),
+                  vue=(x, y, large, haut))
+        colonnes = np.flatnonzero(self._ou_est_il(toile).any(axis=0))
+        milieu = (colonnes[0] + colonnes[-1]) / 2
+        self.assertLess(abs(milieu - (x + OURS_ILOT[0] * large)), large * 0.04)
+        self.assertGreater(abs(milieu - (x + OURS_LA[0] * large)), large * 0.2)
 
 
 class IncrustationDirectTests(unittest.TestCase):
