@@ -26,6 +26,13 @@ Rogné, parce qu'un SVG rendu garde ses marges et qu'elles décalent le dessin
 par rapport au point où le code croit le poser. Rogné une fois pour toutes
 vaut mieux qu'un décalage à corriger à la main.
 
+## ours-maison.jpg
+
+La sculpture de bois du Mont Serein, au bord du rond-point. C'est la
+preuve que « THIS IS MY HOME » n'est pas une blague : il est bien là.
+Recadrée, le chrome Street View enlevé, un voile ambre. Elle se pose
+dans la bande noire pendant la danse, jamais sur la route.
+
 ## trampoline.jpg
 
 Le trampoline élastique du Mont Serein, photographié le 28 juin 2026

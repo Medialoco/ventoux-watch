@@ -3134,6 +3134,11 @@ OURS_ENFLE = 1.35
 OURS_CRI = "THIS IS MY HOME!!!!!"
 OURS_JAUNE = (40, 230, 250)
 OURS_LARME = (235, 190, 120)
+# La photo-preuve : elle apparaît avec la danse, pas pendant la marche.
+# Un fondu d'une seconde, aux deux bouts : claquer, ce serait une pub.
+OURS_PREUVE_FONDU_S = 0.9
+# En dessous, ce n'est plus une bande, c'est le bord d'un Short.
+OURS_PREUVE_BANDE = 90
 
 
 def _colle_decoupe(image: np.ndarray, sprite: np.ndarray, cx: float, sol: float,
@@ -3193,8 +3198,68 @@ def _il_crie(image: np.ndarray, vue: tuple[int, int, int, int], seconde: float) 
                 OURS_JAUNE, trait, cv2.LINE_AA)
 
 
+def pose_preuve_ours(image: np.ndarray, photo: np.ndarray | None,
+                     phase: float, vue: tuple[int, int, int, int]) -> None:
+    """La preuve, dans la bande noire : c'est bien chez lui, le rond-point.
+
+    Pas sur la route. La photo dit ce que le cri affirme, et elle le dit à
+    côté, comme on pose une pièce à côté d'un témoignage. Sans bande — un
+    Short, un cadre plein — elle se tait : mieux vaut rien qu'une carte
+    collée sur la montagne.
+    """
+    if photo is None or photo.size == 0 or phase < OURS_MARCHE_S:
+        return
+    depuis = phase - OURS_MARCHE_S
+    reste = OURS_TENUE_S - phase
+    force = min(1.0, depuis / OURS_PREUVE_FONDU_S, max(0.0, reste) / OURS_PREUVE_FONDU_S)
+    if force < 0.03:
+        return
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue
+    echelle = largeur / 1600
+    bande = gauche
+    if bande < int(OURS_PREUVE_BANDE * echelle):
+        return
+    marge = int(12 * echelle)
+    haut_libre = max(cime + marge, int(ENCART_BAS * echelle) + marge)
+    bas_libre = min(cime + haute_vue - marge,
+                    hauteur - int((AGENDA_H + 8) * echelle))
+    if bas_libre - haut_libre < int(110 * echelle):
+        haut_libre = cime + marge
+        bas_libre = cime + haute_vue - marge
+    poche_l = bande - 2 * marge
+    poche_h = bas_libre - haut_libre
+    if poche_l < 40 or poche_h < 40:
+        return
+    ph, pw = photo.shape[:2]
+    zoom = 1.0 + 0.035 * min(1.0, depuis / OURS_DANSE_S)
+    scale = min(poche_l / pw, poche_h / ph) * zoom
+    tw, th = int(pw * scale), int(ph * scale)
+    tw, th = min(tw, poche_l), min(th, poche_h)
+    if tw < 12 or th < 12:
+        return
+    petit = cv2.resize(photo, (tw, th), interpolation=cv2.INTER_AREA)
+    x = (bande - tw) // 2
+    y = bas_libre - th
+    if y < haut_libre:
+        y = haut_libre
+    if x < 0 or y < 0 or x + tw > largeur or y + th > hauteur:
+        return
+    pad = max(3, int(6 * echelle))
+    calque = image.copy()
+    fond_encart(calque, (max(0, x - pad), max(0, y - pad)),
+                (min(largeur - 1, x + tw + pad - 1),
+                 min(hauteur - 1, y + th + pad - 1)), echelle)
+    calque[y:y + th, x:x + tw] = petit
+    cadre_encart(calque, (max(0, x - pad), max(0, y - pad)),
+                 (min(largeur - 1, x + tw + pad - 1),
+                  min(hauteur - 1, y + th + pad - 1)), echelle)
+    cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
+
+
 def pose_ours(image: np.ndarray, seconde: float, sprite: np.ndarray | None,
-              vue: tuple[int, int, int, int] | None = None) -> float | None:
+              vue: tuple[int, int, int, int] | None = None,
+              preuve: np.ndarray | None = None) -> float | None:
     """Le double de l'ours descend danser sur le rond-point, en pleurant.
 
     Rend où en est le numéro, pour que l'appelant sache quand le faire grogner
@@ -3234,6 +3299,8 @@ def pose_ours(image: np.ndarray, seconde: float, sprite: np.ndarray | None,
         _, sommet, son_large, son_haut = boite
         _larmes(image, boite[0], sommet, son_large, son_haut, phase)
         _il_crie(image, (gauche, cime, large_vue, haute_vue), phase)
+        pose_preuve_ours(image, preuve, phase,
+                         (gauche, cime, large_vue, haute_vue))
     return phase
 
 
@@ -5712,6 +5779,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # puisque la voix ne doit partir qu'une fois et que la boucle repasse ici
     # chaque image.
     ours = charge_vignette(racine / "data" / "ours.png")
+    preuve_ours = cv2.imread(str(racine / "assets" / "ours-maison.jpg"))
     ours_dit: tuple[int, int] = (-1, -1)
     machine_dit = -1.0
     dogmazic_dit = -1.0
@@ -6079,7 +6147,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # toute la nuit par le lampadaire du chalet, le double s'y pose
                 # dans la lumière et il a l'air d'un ours sous un réverbère.
                 # Vérifié sur une vraie image de nuit avant de lever la règle.
-                ou_en_est = pose_ours(toile, quand - origine, ours, vue=cadrage)
+                ou_en_est = pose_ours(toile, quand - origine, ours, vue=cadrage,
+                                      preuve=preuve_ours)
                 # Dogmazic d'abord, le Raspberry ensuite : un seul disque
                 # à la fois, le plateau les départage. Les rectangles se
                 # redessinent après, sur la toile.

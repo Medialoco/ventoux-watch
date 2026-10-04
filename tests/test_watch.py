@@ -5621,6 +5621,43 @@ class OursTests(unittest.TestCase):
         self.assertLess(abs(milieu - (x + OURS_ILOT[0] * large)), large * 0.04)
         self.assertGreater(abs(milieu - (x + OURS_LA[0] * large)), large * 0.2)
 
+    def _preuve(self):
+        photo = np.zeros((180, 220, 3), np.uint8)
+        photo[:] = (5, 250, 5)
+        return photo
+
+    def _ou_est_la_preuve(self, toile):
+        return ((toile[:, :, 1] > 180) & (toile[:, :, 0] < 40)
+                & (toile[:, :, 2] < 40))
+
+    def test_the_proof_sits_in_the_band_during_the_dance(self):
+        """C'est la preuve que c'est chez lui. Elle se lit à côté, pas dessus."""
+        from watcher.stream import pose_ours, OURS_MARCHE_S
+        toile, (x, y, large, haut) = self._scene()
+        pose_ours(toile, self._quand(OURS_MARCHE_S + 2.0), self._decoupe(),
+                  vue=(x, y, large, haut), preuve=self._preuve())
+        preuve = self._ou_est_la_preuve(toile)
+        self.assertTrue(preuve[:, :x].any(), "la preuve n'est pas dans la bande")
+        self.assertFalse(preuve[y:y + haut, x:x + large].any(),
+                         "la preuve mange la route")
+
+    def test_the_proof_waits_until_he_is_home(self):
+        """Pendant la marche, ce n'est pas encore le moment."""
+        from watcher.stream import pose_ours
+        toile, vue = self._scene()
+        pose_ours(toile, self._quand(0.8), self._decoupe(), vue=vue,
+                  preuve=self._preuve())
+        self.assertFalse(self._ou_est_la_preuve(toile).any())
+
+    def test_a_short_has_no_band_so_no_proof(self):
+        """Sans bande, coller la photo ce serait la coller sur la montagne."""
+        from watcher.stream import pose_ours, OURS_MARCHE_S
+        toile = np.zeros((1080, 1920, 3), np.uint8)
+        vue = (0, 0, 1920, 1080)
+        pose_ours(toile, self._quand(OURS_MARCHE_S + 2.0), self._decoupe(),
+                  vue=vue, preuve=self._preuve())
+        self.assertFalse(self._ou_est_la_preuve(toile).any())
+
 
 class IncrustationDirectTests(unittest.TestCase):
     """Pendant le survol, la webcam doit rester visible quelque part."""
