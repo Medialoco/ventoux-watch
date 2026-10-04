@@ -5548,7 +5548,7 @@ class PenseeTests(unittest.TestCase):
 
 
 class SalleTests(unittest.TestCase):
-    """Le compte réel, dit deux fois, et la division qui fait un."""
+    """Le compte réel. La voix dit le nombre en direct, et s'arrête là."""
 
     PAGE = (
         '"subscriberCountText":{"accessibility":{"accessibilityData":'
@@ -5577,8 +5577,11 @@ class SalleTests(unittest.TestCase):
         self.assertEqual(stream.morceaux_nombre(2_000_000), ["deux", "millions"])
         self.assertEqual(stream.groupe(2_000_000), "2 000 000")
         self.assertEqual(
-            ["nous", *stream.morceaux_nombre(1), "milieu", *stream.morceaux_nombre(1)],
-            ["nous", "un", "milieu", "un"])
+            ["nous", *stream.morceaux_nombre(1), "direct"],
+            ["nous", "un", "direct"])
+        self.assertNotIn("DIVISES PAR",
+                         Path(__file__).resolve().parents[1]
+                         .joinpath("watcher/stream.py").read_text())
 
     def test_a_missing_word_stays_silent(self):
         import tempfile

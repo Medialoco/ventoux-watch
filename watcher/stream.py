@@ -4857,15 +4857,18 @@ def _rogne(pcm: bytes) -> bytes:
 
 
 def assemble_salle(racine: Path, n: int) -> Path | None:
-    """Colle « Nous sommes n en direct, divisés par n ». None si un mot manque."""
+    """Colle « Nous sommes n en direct ». None si un mot manque.
+
+    La division ne se dit pas et ne s'écrit pas.
+    """
     dossier = racine / "data" / "voix" / "salle"
-    ordre = ["nous", *morceaux_nombre(n), "milieu", *morceaux_nombre(n)]
+    ordre = ["nous", *morceaux_nombre(n), "direct"]
     blanc = b"\0" * int(_BLANC_MOT * ECHANTILLONS_S * VOIES * 2)
     souffle = b"\0" * int(_SOUFFLE * ECHANTILLONS_S * VOIES * 2)
     parts: list[bytes] = []
     for mot in ordre:
         if parts:
-            parts.append(souffle if mot == "milieu" else blanc)
+            parts.append(souffle if mot == "direct" else blanc)
         try:
             parts.append(_rogne((dossier / f"{mot}.raw").read_bytes()))
         except OSError:
@@ -4905,9 +4908,6 @@ def pose_salle(image: np.ndarray, vue: tuple[int, int, int, int],
         lignes.append(("NOUS SOMMES", BLANC))
         lignes.append((groupe(en_direct), BLANC))
         lignes.append(("EN DIRECT", AMBRE))
-        lignes.append(("DIVISES PAR", BLANC))
-        lignes.append((groupe(en_direct), BLANC))
-        lignes.append(("= 1", CYAN))
     elif en_direct == 0 and abonnes is not None:
         lignes.append(("0", BLANC))
         lignes.append(("EN DIRECT", AMBRE))
