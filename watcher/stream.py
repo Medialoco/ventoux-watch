@@ -4099,8 +4099,26 @@ def tamise_la_photo(photo: np.ndarray) -> np.ndarray:
     return np.clip(plage[:, :, None] * teinte, 0, 255).astype(np.uint8)
 
 
+# Le fond d'un encart, du haut vers le bas.
+#
+# Un rectangle assombri d'un seul coup est une vitre posée sur l'image. Les
+# mêmes pixels assombris un peu plus en haut qu'en bas font une carte éclairée
+# par le haut, ce qui est la façon dont un objet se détache d'un fond depuis
+# qu'on dessine des objets. L'écart est de seize centièmes et ne se remarque
+# pas : c'est exactement ce qu'on lui demande.
+ENCART_SOMBRE = (0.24, 0.40)
+# Le rayon des coins, en pixels d'un cadre de mille six cents. Assez pour qu'un
+# coin ne pique pas, trop peu pour qu'on puisse appeler ça une bulle.
+ENCART_RAYON = 7
+# Le gris des étiquettes. Une étiquette et sa valeur n'ont pas à se disputer le
+# regard : « LOAD » ne change jamais, « 31% » change tout le temps, et c'est le
+# second qu'on vient lire.
+GRIS_ENCART = (142, 142, 142)
+
+
 def cadre_encart(image: np.ndarray, coin_a: tuple[int, int],
-                 coin_b: tuple[int, int], echelle: float) -> None:
+                 coin_b: tuple[int, int], echelle: float,
+                 rayon: int | None = None) -> None:
     """Le filet des encarts : une arête, pas un cadre doré.
 
     Assombri seul, un encart flotte sur l'image et ses limites bougent avec le
@@ -4108,9 +4126,118 @@ def cadre_encart(image: np.ndarray, coin_a: tuple[int, int],
     titre mais très baissé, et le même partout — deux encarts côte à côte avec
     deux bordures différentes, on voit la différence avant de voir les
     encarts.
+
+    Les coins sont adoucis. Un angle droit parfait est ce que trace une
+    bibliothèque de dessin quand on ne lui demande rien ; tout ce qui est
+    fabriqué pour être regardé a les coins cassés, des panneaux de signalisation
+    aux cartes à jouer. Trois pixels suffisent à faire la différence entre un
+    rectangle et un objet.
     """
-    cv2.rectangle(image, coin_a, coin_b,
-                  tuple(int(c * 0.45) for c in CYAN), max(1, int(echelle)))
+    x0, y0 = coin_a
+    x1, y1 = coin_b
+    teinte = tuple(int(c * 0.45) for c in CYAN)
+    trait = max(1, int(echelle))
+    r = ENCART_RAYON if rayon is None else rayon
+    r = max(0, min(int(round(r * echelle)), (x1 - x0) // 2, (y1 - y0) // 2))
+    if r <= 1:
+        cv2.rectangle(image, coin_a, coin_b, teinte, trait)
+        return
+    cv2.line(image, (x0 + r, y0), (x1 - r, y0), teinte, trait, cv2.LINE_AA)
+    cv2.line(image, (x0 + r, y1), (x1 - r, y1), teinte, trait, cv2.LINE_AA)
+    cv2.line(image, (x0, y0 + r), (x0, y1 - r), teinte, trait, cv2.LINE_AA)
+    cv2.line(image, (x1, y0 + r), (x1, y1 - r), teinte, trait, cv2.LINE_AA)
+    for cx, cy, depart in ((x0 + r, y0 + r, 180.0), (x1 - r, y0 + r, 270.0),
+                           (x1 - r, y1 - r, 0.0), (x0 + r, y1 - r, 90.0)):
+        cv2.ellipse(image, (cx, cy), (r, r), depart, 0.0, 90.0,
+                    teinte, trait, cv2.LINE_AA)
+
+
+def fond_encart(image: np.ndarray, coin_a: tuple[int, int],
+                coin_b: tuple[int, int], echelle: float) -> None:
+    """Assombrit la place d'un encart en dégradé, puis pose son filet."""
+    x0, y0 = coin_a
+    x1, y1 = coin_b
+    panneau = image[y0:y1 + 1, x0:x1 + 1]
+    if not panneau.size:
+        return
+    haut, bas = ENCART_SOMBRE
+    rampe = np.linspace(haut, bas, panneau.shape[0], dtype=np.float32)
+    panneau[:] = (panneau * rampe[:, None, None]).astype(np.uint8)
+    cadre_encart(image, coin_a, coin_b, echelle)
+
+
+def pose_titre_encart(image: np.ndarray, texte: str, x: int, ligne: int,
+                      large: int, echelle: float) -> None:
+    """Le nom d'un encart, souligné d'un trait court.
+
+    Le trait ne décore pas : il sépare. Sans lui, le titre est la première des
+    lignes du tableau et se lit comme une mesure de plus ; avec lui, le tableau
+    commence en dessous.
+    """
+    taille = 0.50 * echelle
+    cv2.putText(image, texte, (x, ligne), cv2.FONT_HERSHEY_SIMPLEX, taille,
+                CYAN, 1, cv2.LINE_AA)
+    y = ligne + int(round(5 * echelle))
+    cv2.line(image, (x, y), (x + large, y),
+             tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
+             cv2.LINE_AA)
+
+
+def pose_jauge(image: np.ndarray, x: int, y: int, large: int, part: float,
+               teinte: tuple[int, int, int], echelle: float) -> None:
+    """Une barre fine : la part remplie d'une grandeur qui a des bornes.
+
+    Un nombre dit la valeur, une barre dit où elle en est de sa course. « 46 C »
+    ne renseigne que celui qui sait à quelle température un Raspberry Pi se
+    bride ; la même valeur au tiers de sa barre le dit à tout le monde.
+
+    Et c'est une mesure, pas un ornement : elle n'est posée que sur des
+    grandeurs réellement bornées, et sa longueur est la part, sans mise en
+    valeur ni arrondi flatteur.
+    """
+    epais = max(2, int(round(3 * echelle)))
+    cv2.rectangle(image, (x, y), (x + large, y + epais),
+                  tuple(int(c * 0.20) for c in BLANC), -1)
+    pleine = int(round(large * min(1.0, max(0.0, part))))
+    if pleine > 0:
+        cv2.rectangle(image, (x, y), (x + pleine, y + epais), teinte, -1)
+
+
+def pose_duo(image: np.ndarray, etiquette: str, valeur: str, x: int,
+             bord: int, ligne: int, echelle: float,
+             teinte: tuple[int, int, int] = BLANC) -> None:
+    """Une étiquette à gauche, sa valeur alignée à droite.
+
+    C'est ce qui transforme une liste en tableau. Alignées à gauche, cinq
+    valeurs de longueurs différentes font un bord déchiqueté qu'on relit ligne
+    à ligne ; alignées à droite, elles font une colonne qu'on lit d'un coup.
+    """
+    cv2.putText(image, etiquette, (x, ligne), cv2.FONT_HERSHEY_SIMPLEX,
+                0.44 * echelle, GRIS_ENCART, 1, cv2.LINE_AA)
+    taille = 0.54 * echelle
+    large = cv2.getTextSize(valeur, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
+    cv2.putText(image, valeur, (bord - large, ligne), cv2.FONT_HERSHEY_SIMPLEX,
+                taille, teinte, 2, cv2.LINE_AA)
+
+
+def pose_heros(image: np.ndarray, nombre: str, unite: str, x: int, ligne: int,
+               teinte: tuple[int, int, int], echelle: float) -> int:
+    """Le chiffre qu'on vient lire, en grand, son unité en petit à côté.
+
+    Un tableau où tout a la même taille n'a pas de sujet. Celui-ci en a un : la
+    température est la seule grandeur qui puisse arrêter la diffusion, les
+    autres sont du renseignement.
+    """
+    taille = 0.95 * echelle
+    cv2.putText(image, nombre, (x, ligne), cv2.FONT_HERSHEY_SIMPLEX, taille,
+                teinte, 2, cv2.LINE_AA)
+    large = cv2.getTextSize(nombre, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
+    suite = x + large + int(round(4 * echelle))
+    cv2.putText(image, unite, (suite, ligne - int(round(8 * echelle))),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.40 * echelle, GRIS_ENCART, 1,
+                cv2.LINE_AA)
+    return suite + cv2.getTextSize(unite, cv2.FONT_HERSHEY_SIMPLEX,
+                                   0.40 * echelle, 1)[0][0]
 
 
 def pose_direct(toile: np.ndarray, camera: np.ndarray,
@@ -4155,6 +4282,20 @@ def pose_direct(toile: np.ndarray, camera: np.ndarray,
                    max(2, int(3.5 * echelle)), (60, 60, 235), -1, cv2.LINE_AA)
 
 
+# Le fond d'échelle de la jauge de température, en degrés. Ce n'est pas un
+# goût : à quatre-vingt-cinq degrés un Raspberry Pi se bride de lui-même, les
+# images se mettent à manquer et la diffusion saccade — c'est arrivé. Le bas
+# d'échelle est la température d'une pièce. Les deux valent pour la machine,
+# pas pour cette caméra-ci.
+FROID_C = 20.0
+BRIDE_C = 85.0
+# Les lignes de l'encart machine, en pixels d'un cadre de mille six cents :
+# titre, chiffre héros, sa jauge, la charge, sa jauge, le disque, l'âge, la
+# ville. Écrites une fois ici plutôt que recalculées de proche en proche, pour
+# que la hauteur de la photo en dessous se déduise de la dernière.
+MACHINE_LIGNES = (22, 64, 72, 98, 106, 130, 154, 180)
+
+
 def pose_machine(image: np.ndarray, etat: dict | None,
                  vignette: np.ndarray | None = None, ville: str = "",
                  remue: float = 0.0) -> None:
@@ -4189,11 +4330,13 @@ def pose_machine(image: np.ndarray, etat: dict | None,
         # Sinon la première heure après un redémarrage affiche « UP 0h », ce
         # qui ressemble à une panne alors que c'est le contraire.
         debout = f"{minutes}m"
-    lignes = [("RASPBERRY PI 5", CYAN),
-              (f"{degres:.1f} C", couleur),
-              (f"LOAD {etat['charge'] * 100:.0f}%", BLANC),
-              (f"DISK {etat['libre'] / 1e9:.0f} GB", BLANC),
-              (f"UP {debout}", BLANC)]
+    # Le tableau se lit en trois temps : le titre, le chiffre qui compte, puis
+    # le renseignement. Avant, les cinq lignes avaient la même taille et la
+    # même graisse, donc la température d'une machine qui peut se brider se
+    # lisait aussi vite que la place qu'il reste sur le disque.
+    duos = [("LOAD", f"{etat['charge'] * 100:.0f}%"),
+            ("DISK", f"{etat['libre'] / 1e9:.0f} GB"),
+            ("UP", debout)]
     pas = int(28 * echelle)
     marge = int(14 * echelle)
     sommet = int(RUBAN_H * echelle) + int(remue)
@@ -4202,8 +4345,10 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     # regarde, celui d'en face où est ce qu'elle regarde. Huit mille
     # kilomètres entre les deux, et c'est à peu près tout le projet.
     lieu = (ville or "").upper()
-    large = max([cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
-                 for t, _ in lignes]
+    large = max([cv2.getTextSize(f"{e}   {v}", cv2.FONT_HERSHEY_SIMPLEX,
+                                 0.54 * echelle, 2)[0][0] for e, v in duos]
+                + [cv2.getTextSize("RASPBERRY PI 5", cv2.FONT_HERSHEY_SIMPLEX,
+                                   0.50 * echelle, 1)[0][0]]
                 + [large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle)])
     # L'encart s'élargit pour la photo si le texte ne suffit pas. À la largeur
     # des chiffres seuls, la carte faisait cent pixels de large et on n'y
@@ -4215,7 +4360,7 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     # machine va bien ; la photo dit laquelle. C'est une carte à cent euros sur
     # un bureau, et le flux a l'air d'une chaîne de télévision — autant le
     # montrer, c'est plus honnête et c'est plus intéressant.
-    haut_photo = sommet + pas * (len(lignes) + bool(lieu)) + marge // 2
+    haut_photo = sommet + int(MACHINE_LIGNES[-1] * echelle) + marge // 2
     bas = int(ENCART_BAS * echelle) + int(remue)
     photo = None
     if vignette is not None and bas - haut_photo - marge > 8:
@@ -4227,17 +4372,25 @@ def pose_machine(image: np.ndarray, etat: dict | None,
         # la rogner donnait un gros plan sur le ventilateur.
         photo = tamise_la_photo(_au_plus_juste(vignette, vu_large, vu_haut))
     else:
-        bas = sommet + pas * (len(lignes) + bool(lieu)) + marge
-    panneau = image[sommet:bas, 0:droite]
-    if panneau.size:
-        panneau[:] = (panneau * 0.35).astype(np.uint8)
-        cadre_encart(image, (0, sommet), (droite - 1, bas - 1), echelle)
-    for i, (texte, teinte) in enumerate(lignes):
-        cv2.putText(image, texte, (marge, sommet + pas * (i + 1) - int(6 * echelle)),
-                    cv2.FONT_HERSHEY_SIMPLEX, taille, teinte, 2, cv2.LINE_AA)
-    pose_lieu(image, lieu, marge,
-              sommet + pas * (len(lignes) + 1) - int(6 * echelle),
-              taille * HORLOGE_LIEU, echelle)
+        bas = sommet + int(MACHINE_LIGNES[-1] * echelle) + marge
+    fond_encart(image, (0, sommet), (droite - 1, bas - 1), echelle)
+    bord = droite - marge
+    titre, heros, jauge_c, charge, jauge_l, disque, age, ville_y = (
+        sommet + int(r * echelle) for r in MACHINE_LIGNES)
+    pose_titre_encart(image, "RASPBERRY PI 5", marge, titre, bord - marge, echelle)
+    pose_heros(image, f"{degres:.1f}", "C", marge, heros, couleur, echelle)
+    # Deux jauges, et deux seulement : la température et la charge sont les
+    # deux grandeurs qui ont un plafond connu et qui arrêtent la diffusion
+    # quand elles le touchent. La place sur le disque n'en a pas ici — on ne
+    # connaît que ce qu'il reste — et le temps debout n'en a pas du tout.
+    pose_jauge(image, marge, jauge_c, bord - marge,
+               (degres - FROID_C) / (BRIDE_C - FROID_C), couleur, echelle)
+    pose_duo(image, duos[0][0], duos[0][1], marge, bord, charge, echelle)
+    pose_jauge(image, marge, jauge_l, bord - marge, etat["charge"],
+               VERT if etat["charge"] < 0.75 else AMBRE, echelle)
+    pose_duo(image, duos[1][0], duos[1][1], marge, bord, disque, echelle)
+    pose_duo(image, duos[2][0], duos[2][1], marge, bord, age, echelle)
+    pose_lieu(image, lieu, marge, ville_y, taille * HORLOGE_LIEU, echelle)
     if photo is not None:
         # Centrée dans la place qui reste, et le cadre pris sur elle. La
         # photo est large et la place est haute : il y a forcément du mou, et
@@ -4633,6 +4786,11 @@ def pose_lieu(image: np.ndarray, texte: str, x: int, ligne: int,
                 taille, CYAN, 2, cv2.LINE_AA)
 
 
+# Les lignes de l'horloge, en pixels d'un cadre de mille six cents : le badge,
+# la date, l'heure, la commune, le haut de la carte.
+HORLOGE_LIGNES = (26, 60, 96, 122, 134)
+
+
 def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                  autre: str = "REPLAY", commune: str = "",
                  carte: list | None = None,
@@ -4657,8 +4815,12 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     # dit où regarde la caméra, et elle donne le fuseau par surcroît.
     # Elle est en plus petit : c'est un sous-titre de l'heure, pas une
     # troisième ligne de même importance, et « Beaumont-du-Ventoux » est long.
-    lignes = [moment.strftime("%d %b %Y").upper(),
-              moment.strftime("%H:%M:%S")]
+    # L'heure est le sujet de cet encart, la date en est le contexte. Les deux
+    # étaient écrites à la même taille, donc rien ne disait laquelle des deux
+    # bouge — et c'est celle qui bouge qu'on vient regarder.
+    jour = moment.strftime("%d %b %Y").upper()
+    heure = moment.strftime("%H:%M:%S")
+    lignes = [jour, heure]
     pas = int(34 * echelle)
     marge = int(14 * echelle)
     sommet = int(RUBAN_H * echelle) + int(remue)
@@ -4670,18 +4832,20 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                 + [large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle)]
                 + ([int(ENCART_LARGE * echelle)] if dessin else []))
     badge = "LIVE" if direct else autre
-    large = max(large, cv2.getTextSize(badge, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] + pas)
+    large = max(large,
+                cv2.getTextSize(heure, cv2.FONT_HERSHEY_SIMPLEX,
+                                0.95 * echelle, 2)[0][0],
+                cv2.getTextSize(badge, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] + pas)
     gauche = largeur - large - 2 * marge
-    haut_carte = sommet + pas * (len(lignes) + 1 + bool(lieu)) + marge // 2
+    badge_y, date_y, heure_y, ville_y, carte_y = (
+        sommet + int(r * echelle) for r in HORLOGE_LIGNES)
+    haut_carte = carte_y
     bas = (int(ENCART_BAS * echelle) + int(remue) if dessin
-           else sommet + pas * (len(lignes) + 1 + bool(lieu)) + marge)
-    coin = image[sommet:bas, gauche:largeur]
-    if coin.size:
-        coin[:] = (coin * 0.35).astype(np.uint8)
-        cadre_encart(image, (gauche, sommet), (largeur - 1, bas - 1), echelle)
+           else ville_y + marge)
+    fond_encart(image, (gauche, sommet), (largeur - 1, bas - 1), echelle)
     rayon = int(7 * echelle)
     x = gauche + marge
-    y = sommet + pas - int(6 * echelle)
+    y = badge_y
     # Le point rouge appartient au direct et à lui seul : partout ailleurs sur
     # terre il veut dire « ça tourne, là, maintenant ». Fixe et rouge au-dessus
     # d'une archive, il disait l'inverse de ce qu'il est — et c'est ce qui
@@ -4693,12 +4857,15 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
         cv2.circle(image, (x + rayon, y - rayon), rayon, AMBRE, -1)
     cv2.putText(image, badge, (x + pas, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
                 BLANC if direct else AMBRE, 2, cv2.LINE_AA)
-    for i, ligne in enumerate(lignes):
-        cv2.putText(image, ligne, (x, sommet + pas * (i + 2) - int(6 * echelle)),
-                    cv2.FONT_HERSHEY_SIMPLEX, taille, BLANC, 2, cv2.LINE_AA)
-    pose_lieu(image, lieu, x,
-              sommet + pas * (len(lignes) + 2) - int(6 * echelle),
-              taille * HORLOGE_LIEU, echelle)
+    trait = y + int(round(9 * echelle))
+    cv2.line(image, (x, trait), (largeur - 1 - marge, trait),
+             tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
+             cv2.LINE_AA)
+    cv2.putText(image, jour, (x, date_y), cv2.FONT_HERSHEY_SIMPLEX,
+                0.48 * echelle, GRIS_ENCART, 1, cv2.LINE_AA)
+    cv2.putText(image, heure, (x, heure_y), cv2.FONT_HERSHEY_SIMPLEX,
+                0.95 * echelle, BLANC, 2, cv2.LINE_AA)
+    pose_lieu(image, lieu, x, ville_y, taille * HORLOGE_LIEU, echelle)
     if dessin:
         pose_carte(image, carte, ou[0], ou[1], x, haut_carte,
                    largeur - marge - x, echelle)

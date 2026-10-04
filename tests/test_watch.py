@@ -4513,6 +4513,81 @@ class DiffusionTests(unittest.TestCase):
         self.assertIsNone(stream.batir_session(Path("/inexistant/nulle/part")))
 
 
+class EncartsTests(unittest.TestCase):
+    """Les deux barres latérales : des cartes, et des jauges qui ne mentent pas."""
+
+    def test_the_panel_background_is_a_gradient_and_not_a_flat_pane(self):
+        """Éclairé par le haut, comme tout ce qui est fabriqué pour être regardé."""
+        image = np.full((120, 200, 3), 200, np.uint8)
+        stream.fond_encart(image, (10, 10), (150, 100), 1.0)
+        haut = float(image[20, 80].mean())
+        bas = float(image[90, 80].mean())
+        self.assertLess(haut, bas, "le haut doit être le plus sombre")
+        # Et assombri pour de bon : un encart qui laisse passer le ciel ne se
+        # lit plus quand le ciel change.
+        self.assertLess(bas, 200 * 0.5)
+        # Hors de l'encart, rien n'a bougé.
+        self.assertEqual(int(image[5, 5].mean()), 200)
+
+    def test_the_gauge_length_is_the_share_and_nothing_else(self):
+        """Une jauge est une mesure. Pas d'arrondi flatteur, pas de minimum."""
+        for part in (0.0, 0.25, 0.5, 1.0):
+            image = np.zeros((20, 220, 3), np.uint8)
+            stream.pose_jauge(image, 10, 5, 200, part, (0, 255, 0), 1.0)
+            pleine = int(np.count_nonzero(image[6, :, 1] > 128))
+            self.assertAlmostEqual(pleine / 200.0, part, delta=0.02,
+                                   msg=f"jauge à {part}")
+
+    def test_the_gauge_refuses_to_overflow_its_track(self):
+        """Une charge au-delà du plafond remplit la jauge, elle n'en sort pas."""
+        image = np.zeros((20, 240, 3), np.uint8)
+        stream.pose_jauge(image, 10, 5, 200, 4.2, (0, 255, 0), 1.0)
+        self.assertEqual(int(np.count_nonzero(image[6, 211:, 1] > 128)), 0)
+
+    def test_the_temperature_gauge_is_scaled_on_the_throttling_point(self):
+        """Le plafond est physique : 85 °C est l'endroit où un Pi se bride.
+
+        Pas un goût, pas un réglage trouvé sur cette machine-ci : la même jauge
+        vaudra sur la suivante.
+        """
+        self.assertEqual(stream.BRIDE_C, 85.0)
+        self.assertLess(stream.FROID_C, stream.TIEDE_C)
+        self.assertLess(stream.CHAUD_C, stream.BRIDE_C)
+
+    def test_a_value_is_flush_right_whatever_its_length(self):
+        """C'est l'alignement qui fait d'une liste un tableau."""
+        bords = []
+        for valeur in ("7%", "100%", "142 GB"):
+            image = np.zeros((40, 300, 3), np.uint8)
+            stream.pose_duo(image, "LOAD", valeur, 10, 280, 25, 1.0)
+            colonnes = np.flatnonzero(image.max(axis=(0, 2)) > 60)
+            bords.append(int(colonnes.max()))
+        self.assertLessEqual(max(bords) - min(bords), 4,
+                             f"bords droits inégaux : {bords}")
+
+    def test_both_sidebars_wear_the_same_dress(self):
+        """Deux encarts côte à côte avec deux habillages, on voit la différence
+        avant de voir les encarts."""
+        source = inspect.getsource(stream.pose_machine)
+        horloge = inspect.getsource(stream.pose_horloge)
+        for nom, texte in (("machine", source), ("horloge", horloge)):
+            self.assertIn("fond_encart(", texte, f"{nom} n'a pas le fond commun")
+            self.assertNotIn("* 0.35).astype", texte,
+                             f"{nom} garde l'ancien aplat")
+
+    def test_the_machine_panel_still_reads_without_a_photo(self):
+        """Sur un portable il n'y a ni photo ni capteur : l'encart doit tenir."""
+        image = np.zeros((720, 1280, 3), np.uint8)
+        etat = {"degres": 46.2, "charge": 0.31, "debout": 190000.0,
+                "libre": 142 * 10 ** 9}
+        stream.pose_machine(image, etat, None, "Los Angeles")
+        self.assertGreater(int(np.count_nonzero(image.max(axis=2) > 90)), 300)
+        # Et sans état du tout, on ne dessine rien plutôt que d'inventer.
+        vide = np.zeros((720, 1280, 3), np.uint8)
+        stream.pose_machine(vide, None, None, "Los Angeles")
+        self.assertEqual(int(np.count_nonzero(vide)), 0)
+
+
 class HorlogeDuCreditTests(unittest.TestCase):
     """Le crédit date la musique entendue, pas celle qu'on vient de verser.
 
