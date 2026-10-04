@@ -5540,7 +5540,9 @@ class PenseeTests(unittest.TestCase):
         page = (Path(__file__).resolve().parents[1] / "site" / "index.html").read_text()
         self.assertIn("David Vincent", page)
         self.assertIn("BIG UP TO THE NORMANDY!", page)
-        self.assertIn("Twenty ways", page)
+        self.assertIn("Twenty-one ways", page)
+        self.assertIn("Butterbane", page)
+        self.assertEqual(stream.DIJON_HEURE, 23 * 3600)
 
 
 class HorlogeDuCreditTests(unittest.TestCase):

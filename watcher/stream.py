@@ -1025,6 +1025,7 @@ class Musique:
         self.normandies = repliques(self.racine / "data" / "voix", "normandie")
         self.normandys = repliques(self.racine / "data" / "voix", "normandy")
         self.deplois = repliques(self.racine / "data" / "voix", "deploi")
+        self.dijons = repliques(self.racine / "data" / "voix", "dijon")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -4575,6 +4576,87 @@ def pose_annonce(image: np.ndarray, vue: tuple[int, int, int, int],
         y += int(round(26 * echelle))
 
 
+# La moutarde de Dijon, en BGR. Assez jaune pour se lire, assez brune pour
+# rester une moutarde et pas un soleil.
+MOUTARDE = (36, 164, 214)
+DIJON_HEURE = 23 * 3600
+DIJON_GRACE_S = 240
+DIJON_TENUE_S = 8.0
+
+
+def moutarde(image: np.ndarray, force: float) -> None:
+    """Pousse l'image vers la moutarde, sans lui ôter ses formes."""
+    if force <= 0.01:
+        return
+    plat = cv2.cvtColor(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
+    teinte = plat.astype(np.float32)
+    for voie, cible in enumerate(MOUTARDE):
+        teinte[:, :, voie] *= cible / 170.0
+    teinte = np.clip(teinte, 0, 255).astype(np.uint8)
+    cv2.addWeighted(teinte, force, image, 1.0 - force, 0.0, dst=image)
+
+
+def _dijon_lue(racine: Path) -> date | None:
+    try:
+        return date.fromisoformat(
+            (racine / "data" / "voix" / "dijon.jour").read_text().strip())
+    except (OSError, ValueError):
+        return None
+
+
+def _dijon_ecrite(racine: Path, jour: date) -> None:
+    try:
+        (racine / "data" / "voix" / "dijon.jour").write_text(
+            jour.isoformat() + "\n", encoding="utf-8")
+    except OSError:
+        pass
+
+
+def pose_dijon(image: np.ndarray, vue: tuple[int, int, int, int],
+               photo: np.ndarray | None, age: float) -> None:
+    """La première collaboration : son image, un grade moutarde, la phrase.
+
+    Huit secondes. La montagne prend la moutarde, son visuel se pose dans
+    la fenêtre et en prend un peu aussi. La voix dure trois secondes ; la
+    ligne reste le temps de la lire.
+    """
+    if age < 0 or age > DIJON_TENUE_S:
+        return
+    force = min(1.0, age / 0.5, (DIJON_TENUE_S - age) / 0.7)
+    gx, gy, gw, gh = vue
+    if gw < 8 or gh < 8:
+        return
+    vive = image[gy:gy + gh, gx:gx + gw].copy()
+    moutarde(vive, 0.72 * force)
+    image[gy:gy + gh, gx:gx + gw] = vive
+    if photo is not None:
+        ph, pl = photo.shape[:2]
+        echelle_photo = min(gw * 0.86 / pl, gh * 0.72 / ph)
+        lw = max(1, int(pl * echelle_photo))
+        lh = max(1, int(ph * echelle_photo))
+        cadre_photo = cv2.resize(photo, (lw, lh), interpolation=cv2.INTER_AREA)
+        moutarde(cadre_photo, 0.22 * force)
+        x = gx + (gw - lw) // 2
+        y = gy + (gh - lh) // 2
+        dessous = image[y:y + lh, x:x + lw]
+        cv2.addWeighted(cadre_photo, force, dessous, 1.0 - force, 0.0, dst=dessous)
+    pose_annonce(image, vue, ("IL EST 23 HEURES A DIJON",))
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    taille = 0.62 * echelle
+    trait = max(1, int(round(2 * echelle)))
+    mot = "BUTTERBANE"
+    (large_mot, haut_mot), _ = cv2.getTextSize(
+        mot, cv2.FONT_HERSHEY_SIMPLEX, taille, trait)
+    x = gx + max(0, (gw - large_mot) // 2)
+    y = gy + gh + int(round(78 * echelle)) + haut_mot
+    if y < hauteur:
+        cv2.putText(image, mot, (x, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
+                    (0, 0, 0), trait + 2, cv2.LINE_AA)
+        cv2.putText(image, mot, (x, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
+                    MOUTARDE, trait, cv2.LINE_AA)
+
+
 # Les seuils du Pi 5 lui-même : il réduit sa fréquence à 80 °C et se met à
 # l'abri à 85. On prévient donc avant, pas au moment où c'est fait.
 TIEDE_C = 65.0
@@ -5995,6 +6077,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # Le chien orange, déjà un disque : on le pose comme la photo du Pi.
     photo_dogmazic = cv2.imread(str(racine / "assets" / "dogmazic.png"),
                                cv2.IMREAD_UNCHANGED)
+    photo_butterbane = cv2.imread(str(racine / "assets" / "butterbane.jpg"))
     # Le trampoline du village, côté français : le pendant du disque de
     # gauche. Recadré une fois, teinté à chaque image comme le Raspberry.
     photo_trampoline = cv2.imread(str(racine / "assets" / "trampoline.jpg"))
@@ -6058,6 +6141,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     dernier_ennui = origine - 10_000.0
     pensee_jour, pensee_rang, pensee_etape, pensee_feu = _pensee_lue(racine)
     pensee_suite = pensee_feu + PENSEE_APRES_S if pensee_etape == 1 else 0.0
+    dijon_jour = _dijon_lue(racine)
+    dijon_feu = 0.0
     deploie_dit = False
     # Un quart d'heure en arrière : si la vallée est déjà dans le brouillard au
     # moment où le flux démarre, on le dit tout de suite.
@@ -6467,8 +6552,19 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         _pensee_ecrite(racine, ici.date(), pensee_rang,
                                        pensee_etape, pensee_feu)
                         log.info("Normandy dite à %s", ici.strftime("%H:%M:%S"))
+            if (dijon_jour != ici.date() and musique.dijons
+                    and DIJON_HEURE <= seconde_jour < DIJON_HEURE + DIJON_GRACE_S
+                    and not musique.parle()):
+                if musique.dis(musique.dijons[0]):
+                    dijon_feu = time.time()
+                    dijon_jour = ici.date()
+                    _dijon_ecrite(racine, dijon_jour)
+                    log.info("Dijon dit à %s", ici.strftime("%H:%M:%S"))
             dit = musique.dit_quoi() if musique.parle() else ""
-            if dit == "brouillard" or quand - gris_depuis <= BROUILLARD_TENUE_S:
+            age_dijon = time.time() - dijon_feu if dijon_feu else -1.0
+            if 0 <= age_dijon <= DIJON_TENUE_S:
+                pose_dijon(toile, cadrage, photo_butterbane, age_dijon)
+            elif dit == "brouillard" or quand - gris_depuis <= BROUILLARD_TENUE_S:
                 # Sans voix enregistrée, le mot tient quand même trois
                 # secondes : il doit pouvoir dire le brouillard sur une machine
                 # où data/voix est vide.
