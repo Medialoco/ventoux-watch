@@ -26,6 +26,42 @@ const COPY = {
     navCamera: "Camera",
     navWeather: "Weather",
     navPipeline: "Pipeline",
+    navStage: "Stage",
+    navWatch: "Watch",
+    navWiki: "Wiki",
+    watch: "The watch",
+    watchLine: "OpenCV finds what moved. YOLO11s names the crop. One frame a second, on a Raspberry Pi 5 in Los Angeles. That reading is the work. The picture around it is the show.",
+    watchMotion: "MOG2 finds the motion on the mountain.",
+    watchClass: "A small network names the crop: car, walker, bike, truck.",
+    watchOut: "The named frame is rebuilt and pushed live.",
+    listen: "Listen on Dogmazic",
+    radio: "Audio stream",
+    radioOn: "Listening",
+    chipFps: "1 frame / s",
+    story: "The watch",
+    heroLead: "A Raspberry Pi 5 in Los Angeles reads the Mont Serein webcam one frame a second, finds motion with OpenCV, names what moved with YOLO, and rebuilds the picture as a YouTube stream. The watch is the work. The stream is the show.",
+    heroMachine: "Four cores on a desk, nine thousand kilometres from the pass. The Pi keeps the archive, mixes the music, draws the overlays and pushes the whole frame to YouTube in a continuous loop.",
+    heroSee: "Vehicles and pedestrians are further along. Wildlife, birds, aircraft matched with OpenSky, and pets are where the work is going now. The model is trying to see everything that moves, and to name it correctly.",
+    heroMusic: "Fourteen hours of free music play around the clock, all of it from Dogmazic. Four of those hours are the album Mont Serein, written for this slope. One hundred and fifty-four tracks sit in a public playlist you can open in a click.",
+    stage: "On the stream",
+    stageLead: "Three picture effects take turns on the mountain: pixel, grey, and a slow wave. Dedicated numbers visit the same frame.",
+    stillConsole: "The music console, the LIVE and Raspberry Pi 5 badges, and the cable that ties Los Angeles to Beaumont-du-Ventoux.",
+    stillPixel: "Pixel: the mountain is rebuilt from large squares, then returns.",
+    stillGris: "Grey: colour drains from the slope and comes back.",
+    stillOndule: "Wave: horizontal bands slide, as if the picture were under water.",
+    stillEclat: "A catch: the name of what just passed lights the whole frame.",
+    stillRencontre: "The two dancers leave their corners and meet in the middle of the camera window.",
+    stillTapis: "A flying carpet follows the crest from one side of the sky to the other.",
+    stillMarin: "A yellow submarine crosses the sky above the summit.",
+    stillPiste: "A surfer descends the André Philip run, the piste lighting up behind him.",
+    stillElephant: "A pink elephant fills the frame for a few quiet night hours.",
+    stillOurs: "The wooden bear’s double comes down to dance on the roundabout and claims the place as home.",
+    stillSoleil: "A child’s sun is drawn where the real one sits behind the cloud.",
+    stillBati: "A wireframe building rises from OpenStreetMap, then fades.",
+    stillMachine: "Thanks Raspberry! The Pi 5 on the desk that runs the watch.",
+    stillDogmazic: "Thanks Dogmazic! The free-music library that fills the day.",
+    stillReplay: "A named passage comes back as a dated replay.",
+    stillRelief: "The 3D flyover lives on this page: the relief turns, then the view returns to the webcam angle.",
     prevPage: "Previous",
     nextPage: "Next",
     pages: "Pages",
@@ -51,7 +87,7 @@ const COPY = {
     track: "Track",
     trackText: "A compact blob, tracked for at least 3 frames.",
     class: "Class",
-    classText: "YOLO11 nano, ONNX, on the crop only. Person, car, bus, truck.",
+    classText: "YOLO11s, ONNX, on the crop only. Person, car, bus, truck.",
     plane: "Plane",
     planeText: "OpenSky. A callsign is kept only when that aircraft is in the camera’s view, close enough to be seen. Otherwise the history says it is not in the picture.",
     bus: "Bus",
@@ -105,7 +141,7 @@ const COPY = {
       ["Stream", "HLS, 1 frame a second"],
       ["Motion", "MOG2 at 640 px"],
       ["Track", "3 frames, compact"],
-      ["Class", "YOLO11n on the crop"],
+      ["Class", "YOLO11s on the crop"],
       ["Ground", "Surface and distance"],
       ["Name", "The rules decide"],
       ["Published", "Only what is named"],
@@ -171,6 +207,42 @@ const COPY = {
     navCamera: "Caméra",
     navWeather: "Météo",
     navPipeline: "Pipeline",
+    navStage: "Plateau",
+    navWatch: "Veille",
+    navWiki: "Wiki",
+    watch: "La veille",
+    watchLine: "OpenCV trouve ce qui a bougé. YOLO11s nomme la découpe. Une image par seconde, sur un Raspberry Pi 5 à Los Angeles. Cette lecture est le travail. L’image autour est le spectacle.",
+    watchMotion: "MOG2 trouve le mouvement sur la montagne.",
+    watchClass: "Un petit réseau nomme la découpe : voiture, piéton, vélo, camion.",
+    watchOut: "Le cadre nommé est recomposé et poussé en direct.",
+    listen: "Écouter sur Dogmazic",
+    radio: "Flux audio",
+    radioOn: "À l’écoute",
+    chipFps: "1 image / s",
+    story: "La veille",
+    heroLead: "Un Raspberry Pi 5 à Los Angeles lit la webcam du Mont Serein, une image par seconde, trouve le mouvement avec OpenCV, nomme ce qui a bougé avec YOLO, et reconstitue l’image en direct YouTube. La veille est le travail. Le flux est le spectacle.",
+    heroMachine: "Quatre cœurs sur un bureau, à neuf mille kilomètres du col. Le Pi tient l’archive, mixe la musique, dessine les encarts et pousse le cadre entier vers YouTube en continu.",
+    heroSee: "Les véhicules et les piétons sont plus avancés. La faune, les oiseaux, les avions croisés avec OpenSky et les animaux de compagnie sont encore en cours d’apprentissage. Le modèle cherche à tout voir et à tout nommer juste.",
+    heroMusic: "Quatorze heures de musique libre tournent toute la journée, entièrement chez Dogmazic. Quatre de ces heures sont l’album Mont Serein, écrit pour ce versant. Cent cinquante-quatre morceaux tiennent dans une playlist publique, à un clic.",
+    stage: "Sur le flux",
+    stageLead: "Trois effets d’image se relaient sur la montagne : pixel, gris, et une onde lente. Des numéros dédiés visitent le même cadre.",
+    stillConsole: "La console musique, les badges LIVE et Raspberry Pi 5, et le câble qui relie Los Angeles à Beaumont-du-Ventoux.",
+    stillPixel: "Pixel : la montagne se reconstruit en grands carrés, puis redevient nette.",
+    stillGris: "Gris : la couleur quitte le versant et revient.",
+    stillOndule: "Onde : des bandes horizontales glissent, comme une image sous l’eau.",
+    stillEclat: "Une prise : le nom de ce qui vient de passer allume tout le cadre.",
+    stillRencontre: "Les deux danseurs quittent leurs coins et se rejoignent au milieu de la fenêtre caméra.",
+    stillTapis: "Un tapis volant suit la crête, d’un bord du ciel à l’autre.",
+    stillMarin: "Un sous-marin jaune traverse le ciel au-dessus du sommet.",
+    stillPiste: "Un surfeur descend la piste André Philip, la trace s’allume derrière lui.",
+    stillElephant: "Un éléphant rose remplit le cadre, quelques heures calmes de la nuit.",
+    stillOurs: "Le double de l’ours de bois descend danser sur le rond-point et dit que c’est chez lui.",
+    stillSoleil: "Un soleil d’enfant est dessiné à l’endroit où le vrai reste derrière le nuage.",
+    stillBati: "Le fil de fer d’un bâtiment se lève depuis OpenStreetMap, puis s’efface.",
+    stillMachine: "Thanks Raspberry! Le Pi 5 sur le bureau qui fait tourner la veille.",
+    stillDogmazic: "Thanks Dogmazic! La bibliothèque de musique libre qui remplit la journée.",
+    stillReplay: "Un passage nommé revient en rediffusion datée.",
+    stillRelief: "Le survol 3D est sur cette page : le relief tourne, puis la vue revient à l’angle de la webcam.",
     prevPage: "Précédent",
     nextPage: "Suivant",
     pages: "Pages",
@@ -196,7 +268,7 @@ const COPY = {
     track: "Suivi",
     trackText: "Une tache compacte, suivie au moins de 3 images.",
     class: "Classe",
-    classText: "YOLO11 nano, en ONNX, seulement sur le rectangle. Personne, voiture, bus, camion.",
+    classText: "YOLO11s, en ONNX, seulement sur le rectangle. Personne, voiture, bus, camion.",
     plane: "Avion",
     planeText: "OpenSky. L’indicatif n’est gardé que si l’avion est dans le champ, assez près pour être vu. Sinon l’historique dit qu’il n’est pas dans l’image.",
     bus: "Bus",
@@ -250,7 +322,7 @@ const COPY = {
       ["Flux", "HLS, une image par seconde"],
       ["Mouvement", "MOG2 à 640 px"],
       ["Piste", "3 images, compacte"],
-      ["Classe", "YOLO11n sur la découpe"],
+      ["Classe", "YOLO11s sur la découpe"],
       ["Sol", "Surface et distance"],
       ["Nom", "Les règles tranchent"],
       ["Publié", "Rien que le nommé"],
@@ -408,18 +480,61 @@ function locale() {
 // The 3D view is a separate module and must not keep a second copy of the
 // wording: one dictionary, or the same place ends up named two ways.
 const THEME_KEY = "ventoux-theme";
-let theme = localStorage.getItem(THEME_KEY)
-  || (window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+let theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+
+const HASH = "#FREETECHNORADIO";
+const HASH_GLYPHS = {
+  "#": ["01010", "11111", "01010", "11111", "01010", "00000", "00000"],
+  A: ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
+  C: ["01110", "10001", "10000", "10000", "10000", "10001", "01110"],
+  D: ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
+  E: ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
+  F: ["11111", "10000", "10000", "11110", "10000", "10000", "10000"],
+  H: ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
+  I: ["01110", "00100", "00100", "00100", "00100", "00100", "01110"],
+  N: ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
+  O: ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
+  R: ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
+  T: ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
+};
+
+function paintHash() {
+  const canvas = document.querySelector("#hash");
+  if (!canvas) return;
+  const cell = 3;
+  const gap = 1;
+  const stride = 6;
+  const step = cell + gap;
+  const width = HASH.length * stride - 1;
+  const height = 7;
+  canvas.width = width * step - gap;
+  canvas.height = height * step - gap;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--pine").trim() || "#1e3a30";
+  for (let i = 0; i < HASH.length; i += 1) {
+    const rows = HASH_GLYPHS[HASH[i]] || [];
+    for (let y = 0; y < rows.length; y += 1) {
+      for (let x = 0; x < rows[y].length; x += 1) {
+        if (rows[y][x] === "1") {
+          ctx.fillRect((i * stride + x) * step, y * step, cell, cell);
+        }
+      }
+    }
+  }
+}
 
 function applyTheme() {
   document.documentElement.dataset.theme = theme;
   const knob = document.getElementById("theme");
-  if (!knob) return;
-  const next = theme === "dark" ? t("themeBack") : t("theme");
-  knob.textContent = theme === "dark" ? "☀" : "◐";
-  knob.title = next;
-  knob.setAttribute("aria-label", next);
-  knob.setAttribute("aria-pressed", String(theme === "dark"));
+  if (knob) {
+    const next = theme === "dark" ? t("themeBack") : t("theme");
+    knob.textContent = theme === "dark" ? "☀" : "◐";
+    knob.title = next;
+    knob.setAttribute("aria-label", next);
+    knob.setAttribute("aria-pressed", String(theme === "dark"));
+  }
+  paintHash();
 }
 
 document.getElementById("theme")?.addEventListener("click", () => {
@@ -499,13 +614,18 @@ function km(a, b) {
 const station = STATIONS.slice().sort((a, b) => km(CAMERA, a) - km(CAMERA, b))[0];
 
 function tick() {
+  const clock = document.querySelector("#clock");
+  if (!clock) return;
   const now = new Date();
-  document.querySelector("#clock").textContent = now.toLocaleTimeString(locale(), {
+  clock.textContent = now.toLocaleTimeString(locale(), {
     timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit",
   });
-  document.querySelector("#clock-date").textContent = now.toLocaleDateString(locale(), {
-    timeZone: "Europe/Paris", weekday: "short", day: "numeric", month: "short",
-  });
+  const date = document.querySelector("#clock-date");
+  if (date) {
+    date.textContent = now.toLocaleDateString(locale(), {
+      timeZone: "Europe/Paris", weekday: "short", day: "numeric", month: "short",
+    });
+  }
 }
 
 function mapLink(spot) {
@@ -534,9 +654,10 @@ function paintWeather() {
   // rather than trailing a note underneath. Four stacked lines up there cost
   // fifty pixels of every section on the page, every time anyone scrolled.
   const more = document.querySelector("#view-air");
-  if (weatherNow) {
+  const weather = document.querySelector("#weather");
+  if (weatherNow && weather) {
     const sky = stationLabel();
-    document.querySelector("#weather").textContent =
+    weather.textContent =
       [Number.isFinite(weatherNow.temp) ? `${weatherNow.temp} °C` : "—", sky].filter(Boolean).join(" · ");
   }
   if (more && weatherNow) {
@@ -640,7 +761,8 @@ async function loadWeather() {
     };
     paintWeather();
   } catch (_) {
-    document.querySelector("#weather").textContent = "—";
+    const weather = document.querySelector("#weather");
+    if (weather) weather.textContent = "—";
   }
 }
 
@@ -707,16 +829,58 @@ async function suisLeDirect() {
     if (!diffusion) showCamera();
     return;
   }
-  if (fiche.chaine) {
+  if (fiche.chaine && surYouTube) {
     surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
   }
   // Only when it has actually changed. Reassigning src reloads the player, and
   // a check every few minutes would restart the stream under the viewer.
   if (numero === diffusion) return;
   diffusion = numero;
-  direct.src = `https://www.youtube.com/embed/${numero}?autoplay=1&mute=1&playsinline=1&rel=0`;
+  direct.src = `https://www.youtube.com/embed/${numero}?autoplay=1&mute=1&playsinline=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
   hideCamera();
   direct.hidden = false;
+}
+
+function commandeDirect(fonction) {
+  if (!direct || direct.hidden || !direct.contentWindow) return false;
+  direct.contentWindow.postMessage(JSON.stringify({
+    event: "command", func: fonction, args: [],
+  }), "*");
+  return true;
+}
+
+const radio = document.querySelector("#radio");
+let ecoute = false;
+
+function poseRadio() {
+  if (!radio) return;
+  radio.textContent = t(ecoute ? "radioOn" : "radio");
+  radio.classList.toggle("on", ecoute);
+  radio.setAttribute("aria-pressed", String(ecoute));
+}
+
+radio?.addEventListener("click", () => {
+  ecoute = !ecoute;
+  if (ecoute) {
+    if (!commandeDirect("unMute") && video && !video.hidden) {
+      video.muted = false;
+      video.play().catch(() => {});
+    } else {
+      commandeDirect("playVideo");
+    }
+  } else if (!commandeDirect("mute") && video && !video.hidden) {
+    video.muted = true;
+  }
+  poseRadio();
+});
+document.addEventListener("ventoux-lang", poseRadio);
+
+const liveBloc = document.querySelector("#live");
+if (liveBloc && "IntersectionObserver" in window) {
+  const garde = new IntersectionObserver(([vue]) => {
+    document.body.classList.toggle("radio-docked", Boolean(vue) && !vue.isIntersecting);
+  }, { threshold: 0, rootMargin: "-48px 0px 0px 0px" });
+  garde.observe(liveBloc);
 }
 
 suisLeDirect();
@@ -735,8 +899,8 @@ const PER_PAGE = 25;
 let page = 0;
 
 const loupe = document.querySelector("#loupe");
-const loupeImg = loupe.querySelector("img.frame");
-const loupeNear = loupe.querySelector("img.near");
+const loupeImg = loupe?.querySelector("img.frame");
+const loupeNear = loupe?.querySelector("img.near");
 
 function moveLoupe(event) {
   const pad = 12;
@@ -760,6 +924,7 @@ function moveLoupe(event) {
 const AGRANDIR = "#list .shot img, #doubt-list img, #control-list img";
 
 document.addEventListener("mouseover", (event) => {
+  if (!loupe || !loupeImg) return;
   const img = event.target.closest?.(AGRANDIR);
   if (!img) return;
   loupeImg.src = img.src;
@@ -772,9 +937,11 @@ document.addEventListener("mouseover", (event) => {
   moveLoupe(event);
 });
 document.addEventListener("mousemove", (event) => {
-  if (!loupe.hidden && event.target.closest?.(AGRANDIR)) moveLoupe(event);
+  if (!loupe || loupe.hidden) return;
+  if (event.target.closest?.(AGRANDIR)) moveLoupe(event);
 });
 document.addEventListener("mouseout", (event) => {
+  if (!loupe) return;
   if (event.target.closest?.(AGRANDIR)) loupe.hidden = true;
 });
 
@@ -879,6 +1046,7 @@ function namedItself(event) {
 }
 
 function render() {
+  if (!list) return;
   const shown = events.filter(namedItself).filter((event) => {
     if (filter === "all") return true;
     if (filter === "vehicle") return event.type === "vehicle" || event.type === "car";
@@ -1275,7 +1443,9 @@ function paintScore() {
 
 function paintCounts() {
   if (!counts) return;
-  document.querySelector("#seen").textContent = String(counts.seen || 0);
+  const seen = document.querySelector("#seen");
+  if (!seen) return;
+  seen.textContent = String(counts.seen || 0);
   // The breakdown belongs beside the history it describes. In the top bar it
   // was a second line under the total, and the bar has no second line to give.
   const tally = document.querySelector("#tally");
@@ -1439,7 +1609,12 @@ function followSections() {
      than whichever one last crossed a line, because once a section is centred
      its heading sits below that line and the previous one would keep winning. */
   const links = [...document.querySelectorAll(".onpage a")];
-  const parts = links.map((link) => document.querySelector(link.getAttribute("href"))).filter(Boolean);
+  const parts = links
+    .map((link) => {
+      const href = link.getAttribute("href") || "";
+      return href.startsWith("#") ? document.querySelector(href) : null;
+    })
+    .filter(Boolean);
   if (!parts.length) return;
   const top = document.querySelector(".top");
   const waterline = () => (top?.offsetHeight || 78) + 8;
@@ -1461,11 +1636,13 @@ function followSections() {
 
   for (const link of links) {
     link.addEventListener("click", (hit) => {
-      const part = document.querySelector(link.getAttribute("href"));
+      const href = link.getAttribute("href") || "";
+      if (!href.startsWith("#")) return;
+      const part = document.querySelector(href);
       if (!part) return;
       hit.preventDefault();
       reveal(part);
-      history.replaceState(null, "", link.getAttribute("href"));
+      history.replaceState(null, "", href);
     });
   }
 
@@ -1507,7 +1684,7 @@ loadAim();
 
 function paintSequence() {
   const frame = sequenceFrames[sequenceIndex];
-  if (!frame) return;
+  if (!frame || !document.querySelector("#seq-img")) return;
   document.querySelector("#seq-img").src = frame.thumb;
   document.querySelector("#seq-frame").href = `https://www.mapillary.com/app/?pKey=${encodeURIComponent(frame.id)}&focus=photo`;
   document.querySelector("#seq-count").textContent = `${sequenceIndex + 1} / ${sequenceFrames.length}`;
@@ -1531,6 +1708,7 @@ async function mly(pathname, params) {
 }
 
 async function loadSequence() {
+  if (!document.querySelector("#sequence")) return;
   const pad = 0.02;
   const bbox = [CAMERA.lon - pad, CAMERA.lat - pad, CAMERA.lon + pad, CAMERA.lat + pad].join(",");
   const nearby = await mly("images", { fields: "id,computed_geometry,captured_at", bbox, limit: "200" });
@@ -1561,8 +1739,8 @@ async function loadSequence() {
   paintSequence();
 }
 
-document.querySelector("#seq-prev").addEventListener("click", () => stepSequence(-1));
-document.querySelector("#seq-next").addEventListener("click", () => stepSequence(1));
+document.querySelector("#seq-prev")?.addEventListener("click", () => stepSequence(-1));
+document.querySelector("#seq-next")?.addEventListener("click", () => stepSequence(1));
 
 load();
 setInterval(load, 60000);

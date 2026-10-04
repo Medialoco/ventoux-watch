@@ -117,12 +117,11 @@ REPLIQUES = [
     # Le portrait du Pi, en grand au milieu. C'est lui qui tient le flux,
     # depuis Los Angeles, et on ne le voyait que dans un disque de cent
     # pixels. Quand il prend enfin la place, on le remercie.
-    ("machine", CLAIRE, "Thanks Raspberry"),
-    ("machine", PLAT, "Thanks Raspberry"),
+    ("machine", CLAIRE, "Thanks Raspberry!"),
+    ("machine", PLAT, "Thanks Raspberry!"),
     # Dogmazic, le même numéro : le logo au milieu, et on les remercie.
-    # Le point d'exclamation reste, lui : c'est eux, pas le Raspberry.
-    ("dogmazic", CLAIRE, "Thanks Dogmazic !"),
-    ("dogmazic", PLAT, "Thanks Dogmazic !"),
+    ("dogmazic", CLAIRE, "Thanks Dogmazic!"),
+    ("dogmazic", PLAT, "Thanks Dogmazic!"),
 ]
 
 
@@ -238,7 +237,7 @@ JEU = {
                "say the word dot. Over in a second and a half.",
     "dogmazic": "Warm, grateful, a little giddy. You are thanking the free "
                 "music archive that fills the mountain watch. Bright and "
-                "sincere. Say Thanks Dogmazic with a cheerful lift. The "
+                "sincere. Say Thanks Dogmazic! with a cheerful lift. The "
                 "exclamation is energy, never the word dot. Over in a "
                 "second and a half.",
 }

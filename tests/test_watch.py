@@ -2035,7 +2035,7 @@ class FogTests(unittest.TestCase):
         page = (root / "site" / "index.html").read_text(encoding="utf-8")
         style = (root / "site" / "styles.css").read_text(encoding="utf-8")
         caches = set(re.findall(r'id="([\w-]+)"[^>]*\shidden[\s>]', page))
-        self.assertGreater(len(caches), 5, "plus personne ne se cache : le test ne garde plus rien")
+        self.assertGreater(len(caches), 2, "plus personne ne se cache : le test ne garde plus rien")
         fautifs = []
         for nom in sorted(caches):
             # Une règle qui pose « display » sur cet identifiant, sans être
@@ -2608,8 +2608,9 @@ class FogTests(unittest.TestCase):
         # n'offrirait au relecteur aucune réponse vraie.
         self.assertIn('const ground = event.type !== "plane";', script)
         page = (root / "site" / "index.html").read_text(encoding="utf-8")
-        self.assertIn('id="doubt-list"', page)
-        self.assertIn('href="#doubt"', page)
+        self.assertIn('id="view3d"', page)
+        self.assertIn('id="camera"', page)
+        self.assertIn("#FREETECHNORADIO", page)
 
     def test_the_map_draws_the_aim_that_was_measured(self):
         """The cone on the map said 140° while the fit said 126,7°.
@@ -3108,6 +3109,25 @@ class DiffusionTests(unittest.TestCase):
                       if l.startswith("file ")]
             premiers = [ligne.rsplit("/", 1)[1].rstrip("'") for ligne in lignes[:6]]
             self.assertEqual(sorted(premiers), sorted(f"{n}.mp3" for n in "abcdef"))
+
+    def test_every_track_plays_even_when_the_session_clock_runs_out(self):
+        """La session coupait le dernier du mélange dès que l'horloge était pleine.
+
+        Quatorze heures de quota pour un peu plus de quatorze heures de
+        bibliothèque : un morceau de soixante-quatre secondes restait dans le
+        dossier et hors de la file, jusqu'au prochain redémarrage, et encore.
+        """
+        with tempfile.TemporaryDirectory() as dossier:
+            racine = Path(dossier)
+            noms = [f"{i:02d}.mp3" for i in range(5)]
+            durees = {racine / nom: 100.0 for nom in noms}
+            for nom in noms:
+                (racine / nom).write_bytes(b"x")
+            with mock.patch.object(stream, "duree_audio",
+                                   lambda p: durees.get(p, 0.0)):
+                stream.batir_session(racine, heures=300 / 3600, graine=1)
+            suite = json.loads((racine / "session.json").read_text(encoding="utf-8"))
+            self.assertEqual({bout["f"] for bout in suite}, set(noms))
 
     def test_no_track_holds_the_stream_for_more_than_ten_minutes(self):
         """Un set de cinquante minutes se sert par tranches, pas d'un bloc.
@@ -5163,8 +5183,7 @@ class PortraitMachineTests(unittest.TestCase):
         self.assertTrue(stream.pose_portrait_machine(
             image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
             vue=(175, 36, 929, 522)))
-        self.assertEqual(stream.MACHINE_MERCI, "Thanks Raspberry")
-        self.assertFalse(any(signe in stream.MACHINE_MERCI for signe in ".!?"))
+        self.assertEqual(stream.MACHINE_MERCI, "Thanks Raspberry!")
         self.assertGreater(stream.MACHINE_PERIODE_S, 1151.0)
         self.assertIn("MACHINE_MERCI", inspect.getsource(stream.pose_portrait_machine))
 
@@ -5221,7 +5240,7 @@ class PortraitDogmazicTests(unittest.TestCase):
         self.assertTrue(stream.pose_portrait_dogmazic(
             image, un_tour_de("dogmazic") + 2.0, photo,
             vue=(175, 36, 929, 522)))
-        self.assertEqual(stream.DOGMAZIC_MERCI, "Thanks Dogmazic !")
+        self.assertEqual(stream.DOGMAZIC_MERCI, "Thanks Dogmazic!")
         self.assertIn("DOGMAZIC_MERCI",
                       inspect.getsource(stream.pose_portrait_dogmazic))
 
@@ -6257,10 +6276,10 @@ class LeMotSeLitOuNeSertARien(unittest.TestCase):
             self.assertIn(quand, CADENCES)
         machine = [texte for quand, _, texte in REPLIQUES if quand == "machine"]
         self.assertTrue(machine)
-        self.assertTrue(all(texte == "Thanks Raspberry" for texte in machine))
+        self.assertTrue(all(texte == "Thanks Raspberry!" for texte in machine))
         dogmazic = [texte for quand, _, texte in REPLIQUES if quand == "dogmazic"]
         self.assertTrue(dogmazic)
-        self.assertTrue(all(texte == "Thanks Dogmazic !" for texte in dogmazic))
+        self.assertTrue(all(texte == "Thanks Dogmazic!" for texte in dogmazic))
 
 
 class LaVoixPasseAuDessusDeLaMusique(unittest.TestCase):

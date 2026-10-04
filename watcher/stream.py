@@ -938,7 +938,13 @@ def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None =
     auteurs = _auteurs(dossier)
     suite: list[dict] = []
     total = 0.0
-    while total < heures * 3600:
+    # Un tour complet d'abord. Couper au milieu du premier mélange, c'est
+    # garantir que les derniers du tirage n'existent pas : le 4 octobre, la
+    # bibliothèque faisait quatorze heures et quelques, la session s'arrêtait
+    # à quatorze pile, et Komiku (« An anarchist utopia », soixante-quatre
+    # secondes) n'était tout simplement pas dans la file.
+    premier_tour = True
+    while total < heures * 3600 or premier_tour:
         tour = _espace(_entrelace(premier, second, tirage), auteurs)
         if not tour:
             break
@@ -946,8 +952,9 @@ def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None =
             for bout in _tranches(piste, durees[piste]):
                 suite.append(bout)
                 total += bout["d"]
-            if total >= heures * 3600:
+            if not premier_tour and total >= heures * 3600:
                 break
+        premier_tour = False
     chemin = dossier / "session.txt"
     chemin.write_text("".join(
         "file '%s'\ninpoint %.3f\noutpoint %.3f\n"
@@ -3838,7 +3845,7 @@ MACHINE_RETARD_S = 120.0
 # et les ports, pas un mur : la route reste visible autour.
 MACHINE_PORTRAIT = 0.32
 # Deux mots, rien derrière : un point ferait dire « dot » à la voix.
-MACHINE_MERCI = "Thanks Raspberry"
+MACHINE_MERCI = "Thanks Raspberry!"
 
 # Dogmazic, le même numéro : leur chien orange au milieu, et on les
 # remercie. Vingt-sept minutes, un autre premier, neuf minutes de retard
@@ -3847,7 +3854,7 @@ DOGMAZIC_PERIODE_S = 1607.0
 DOGMAZIC_TENUE_S = MACHINE_TENUE_S
 DOGMAZIC_RETARD_S = 540.0
 DOGMAZIC_PORTRAIT = MACHINE_PORTRAIT
-DOGMAZIC_MERCI = "Thanks Dogmazic !"
+DOGMAZIC_MERCI = "Thanks Dogmazic!"
 
 # Le plateau, maintenant que les numéros ont dit leur période et leur
 # durée. L'ordre départage les ex æquo : le tapis d'abord parce qu'il passe

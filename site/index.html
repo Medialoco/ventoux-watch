@@ -4,6 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Mont Serein</title>
+  <script>
+    (function () {
+      var q = new URLSearchParams(location.search).get("theme");
+      var theme = (q === "dark" || q === "light") ? q : null;
+      if (!theme) {
+        try { theme = localStorage.getItem("ventoux-theme"); } catch (e) {}
+      }
+      if (theme !== "dark" && theme !== "light") {
+        try {
+          theme = (document.referrer && /benoit-prieur\.fr$/i.test(new URL(document.referrer).hostname))
+            ? "dark" : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        } catch (e) {
+          theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+      }
+      document.documentElement.dataset.theme = theme;
+      try { localStorage.setItem("ventoux-theme", theme); } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
@@ -27,29 +46,10 @@
       </div>
       <nav class="onpage" data-i18n-aria="sections" aria-label="Sections">
         <a href="#live" data-i18n="navLive">Live</a>
-        <a href="#log" data-i18n="navHistory">History</a>
-        <a href="#doubt" data-i18n="navDoubt">To judge</a>
-        <a href="#figures" data-i18n="navFigures">Dataviz</a>
+        <a href="#watch" data-i18n="navWatch">Watch</a>
         <a href="#view3d" data-i18n="navRelief">3D</a>
         <a href="#camera" data-i18n="navCamera">Camera</a>
-        <a href="#weather-block" data-i18n="navWeather">Weather</a>
-        <a href="#flow" data-i18n="navPipeline">Pipeline</a>
       </nav>
-      <dl class="facts">
-      <div>
-        <dt data-i18n="paris">Paris time</dt>
-        <dd id="clock">—</dd>
-        <dd class="sub" id="clock-date"></dd>
-      </div>
-      <div>
-        <dt data-i18n="weather">Weather</dt>
-        <dd id="weather">—</dd>
-      </div>
-      <div>
-        <dt data-i18n="passes">Passes</dt>
-        <dd id="seen">—</dd>
-      </div>
-      </dl>
       <p class="langs">
         <button type="button" data-lang="en" class="on">EN</button>
         <button type="button" data-lang="fr">FR</button>
@@ -59,108 +59,62 @@
   </header>
 
   <main id="content">
-  <section class="block live" id="live" aria-labelledby="live-title">
+  <section class="block live hero" id="live" aria-labelledby="live-title">
     <h2 class="sr" id="live-title" data-i18n="live">Live</h2>
-    <!-- Notre diffusion, et non la caméra nue : c'est le même versant, nommé.
-         Le numéro de la vidéo n'est pas écrit ici parce qu'il change chaque
-         fois que YouTube termine une diffusion et qu'on en rouvre une — il est
-         lu dans data/direct.json, que la veille tient à jour. La webcam brute
-         reste en dessous, cachée, et ne reparaît que si le direct manque. -->
-    <iframe id="direct" title="Mont Serein — live" allowfullscreen
-            allow="autoplay; encrypted-media; picture-in-picture" hidden></iframe>
-    <video id="player" controls autoplay muted playsinline hidden></video>
-    <p class="sub live-link"><a id="sur-youtube" href="https://www.youtube.com/channel/UCvN0sNcj5JM9tklIkAlGi7g/live"
-       target="_blank" rel="noopener" data-i18n="onYouTube">Watch on YouTube</a></p>
-  </section>
-
-  <section class="block history" id="log" aria-labelledby="log-title">
-    <div class="history-head">
-      <h2 id="log-title" data-i18n="history">History</h2><a class="anchor" href="#log" aria-hidden="true" tabindex="-1">#</a>
-      <p class="count" id="count"></p>
-      <p class="sub" id="tally"></p>
-      <!-- Le score de justesse, rempli par l'historique. Caché tant que rien
-           n'a été relu : sans lecture humaine, rien n'est ni juste ni faux. -->
-      <p class="sub score" id="score" hidden></p>
-      <!-- Ce qu'on a le droit d'affirmer, borne basse comprise. -->
-      <p class="sub score" id="claim" hidden></p>
-      <div class="filters" role="tablist">
-        <button type="button" class="on" data-filter="all" data-i18n="all">All</button>
-        <button type="button" data-filter="vehicle" data-i18n="vehicles">Vehicles</button>
-        <button type="button" data-filter="person" data-i18n="pedestrians">Pedestrians</button>
-        <button type="button" data-filter="bus" data-i18n="buses">Buses</button>
-        <button type="button" data-filter="fire" data-i18n="fires">Fires</button>
-        <button type="button" data-filter="plane" data-i18n="planes">Planes</button>
+    <div class="live-hold">
+      <div class="stage-frame">
+        <iframe id="direct" title="Mont Serein — live" allowfullscreen
+                allow="autoplay; encrypted-media; picture-in-picture" hidden></iframe>
+        <video id="player" controls autoplay muted playsinline hidden></video>
       </div>
     </div>
-    <p id="empty" class="empty" data-i18n="empty" hidden>Nothing yet.</p>
-    <table class="log">
-      <thead>
-        <tr>
-          <th data-i18n="colTime">Time</th>
-          <th data-i18n="colEvent">Event</th>
-          <th data-i18n="colPlace">Place</th>
-          <th data-i18n="colPhoto">Photo</th>
-        </tr>
-      </thead>
-      <tbody id="list"></tbody>
-    </table>
-    <nav class="pager" id="pager" data-i18n-aria="pages" aria-label="Pages" hidden>
-      <button type="button" data-step="-1" data-i18n="prevPage">Previous</button>
-      <span id="pager-where"></span>
-      <button type="button" data-step="1" data-i18n="nextPage">Next</button>
-    </nav>
+    <div class="hero-bar">
+      <p class="chips" aria-label="Raspberry Pi 5">
+        <span class="chip live-chip"><i></i> LIVE</span>
+        <span class="chip pi-chip"><i></i> RASPBERRY PI 5</span>
+      </p>
+      <p class="hero-actions">
+        <button type="button" id="radio" class="play" data-i18n="radio">Audio stream</button>
+        <a class="play ghost" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803"
+           target="_blank" rel="noopener" data-i18n="listen">Listen on Dogmazic</a>
+      </p>
+      <p class="hash-hold">
+        <canvas id="hash" width="379" height="27" aria-label="#FREETECHNORADIO"></canvas>
+      </p>
+    </div>
   </section>
 
-  <!-- Ce que la veille a vu sans le reconnaître elle-même. L'historique
-       au-dessus ne garde que les lectures que le modèle a faites seul ; tout le
-       reste atterrit ici, en attente d'un avis. Chaque verdict donné ici part
-       corriger l'entrée et laisse derrière lui une ligne dans data/reviewed.jsonl,
-       d'où viendra le prochain réglage. -->
-  <section class="block doubt" id="doubt" aria-labelledby="doubt-title">
-    <div class="head">
-      <h2 id="doubt-title" data-i18n="doubt">To judge</h2><a class="anchor" href="#doubt" aria-hidden="true" tabindex="-1">#</a>
-      <p class="sub" id="doubt-why"></p>
-      <p class="sub" id="doubt-count"></p>
-    </div>
-    <!-- Le contrôle passe avant le reste. Tant que personne n'a lu un tirage
-         au hasard de ce qui est publié, le taux de justesse du site n'est pas
-         une mesure mais une impression. -->
-    <div class="control" id="control" hidden>
-      <h3 id="control-title"></h3>
-      <p class="sub" id="control-why"></p>
-      <div class="cards" id="control-list"></div>
-    </div>
-    <h3 id="doubt-list-title"></h3>
-    <p id="doubt-empty" class="empty" data-i18n="doubtEmpty" hidden>Nothing waiting.</p>
-    <div class="cards" id="doubt-list"></div>
-    <nav class="pager" id="doubt-pager" data-i18n-aria="pages" aria-label="Pages" hidden>
-      <button type="button" data-step="-1" data-i18n="prevPage">Previous</button>
-      <span id="doubt-where"></span>
-      <button type="button" data-step="1" data-i18n="nextPage">Next</button>
-    </nav>
+  <section class="block feature" id="watch" aria-labelledby="watch-title">
+    <h2 id="watch-title" data-i18n="watch">The watch</h2>
+    <p class="feature-line" data-i18n="watchLine">OpenCV finds what moved. YOLO11s names the crop. One frame a second, on a Raspberry Pi 5 in Los Angeles. That reading is the work. The picture around it is the show.</p>
+    <ol class="feature-steps">
+      <li><strong>OpenCV</strong><span data-i18n="watchMotion">MOG2 finds the motion on the mountain.</span></li>
+      <li><strong>YOLO11s</strong><span data-i18n="watchClass">A small network names the crop: car, walker, bike, truck.</span></li>
+      <li><strong>YouTube</strong><span data-i18n="watchOut">The named frame is rebuilt and pushed live.</span></li>
+    </ol>
+    <figure class="feature-still">
+      <img src="stills/eclat.jpg" alt="">
+      <figcaption data-i18n="stillEclat">A catch: the name of what just passed lights the whole frame.</figcaption>
+    </figure>
+    <p data-i18n="heroMusic">Fourteen hours of free music play around the clock, all of it from Dogmazic. Four of those hours are the album Mont Serein, written for this slope.</p>
   </section>
 
-  <section class="block figures" id="figures" aria-labelledby="figures-title">
+  <section class="block stage" id="stage" aria-labelledby="stage-title">
     <div class="head">
-      <h2 id="figures-title" data-i18n="figures">Dataviz</h2><a class="anchor" href="#figures" aria-hidden="true" tabindex="-1">#</a>
-      <p class="sub" id="figures-span"></p>
+      <h2 id="stage-title" data-i18n="stage">On the stream</h2>
+      <p class="sub" data-i18n="stageLead">Three picture effects take turns on the mountain: pixel, grey, and a slow wave. Dedicated numbers visit the same frame.</p>
     </div>
-    <p class="legend" id="figures-legend"></p>
-    <div class="panels">
-      <figure>
-        <figcaption data-i18n="byHour">By hour of the day</figcaption>
-        <div class="bars" id="by-hour"></div>
-      </figure>
-      <figure>
-        <figcaption data-i18n="byDay">By day of the week</figcaption>
-        <div class="bars wide" id="by-day"></div>
-      </figure>
+    <div class="stills">
+      <figure><img src="stills/console.jpg" alt=""><figcaption data-i18n="stillConsole">The music console, the LIVE and Raspberry Pi 5 badges, and the cable that ties Los Angeles to Beaumont-du-Ventoux.</figcaption></figure>
+      <figure><img src="stills/ours.jpg" alt=""><figcaption data-i18n="stillOurs">The wooden bear’s double comes down to dance on the roundabout and claims the place as home.</figcaption></figure>
+      <figure><img src="stills/machine.jpg" alt=""><figcaption data-i18n="stillMachine">Thanks Raspberry! The Pi 5 on the desk that runs the watch.</figcaption></figure>
+      <figure><img src="stills/dogmazic.jpg" alt=""><figcaption data-i18n="stillDogmazic">Thanks Dogmazic! The free-music library that fills the day.</figcaption></figure>
     </div>
   </section>
 
   <section class="block relief" id="view3d" aria-labelledby="view3d-title">
     <div class="head">
-      <h2 id="view3d-title" data-i18n="relief">3D view</h2><a class="anchor" href="#view3d" aria-hidden="true" tabindex="-1">#</a>
+      <h2 id="view3d-title" data-i18n="relief">3D view</h2>
     </div>
     <div class="stage" id="relief-stage">
       <div id="relief"></div>
@@ -185,57 +139,11 @@
       <p class="cap"><span data-i18n="cameraText">Fixed, facing 140°.</span></p>
     </div>
   </section>
-
-  <section class="block sequence" id="sequence" hidden>
-    <div class="head">
-      <h2 data-i18n="around">Around</h2>
-      <p class="sub"><span id="sequence-meta"></span> · <a id="sequence-osm" href="https://www.openstreetmap.org/" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> · <span id="seq-count"></span></p>
-    </div>
-    <div class="carousel">
-      <button type="button" id="seq-prev" aria-label="Previous">‹</button>
-      <a id="seq-frame" target="_blank" rel="noopener noreferrer"><img id="seq-img" alt=""></a>
-      <button type="button" id="seq-next" aria-label="Next">›</button>
-    </div>
-  </section>
-
-  <section class="block bulletin" id="weather-block" aria-labelledby="weather-title">
-    <div class="head">
-      <h2 id="weather-title" data-i18n="compare">Weather</h2><a class="anchor" href="#weather-block" aria-hidden="true" tabindex="-1">#</a>
-      <p class="sub" id="view-when"></p>
-    </div>
-    <p class="words" id="view-words" data-i18n="compareEmpty">No reading yet.</p>
-    <div class="shot" id="view-shot" hidden>
-      <img id="view-photo" alt="">
-      <span class="moon" id="view-moon" hidden></span>
-    </div>
-    <p class="sub" id="view-station"></p>
-    <p class="sub" id="view-air"></p>
-  </section>
-
-  <section class="block pipeline" id="flow" aria-labelledby="flow-title">
-    <div class="head"><h2 id="flow-title" data-i18n="pipeline">Pipeline</h2><a class="anchor" href="#flow" aria-hidden="true" tabindex="-1">#</a></div>
-    <div class="chart" id="chart"></div>
-    <ol class="steps">
-      <li><strong data-i18n="image">Frame</strong><span data-i18n="imageText">1 frame/s. ffmpeg reads the HLS stream.</span></li>
-      <li><strong data-i18n="motion">Motion</strong><span data-i18n="motionText">OpenCV MOG2, frame scaled to 640 px. If more than 35% changes, it is light, and it is ignored. The red beacon on the summit is excluded.</span></li>
-      <li><strong data-i18n="track">Track</strong><span data-i18n="trackText">A compact blob, tracked for at least 3 frames.</span></li>
-      <li><strong data-i18n="class">Class</strong><span data-i18n="classText">YOLO11 nano, ONNX, on the crop only. Person, car, bus, truck.</span></li>
-      <li><strong data-i18n="plane">Plane</strong><span data-i18n="planeText">OpenSky. A callsign is kept only when that aircraft is in the camera’s view, close enough to be seen. Otherwise the history says it is not in the picture.</span></li>
-      <li><strong data-i18n="bus">Bus</strong><span data-i18n="busText">Trans'CoVe or ZOU. A single trip within ±15 min gives the route. Otherwise “Bus”, from a confidence of 0.6.</span></li>
-      <li><strong data-i18n="fire">Fire</strong><span data-i18n="fireText">On the slope, 5 s, area ×1.5, at least 8% warm pixels or a rising plume. Not at dusk. In rain, fog, or snow, it takes 20%.</span></li>
-    </ol>
-  </section>
-
-  <div id="loupe" hidden><img class="frame" alt=""><img class="near" alt="" hidden></div>
   </main>
 
   <footer class="foot">
     <p>
-      <a href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener noreferrer">Medialoco/ventoux-watch</a>
-      <!-- Rempli par l'historique. Vide tant qu'il n'a pas été lu : une
-           version écrite en dur ici a menti pendant deux étiquettes. -->
       <span class="tag" id="version"></span>
-      <span class="sub" data-i18n="repoPrivate">Source and history of every change.</span>
     </p>
   </footer>
   <script src="app.js"></script>
