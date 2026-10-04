@@ -4629,6 +4629,28 @@ class EncartsTests(unittest.TestCase):
         self.assertEqual(int(np.count_nonzero(vide)), 0)
 
 
+class BandeauxTests(unittest.TestCase):
+    """Le ruban et l'agenda : le même dégradé que les cartes, sans les coins."""
+
+    def test_the_banner_is_a_gradient_and_not_a_flat_pane(self):
+        """Plus sombre du côté du bord, plus clair du côté de l'image."""
+        image = np.full((80, 200, 3), 200, np.uint8)
+        stream.fond_bandeau(image, 0, 30, 1.0)
+        self.assertLess(float(image[4, 100].mean()), float(image[24, 100].mean()))
+        image = np.full((80, 200, 3), 200, np.uint8)
+        stream.fond_bandeau(image, 50, 80, 1.0, inverse=True)
+        self.assertGreater(float(image[54, 100].mean()), float(image[74, 100].mean()))
+        self.assertEqual(int(image[40, 100].mean()), 200)
+
+    def test_the_two_tickers_wear_the_same_dress(self):
+        """Deux bandeaux, deux aplats différents, on voyait la couture."""
+        for nom, fn in (("ruban", stream.pose_ruban), ("agenda", stream.pose_agenda)):
+            texte = inspect.getsource(fn)
+            self.assertIn("fond_bandeau(", texte, f"{nom} n'a pas le fond commun")
+            self.assertNotIn("* 0.22).astype", texte, f"{nom} garde l'ancien aplat")
+            self.assertNotIn("* 0.25).astype", texte, f"{nom} garde l'ancien aplat")
+
+
 class LecteurTests(unittest.TestCase):
     """Le lecteur de musique, dans le même langage que les deux barres."""
 
@@ -4671,6 +4693,12 @@ class LecteurTests(unittest.TestCase):
         self.assertNotIn("* 0.18).astype", source)
         # Et la même jauge que la température et la charge, en face.
         self.assertIn("pose_jauge(", source)
+
+    def test_just_played_uses_the_same_grey_as_the_labels(self):
+        """Un quatrième gris, c'est un quatrième objet."""
+        source = inspect.getsource(stream.pose_bloc_musique)
+        self.assertIn("GRIS_ENCART", source)
+        self.assertNotIn("(96, 96, 96)", source)
 
     def test_the_badge_frames_the_word_and_says_where_it_ends(self):
         """Elle rend son bord droit : ce qui suit se pose sans chevaucher."""
@@ -5826,6 +5854,8 @@ class RienDeReconnaissableNeSort(unittest.TestCase):
         source = inspect.getsource(stream.pose_rediffusion)
         self.assertIn("floute(vignette)", source)
         self.assertLess(source.index("imread"), source.index("floute(vignette)"))
+        self.assertIn("fond_encart(", source)
+        self.assertNotIn("* 0.45).astype", source)
 
 
 class LesDeuxProgrammesParlentDeLaMemeSeconde(unittest.TestCase):

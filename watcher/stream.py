@@ -1482,8 +1482,7 @@ def pose_ruban(image: np.ndarray, morceaux: list[tuple[str, tuple[int, int, int]
     largeur = image.shape[1]
     echelle = largeur / 1600
     haut = int(RUBAN_H * echelle)
-    bande = image[0:haut, :]
-    bande[:] = (bande * 0.22).astype(np.uint8)
+    fond_bandeau(image, 0, haut, echelle)
     taille = 0.66 * echelle
     larges = [cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] for t, _ in morceaux]
     long_px = sum(larges)
@@ -1845,7 +1844,7 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     if avant:
         file.append(("JUST PLAYED  "
                      + _coupe(f"{avant['auteur']} — {avant['titre']}", 28),
-                     (96, 96, 96)))
+                     GRIS_ENCART))
     file_large = max([large_de(t, 0.52) for t, _ in file] or [0])
 
     bloc_h = max(cote, pas * 4) + 2 * marge
@@ -2208,9 +2207,9 @@ def pose_rediffusion(image: np.ndarray, fiche: dict,
     # moment où une image de surveillance apparaissait dessus. À 0,45 la
     # montagne se devine encore autour de la vignette : on comprend que le flux
     # est toujours là et qu'il montre simplement autre chose.
-    fond = image[haut:haut + carte_h, max(0, gauche - marge):min(largeur, gauche + cible_l + marge)]
-    if fond.size:
-        fond[:] = (fond * 0.45).astype(np.uint8)
+    x0 = max(0, gauche - marge)
+    x1 = min(largeur, gauche + cible_l + marge) - 1
+    fond_encart(image, (x0, haut), (x1, haut + carte_h - 1), echelle)
     image[haut:haut + cible_h, gauche:gauche + cible_l] = vignette
     bas = haut + cible_h + marge
     # En ambre et non en rouge. Le rouge est la couleur de l'alerte, et il ne
@@ -2250,11 +2249,7 @@ def pose_agenda(image: np.ndarray, rendez_vous: list, credit: str,
     pas = int(AGENDA_H * echelle)
     taille = 0.56 * echelle
     base = hauteur - int(13 * echelle)
-    bande = image[hauteur - pas:hauteur, :]
-    bande[:] = (bande * 0.25).astype(np.uint8)
-    cv2.line(image, (0, hauteur - pas), (largeur, hauteur - pas),
-             tuple(int(c * 0.45) for c in CYAN), max(1, int(echelle)),
-             cv2.LINE_AA)
+    fond_bandeau(image, hauteur - pas, hauteur, echelle, inverse=True)
 
     morceaux: list[tuple[str, tuple[int, int, int]]] = []
     if credit:
@@ -4194,6 +4189,32 @@ def fond_encart(image: np.ndarray, coin_a: tuple[int, int],
     rampe = np.linspace(haut, bas, panneau.shape[0], dtype=np.float32)
     panneau[:] = (panneau * rampe[:, None, None]).astype(np.uint8)
     cadre_encart(image, coin_a, coin_b, echelle)
+
+
+def fond_bandeau(image: np.ndarray, y0: int, y1: int, echelle: float,
+                 inverse: bool = False) -> None:
+    """Le même dégradé que les encarts, sur toute la largeur.
+
+    Un bandeau n'est pas une carte : il n'a pas de coins à adoucir. Il a un
+    fond, et un filet du côté de l'image — sans lui le texte se pose sur la
+    montagne et on ne sait plus ce qui est écrit et ce qui est un arbre.
+
+    Inverse : plus sombre vers le bas, pour le bandeau du bas. Le haut de
+    l'écran s'éclaire vers la montagne, le bas aussi : les deux s'éloignent
+    de l'image par le noir, pas par un aplat.
+    """
+    bande = image[y0:y1, :]
+    if not bande.size:
+        return
+    haut, bas = ENCART_SOMBRE
+    if inverse:
+        haut, bas = bas, haut
+    rampe = np.linspace(haut, bas, bande.shape[0], dtype=np.float32)
+    bande[:] = (bande * rampe[:, None, None]).astype(np.uint8)
+    teinte = tuple(int(c * 0.45) for c in CYAN)
+    y = (y1 - 1) if not inverse else y0
+    cv2.line(image, (0, y), (image.shape[1] - 1, y), teinte,
+             max(1, int(round(echelle))), cv2.LINE_AA)
 
 
 def pose_titre_encart(image: np.ndarray, texte: str, x: int, ligne: int,
