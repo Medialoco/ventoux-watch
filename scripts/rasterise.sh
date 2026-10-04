@@ -16,7 +16,14 @@ command -v rsvg-convert >/dev/null || {
 # de large à l'antenne, et on veut pouvoir le grossir sans qu'il bave.
 rsvg-convert -w 1100 -h 600 -f png -o /tmp/sous-marin-brut.png assets/sous-marin.svg
 
-python3 - <<'PY'
+# Le chien orange de Dogmazic. Le SVG officiel fait cent cinquante-huit
+# pixels ; à l'antenne le disque en fait trois cents. Cinq fois, comme
+# l'autre, pour qu'on puisse le poser sans qu'il bave.
+rsvg-convert -w 790 -h 790 -f png -o /tmp/dogmazic-brut.png assets/dogmazic.svg
+
+PYTHON=".venv/bin/python"
+[ -x "$PYTHON" ] || PYTHON="python3"
+"$PYTHON" - <<'PY'
 import cv2
 import numpy as np
 
@@ -29,4 +36,11 @@ cv2.imwrite("assets/sous-marin.png",
             brut[ys.min():ys.max() + 1, xs.min():xs.max() + 1])
 print("assets/sous-marin.png", cv2.imread("assets/sous-marin.png",
                                           cv2.IMREAD_UNCHANGED).shape)
+
+brut = cv2.imread("/tmp/dogmazic-brut.png", cv2.IMREAD_UNCHANGED)
+ys, xs = np.nonzero(brut[:, :, 3] > 8)
+cv2.imwrite("assets/dogmazic.png",
+            brut[ys.min():ys.max() + 1, xs.min():xs.max() + 1])
+print("assets/dogmazic.png", cv2.imread("assets/dogmazic.png",
+                                       cv2.IMREAD_UNCHANGED).shape)
 PY

@@ -36,3 +36,19 @@ https://commons.wikimedia.org/wiki/File:Acivit%C3%A9s_estavales_(88728).jpg
 Recadré sur le V jaune et le tapis. À l'écran il est teinté comme la
 photo du Raspberry : c'est le disque français, en face du disque de
 Los Angeles.
+
+## dogmazic.svg
+
+Le chien orange de Dogmazic, pris sur play.dogmazic.net — c'est leur
+favicon, le même dessin que Wikimedia Commons publie en CC BY-SA 4.0.
+
+https://commons.wikimedia.org/wiki/File:Dogmazic.png
+https://play.dogmazic.net/
+
+Association Musique Libre !, 2015. On le montre pour les remercier :
+c'est de leur archive que vient presque toute la musique du flux.
+
+## dogmazic.png
+
+Le même, rasterisé à cinq fois sa taille puis rogné sur ses pixels
+opaques, comme le sous-marin. `scripts/rasterise.sh`.

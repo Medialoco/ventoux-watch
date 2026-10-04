@@ -966,6 +966,7 @@ class Musique:
         self.grognements = repliques(self.racine / "data" / "voix", "ours")
         self.cris_dours = repliques(self.racine / "data" / "voix", "ours_cri")
         self.remerciements = repliques(self.racine / "data" / "voix", "machine")
+        self.remerciements_dogmazic = repliques(self.racine / "data" / "voix", "dogmazic")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -3500,17 +3501,27 @@ def pose_batiments(image: np.ndarray, seconde: float, batis: list | None,
 PISTE_PERIODE_S = 787.0
 PISTE_DESCENTE_S = 20.0
 
-# La photo de la machine, en grand au milieu. Dix-neuf minutes, un nombre
+# La photo de la machine, en grand au milieu. Vingt-cinq minutes, un nombre
 # premier, et sept secondes : assez pour voir que c'est un Raspberry Pi, pas
 # assez pour oublier la montagne. Deux minutes de retard, le temps que
 # YouTube ouvre l'image — plus tôt, on la montrerait à personne.
-MACHINE_PERIODE_S = 1151.0
+MACHINE_PERIODE_S = 1483.0
 MACHINE_TENUE_S = 7.0
 MACHINE_RETARD_S = 120.0
 # Largeur de la photo, en part de la fenêtre caméra. Assez pour le ventilateur
 # et les ports, pas un mur : la route reste visible autour.
 MACHINE_PORTRAIT = 0.32
+# Deux mots, rien derrière : un point ferait dire « dot » à la voix.
 MACHINE_MERCI = "Thanks Raspberry"
+
+# Dogmazic, le même numéro : leur chien orange au milieu, et on les
+# remercie. Vingt-sept minutes, un autre premier, neuf minutes de retard
+# pour ne pas tomber sur le Raspberry au redémarrage.
+DOGMAZIC_PERIODE_S = 1607.0
+DOGMAZIC_TENUE_S = MACHINE_TENUE_S
+DOGMAZIC_RETARD_S = 540.0
+DOGMAZIC_PORTRAIT = MACHINE_PORTRAIT
+DOGMAZIC_MERCI = "Thanks Dogmazic !"
 
 # Le plateau, maintenant que les numéros ont dit leur période et leur
 # durée. L'ordre départage les ex æquo : le tapis d'abord parce qu'il passe
@@ -3524,6 +3535,7 @@ PLATEAU = (
     ("elephant", ELEPHANT_PERIODE_S, ELEPHANT_TENUE_S, 0.0),
     ("batiment", BATIMENT_PERIODE_S, BATIMENT_RELEVE_S, 0.0),
     ("machine", MACHINE_PERIODE_S, MACHINE_TENUE_S, MACHINE_RETARD_S),
+    ("dogmazic", DOGMAZIC_PERIODE_S, DOGMAZIC_TENUE_S, DOGMAZIC_RETARD_S),
     # L'ours en dernier parce qu'il écrit en travers du ciel, et qu'il vaut
     # mieux qu'il cède le passage plutôt que de crier par-dessus le tapis.
     #
@@ -4456,6 +4468,71 @@ BRIDE_C = 85.0
 MACHINE_LIGNES = (26, 60, 96, 124, 132, 154, 162, 180)
 
 
+def _pose_portrait(image: np.ndarray, seconde: float,
+                   photo: np.ndarray | None, occasion: str, merci: str,
+                   tenue: float, part: float,
+                   vue: tuple[int, int, int, int] | None = None,
+                   nuit: bool = False,
+                   pied_gauche: str = "", pied_droit: str = "",
+                   pied_couleur: tuple[int, int, int] | None = None) -> bool:
+    """Un disque au milieu, un remerciement au-dessus, parfois une ligne au pied."""
+    if photo is None or photo.size == 0:
+        return False
+    phase = en_scene(occasion, seconde, nuit)
+    if phase is None:
+        return False
+    force = min(phase, tenue - phase, 1.0)
+    if force < 0.02:
+        return True
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
+    echelle = largeur / 1600
+    # Une ligne au-dessus pour le remerciement, une en dessous pour le lieu
+    # et la température. Le mot sous le disque se collait à la route et
+    # devenait illisible dès que le trait d'un rectangle passait par là.
+    pied_h = int(28 * echelle) if (pied_gauche or pied_droit) else int(8 * echelle)
+    tete_h = int(36 * echelle)
+    rayon = max(8, int(large_vue * part / 2))
+    if 2 * rayon + pied_h + tete_h + int(16 * echelle) > haute_vue:
+        return False
+    cx = gauche + large_vue // 2
+    cy = cime + tete_h + (haute_vue - pied_h - tete_h) // 2
+    if (cx - rayon < gauche or cy - rayon < cime + tete_h
+            or cx + rayon >= gauche + large_vue
+            or cy + rayon + pied_h >= cime + haute_vue):
+        return False
+    calque = image.copy()
+    pose_photo_ronde(calque, photo, cx, cy, rayon, echelle)
+    taille_merci = 0.70 * echelle
+    epais = max(1, int(round(2 * echelle)))
+    (mw, mh), _ = cv2.getTextSize(merci, cv2.FONT_HERSHEY_SIMPLEX,
+                                  taille_merci, epais)
+    ligne_merci = cy - rayon - int(10 * echelle)
+    ox = cx - mw // 2
+    # Un bandeau, pas un liseré : à cette taille un trait autour des
+    # lettres les dédouble, et une ombre aussi.
+    marge = max(4, int(6 * echelle))
+    cv2.rectangle(calque,
+                  (ox - marge, ligne_merci - mh - marge),
+                  (ox + mw + marge, ligne_merci + marge // 2),
+                  (10, 16, 18), -1)
+    cv2.putText(calque, merci, (ox, ligne_merci),
+                cv2.FONT_HERSHEY_SIMPLEX, taille_merci, CYAN,
+                epais, cv2.LINE_AA)
+    ligne = cy + rayon + int(20 * echelle)
+    if pied_gauche:
+        pose_lieu(calque, pied_gauche, cx - rayon, ligne, 0.48 * echelle, echelle)
+    if pied_droit:
+        couleur = pied_couleur or VERT
+        large = cv2.getTextSize(pied_droit, cv2.FONT_HERSHEY_SIMPLEX,
+                                0.54 * echelle, 2)[0][0]
+        cv2.putText(calque, pied_droit, (cx + rayon - large, ligne),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.54 * echelle, couleur, 2,
+                    cv2.LINE_AA)
+    cv2.addWeighted(calque, 0.92 * force, image, 1.0 - 0.92 * force, 0.0, dst=image)
+    return True
+
+
 def pose_portrait_machine(image: np.ndarray, seconde: float,
                           photo: np.ndarray | None,
                           etat: dict | None = None, ville: str = "",
@@ -4475,64 +4552,33 @@ def pose_portrait_machine(image: np.ndarray, seconde: float,
     celui-ci est le portrait. Rond : une carte rectangulaire au milieu de
     la montagne, c'est un encart de plus ; un disque, c'est la photo.
     """
-    if photo is None or photo.size == 0:
-        return False
-    phase = en_scene("machine", seconde, nuit)
-    if phase is None:
-        return False
-    force = min(phase, MACHINE_TENUE_S - phase, 1.0)
-    if force < 0.02:
-        return True
-    hauteur, largeur = image.shape[:2]
-    gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
-    echelle = largeur / 1600
-    # Une ligne au-dessus pour le remerciement, une en dessous pour le lieu
-    # et la température. Le mot sous le disque se collait à la route et
-    # devenait illisible dès que le trait d'un rectangle passait par là.
-    pied_h = int(28 * echelle)
-    tete_h = int(36 * echelle)
-    rayon = max(8, int(large_vue * MACHINE_PORTRAIT / 2))
-    if 2 * rayon + pied_h + tete_h + int(16 * echelle) > haute_vue:
-        return False
-    cx = gauche + large_vue // 2
-    cy = cime + tete_h + (haute_vue - pied_h - tete_h) // 2
-    if (cx - rayon < gauche or cy - rayon < cime + tete_h
-            or cx + rayon >= gauche + large_vue
-            or cy + rayon + pied_h >= cime + haute_vue):
-        return False
-    calque = image.copy()
-    pose_photo_ronde(calque, photo, cx, cy, rayon, echelle)
-    merci = MACHINE_MERCI
-    taille_merci = 0.70 * echelle
-    epais = max(1, int(round(2 * echelle)))
-    (mw, mh), _ = cv2.getTextSize(merci, cv2.FONT_HERSHEY_SIMPLEX,
-                                  taille_merci, epais)
-    ligne_merci = cy - rayon - int(10 * echelle)
-    ox = cx - mw // 2
-    # Un bandeau, pas un liseré : à cette taille un trait autour des
-    # lettres les dédouble, et une ombre aussi.
-    marge = max(4, int(6 * echelle))
-    cv2.rectangle(calque,
-                  (ox - marge, ligne_merci - mh - marge),
-                  (ox + mw + marge, ligne_merci + marge // 2),
-                  (10, 16, 18), -1)
-    cv2.putText(calque, merci, (ox, ligne_merci),
-                cv2.FONT_HERSHEY_SIMPLEX, taille_merci, CYAN,
-                epais, cv2.LINE_AA)
-    ligne = cy + rayon + int(20 * echelle)
-    if ville:
-        pose_lieu(calque, ville.upper(), cx - rayon, ligne, 0.48 * echelle, echelle)
+    pied_droit = ""
+    couleur = None
     if etat:
         couleur = VERT if etat["degres"] < TIEDE_C else (
             AMBRE if etat["degres"] < CHAUD_C else ROUGE)
-        valeur = f"{etat['degres']:.1f} C"
-        large = cv2.getTextSize(valeur, cv2.FONT_HERSHEY_SIMPLEX,
-                                0.54 * echelle, 2)[0][0]
-        cv2.putText(calque, valeur, (cx + rayon - large, ligne),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.54 * echelle, couleur, 2,
-                    cv2.LINE_AA)
-    cv2.addWeighted(calque, 0.92 * force, image, 1.0 - 0.92 * force, 0.0, dst=image)
-    return True
+        pied_droit = f"{etat['degres']:.1f} C"
+    return _pose_portrait(
+        image, seconde, photo, "machine", MACHINE_MERCI,
+        MACHINE_TENUE_S, MACHINE_PORTRAIT, vue=vue, nuit=nuit,
+        pied_gauche=ville.upper() if ville else "",
+        pied_droit=pied_droit, pied_couleur=couleur)
+
+
+def pose_portrait_dogmazic(image: np.ndarray, seconde: float,
+                           photo: np.ndarray | None,
+                           vue: tuple[int, int, int, int] | None = None,
+                           nuit: bool = False) -> bool:
+    """Le logo de Dogmazic, en grand au milieu, de temps en temps.
+
+    Même disque que le Raspberry, même bandeau, autre remerciement. C'est
+    de leur archive que vient presque toute la musique : quand le chien
+    orange prend le milieu, on le dit.
+    """
+    return _pose_portrait(
+        image, seconde, photo, "dogmazic", DOGMAZIC_MERCI,
+        DOGMAZIC_TENUE_S, DOGMAZIC_PORTRAIT, vue=vue, nuit=nuit,
+        pied_gauche="MUSIQUE LIBRE")
 
 
 def _carre_plein(image: np.ndarray, cote: int) -> np.ndarray:
@@ -4567,7 +4613,12 @@ def pose_photo_ronde(image: np.ndarray, photo: np.ndarray, cx: int, cy: int,
     # on lit un défaut avant de lire la carte.
     alpha = np.clip((rayon - dist) / 1.5, 0.0, 1.0)
     coin = image[y0:y0 + cote, x0:x0 + cote].astype(np.float32)
-    coin[:] = coin * (1.0 - alpha[:, :, None]) + carre.astype(np.float32) * alpha[:, :, None]
+    if carre.ndim == 3 and carre.shape[2] == 4:
+        source = carre[:, :, :3].astype(np.float32)
+        alpha = alpha * (carre[:, :, 3].astype(np.float32) / 255.0)
+    else:
+        source = carre.astype(np.float32)
+    coin[:] = coin * (1.0 - alpha[:, :, None]) + source * alpha[:, :, None]
     image[y0:y0 + cote, x0:x0 + cote] = np.clip(coin, 0, 255).astype(np.uint8)
     teinte = tuple(int(c * 0.45) for c in CYAN)
     cv2.circle(image, (cx, cy), rayon, teinte,
@@ -5407,10 +5458,14 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     ours = charge_vignette(racine / "data" / "ours.png")
     ours_dit: tuple[int, int] = (-1, -1)
     machine_dit = -1.0
+    dogmazic_dit = -1.0
     agenda, agenda_credit, agenda_lu = [], "", 0.0
     # La photo de la machine qui fait tout ça. Lue en BGR et non en BGRA :
     # c'est une photo, elle n'a pas de transparence.
     photo_machine = cv2.imread(str(racine / "assets" / "machine.jpg"))
+    # Le chien orange, déjà un disque : on le pose comme la photo du Pi.
+    photo_dogmazic = cv2.imread(str(racine / "assets" / "dogmazic.png"),
+                               cv2.IMREAD_UNCHANGED)
     # Le trampoline du village, côté français : le pendant du disque de
     # gauche. Recadré une fois, teinté à chaque image comme le Raspberry.
     photo_trampoline = cv2.imread(str(racine / "assets" / "trampoline.jpg"))
@@ -5780,6 +5835,23 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # dans la lumière et il a l'air d'un ours sous un réverbère.
                 # Vérifié sur une vraie image de nuit avant de lever la règle.
                 ou_en_est = pose_ours(toile, quand - origine, ours, vue=cadrage)
+                # Dogmazic d'abord, le Raspberry ensuite : un seul disque
+                # à la fois, le plateau les départage. Les rectangles se
+                # redessinent après, sur la toile.
+                la_dogmazic = pose_portrait_dogmazic(
+                    toile, quand - origine, photo_dogmazic,
+                    vue=cadrage, nuit=not fait_jour)
+                if la_dogmazic:
+                    phase_dogmazic = en_scene("dogmazic", quand - origine,
+                                              not fait_jour) or 0.0
+                    debut_dogmazic = round(quand - origine - phase_dogmazic)
+                    if dogmazic_dit != debut_dogmazic:
+                        dogmazic_dit = debut_dogmazic
+                        if musique.remerciements_dogmazic:
+                            musique.dis(tirage.choice(
+                                musique.remerciements_dogmazic))
+                        log.info("Portrait de Dogmazic : %s",
+                                 musique.voix_dit or "sans voix")
                 # La photo de la machine, en grand. Le rectangle se redessine
                 # après, sur la toile : un disque au milieu de la route ne
                 # doit pas éteindre la veille.

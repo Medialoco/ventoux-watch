@@ -119,6 +119,10 @@ REPLIQUES = [
     # pixels. Quand il prend enfin la place, on le remercie.
     ("machine", CLAIRE, "Thanks Raspberry"),
     ("machine", PLAT, "Thanks Raspberry"),
+    # Dogmazic, le même numéro : le logo au milieu, et on les remercie.
+    # Le point d'exclamation reste, lui : c'est eux, pas le Raspberry.
+    ("dogmazic", CLAIRE, "Thanks Dogmazic !"),
+    ("dogmazic", PLAT, "Thanks Dogmazic !"),
 ]
 
 
@@ -193,7 +197,7 @@ CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180,
             "rediff": 110,
             # Un ours ne parle pas vite.
             "ours": 100, "ours_cri": 100,
-            "machine": 170}
+            "machine": 170, "dogmazic": 170}
 
 # La consigne de jeu, envoyée avec chaque phrase. C'est ce qu'on ne pouvait pas
 # faire avec les voix système : le ton s'y choisissait en changeant de personne,
@@ -229,8 +233,14 @@ JEU = {
             "this mountain far longer than the road has.",
     "machine": "Warm, grateful, a little giddy. You are thanking the small "
                "computer that watches a mountain day and night. Bright and "
-               "sincere, not sarcastic. Hit the exclamation marks. Over in "
-               "a second and a half.",
+               "sincere, not sarcastic. Say exactly the two words Thanks "
+               "Raspberry and then stop. No period, no exclamation, never "
+               "say the word dot. Over in a second and a half.",
+    "dogmazic": "Warm, grateful, a little giddy. You are thanking the free "
+                "music archive that fills the mountain watch. Bright and "
+                "sincere. Say Thanks Dogmazic with a cheerful lift. The "
+                "exclamation is energy, never the word dot. Over in a "
+                "second and a half.",
 }
 
 # Les voix, par rôle. « ash » est celle dont medialoco-tube se sert pour sa

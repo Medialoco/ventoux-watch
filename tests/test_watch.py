@@ -4971,7 +4971,7 @@ class PortraitMachineTests(unittest.TestCase):
 
     def test_the_portrait_is_the_photograph_not_the_dashboard_tint(self):
         """L'encart est un tableau de bord. Celui-ci est le portrait."""
-        source = inspect.getsource(stream.pose_portrait_machine)
+        source = inspect.getsource(stream._pose_portrait)
         self.assertNotIn("tamise_la_photo", source)
         self.assertIn("pose_photo_ronde(", source)
         self.assertNotIn("fond_encart(", source)
@@ -5006,17 +5006,22 @@ class PortraitMachineTests(unittest.TestCase):
             image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
             vue=(175, 36, 929, 522)))
         self.assertEqual(stream.MACHINE_MERCI, "Thanks Raspberry")
+        self.assertFalse(any(signe in stream.MACHINE_MERCI for signe in ".!?"))
+        self.assertGreater(stream.MACHINE_PERIODE_S, 1151.0)
         self.assertIn("MACHINE_MERCI", inspect.getsource(stream.pose_portrait_machine))
 
     def test_a_catch_stays_on_top_of_the_portrait(self):
         """Un disque au milieu ne doit pas éteindre la veille."""
         source = inspect.getsource(stream.diffuse)
         self.assertIn("pose_portrait_machine(", source)
+        self.assertIn("pose_portrait_dogmazic(", source)
         self.assertNotIn("pose_portrait_arduino(", source)
         # Le portrait n'attend plus un creux : les rectangles se redessinent
         # après lui, dans la fenêtre.
         apres = source.split("pose_portrait_machine(")[-1]
         self.assertIn("dessine(toile, vus, quand, vue=cadrage)", apres)
+        self.assertIn("dessine(toile, vus, quand, vue=cadrage)",
+                      source.split("pose_portrait_dogmazic(")[-1])
 
     def test_effects_never_turn_the_watch_off(self):
         """Un effet occupe l'écran, la veille continue de montrer ce qu'elle voit."""
@@ -5034,6 +5039,49 @@ class PortraitMachineTests(unittest.TestCase):
         x1 = vue[0] + int(0.10 * vue[2])
         y1 = vue[1] + int(0.40 * vue[3])
         self.assertEqual(tuple(int(c) for c in image[y1, x1]), stream.AMBRE)
+
+
+class PortraitDogmazicTests(unittest.TestCase):
+    """Le chien orange, en grand au milieu, de temps en temps."""
+
+    def test_the_logo_is_in_the_tree(self):
+        """Sans le dessin on se tait : un cadre vide n'est pas un remerciement."""
+        self.assertTrue((ROOT / "assets" / "dogmazic.png").is_file())
+        self.assertTrue((ROOT / "assets" / "dogmazic.svg").is_file())
+
+    def test_no_logo_means_no_portrait(self):
+        image = np.zeros((720, 1280, 3), np.uint8)
+        self.assertFalse(stream.pose_portrait_dogmazic(
+            image, un_tour_de("dogmazic") + 2.0, None,
+            vue=(175, 36, 929, 522)))
+        self.assertEqual(int(np.count_nonzero(image)), 0)
+
+    def test_the_portrait_thanks_dogmazic(self):
+        photo = cv2.imread(str(ROOT / "assets" / "dogmazic.png"),
+                           cv2.IMREAD_UNCHANGED)
+        image = np.zeros((720, 1280, 3), np.uint8)
+        self.assertTrue(stream.pose_portrait_dogmazic(
+            image, un_tour_de("dogmazic") + 2.0, photo,
+            vue=(175, 36, 929, 522)))
+        self.assertEqual(stream.DOGMAZIC_MERCI, "Thanks Dogmazic !")
+        self.assertIn("DOGMAZIC_MERCI",
+                      inspect.getsource(stream.pose_portrait_dogmazic))
+
+    def test_it_leaves_when_its_turn_is_over(self):
+        photo = cv2.imread(str(ROOT / "assets" / "dogmazic.png"),
+                           cv2.IMREAD_UNCHANGED)
+        image = np.zeros((720, 1280, 3), np.uint8)
+        self.assertFalse(stream.pose_portrait_dogmazic(
+            image, un_tour_de("dogmazic") + stream.DOGMAZIC_TENUE_S + 1.0,
+            photo, vue=(175, 36, 929, 522)))
+        self.assertEqual(int(np.count_nonzero(image)), 0)
+
+    def test_the_two_thanks_never_share_the_stage(self):
+        """Un disque sur l'autre, on ne lit plus ni Raspberry ni Dogmazic."""
+        noms = [nom for nom, _, _, _ in stream.PLATEAU]
+        self.assertIn("machine", noms)
+        self.assertIn("dogmazic", noms)
+        self.assertNotEqual(stream.MACHINE_PERIODE_S, stream.DOGMAZIC_PERIODE_S)
 
 
 class BandeauxTests(unittest.TestCase):
@@ -5864,6 +5912,12 @@ class LeMotSeLitOuNeSertARien(unittest.TestCase):
         self.assertLess(CADENCES["ennui"], CADENCES["attrape"])
         for quand, _, _ in REPLIQUES:
             self.assertIn(quand, CADENCES)
+        machine = [texte for quand, _, texte in REPLIQUES if quand == "machine"]
+        self.assertTrue(machine)
+        self.assertTrue(all(texte == "Thanks Raspberry" for texte in machine))
+        dogmazic = [texte for quand, _, texte in REPLIQUES if quand == "dogmazic"]
+        self.assertTrue(dogmazic)
+        self.assertTrue(all(texte == "Thanks Dogmazic !" for texte in dogmazic))
 
 
 class LaVoixPasseAuDessusDeLaMusique(unittest.TestCase):
