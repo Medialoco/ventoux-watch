@@ -1904,9 +1904,10 @@ PLAY_PAS = 24
 PLAY_MAINTENANT = 112
 PLAY_VOISINE = 80
 PLAY_JAUGE_H = 5
-PLAY_BARRES = 28
+PLAY_BARRES = 12
 PLAY_BARRE_ECART = 3
 PLAY_EQ_H = 26
+PLAY_EQ_L = 140
 PLAY_GRIS = (120, 120, 120)
 PLAY_RAIL = (64, 64, 64)
 PLAY_VOILE = 0.72
@@ -1917,10 +1918,9 @@ def _vumetre(image: np.ndarray, x: int, base: int, largeur: int,
              echelle: float, energie: float, seconde: float) -> None:
     """Une lame d'égaliseur, pas un mur.
 
-    Trop grand, il mangeait l'artiste et le titre. Ici il tient sous le
-    crédit, large comme la colonne, bas comme une jauge qui respire. Chaque
-    barre a sa lenteur et un halo : c'est de l'art numérique, pas un
-    rectangle plat.
+    Trop grand, il mangeait l'artiste et le titre. Trop large, il barrissait
+    toute la console. Ici il tient sous le crédit, court comme un instrument,
+    pas comme une frise. Chaque barre a sa lenteur et un halo.
 
     Il ne mesure rien d'utile et ne prétend pas le contraire : il est posé
     contre l'étiquette du morceau, pas contre l'image, et personne ne peut le
@@ -2209,7 +2209,8 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
                   echelle, CYAN, BLANC, 0.50, 0.72,
                   infos=_ligne_infos(en_cours, reste), eclate=True)
     eq_base = y_now + maintenant - int(8 * echelle)
-    _vumetre(image, x, eq_base, colonne, echelle, energie, seconde)
+    eq_l = min(int(PLAY_EQ_L * echelle), colonne)
+    _vumetre(image, x, eq_base, eq_l, echelle, energie, seconde)
     if duree > 0:
         rail_y = min(eq_base + int(10 * echelle), bas - marge - int(16 * echelle))
         epais = max(2, int(PLAY_JAUGE_H * echelle))
@@ -2598,13 +2599,6 @@ def pose_agenda(image: np.ndarray, rendez_vous: list, credit: str,
 # qui change vraiment — les résultats du championnat d'à côté.
 
 
-# La distance entre la machine et ce qu'elle regarde, écrite sobrement sous
-# l'image. Les deux encarts donnent les deux lieux ; celui-ci donne ce qu'il
-# y a entre, qui est la seule chose que ni l'un ni l'autre ne peut dire.
-DISTANCE_TAILLE = 0.5
-DISTANCE_GRIS = (150, 150, 150)
-
-
 def a_vol_d_oiseau(un: tuple[float, float], deux: tuple[float, float]) -> float:
     """Les kilomètres entre deux points de la Terre, par le grand cercle."""
     rayon = 6371.0088
@@ -2623,9 +2617,9 @@ FIL_GRIS = (120, 118, 112)
 FIL_CREUX = 6            # le ventre du brin tendu, au repos
 
 
-def pose_fil(image: np.ndarray, texte: str, vue: tuple | None = None,
+def pose_fil(image: np.ndarray, vue: tuple | None = None,
              remue: float = 0.0) -> None:
-    """Un fil qui relie les deux encarts, et les kilomètres posés dessus.
+    """Un fil qui relie les deux encarts.
 
     Les deux encarts disaient déjà la même chose chacun de son côté — ici la
     machine, là ce qu'elle regarde — mais rien ne les reliait, et deux choses
@@ -2641,6 +2635,9 @@ def pose_fil(image: np.ndarray, texte: str, vue: tuple | None = None,
     comme deux charges d'un même câble : celui qui descend fait monter
     l'autre, et le fil s'incline d'autant. C'est le seul endroit où le
     balancement se lit comme une mécanique plutôt que comme un défaut.
+
+    Les kilomètres ne s'écrivent plus dessus : on en fera un effet, pas une
+    légende posée en permanence.
     """
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
@@ -2691,23 +2688,6 @@ def pose_fil(image: np.ndarray, texte: str, vue: tuple | None = None,
         droit = bas_g + (bas_d - bas_g) * part
         travee.append((int(x), int(droit + creux * math.sin(math.pi * part))))
     brin(travee)
-
-    if not texte:
-        return
-    # Le texte posé sur le fil, au milieu, et le fil effacé dessous : une
-    # ligne qui traverse les lettres les rend illisibles, et un texte qui
-    # flotte à côté du fil n'y est pas posé.
-    taille = DISTANCE_TAILLE * echelle
-    (long_px, haut_px), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX,
-                                            taille, 1)
-    x = (largeur - long_px) // 2
-    base = y - int(9 * echelle)
-    creuse = image[max(0, base - haut_px - int(6 * echelle)):base + int(10 * echelle),
-                   max(0, x - int(10 * echelle)):min(largeur, x + long_px + int(10 * echelle))]
-    if creuse.size:
-        creuse[:] = (creuse * 0.25).astype(np.uint8)
-    cv2.putText(image, texte, (x, base), cv2.FONT_HERSHEY_SIMPLEX, taille,
-                BLANC, max(1, int(echelle)), cv2.LINE_AA)
 
 
 ATTRAPE_S = 1.6
@@ -4946,8 +4926,9 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     # kilomètres entre les deux, et c'est à peu près tout le projet.
     lieu = (ville or "").upper()
     large = max(
-        cv2.getTextSize("RASPBERRY PI 5", cv2.FONT_HERSHEY_SIMPLEX,
-                        0.50 * echelle, 1)[0][0],
+        int(BADGE_PAS * echelle) + cv2.getTextSize(
+            "RASPBERRY PI 5", cv2.FONT_HERSHEY_SIMPLEX,
+            BADGE_TAILLE * echelle, 2)[0][0],
         cv2.getTextSize(jour, cv2.FONT_HERSHEY_SIMPLEX, 0.48 * echelle, 1)[0][0],
         cv2.getTextSize(heure, cv2.FONT_HERSHEY_SIMPLEX, 0.95 * echelle, 2)[0][0],
         cv2.getTextSize(f"TEMP   {degres:.1f} C", cv2.FONT_HERSHEY_SIMPLEX,
@@ -4967,7 +4948,12 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     bord = droite - marge
     titre, date_y, heure_y, temp_y, jauge_c, charge, jauge_l, ville_y = (
         sommet + int(r * echelle) for r in MACHINE_LIGNES)
-    pose_titre_encart(image, "RASPBERRY PI 5", marge, titre, bord - marge, echelle)
+    pose_badge(image, "RASPBERRY PI 5", marge, titre, echelle, instant,
+               teinte_mot=BLANC, teinte_point=CYAN)
+    trait = titre + int(round(9 * echelle))
+    cv2.line(image, (marge, trait), (bord, trait),
+             tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
+             cv2.LINE_AA)
     pose_date_heure(image, marge, date_y, heure_y, jour, heure, echelle)
     # Température et charge restent : ce sont les deux grandeurs qui ont un
     # plafond connu et qui arrêtent la diffusion. Plus de disque, plus d'âge.
@@ -5793,17 +5779,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         ou_camera = (float(vise["lat"]), float(vise["lon"]))
     except (OSError, ValueError, KeyError, TypeError):
         ou_camera = None
-    # La distance entre la machine et ce qu'elle regarde. Calculée une fois :
-    # ni l'une ni l'autre ne bouge.
-    dit_la_distance = ""
-    if ou_camera and machine_ou.get("lat") is not None:
-        km = a_vol_d_oiseau((float(machine_ou["lat"]), float(machine_ou["lon"])),
-                            ou_camera)
-        # Les kilomètres seuls. Les deux noms y étaient aussi, du temps où
-        # cette ligne était seule dans un coin ; maintenant chaque encart
-        # nomme son lieu et le fil les relie, et répéter « Los Angeles » sous
-        # l'encart qui dit déjà « Los Angeles » n'apprend rien à personne.
-        dit_la_distance = f"{km:,.0f} KM AS THE CROW FLIES".replace(",", " ")
     # Loin en arrière, comme « bonjour » : à zéro, le flux s'ouvrirait sur
     # « BOOOOORING » pendant trois secondes, ce qui est une drôle de carte de
     # visite pour une veille qui vient de démarrer.
@@ -6214,7 +6189,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 except (OSError, ValueError):
                     agenda, agenda_credit = [], ""
             pose_agenda(toile, agenda, agenda_credit, quand - origine)
-            pose_fil(toile, dit_la_distance, cadrage, remue)
+            pose_fil(toile, cadrage, remue)
             # La musique en dernier : c'est elle qu'on vient écouter, et c'est
             # elle que la licence oblige à nommer.
             pose_bloc_musique(toile, prog, racine / "data" / "musique",

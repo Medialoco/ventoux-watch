@@ -94,12 +94,7 @@ def compose(largeur: int, nuit: bool, musique: bool = True,
         agenda = json.loads(feuille.read_text(encoding="utf-8"))
         stream.pose_agenda(toile, agenda.get("evenements") or [],
                            str(agenda.get("credit") or ""), 0.0)
-    if machine.get("lat") is not None:
-        km = stream.a_vol_d_oiseau((float(machine["lat"]), float(machine["lon"])),
-                                   (float(pose["lat"]), float(pose["lon"])))
-        stream.pose_fil(toile,
-                        f"{km:,.0f} KM AS THE CROW FLIES".replace(",", " "),
-                        cadrage, stream.flottement(3.0, largeur / 1600))
+    stream.pose_fil(toile, cadrage, stream.flottement(3.0, largeur / 1600))
     if eclat is not None:
         stream.pose_eclat(toile, cadrage, eclat, nom, stream.AMBRE)
     return toile

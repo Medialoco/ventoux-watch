@@ -3609,7 +3609,7 @@ class DiffusionTests(unittest.TestCase):
         """
         from watcher import stream
         vue = (220, 46, 1159, 651)
-        for pose in (lambda t: stream.pose_fil(t, "9 610 KM", vue, 3.0),
+        for pose in (lambda t: stream.pose_fil(t, vue, 3.0),
                      lambda t: stream.pose_bulles(t, 7.0, vue),
                      lambda t: stream.pose_poissons(t, 12.0, vue),
                      lambda t: stream.pose_poissons(t, 40.0, vue)):
@@ -3619,6 +3619,12 @@ class DiffusionTests(unittest.TestCase):
             fenetre = toile[cime:cime + haute, gauche:gauche + large]
             self.assertEqual(int(fenetre.sum()), 0)
             self.assertGreater(int(toile.sum()), 0)
+
+    def test_the_thread_no_longer_writes_the_distance(self):
+        """Les kilomètres, on en fera un effet. Pas une légende permanente."""
+        from watcher import stream
+        self.assertNotIn("CROW FLIES", inspect.getsource(stream.diffuse))
+        self.assertNotIn("putText", inspect.getsource(stream.pose_fil))
 
     def test_the_two_panels_float_slowly_and_in_opposition(self):
         """The old shake was tied to the beat; this one never stops.
@@ -5017,6 +5023,32 @@ class EncartsTests(unittest.TestCase):
         stream.pose_machine(vide, None, None, "Los Angeles")
         self.assertEqual(int(np.count_nonzero(vide)), 0)
 
+    def test_the_raspberry_title_wears_the_same_badge_as_live(self):
+        """Le point rouge est à LIVE. Ici c'est cyan : la machine, pas le flux."""
+        source = inspect.getsource(stream.pose_machine)
+        self.assertIn("pose_badge(", source)
+        self.assertIn("teinte_point=CYAN", source)
+        self.assertNotIn('pose_titre_encart(image, "RASPBERRY PI 5"', source)
+
+    def test_the_raspberry_dot_blinks_cyan_and_never_red(self):
+        etat = {"degres": 46.2, "charge": 0.31, "debout": 190000.0,
+                "libre": 142 * 10 ** 9}
+        pair = np.zeros((720, 1280, 3), np.uint8)
+        impair = np.zeros((720, 1280, 3), np.uint8)
+        stream.pose_machine(pair, etat, None, "Los Angeles", quand=0.0)
+        stream.pose_machine(impair, etat, None, "Los Angeles", quand=1.0)
+        coin = (slice(35, 70), slice(0, 50))
+
+        def combien(image, teinte):
+            return int(np.count_nonzero(np.all(image[coin] == teinte, axis=2)))
+
+        self.assertGreater(combien(pair, stream.CYAN), 8,
+                           "le point cyan manque à la seconde paire")
+        self.assertEqual(combien(impair, stream.CYAN), 0,
+                         "le point cyan reste allumé à la seconde impaire")
+        self.assertEqual(combien(pair, stream.ROUGE), 0)
+        self.assertEqual(combien(impair, stream.ROUGE), 0)
+
 
 class PortraitMachineTests(unittest.TestCase):
     """La photo du Pi, en grand au milieu, de temps en temps."""
@@ -5313,8 +5345,10 @@ class LecteurTests(unittest.TestCase):
 
         self.assertLess(barres(image[530:600, 420:860]), 80,
                         "l'égaliseur mange encore les titres")
-        self.assertGreater(barres(image[610:670, 360:900]), 60,
-                           "l'égaliseur a disparu du milieu")
+        self.assertGreater(barres(image[610:670, 330:520]), 30,
+                           "l'égaliseur a disparu sous le titre")
+        self.assertLess(barres(image[610:670, 560:1100]), 15,
+                        "l'égaliseur est encore trop large")
 
     def test_the_console_shows_what_is_left_and_where_it_comes_from(self):
         """Un titre sans le reste du temps, on ne sait pas si on reste."""
