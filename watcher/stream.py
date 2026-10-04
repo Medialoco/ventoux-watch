@@ -836,7 +836,23 @@ class Musique:
         self.muet = muet
         self.session = None if muet else batir_session(dossier, nuit=est_nuit(self.racine))
         self.process: subprocess.Popen | None = None
+        # Trois repères, et non un seul compteur remis à zéro.
+        #
+        # « octets » est tout ce qu'on a remis à ffmpeg depuis le début, et ne
+        # revient jamais en arrière : c'est la seule grandeur qui puisse servir
+        # de référence commune aux deux autres.
+        # « session_a » est sa valeur quand la session en cours a commencé, de
+        # quoi ramener une position absolue à une position dans la session.
+        # « repere » est sa valeur quand la sortie en cours s'est ouverte : une
+        # sortie neuve repart de zéro et oublie tout ce qu'on avait versé dans
+        # la précédente.
         self.octets = 0
+        self.session_a = 0
+        self.repere = 0
+        # Où en est l'image réellement diffusée, en secondes depuis l'ouverture
+        # de la sortie. Posée par la boucle des images ; c'est l'horloge du
+        # spectateur, et donc la seule qui ait le droit de dater un crédit.
+        self.ecran = 0.0
         self.suite: list[dict] = []
         self.fiches: dict[str, dict] = {}
         self.voix = b""
@@ -859,7 +875,6 @@ class Musique:
     def _ouvre(self) -> None:
         if self.muet or self.session is None:
             return
-        self.octets = 0
         try:
             self.suite = json.loads((self.dossier / "session.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -939,6 +954,11 @@ class Musique:
             # incomplet.
             try:
                 self.arrete()
+                # La session neuve commence exactement là où l'ancienne s'est
+                # tarie, c'est-à-dire après la fin de tranche qu'on vient de
+                # lire — et non au début de la tranche, qui tient encore les
+                # dernières mesures du morceau précédent.
+                self.session_a = self.octets + len(morceau)
                 # La session suivante est bâtie pour l'heure qu'il sera, pas
                 # pour celle qu'il était : une session de jour tirée à cinq
                 # heures du matin jouerait au soleil levant une sélection
@@ -1008,8 +1028,59 @@ class Musique:
             self.voix = reste[combien:]
         return melange.astype(np.int16).tobytes() + morceau[combien:]
 
+    def a_l_ecran(self, seconde: float) -> None:
+        """Dit où en est l'image diffusée, en secondes depuis l'ouverture.
+
+        C'est le compte d'images, et rien d'autre : ffmpeg date la nième image
+        à n divisé par la cadence, donc ce nombre est l'instant exact où ce
+        qu'on dessine maintenant sera regardé.
+        """
+        self.ecran = seconde
+
+    def repart(self) -> None:
+        """Une sortie neuve : son horloge repart de zéro, pas la musique.
+
+        Tout ce qui avait été versé dans la sortie précédente est perdu avec
+        elle. Le premier octet de la nouvelle est donc celui qu'on en est à
+        remettre, et c'est lui qui vaut l'instant zéro de sa vidéo.
+        """
+        self.repere = self.octets
+        self.ecran = 0.0
+
     def _seconde(self) -> float:
-        return self.octets / (ECHANTILLONS_S * VOIES * OCTETS_PAR_ECHANTILLON)
+        """Où en est le morceau que le spectateur entend en ce moment.
+
+        Et non : où en est le morceau qu'on vient de remettre à ffmpeg. Les
+        deux ne sont pas du tout le même instant, et c'est ce qui désynchronisait
+        le crédit de la musique.
+
+        Le son qu'on verse ne part pas quand on le verse. Il attend dans la
+        file de l'entrée — cinq cent douze paquets, soit près de deux mégaoctets,
+        soit douze secondes — puis dans l'encodeur. Mesuré : le compteur
+        d'octets court douze secondes devant l'image. Le titre changeait donc à
+        l'écran douze secondes avant de changer dans les oreilles.
+
+        Cette file ne se réduit pas pour autant. Si elle venait à se vider
+        parce que le fil du son a été endormi une demi-seconde de trop, ffmpeg
+        attendrait du son, et l'image attendrait avec lui : la musique est
+        l'agrément, l'image est le sujet, et l'agrément n'a pas le droit
+        d'arrêter le sujet. On garde donc le matelas, et on lit l'heure
+        ailleurs.
+
+        L'image, elle, est datée par son rang : ffmpeg place la nième image à
+        n divisé par la cadence, et le son à l'octet divisé par le débit. Les
+        deux horloges partent ensemble de zéro à l'ouverture de la sortie. La
+        position diffusée est donc le repère d'ouverture plus l'âge de l'image,
+        sans qu'aucun tampon n'entre dans le calcul et sans constante à régler.
+
+        Plafonné à ce qu'on a vraiment remis : si la boucle des images prenait
+        de l'avance sur le son, mieux vaut un crédit en retard qu'un crédit qui
+        nomme un morceau qui n'a pas encore été décodé.
+        """
+        debit = ECHANTILLONS_S * VOIES * OCTETS_PAR_ECHANTILLON
+        remis = (self.octets - self.session_a) / debit
+        diffuse = (self.repere - self.session_a) / debit + self.ecran
+        return max(0.0, min(remis, diffuse))
 
     def a_suivre(self) -> str:
         """Le morceau d'après, pour qui aime savoir ce qui arrive."""
@@ -4755,6 +4826,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     octets = source_l * source_h * 3
     largeur, hauteur = cfg["stream_size"]
     sortie = son = None
+    # Les images déjà remises à la sortie en cours. Comptées à part de « images »,
+    # qui totalise la journée : celle-ci repart à zéro avec chaque sortie, parce
+    # que c'est elle qui donne l'heure de la vidéo chez le spectateur.
+    diffusees = 0
     verseur: threading.Thread | None = None
     coupe = threading.Event()
     coupe_son = threading.Event()
@@ -4943,6 +5018,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             quand = ouvert + vues / cfg["stream_fps"]
             vues += 1
             images += 1
+            # L'instant où l'image qu'on s'apprête à dessiner sera regardée.
+            # Posé avant de dessiner quoi que ce soit, puisque c'est l'heure
+            # que le crédit musical va lire.
+            musique.a_l_ecran(diffusees / cfg["stream_fps"])
             if quand - relu >= 2.0:
                 vus = identifications(racine / "data" / "events.json", quand - TENUE_S - 60)
                 machine = etat_machine(racine)
@@ -5267,6 +5346,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                                       cfg["stream_preset"])
                 assert sortie.stdin is not None
                 ouverte_a = _maintenant()
+                # Horloge neuve des deux côtés : la vidéo de cette sortie-ci
+                # commence à zéro, et la musique note où elle en était.
+                diffusees = 0
+                musique.repart()
                 # Propre au verseur : couper le son d'une sortie qu'on remplace
                 # ne doit pas couper aussi la veille du direct, qui partage
                 # l'autre événement et qui, elle, vit aussi longtemps que nous.
@@ -5297,6 +5380,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 time.sleep(min(attente, 1.0))
             try:
                 sortie.stdin.write(toile.tobytes())
+                diffusees += 1
             except BrokenPipeError:
                 # YouTube a raccroché. Mourir ici revient à laisser systemd
                 # tout rouvrir, entrée comprise, et c'est le clignotement qu'on

@@ -4513,6 +4513,112 @@ class DiffusionTests(unittest.TestCase):
         self.assertIsNone(stream.batir_session(Path("/inexistant/nulle/part")))
 
 
+class HorlogeDuCreditTests(unittest.TestCase):
+    """Le crédit date la musique entendue, pas celle qu'on vient de verser.
+
+    Cette horloge n'était couverte par rien : les essais du crédit remplaçaient
+    « _seconde » par une constante, donc le seul endroit où la désynchronisation
+    pouvait naître était aussi le seul qu'on ne regardait pas.
+    """
+
+    DEBIT = stream.ECHANTILLONS_S * stream.VOIES * stream.OCTETS_PAR_ECHANTILLON
+    # Ce que la file d'entrée de ffmpeg retient : cinq cent douze paquets de
+    # quatre mille quatre-vingt-seize octets, mesurés à douze secondes.
+    EN_VOL = 12.1
+
+    def _musique(self):
+        musique = stream.Musique.__new__(stream.Musique)
+        musique.octets = 0
+        musique.session_a = 0
+        musique.repere = 0
+        musique.ecran = 0.0
+        musique.suite = [{"f": "a.mp3", "d": 120.0}, {"f": "b.mp3", "d": 90.0}]
+        musique.fiches = {
+            "a.mp3": {"auteur": "Nemeton", "titre": "01nocti27", "licence": "CC BY 4.0"},
+            "b.mp3": {"auteur": "Naxar", "titre": "Night Sky", "licence": "CC BY-SA 3.0"}}
+        return musique
+
+    def _diffuse(self, musique, seconde):
+        """Avance les deux horloges comme la diffusion le fait vraiment.
+
+        Le son est versé avec l'avance que lui donne la file d'attente ; l'image
+        est datée par son rang. C'est exactement la situation mesurée sur le Pi.
+        """
+        musique.octets = int((seconde + self.EN_VOL) * self.DEBIT)
+        musique.a_l_ecran(seconde)
+
+    def test_the_title_changes_when_the_track_changes_and_not_before(self):
+        """Le cas qui a donné son nom au défaut.
+
+        Avec le compteur d'octets, le titre basculait douze secondes trop tôt :
+        on lisait Naxar pendant que Nemeton jouait encore.
+        """
+        musique = self._musique()
+        self._diffuse(musique, 119.0)
+        self.assertIn("Nemeton", musique.credit())
+        self._diffuse(musique, 121.0)
+        self.assertIn("Naxar", musique.credit())
+
+    def test_the_clock_ignores_whatever_waits_in_the_pipe(self):
+        """Verser dix minutes d'avance ne doit pas avancer le crédit d'autant."""
+        musique = self._musique()
+        musique.a_l_ecran(30.0)
+        musique.octets = int(600.0 * self.DEBIT)
+        self.assertAlmostEqual(musique._seconde(), 30.0, places=6)
+
+    def test_the_clock_never_names_a_track_not_yet_decoded(self):
+        """Si l'image prenait de l'avance, mieux vaut un crédit en retard.
+
+        Nommer un morceau qu'on n'a pas encore décodé serait affirmer quelque
+        chose qu'on ne sait pas ; rester une seconde sur le précédent, non.
+        """
+        musique = self._musique()
+        musique.octets = int(40.0 * self.DEBIT)
+        musique.a_l_ecran(300.0)
+        self.assertAlmostEqual(musique._seconde(), 40.0, places=6)
+
+    def test_a_new_session_starts_its_count_at_the_right_byte(self):
+        """La session neuve repart de zéro sans que l'image reparte de zéro."""
+        musique = self._musique()
+        self._diffuse(musique, 500.0)
+        # La session précédente s'est tarie après cinq cents secondes de
+        # diffusion ; tout ce qui a été versé avant lui appartient.
+        musique.session_a = int(500.0 * self.DEBIT)
+        self.assertAlmostEqual(musique._seconde(), 0.0, places=6)
+        self._diffuse(musique, 530.0)
+        self.assertAlmostEqual(musique._seconde(), 30.0, places=6)
+        self.assertIn("Nemeton", musique.credit())
+
+    def test_a_new_output_restarts_the_image_clock_but_not_the_music(self):
+        """YouTube raccroche, on rouvre : la vidéo repart à zéro, pas le morceau.
+
+        Sans ce repère, une sortie rouverte au bout d'une heure recréditerait le
+        premier morceau de la session alors qu'on en est au trentième.
+        """
+        musique = self._musique()
+        self._diffuse(musique, 100.0)
+        self.assertAlmostEqual(musique._seconde(), 100.0, places=6)
+        musique.repart()
+        # L'image de la nouvelle sortie est à zéro, mais on est toujours à cent
+        # secondes de musique — aux douze qui attendaient dans l'ancienne file
+        # et qui sont parties avec elle.
+        self.assertAlmostEqual(musique._seconde(), 100.0 + self.EN_VOL, places=3)
+        musique.octets += int(10.0 * self.DEBIT)
+        musique.a_l_ecran(10.0)
+        self.assertAlmostEqual(musique._seconde(), 110.0 + self.EN_VOL, places=3)
+
+    def test_the_image_loop_sets_the_clock_before_drawing(self):
+        """L'horloge doit être posée avant le dessin, sinon elle date la veille."""
+        source = inspect.getsource(stream.diffuse)
+        pose = source.index("musique.a_l_ecran(")
+        dessin = source.index("toile = cadre(")
+        self.assertLess(pose, dessin,
+                        "l'horloge est posée après le dessin du crédit")
+        # Et comptée sur les images réellement remises à la sortie.
+        self.assertIn("musique.a_l_ecran(diffusees / cfg[\"stream_fps\"])", source)
+        self.assertIn("diffusees += 1", source)
+
+
 class OursTests(unittest.TestCase):
     """Le double de l'ours descend danser sur le rond-point, et pas ailleurs."""
 
