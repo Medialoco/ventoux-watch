@@ -5267,6 +5267,13 @@ class LecteurTests(unittest.TestCase):
         self.assertIn("GRIS_ENCART", source)
         self.assertNotIn("(96, 96, 96)", source)
 
+    def test_previous_and_next_share_the_same_up_word(self):
+        """Deux files, un seul verbe : UP PREVIOUS à gauche, UP NEXT à droite."""
+        source = inspect.getsource(stream.pose_bloc_musique)
+        self.assertIn('"UP PREVIOUS"', source)
+        self.assertIn('"UP NEXT"', source)
+        self.assertNotIn("JUST PLAYED", source)
+
     def test_the_badge_frames_the_word_and_says_where_it_ends(self):
         """Elle rend son bord droit : ce qui suit se pose sans chevaucher."""
         image = np.zeros((60, 300, 3), np.uint8)

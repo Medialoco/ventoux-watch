@@ -2170,7 +2170,7 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
 
     x = marge
     if avant:
-        _etiquette_bac(image, "JUST PLAYED", x, y_mot, voisine, echelle,
+        _etiquette_bac(image, "UP PREVIOUS", x, y_mot, voisine, echelle,
                        GRIS_ENCART)
         _pose_pochette(image, _pochette_de(avant, dossier, voisine),
                        x, y_vois, voisine, echelle, PLAY_VOILE)
