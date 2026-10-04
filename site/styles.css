@@ -1194,17 +1194,67 @@ section[id] { scroll-margin-top: 50px; }
 
 .play.on { background: var(--pine); color: var(--paper); }
 
-.hash-hold {
-  flex: 1 1 100%;
-  margin: 2px 0 0;
+.hash-frame {
+  position: relative;
+  padding: 22px;
 }
 
-#hash {
+.hash-inner { position: relative; z-index: 1; }
+
+.hash-strip {
+  position: absolute;
+  z-index: 2;
   display: block;
-  width: min(100%, 379px);
-  height: auto;
+  pointer-events: none;
   image-rendering: pixelated;
 }
+
+.hash-top, .hash-bot {
+  left: 22px;
+  right: 22px;
+  height: 18px;
+}
+
+.hash-top { top: 2px; }
+.hash-bot { bottom: 2px; }
+
+.hash-side {
+  top: 22px;
+  bottom: 22px;
+  width: 18px;
+}
+
+.hash-left { left: 2px; }
+.hash-right { right: 2px; }
+
+.hash-on-video {
+  width: min(100%, 1280px, (100vh - 150px) * 16 / 9);
+  margin: 0 auto;
+  padding: 0;
+}
+
+.hash-on-video .live-hold { width: 100%; }
+
+.hash-on-video .hash-top,
+.hash-on-video .hash-bot {
+  left: 0;
+  right: 0;
+  height: 20px;
+}
+
+.hash-on-video .hash-top { top: 0; }
+.hash-on-video .hash-bot { bottom: 0; }
+
+.hash-on-video .hash-side {
+  top: 0;
+  bottom: 0;
+  width: 20px;
+}
+
+.hash-on-video .hash-left { left: 0; }
+.hash-on-video .hash-right { right: 0; }
+
+body.radio-docked .hash-on-video .hash-strip { display: none; }
 
 .quiet { color: var(--muted); font-size: 12px; text-decoration: none; }
 .quiet:hover { color: var(--ink); }
@@ -1251,27 +1301,29 @@ body.radio-docked .hero-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 18px 0 20px;
+  margin: 18px 0 0;
   padding: 0;
-  list-style: none;
 }
 
-.feature-steps li {
+.feature-steps p {
   flex: 1 1 160px;
-  position: relative;
+  margin: 0;
   padding: 12px 14px;
   border: 1px solid var(--pine);
   background: var(--shade);
 }
 
-.feature-steps li strong {
+.feature-steps p strong {
   display: block;
   margin-bottom: 4px;
   font-size: 15px;
   letter-spacing: 0.04em;
 }
 
-.feature-steps li span { color: var(--muted); font-size: 13px; }
+.feature-steps p span { color: var(--muted); font-size: 13px; }
+
+.feature .hash-frame { margin-bottom: 20px; }
+.feature .feature-still { margin-top: 0; }
 
 .feature-still { margin: 0; max-width: 720px; }
 .feature-still img {

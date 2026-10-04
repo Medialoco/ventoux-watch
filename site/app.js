@@ -482,7 +482,7 @@ function locale() {
 const THEME_KEY = "ventoux-theme";
 let theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 
-const HASH = "#FREETECHNORADIO";
+const HASH = "#FREETECHRADIO";
 const HASH_GLYPHS = {
   "#": ["01010", "11111", "01010", "11111", "01010", "00000", "00000"],
   A: ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
@@ -492,26 +492,21 @@ const HASH_GLYPHS = {
   F: ["11111", "10000", "10000", "11110", "10000", "10000", "10000"],
   H: ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
   I: ["01110", "00100", "00100", "00100", "00100", "00100", "01110"],
-  N: ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
   O: ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
   R: ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
   T: ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
 };
 
-function paintHash() {
-  const canvas = document.querySelector("#hash");
-  if (!canvas) return;
+function hashTile(color) {
   const cell = 3;
   const gap = 1;
   const stride = 6;
   const step = cell + gap;
-  const width = HASH.length * stride - 1;
-  const height = 7;
-  canvas.width = width * step - gap;
-  canvas.height = height * step - gap;
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--pine").trim() || "#1e3a30";
+  const tile = document.createElement("canvas");
+  tile.width = HASH.length * stride * step - gap + step * 2;
+  tile.height = 7 * step - gap;
+  const ctx = tile.getContext("2d");
+  ctx.fillStyle = color;
   for (let i = 0; i < HASH.length; i += 1) {
     const rows = HASH_GLYPHS[HASH[i]] || [];
     for (let y = 0; y < rows.length; y += 1) {
@@ -522,6 +517,36 @@ function paintHash() {
       }
     }
   }
+  return tile;
+}
+
+function paintHash() {
+  const color = getComputedStyle(document.documentElement).getPropertyValue("--pine").trim() || "#1e3a30";
+  const tile = hashTile(color);
+  document.querySelectorAll("canvas.hash-strip").forEach((canvas) => {
+    const side = canvas.classList.contains("hash-side");
+    const wide = Math.max(1, canvas.clientWidth);
+    const high = Math.max(1, canvas.clientHeight);
+    canvas.width = wide;
+    canvas.height = high;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, wide, high);
+    ctx.imageSmoothingEnabled = false;
+    if (side) {
+      ctx.translate(wide / 2, high / 2);
+      ctx.rotate(-Math.PI / 2);
+      const run = high;
+      const mid = -tile.height / 2;
+      for (let x = -run / 2; x < run / 2; x += tile.width) {
+        ctx.drawImage(tile, x, mid);
+      }
+    } else {
+      const mid = Math.round((high - tile.height) / 2);
+      for (let x = 0; x < wide; x += tile.width) {
+        ctx.drawImage(tile, x, mid);
+      }
+    }
+  });
 }
 
 function applyTheme() {
@@ -544,6 +569,12 @@ document.getElementById("theme")?.addEventListener("click", () => {
 });
 document.addEventListener("ventoux-lang", applyTheme);
 applyTheme();
+if (window.ResizeObserver) {
+  document.querySelectorAll(".hash-frame").forEach((frame) => {
+    new ResizeObserver(() => paintHash()).observe(frame);
+  });
+}
+window.addEventListener("resize", paintHash);
 
 window.ventoux = {
   locale,

@@ -61,11 +61,17 @@
   <main id="content">
   <section class="block live hero" id="live" aria-labelledby="live-title">
     <h2 class="sr" id="live-title" data-i18n="live">Live</h2>
-    <div class="live-hold">
-      <div class="stage-frame">
-        <iframe id="direct" title="Mont Serein — live" allowfullscreen
-                allow="autoplay; encrypted-media; picture-in-picture" hidden></iframe>
-        <video id="player" controls autoplay muted playsinline hidden></video>
+    <div class="hash-frame hash-on-video" aria-label="#FREETECHRADIO">
+      <canvas class="hash-strip hash-top" aria-hidden="true"></canvas>
+      <canvas class="hash-strip hash-bot" aria-hidden="true"></canvas>
+      <canvas class="hash-strip hash-side hash-left" aria-hidden="true"></canvas>
+      <canvas class="hash-strip hash-side hash-right" aria-hidden="true"></canvas>
+      <div class="live-hold">
+        <div class="stage-frame">
+          <iframe id="direct" title="Mont Serein — live" allowfullscreen
+                  allow="autoplay; encrypted-media; picture-in-picture" hidden></iframe>
+          <video id="player" controls autoplay muted playsinline hidden></video>
+        </div>
       </div>
     </div>
     <div class="hero-bar">
@@ -78,20 +84,25 @@
         <a class="play ghost" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803"
            target="_blank" rel="noopener" data-i18n="listen">Listen on Dogmazic</a>
       </p>
-      <p class="hash-hold">
-        <canvas id="hash" width="379" height="27" aria-label="#FREETECHNORADIO"></canvas>
-      </p>
     </div>
   </section>
 
   <section class="block feature" id="watch" aria-labelledby="watch-title">
-    <h2 id="watch-title" data-i18n="watch">The watch</h2>
-    <p class="feature-line" data-i18n="watchLine">OpenCV finds what moved. YOLO11s names the crop. One frame a second, on a Raspberry Pi 5 in Los Angeles. That reading is the work. The picture around it is the show.</p>
-    <ol class="feature-steps">
-      <li><strong>OpenCV</strong><span data-i18n="watchMotion">MOG2 finds the motion on the mountain.</span></li>
-      <li><strong>YOLO11s</strong><span data-i18n="watchClass">A small network names the crop: car, walker, bike, truck.</span></li>
-      <li><strong>YouTube</strong><span data-i18n="watchOut">The named frame is rebuilt and pushed live.</span></li>
-    </ol>
+    <div class="hash-frame" aria-label="#FREETECHRADIO">
+      <canvas class="hash-strip hash-top" aria-hidden="true"></canvas>
+      <canvas class="hash-strip hash-bot" aria-hidden="true"></canvas>
+      <canvas class="hash-strip hash-side hash-left" aria-hidden="true"></canvas>
+      <canvas class="hash-strip hash-side hash-right" aria-hidden="true"></canvas>
+      <div class="hash-inner">
+        <h2 id="watch-title" data-i18n="watch">The watch</h2>
+        <p class="feature-line" data-i18n="watchLine">OpenCV finds what moved. YOLO11s names the crop. One frame a second, on a Raspberry Pi 5 in Los Angeles. That reading is the work. The picture around it is the show.</p>
+        <div class="feature-steps">
+          <p><strong>OpenCV</strong><span data-i18n="watchMotion">MOG2 finds the motion on the mountain.</span></p>
+          <p><strong>YOLO11s</strong><span data-i18n="watchClass">A small network names the crop: car, walker, bike, truck.</span></p>
+          <p><strong>YouTube</strong><span data-i18n="watchOut">The named frame is rebuilt and pushed live.</span></p>
+        </div>
+      </div>
+    </div>
     <figure class="feature-still">
       <img src="stills/eclat.jpg" alt="">
       <figcaption data-i18n="stillEclat">A catch: the name of what just passed lights the whole frame.</figcaption>

@@ -2610,7 +2610,7 @@ class FogTests(unittest.TestCase):
         page = (root / "site" / "index.html").read_text(encoding="utf-8")
         self.assertIn('id="view3d"', page)
         self.assertIn('id="camera"', page)
-        self.assertIn("#FREETECHNORADIO", page)
+        self.assertIn("#FREETECHRADIO", page)
 
     def test_the_map_draws_the_aim_that_was_measured(self):
         """The cone on the map said 140° while the fit said 126,7°.
