@@ -4684,6 +4684,67 @@ class LecteurTests(unittest.TestCase):
         self.assertEqual(int(np.count_nonzero(image[:, bout + 2:])), 0)
 
 
+class TipiTests(unittest.TestCase):
+    """Le tipi du matin : deux rayons sur le vrai soleil, pas une mesure."""
+
+    CAMERA = {"lat": 44.1835, "lon": 5.2621, "ele": 1390}
+    PARIS = ZoneInfo("Europe/Paris")
+
+    def test_the_aim_is_silent_at_night(self):
+        """Sans astre au-dessus de l'horizon, il n'y a rien à viser."""
+        pose = stream.charge_pose(ROOT)
+        nuit = datetime(2026, 10, 4, 2, 0, tzinfo=self.PARIS).timestamp()
+        self.assertIsNone(stream.vise_soleil(pose, self.CAMERA, nuit))
+        self.assertIsNone(stream.vise_soleil(None, self.CAMERA, nuit))
+
+    def test_the_aim_finds_the_sun_in_this_morning_window(self):
+        """Ce matin-là, l'astre est dans le cadre : c'est pour ça que le tipi existe."""
+        pose = stream.charge_pose(ROOT)
+        matin = datetime(2026, 10, 4, 8, 50, tzinfo=self.PARIS).timestamp()
+        ou = stream.vise_soleil(pose, self.CAMERA, matin)
+        self.assertIsNotNone(ou)
+        self.assertTrue(0.0 < ou[0] < 0.5, ou)
+        self.assertTrue(0.2 < ou[1] < 0.6, ou)
+
+    def test_the_disc_is_the_blob_not_the_flare(self):
+        """Les deux rayons saturent aussi : ce sont des traits, on les ôte."""
+        image = np.zeros((400, 640, 3), np.uint8)
+        cv2.circle(image, (200, 140), 18, (255, 255, 255), -1)
+        cv2.line(image, (200, 140), (80, 399), (255, 255, 255), 3)
+        cv2.line(image, (200, 140), (340, 399), (255, 255, 255), 3)
+        ou = stream.disque_du_soleil(image, (0.32, 0.36), 80.0)
+        self.assertIsNotNone(ou)
+        self.assertAlmostEqual(ou[0], 200 / 640, delta=0.03)
+        self.assertAlmostEqual(ou[1], 140 / 400, delta=0.03)
+
+    def test_a_clear_sky_without_a_disc_is_not_the_sun(self):
+        """Poser un tipi sur une prédiction, c'est encadrer un calcul."""
+        image = np.full((200, 320, 3), 180, np.uint8)
+        self.assertIsNone(stream.disque_du_soleil(image, (0.4, 0.3), 80.0))
+
+    def test_the_tipi_never_paints_the_sky_above_the_sun(self):
+        """Deux rayons, vers le bas. Le ciel au-dessus reste le ciel."""
+        image = np.full((240, 400, 3), 90, np.uint8)
+        stream.pose_tipi_soleil(image, (0.4, 0.35), 10.0, 8.0)
+        haut = image[: int(0.35 * 240) - 4]
+        self.assertTrue(np.all(haut == 90), "rien au-dessus du sommet")
+        self.assertTrue(np.any(image[int(0.35 * 240) + 10:] != 90))
+
+    def test_the_opening_and_the_search_are_angles(self):
+        """Pas une largeur en pixels de cette image-ci."""
+        self.assertGreater(stream.TIPI_OUVERTURE, 10.0)
+        self.assertLess(stream.TIPI_OUVERTURE, 40.0)
+        self.assertGreater(stream.TIPI_CHERCHE, 4.0)
+        self.assertLess(stream.TIPI_CHERCHE, 15.0)
+
+    def test_the_child_sun_and_the_tipi_never_share_the_frame(self):
+        """L'un console l'absence, l'autre célèbre la présence."""
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("elif visee_soleil is not None", source)
+        self.assertIn("pose_tipi_soleil(", source)
+        self.assertNotIn("cv2.circle", inspect.getsource(stream.pose_tipi_soleil))
+
+
 class HorlogeDuCreditTests(unittest.TestCase):
     """Le crédit date la musique entendue, pas celle qu'on vient de verser.
 

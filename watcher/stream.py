@@ -3793,6 +3793,23 @@ SOLEIL_COIN_HAUT = 0.19
 SOLEIL_TAILLE = 0.085
 SOLEIL_JAUNE = (70, 205, 248)
 RAYONS = 11
+# Le tipi du matin : deux rayons, et rien d'autre. L'ouverture est un angle,
+# pas une largeur en pixels — le même triangle tiendra sur une autre webcam
+# dont on connaît le champ. Vingt-deux degrés de chaque côté de la verticale,
+# c'est un tipi, pas un éventail : assez pour qu'on lise une tente, pas assez
+# pour manger la montagne.
+TIPI_OUVERTURE = 22.0
+# Autour de la visée : le modèle d'objectif n'est pas calé au pixel, et le
+# disque saturé de l'astre est plus vrai que la prédiction. Huit degrés, c'est
+# l'erreur qu'on tolère, pas un réglage de cette image-ci.
+TIPI_CHERCHE = 8.0
+# Le disque du soleil brûle le capteur. En dessous, c'est un ciel clair, pas
+# l'astre : on ne pose pas un tipi sur une prédiction.
+TIPI_SATURATION = 245
+TIPI_FONDU_S = 4.0
+# Sans le disque pendant quelques secondes — un nuage, un hoquet — on garde
+# le dernier endroit plutôt que de clignoter.
+TIPI_GARDE_S = 8.0
 
 
 def charge_relief(racine: Path, camera: dict):
@@ -3811,6 +3828,26 @@ def charge_relief(racine: Path, camera: dict):
                        2500.0, cache=chemin)
     except Exception:
         log.warning("Relief illisible : pas d'heure d'ombre", exc_info=True)
+        return None
+
+
+def charge_pose(racine: Path):
+    """La pose calée de la caméra, si elle est là.
+
+    Sans elle on ne vise pas le soleil : viser avec le cap publié sur OSM, à
+    vingt degrés près, planterait le tipi à côté de l'astre. Mieux vaut se
+    taire qu'entourer un morceau de forêt.
+    """
+    chemin = racine / "config" / "scene.json"
+    if not chemin.is_file():
+        return None
+    try:
+        from watcher.frustum import Pose
+
+        brut = json.loads(chemin.read_text(encoding="utf-8")).get("pose") or {}
+        return Pose(**{k: brut[k] for k in Pose.__dataclass_fields__ if k in brut})
+    except Exception:
+        log.warning("Pose illisible : pas de tipi", exc_info=True)
         return None
 
 
@@ -3958,6 +3995,127 @@ def pose_soleil_dessine(image: np.ndarray, ou: tuple[float, float], seconde: flo
     # Posé par transparence : il est dans le ciel du dessin, pas collé sur la
     # vitre. À moitié, pour qu'on voie toujours le temps qu'il fait derrière.
     cv2.addWeighted(calque, 0.62, image, 0.38, 0.0, dst=image)
+
+
+def vise_soleil(pose, camera: dict, quand: float) -> tuple[float, float] | None:
+    """Où l'éphéméride place le soleil dans l'image, ou rien s'il n'y est pas.
+
+    La direction vient du calcul solaire, le pixel de la pose calée. On ne
+    cherche pas l'astre hors du cadre : un tipi planté dans le noir à côté
+    de l'image n'est plus un dessin, c'est une erreur de visée.
+    """
+    if pose is None:
+        return None
+    from watcher.frustum import aim
+    from watcher.scene import solar_azimuth, solar_elevation
+
+    moment = datetime.fromtimestamp(quand, timezone.utc)
+    haut = solar_elevation(moment, camera["lat"], camera["lon"])
+    if haut < HORIZON:
+        return None
+    ou = aim(pose, solar_azimuth(moment, camera["lat"], camera["lon"]), haut)
+    if ou is None:
+        return None
+    # Une marge : la pose n'est pas calée au pixel, et l'astre peut toucher
+    # le bord. Au-delà, il n'est plus dans l'image, même pour cette erreur.
+    if not (-0.15 < ou[0] < 1.15 and -0.15 < ou[1] < 1.15):
+        return None
+    return ou
+
+
+def disque_du_soleil(image: np.ndarray, visee: tuple[float, float],
+                     champ: float) -> tuple[float, float] | None:
+    """Le disque saturé près de la visée, et rien d'autre.
+
+    Les deux rayons du flare sont saturés eux aussi : ce sont des traits, pas
+    un disque. On les ôte d'un ouvert morphologique, et ce qui reste — s'il
+    reste quelque chose d'assez plein — est l'astre. Sans saturation on se
+    tait : poser un tipi sur un ciel clair, c'est encadrer une prédiction.
+    """
+    hauteur, largeur = image.shape[:2]
+    if champ <= 1.0:
+        return None
+    rayon = (TIPI_CHERCHE / champ) * largeur
+    cx, cy = visee[0] * largeur, visee[1] * hauteur
+    x0, x1 = int(max(0, cx - rayon)), int(min(largeur, cx + rayon + 1))
+    y0, y1 = int(max(0, cy - rayon)), int(min(hauteur, cy + rayon + 1))
+    if x1 - x0 < 8 or y1 - y0 < 8:
+        return None
+    crop = cv2.cvtColor(image[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY)
+    noyau = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+    plein = cv2.morphologyEx((crop >= TIPI_SATURATION).astype(np.uint8) * 255,
+                             cv2.MORPH_OPEN, noyau)
+    combien, _, stats, cents = cv2.connectedComponentsWithStats(plein)
+    if combien < 2:
+        return None
+    i = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    if stats[i, cv2.CC_STAT_AREA] < 20:
+        return None
+    return ((float(cents[i][0]) + x0) / largeur,
+            (float(cents[i][1]) + y0) / hauteur)
+
+
+def pose_tipi_soleil(image: np.ndarray, ou: tuple[float, float],
+                     seconde: float, age: float) -> None:
+    """Les deux rayons du matin, en tipi, dès que l'astre est là.
+
+    Ce n'est pas une mesure : on n'entoure pas le soleil d'un cercle juste,
+    on ne pose pas de graduation. C'est la tente de lumière qu'on voit déjà
+    — le disque et ses deux rayons — dessinée par-dessus, assez légère pour
+    que la montagne reste ce qu'on est venu regarder.
+
+    L'ouverture est un angle, la force un fondu puis une respiration. Rien
+    ici ne dépend du cadrage de cette caméra-ci.
+    """
+    if age < 0:
+        return
+    hauteur, largeur = image.shape[:2]
+    cx = int(round(ou[0] * largeur))
+    cy = int(round(ou[1] * hauteur))
+    if not (0 <= cx < largeur and 0 <= cy < hauteur):
+        return
+    force = min(1.0, age / TIPI_FONDU_S)
+    force *= 0.90 + 0.10 * math.sin(seconde * 0.45)
+    if force < 0.02:
+        return
+    descente = max(1, hauteur - 1 - cy)
+    half = int(round(descente * math.tan(math.radians(TIPI_OUVERTURE))))
+    sommet = (cx, cy)
+    gauche = (cx - half, hauteur - 1)
+    droite = (cx + half, hauteur - 1)
+    triangle = np.array([sommet, gauche, droite], np.int32)
+
+    # Le voile d'abord : plus fort sous l'astre, éteint en bas. Un aplat
+    # unique ferait une tente en papier calque ; une rampe, un rayon.
+    #
+    # Pas d'anneau autour du disque. Un cercle juste sur l'astre, c'est une
+    # mesure, et ce flux en publie déjà. Le soleil réel est le sommet : on
+    # n'a rien de plus joli à poser dessus.
+    ys = np.arange(hauteur, dtype=np.float32)
+    rampe = np.clip(1.0 - (ys - cy) / max(1.0, float(descente)), 0.0, 1.0)
+    masque = np.zeros(image.shape[:2], np.float32)
+    cv2.fillConvexPoly(masque, triangle, 1.0)
+    masque *= rampe[:, None]
+    sigma = max(1.0, largeur * 0.006)
+    masque = cv2.GaussianBlur(masque, (0, 0), sigmaX=sigma)
+    teinte = np.array(AMBRE, dtype=np.float32)
+    image[:] = np.clip(image.astype(np.float32)
+                       + masque[:, :, None] * teinte * (0.30 * force),
+                       0, 255).astype(np.uint8)
+
+    # Les deux perches, plus claires que le voile, et la même rampe : près
+    # de la route elles n'existent presque plus. Une ligne qui traverse une
+    # voiture n'est plus un rayon, c'est un trait sur le sujet.
+    perches = np.zeros_like(image)
+    trait = max(2, int(round(largeur / 1600 * 3)))
+    cv2.line(perches, sommet, gauche, AMBRE, trait + 2, cv2.LINE_AA)
+    cv2.line(perches, sommet, droite, AMBRE, trait + 2, cv2.LINE_AA)
+    cv2.line(perches, sommet, gauche, SOLEIL_JAUNE, trait, cv2.LINE_AA)
+    cv2.line(perches, sommet, droite, SOLEIL_JAUNE, trait, cv2.LINE_AA)
+    image[:] = np.clip(image.astype(np.float32)
+                       + perches.astype(np.float32)
+                       * rampe[:, None, None] * (0.55 * force),
+                       0, 255).astype(np.uint8)
 
 
 def pose_attrape(image: np.ndarray, age: float, nom: str = "") -> None:
@@ -5145,6 +5303,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     hauteur_soleil: float | None = None
     soleil: tuple[float, float] | None = None
     relief = charge_relief(racine, cfg["camera"])
+    pose_camera = charge_pose(racine)
+    visee_soleil: tuple[float, float] | None = None
+    tipi_ou: tuple[float, float] | None = None
+    tipi_depuis = 0.0
+    tipi_vu = 0.0
     almanach: dict = {}
     # Les heures de demain aussi : après le coucher, c'est d'elles que le ruban
     # a besoin, et un balayage de soixante-dix millisecondes fait deux fois par
@@ -5275,8 +5438,14 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # service : il arrive qu'il annonce « couvert » sur une vallée
                 # pendant qu'il fait grand soleil à mille quatre cents mètres.
                 temps = str(ciel.get("webcam") or ciel.get("api") or "")
+                manque = soleil_absent(relief, cfg["camera"], quand, temps)
                 soleil = (ou_est_le_soleil(cfg["camera"], quand, hauteur / largeur)
-                          if soleil_absent(relief, cfg["camera"], quand, temps) else None)
+                          if manque else None)
+                # Le vrai soleil, seulement quand il est là : le dessin
+                # d'enfant console l'absence, le tipi célèbre la présence.
+                # Les deux sur la même image se contrediraient.
+                visee_soleil = (None if manque
+                                else vise_soleil(pose_camera, cfg["camera"], quand))
                 mot_gris = BROUILLARD_MOTS.get(temps, "")
                 prog = PROG_VIDE if muet else musique.programme()
                 relu = quand
@@ -5287,6 +5456,21 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # du ciel, donc il se pixellise et il ondule avec elle.
             if soleil is not None:
                 pose_soleil_dessine(image, soleil, quand - origine)
+            elif visee_soleil is not None and pose_camera is not None:
+                disque = disque_du_soleil(image, visee_soleil, pose_camera.hfov)
+                if disque is not None:
+                    if tipi_ou is None:
+                        tipi_depuis = quand
+                    tipi_ou = disque
+                    tipi_vu = quand
+                if (tipi_ou is not None
+                        and quand - tipi_vu <= TIPI_GARDE_S):
+                    pose_tipi_soleil(image, tipi_ou, quand - origine,
+                                     quand - tipi_depuis)
+                else:
+                    tipi_ou = None
+            else:
+                tipi_ou = None
             # Le lampadaire au même endroit du traitement, et pour la même
             # raison : il n'est pas posé sur la vitre, il remplace un objet du
             # paysage. Il doit donc prendre la teinte et le grain comme le
