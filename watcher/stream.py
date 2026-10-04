@@ -1026,6 +1026,7 @@ class Musique:
         self.normandys = repliques(self.racine / "data" / "voix", "normandy")
         self.deplois = repliques(self.racine / "data" / "voix", "deploi")
         self.dijons = repliques(self.racine / "data" / "voix", "dijon")
+        self.dijon23 = repliques(self.racine / "data" / "voix", "dijon23")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -4579,7 +4580,9 @@ def pose_annonce(image: np.ndarray, vue: tuple[int, int, int, int],
 # La moutarde de Dijon, en BGR. Assez jaune pour se lire, assez brune pour
 # rester une moutarde et pas un soleil.
 MOUTARDE = (36, 164, 214)
-DIJON_HEURE = 23 * 3600 + 15 * 60
+# 23 h, puis 23 h 15. L'ancien fichier qui ne portait que la date ferme
+# la journée : on ne la rejoue pas le soir où le format a changé.
+DIJON_HEURES = (23 * 3600, 23 * 3600 + 15 * 60)
 DIJON_GRACE_S = 240
 DIJON_TENUE_S = 14.0
 
@@ -4596,29 +4599,32 @@ def moutarde(image: np.ndarray, force: float) -> None:
     cv2.addWeighted(teinte, force, image, 1.0 - force, 0.0, dst=image)
 
 
-def _dijon_lue(racine: Path) -> date | None:
+def _dijon_lue(racine: Path) -> tuple[date | None, int]:
+    """La date, et le prochain créneau : 0, 1, ou 2 si la journée est close."""
     try:
-        return date.fromisoformat(
-            (racine / "data" / "voix" / "dijon.jour").read_text().strip())
-    except (OSError, ValueError):
-        return None
+        morceaux = (racine / "data" / "voix" / "dijon.jour").read_text().split()
+        jour = date.fromisoformat(morceaux[0])
+        if len(morceaux) == 1:
+            return jour, len(DIJON_HEURES)
+        return jour, int(morceaux[1])
+    except (OSError, ValueError, IndexError):
+        return None, 0
 
 
-def _dijon_ecrite(racine: Path, jour: date) -> None:
+def _dijon_ecrite(racine: Path, jour: date, rang: int) -> None:
     try:
         (racine / "data" / "voix" / "dijon.jour").write_text(
-            jour.isoformat() + "\n", encoding="utf-8")
+            f"{jour.isoformat()} {rang}\n", encoding="utf-8")
     except OSError:
         pass
 
 
 def pose_dijon(image: np.ndarray, vue: tuple[int, int, int, int],
-               photo: np.ndarray | None, age: float) -> None:
-    """La première collaboration : son image, un grade moutarde, la phrase.
+               logo: np.ndarray | None, age: float, heure: str) -> None:
+    """Son logo, l'heure, et la ligne UNE COLLAB AVEC BUTTERBANE.
 
-    Huit secondes. La montagne prend la moutarde, son visuel se pose dans
-    la fenêtre et en prend un peu aussi. La voix dure trois secondes ; la
-    ligne reste le temps de la lire.
+    Quatorze secondes. La montagne prend la moutarde. Le logo reste le
+    sien : on ne le repeint pas.
     """
     if age < 0 or age > DIJON_TENUE_S:
         return
@@ -4627,47 +4633,25 @@ def pose_dijon(image: np.ndarray, vue: tuple[int, int, int, int],
     if gw < 8 or gh < 8:
         return
     vive = image[gy:gy + gh, gx:gx + gw].copy()
-    moutarde(vive, 0.72 * force)
+    moutarde(vive, 0.55 * force)
     image[gy:gy + gh, gx:gx + gw] = vive
-    if photo is not None:
-        ph, pl = photo.shape[:2]
-        echelle_photo = min(gw * 0.86 / pl, gh * 0.72 / ph)
-        lw = max(1, int(pl * echelle_photo))
-        lh = max(1, int(ph * echelle_photo))
-        cadre_photo = cv2.resize(photo, (lw, lh), interpolation=cv2.INTER_AREA)
-        moutarde(cadre_photo, 0.22 * force)
-        x = gx + (gw - lw) // 2
-        y = gy + (gh - lh) // 2
-        dessous = image[y:y + lh, x:x + lw]
-        cv2.addWeighted(cadre_photo, force, dessous, 1.0 - force, 0.0, dst=dessous)
-    # L'heure en grand, dans la fenêtre : c'est elle qu'on est venu lire.
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
-    heure = "23:15"
-    taille_heure = 2.2 * echelle
-    trait_heure = max(2, int(6 * echelle))
-    (lh, hh), _ = cv2.getTextSize(heure, cv2.FONT_HERSHEY_DUPLEX, taille_heure, trait_heure)
+    if logo is not None:
+        rayon = int(min(gw, gh) * 0.22)
+        pose_photo_ronde(image, logo, gx + gw // 2, gy + gh // 2, rayon,
+                         echelle, anneau=MOUTARDE)
+    taille_heure = 1.6 * echelle
+    trait_heure = max(2, int(5 * echelle))
+    (lh, hh), _ = cv2.getTextSize(heure, cv2.FONT_HERSHEY_DUPLEX,
+                                  taille_heure, trait_heure)
     xh = gx + (gw - lh) // 2
-    yh = gy + int(gh * 0.22)
+    yh = gy + int(gh * 0.16) + hh
     cv2.putText(image, heure, (xh, yh), cv2.FONT_HERSHEY_DUPLEX, taille_heure,
-                (0, 0, 0), trait_heure + 4, cv2.LINE_AA)
+                (0, 0, 0), trait_heure + 3, cv2.LINE_AA)
     cv2.putText(image, heure, (xh, yh), cv2.FONT_HERSHEY_DUPLEX, taille_heure,
                 MOUTARDE, trait_heure, cv2.LINE_AA)
-    pose_annonce(image, vue, ("IL EST 23 H 15 A DIJON",))
-    hauteur, largeur = image.shape[:2]
-    echelle = largeur / 1600
-    taille = 0.62 * echelle
-    trait = max(1, int(round(2 * echelle)))
-    mot = "BUTTERBANE"
-    (large_mot, haut_mot), _ = cv2.getTextSize(
-        mot, cv2.FONT_HERSHEY_SIMPLEX, taille, trait)
-    x = gx + max(0, (gw - large_mot) // 2)
-    y = gy + gh + int(round(78 * echelle)) + haut_mot
-    if y < hauteur:
-        cv2.putText(image, mot, (x, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
-                    (0, 0, 0), trait + 2, cv2.LINE_AA)
-        cv2.putText(image, mot, (x, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
-                    MOUTARDE, trait, cv2.LINE_AA)
+    pose_annonce(image, vue, ("UNE COLLAB", "AVEC BUTTERBANE"))
 
 
 # Les seuils du Pi 5 lui-même : il réduit sa fréquence à 80 °C et se met à
@@ -5185,7 +5169,8 @@ def _carre_plein(image: np.ndarray, cote: int) -> np.ndarray:
 
 
 def pose_photo_ronde(image: np.ndarray, photo: np.ndarray, cx: int, cy: int,
-                     rayon: int, echelle: float) -> None:
+                     rayon: int, echelle: float,
+                     anneau: tuple[int, int, int] = CYAN) -> None:
     """Une photo dans un disque. Le cadre est le cercle, pas un rectangle."""
     if rayon < 4:
         return
@@ -5208,7 +5193,7 @@ def pose_photo_ronde(image: np.ndarray, photo: np.ndarray, cx: int, cy: int,
         source = carre.astype(np.float32)
     coin[:] = coin * (1.0 - alpha[:, :, None]) + source * alpha[:, :, None]
     image[y0:y0 + cote, x0:x0 + cote] = np.clip(coin, 0, 255).astype(np.uint8)
-    teinte = tuple(int(c * 0.45) for c in CYAN)
+    teinte = tuple(int(c * 0.45) for c in anneau)
     cv2.circle(image, (cx, cy), rayon, teinte,
                max(1, int(round(echelle))), cv2.LINE_AA)
 
@@ -6090,7 +6075,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # Le chien orange, déjà un disque : on le pose comme la photo du Pi.
     photo_dogmazic = cv2.imread(str(racine / "assets" / "dogmazic.png"),
                                cv2.IMREAD_UNCHANGED)
-    photo_butterbane = cv2.imread(str(racine / "assets" / "butterbane.jpg"))
+    photo_butterbane = cv2.imread(str(racine / "assets" / "butterbane-logo.jpg"))
     # Le trampoline du village, côté français : le pendant du disque de
     # gauche. Recadré une fois, teinté à chaque image comme le Raspberry.
     photo_trampoline = cv2.imread(str(racine / "assets" / "trampoline.jpg"))
@@ -6154,8 +6139,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     dernier_ennui = origine - 10_000.0
     pensee_jour, pensee_rang, pensee_etape, pensee_feu = _pensee_lue(racine)
     pensee_suite = pensee_feu + PENSEE_APRES_S if pensee_etape == 1 else 0.0
-    dijon_jour = _dijon_lue(racine)
+    dijon_jour, dijon_rang = _dijon_lue(racine)
     dijon_feu = 0.0
+    dijon_heure = "23:00"
     deploie_dit = False
     # Un quart d'heure en arrière : si la vallée est déjà dans le brouillard au
     # moment où le flux démarre, on le dit tout de suite.
@@ -6565,18 +6551,26 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         _pensee_ecrite(racine, ici.date(), pensee_rang,
                                        pensee_etape, pensee_feu)
                         log.info("Normandy dite à %s", ici.strftime("%H:%M:%S"))
-            if (dijon_jour != ici.date() and musique.dijons
-                    and DIJON_HEURE <= seconde_jour < DIJON_HEURE + DIJON_GRACE_S
-                    and not musique.parle()):
-                if musique.dis(musique.dijons[0]):
+            if dijon_jour != ici.date():
+                dijon_jour, dijon_rang = ici.date(), 0
+            if dijon_rang < len(DIJON_HEURES):
+                vise = DIJON_HEURES[dijon_rang]
+                clips = (musique.dijon23, musique.dijons)[dijon_rang]
+                if seconde_jour >= vise + DIJON_GRACE_S:
+                    dijon_rang += 1
+                    _dijon_ecrite(racine, ici.date(), dijon_rang)
+                elif (vise <= seconde_jour and not musique.parle()
+                      and (not clips or musique.dis(clips[0]))):
                     dijon_feu = time.time()
-                    dijon_jour = ici.date()
-                    _dijon_ecrite(racine, dijon_jour)
+                    dijon_heure = "23:00" if dijon_rang == 0 else "23:15"
+                    dijon_rang += 1
+                    _dijon_ecrite(racine, ici.date(), dijon_rang)
                     log.info("Dijon dit à %s", ici.strftime("%H:%M:%S"))
             dit = musique.dit_quoi() if musique.parle() else ""
             age_dijon = time.time() - dijon_feu if dijon_feu else -1.0
             if 0 <= age_dijon <= DIJON_TENUE_S:
-                pose_dijon(toile, cadrage, photo_butterbane, age_dijon)
+                pose_dijon(toile, cadrage, photo_butterbane, age_dijon,
+                           dijon_heure)
             elif dit == "brouillard" or quand - gris_depuis <= BROUILLARD_TENUE_S:
                 # Sans voix enregistrée, le mot tient quand même trois
                 # secondes : il doit pouvoir dire le brouillard sur une machine

@@ -5542,7 +5542,9 @@ class PenseeTests(unittest.TestCase):
         self.assertIn("BIG UP TO THE NORMANDY!", page)
         self.assertIn("Twenty-one ways", page)
         self.assertIn("Butterbane", page)
-        self.assertEqual(stream.DIJON_HEURE, 23 * 3600 + 15 * 60)
+        self.assertEqual(stream.DIJON_HEURES,
+                         (23 * 3600, 23 * 3600 + 15 * 60))
+        self.assertIn("UNE COLLAB", page)
 
 
 class HorlogeDuCreditTests(unittest.TestCase):
