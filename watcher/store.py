@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -295,6 +296,60 @@ def same_build(new: dict, old: dict) -> bool:
     return (one >= BUS_LENGTH_M) == (other >= BUS_LENGTH_M)
 
 
+# Ce qui peut être deux vues de la même chose. Une moto n'est pas une voiture
+# plus étroite, un piéton n'est pas une moto sans roues : les regrouper dans
+# la minute les fait disparaître, exactement comme le camion derrière la
+# voiture. Le 4 octobre à 09:54 une moto a ouvert une fiche et les trois
+# passages suivants, francs, n'ont plus existé.
+FAMILLE = {
+    "cycle": "cycle",
+    "vehicle": "vehicle", "car": "vehicle", "truck": "vehicle", "bus": "vehicle",
+    "person": "person",
+    "animal": "animal",
+    "plane": "plane",
+}
+
+
+def same_kind(new: dict, old: dict) -> bool:
+    """Deux lectures du même genre d'objet, ou une tache encore sans nom.
+
+    Le mouvement peut rejoindre n'importe quel passage : ce n'est pas un
+    autre objet, c'est l'aveu qu'on n'a pas su lire celui-là. Deux noms
+    différents, si.
+    """
+    a, b = new.get("type") or "", old.get("type") or ""
+    if a in {"motion", "habit"} or b in {"motion", "habit"}:
+        return True
+    return FAMILLE.get(a, a) == FAMILLE.get(b, b)
+
+
+def same_place(new: dict, old: dict) -> bool:
+    """Deux boîtes éloignées dans l'image sont deux véhicules, pas deux vues.
+
+    Un même passage se reprend là où il était : la boîte a bougé de moins
+    que sa propre taille. Celui qui suit, même trois secondes plus tard,
+    s'assoit derrière — au moins une longueur plus loin. C'est pour ça
+    qu'on ne voyait souvent que le premier d'un convoi : la minute les
+    versait tous dans sa fiche.
+
+    Sans boîte on ne sait pas, et on ne coupe pas.
+    """
+    one = (new.get("detail") or {}).get("box")
+    other = (old.get("detail") or {}).get("box")
+    if not (isinstance(one, (list, tuple)) and isinstance(other, (list, tuple))
+            and len(one) >= 4 and len(other) >= 4):
+        return True
+    try:
+        ax, ay, aw, ah = (float(v) for v in one[:4])
+        bx, by, bw, bh = (float(v) for v in other[:4])
+    except (TypeError, ValueError):
+        return True
+    dist = math.hypot((ax + aw / 2) - (bx + bw / 2),
+                      (ay + ah / 2) - (by + bh / 2))
+    slack = max(aw, ah, bw, bh)
+    return dist <= max(slack, 1e-6)
+
+
 def open_passage(events: list[dict], event: dict) -> dict | None:
     # Une tache écartée ne rejoint aucun passage. Ce n'est pas la lecture d'une
     # chose, c'est le constat qu'on n'a rien su lire : groupée avec la voiture
@@ -313,7 +368,9 @@ def open_passage(events: list[dict], event: dict) -> dict | None:
         # Cherché parmi les gabarits compatibles, et non pas simplement écarté
         # sur le plus récent : sinon une voiture glissée entre deux vues du
         # camion couperait le camion en deux passages.
-        if not same_build(event, item):
+        if (not same_build(event, item)
+                or not same_kind(event, item)
+                or not same_place(event, item)):
             continue
         if newest is None or event_time(item) > event_time(newest):
             newest = item

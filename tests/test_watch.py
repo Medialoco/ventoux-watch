@@ -2116,6 +2116,56 @@ class FogTests(unittest.TestCase):
                        "label": "Véhicule", "zone": "roundabout", "detail": {}}
         self.assertIsNotNone(open_passage([voiture], sans_mesure))
 
+    def test_a_vehicle_behind_another_is_its_own_passage(self):
+        """Quand ils se suivent, on ne gardait que le premier.
+
+        Le 4 octobre à 09:54 une moto a ouvert une fiche ; les trois
+        suivantes, dans la même minute, ont été comptées sur elle et
+        n'ont plus eu ni carte ni flash. Deux voitures de même gabarit,
+        l'une derrière l'autre, faisaient la même chose : la minute et
+        la zone suffisaient, et la deuxième disparaissait.
+        """
+        from watcher.store import open_passage
+
+        moto = {
+            "id": "m", "t": "2026-10-04T09:54:56Z", "type": "cycle",
+            "label": "Moto", "zone": "other",
+            "detail": {"box": [0.20, 0.80, 0.06, 0.08],
+                       "measured": {"width_m": 2.1}},
+        }
+        voiture = {
+            "id": "v", "t": "2026-10-04T09:55:04Z", "type": "vehicle",
+            "label": "Voiture", "zone": "roundabout",
+            "detail": {"box": [0.45, 0.70, 0.10, 0.08],
+                       "measured": {"width_m": 4.4}},
+        }
+        self.assertIsNone(open_passage([moto], voiture),
+                          "une voiture n'est pas une autre vue de la moto")
+
+        premiere = {
+            "id": "a", "t": "2026-10-04T09:55:00Z", "type": "vehicle",
+            "label": "Voiture", "zone": "roundabout",
+            "detail": {"box": [0.22, 0.82, 0.10, 0.08],
+                       "measured": {"width_m": 4.3}},
+        }
+        suivante = {
+            "id": "b", "t": "2026-10-04T09:55:06Z", "type": "vehicle",
+            "label": "Voiture", "zone": "roundabout",
+            "detail": {"box": [0.48, 0.68, 0.10, 0.08],
+                       "measured": {"width_m": 4.4}},
+        }
+        self.assertIsNone(open_passage([premiere], suivante),
+                          "celle de derrière n'est pas une autre vue de la première")
+
+        reprise = {
+            "id": "c", "t": "2026-10-04T09:55:03Z", "type": "vehicle",
+            "label": "Voiture", "zone": "roundabout",
+            "detail": {"box": [0.24, 0.81, 0.10, 0.08],
+                       "measured": {"width_m": 4.2}},
+        }
+        self.assertIsNotNone(open_passage([premiere], reprise),
+                             "la même voiture reprise un peu plus loin reste un passage")
+
     def test_une_lecture_ecartee_ne_repeint_pas_la_fiche_qui_la_bat(self):
         """Le gros plan doit suivre le mot, sinon la fiche se contredit.
 
