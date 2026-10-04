@@ -37,7 +37,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from watcher import direct
+from watcher import __version__, direct
 from watcher.store import floute
 
 log = logging.getLogger("ventoux.stream")
@@ -357,6 +357,10 @@ def nomme(label: str, confiance: float) -> bool:
 # cette caméra.
 TRACE_AIRE = 0.20
 TRACE_COTE = 0.35
+# Une flaque plus grande que la chose nommée n'est plus cette chose : c'est
+# le reliquat qu'elle laisse en partant. Le 4 octobre vers 18 h, le dernier
+# point était plus vaste que la voiture, et le rectangle vide s'y installait.
+TRACE_GROS = 2.5
 
 
 def _pied(boite: tuple[float, float, float, float]) -> tuple[float, float]:
@@ -372,6 +376,35 @@ def _cadre_au_pied(cadre: tuple[float, float, float, float],
     return pied_x - w / 2, pied_y - h, w, h
 
 
+def _cadre_nomme(vu: dict) -> tuple[float, float, float, float]:
+    """La taille de la chose, pas de la flaque coupée qu'elle laisse en partant.
+
+    Le 4 octobre peu avant 18 h, une voiture blanche a été publiée avec le
+    rectangle de la tache finale, coupé par le bord, plus grand qu'elle :
+    le flux a posé un carré vide. Si la boîte stockée est coupée et plus
+    vaste que toute tache encore entière sur le trajet, on reprend celle-là.
+    """
+    cadre = tuple(vu["box"])
+    pleines = []
+    for point in vu.get("trace") or []:
+        if len(point) < 5:
+            continue
+        _, x, y, w, h = point[:5]
+        if w <= 0 or h <= 0:
+            continue
+        if x <= 0.002 or y <= 0.002 or x + w >= 0.998 or y + h >= 0.998:
+            continue
+        pleines.append((w, h))
+    if not pleines:
+        return cadre
+    large, haut = max(pleines, key=lambda cote: cote[0] * cote[1])
+    coupee = (cadre[0] <= 0.002 or cadre[1] <= 0.002
+              or cadre[0] + cadre[2] >= 0.998 or cadre[1] + cadre[3] >= 0.998)
+    if coupee and cadre[2] * cadre[3] > large * haut * 1.05:
+        return (cadre[0], cadre[1], large, haut)
+    return cadre
+
+
 def _trace_utile(vu: dict) -> list:
     """Le trajet tant que la tache est encore le sujet, plus dès qu'elle n'est plus que du vide.
 
@@ -379,9 +412,9 @@ def _trace_utile(vu: dict) -> list:
     trajectoire sans aucun recouvrement avec la chose nommée : la voiture
     était partie, il restait une flaque de quelques pixels, et le rectangle
     allait s'y installer. On garde les points où la tache a encore la taille
-    de ce qui a été lu.
+    de ce qui a été lu — ni trop petite, ni beaucoup trop grande.
     """
-    cadre = tuple(vu["box"])
+    cadre = _cadre_nomme(vu)
     aire = max(cadre[2] * cadre[3], 1e-9)
     large, haut = max(cadre[2], 1e-9), max(cadre[3], 1e-9)
     gardes = []
@@ -389,6 +422,8 @@ def _trace_utile(vu: dict) -> list:
         if len(point) < 5:
             continue
         _, x, y, w, h = point[:5]
+        if w * h > TRACE_GROS * aire and w > large and h > haut:
+            continue
         if w * h >= TRACE_AIRE * aire or w >= TRACE_COTE * large or h >= TRACE_COTE * haut:
             gardes.append(point)
     return gardes
@@ -457,7 +492,7 @@ def suit(vu: dict, quand: float) -> tuple[float, float, float, float]:
     c'est inventer, et le rectangle inventé se poserait sur du vide avec le
     même aplomb que les autres.
     """
-    cadre = tuple(vu["box"])
+    cadre = _cadre_nomme(vu)
     chemin = _trace_utile(vu)
     if len(chemin) < 2:
         return cadre
@@ -515,6 +550,17 @@ def teinte_de(vu: dict) -> tuple[int, int, int]:
     if not vu.get("sur"):
         return ROUGE
     return TEINTE_ESPECE.get(vu.get("type") or "", ROUGE)
+
+
+def visibles(vus: list[dict], quand: float) -> int:
+    """Combien de choses sont encore dans le champ à cet instant.
+
+    Comptées sans les dessiner : le rectangle n'est posé qu'une fois, sur la
+    toile, après les effets. Le poser aussi sur l'image caméra le recopiait
+    puis le redessinait à côté — le 4 octobre, deux cadres décalés sur la
+    même voiture.
+    """
+    return sum(1 for vu in vus if presence(vu)[0] <= quand <= presence(vu)[1])
 
 
 def dessine(image: np.ndarray, vus: list[dict], quand: float,
@@ -1785,10 +1831,10 @@ def applique_teinte(image: np.ndarray, angle: float, force: float) -> None:
 # dans une fenêtre et les encarts autour, plus rien ne peut entrer en conflit :
 # ce qui est à la caméra reste à la caméra.
 BORD_HAUT = 46
-# La bande du bas tient le bloc musique entier plus le bandeau : mesurée à
-# 124, le bloc dépassait d'une centaine de pixels sur l'image, ce qui est
-# exactement ce qu'on cherchait à éviter.
-BORD_BAS = 202
+# La bande du bas tient la console musique entière plus le bandeau. Un peu
+# plus haute qu'avant : trois pochettes côte à côte demandent de la place,
+# et le pavé d'un seul disque n'y suffisait plus.
+BORD_BAS = 214
 
 
 def fenetre(forme: tuple[int, int], largeur: int,
@@ -1838,22 +1884,26 @@ def _mmss(secondes: float) -> str:
     return f"{secondes // 60}:{secondes % 60:02d}"
 
 
-# Le player, en pixels à 1600 de large.
-PLAY_MARGE = 16
-PLAY_PAS = 27           # d'une ligne à la suivante
-PLAY_POCHETTE = 94
-PLAY_JAUGE_H = 5        # l'épaisseur du rail de la jauge
-PLAY_BARRES = 5         # combien de barres au vumètre
+# Le player, en pixels à 1600 de large. Trois bacs : ce qui vient de jouer,
+# ce qui joue, ce qui suit. La pochette du milieu est plus grande — c'est
+# elle qu'on écoute. Les deux autres reculent, comme sur une platine.
+PLAY_MARGE = 12
+PLAY_PAS = 24
+PLAY_MAINTENANT = 112
+PLAY_VOISINE = 80
+PLAY_JAUGE_H = 5
+PLAY_BARRES = 14
 PLAY_BARRE_L = 3
-PLAY_BARRE_ECART = 5
-PLAY_BARRE_H = 15
+PLAY_BARRE_ECART = 3
+PLAY_BARRE_H = 26
 PLAY_GRIS = (120, 120, 120)
 PLAY_RAIL = (64, 64, 64)
+PLAY_VOILE = 0.72
 
 
 def _vumetre(image: np.ndarray, x: int, base: int, echelle: float,
              energie: float, seconde: float) -> int:
-    """Cinq barres qui montent avec le son. Rend la largeur occupée.
+    """Les barres qui montent avec le son. Rend la largeur occupée.
 
     C'est le seul endroit du flux où une chose dessinée bouge parce que le son
     bouge, et c'est pour ça qu'il est là : la jauge dit où on en est dans le
@@ -1869,31 +1919,94 @@ def _vumetre(image: np.ndarray, x: int, base: int, echelle: float,
     ecart = max(2, int(PLAY_BARRE_ECART * echelle))
     haut_max = max(4, int(PLAY_BARRE_H * echelle))
     for i in range(PLAY_BARRES):
-        # Chaque barre suit le son avec sa propre lenteur, sinon les cinq
+        # Chaque barre suit le son avec sa propre lenteur, sinon elles
         # montent et descendent ensemble et ça fait un bloc qui respire.
-        onde = 0.55 + 0.45 * math.sin(seconde * (2.6 + i * 0.7) + i * 1.3)
-        haut = max(2, int(haut_max * (0.22 + min(1.0, energie * 6.0) * onde)))
+        onde = 0.55 + 0.45 * math.sin(seconde * (2.6 + i * 0.55) + i * 1.1)
+        haut = max(2, int(haut_max * (0.18 + min(1.0, energie * 6.0) * onde)))
+        # Vert, puis ambre sur les dernières : une console, pas une alarme.
+        # Le rouge reste à LIVE.
+        teinte = AMBRE if i >= PLAY_BARRES - 3 else VERT
         cv2.rectangle(image, (x + i * (large + ecart), base - haut),
-                      (x + i * (large + ecart) + large, base), VERT, -1)
+                      (x + i * (large + ecart) + large, base), teinte, -1)
     return PLAY_BARRES * (large + ecart) - ecart
+
+
+def _pochette_de(fiche: dict | None, dossier: Path, cote: int) -> np.ndarray:
+    """Un carré de pochette, ou un aplat si le fichier manque.
+
+    Manquer n'est pas une panne : une session commence parfois avant que
+    toutes les images soient là, et un bac vide reste un bac.
+    """
+    if fiche:
+        nom = fiche.get("pochette")
+        if nom:
+            photo = cv2.imread(str(dossier / nom))
+            if photo is not None and photo.size:
+                return _carre_plein(photo, cote)
+    fond = np.full((max(1, cote), max(1, cote), 3), (22, 28, 32), np.uint8)
+    if not fiche:
+        return fond
+    lettre = (str(fiche.get("auteur") or "?")[:1] or "?").upper()
+    (lw, lh), _ = cv2.getTextSize(lettre, cv2.FONT_HERSHEY_SIMPLEX, 0.9, 2)
+    cv2.putText(fond, lettre, ((cote - lw) // 2, (cote + lh) // 2),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.9, PLAY_GRIS, 2, cv2.LINE_AA)
+    return fond
+
+
+def _pose_pochette(image: np.ndarray, photo: np.ndarray, x: int, y: int,
+                   cote: int, echelle: float, voile: float = 1.0) -> None:
+    """Une pochette dans son bac, éventuellement reculée."""
+    if cote < 4 or x < 0 or y < 0:
+        return
+    if y + cote > image.shape[0] or x + cote > image.shape[1]:
+        return
+    carre = photo
+    if voile < 0.99:
+        carre = (carre.astype(np.float32) * voile).clip(0, 255).astype(np.uint8)
+    image[y:y + cote, x:x + cote] = carre
+    cadre_encart(image, (x - 1, y - 1), (x + cote, y + cote), echelle)
+
+
+def _etiquette_bac(image: np.ndarray, texte: str, x: int, y: int,
+                   cote: int, echelle: float,
+                   teinte: tuple[int, int, int]) -> None:
+    """Le mot au-dessus d'un bac, calé sur le bord gauche de la pochette."""
+    cv2.putText(image, texte, (x, y), cv2.FONT_HERSHEY_SIMPLEX,
+                0.36 * echelle, teinte, 1, cv2.LINE_AA)
+
+
+def _legende_pochette(image: np.ndarray, fiche: dict, x: int, y: int,
+                      cote: int, echelle: float,
+                      teinte: tuple[int, int, int]) -> None:
+    """Le nom, écrit dans le bas de la pochette, pas en dessous.
+
+    En dessous il sortait de la bande noire. Ici il reste dans le bac.
+    """
+    bande = max(10, int(16 * echelle))
+    y0 = y + cote - bande
+    image[y0:y + cote, x:x + cote] = (
+        image[y0:y + cote, x:x + cote].astype(np.float32) * 0.28
+    ).astype(np.uint8)
+    nom = _coupe(f"{fiche.get('auteur', '')} — {fiche.get('titre', '')}", 14)
+    cv2.putText(image, nom, (x + max(2, int(3 * echelle)),
+                             y + cote - max(3, int(4 * echelle))),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.28 * echelle, teinte, 1,
+                cv2.LINE_AA)
 
 
 def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
                       energie: float = 0.0, seconde: float = 0.0) -> None:
-    """Le player : la pochette, ce qui joue, où on en est, et ce qui suit.
+    """La console : précédent, en cours, à suivre, sur toute la largeur.
 
-    Fixe, et en bas à gauche, parce que c'est la seule chose du flux qu'on
-    puisse avoir envie de noter. Le lien y figure en toutes lettres : CC-BY
-    demande de nommer l'auteur, l'œuvre, la licence et de renvoyer à la
-    source, et une adresse qu'on ne peut pas recopier ne renvoie nulle part.
+    Ce n'est plus un pavé de texte dans le coin. Un lecteur montre trois
+    choses — ce qui vient de passer, ce qui joue, ce qui vient — et il les
+    montre par l'image, pas par une file de lignes. Sans la pochette du
+    suivant on ne sait pas ce qu'on attend ; sans celle du précédent on
+    ne sait pas d'où on vient.
 
-    C'était un pavé de texte : trois lignes à gauche, deux étiquettes à
-    droite, et rien qui dise que de la musique était en train de jouer plutôt
-    qu'une liste d'être affichée. Un lecteur, lui, montre trois choses — ce
-    qui passe, combien il en reste, ce qui vient — et c'est la deuxième qui
-    manquait le plus : sans elle on ne sait pas si on tombe sur la fin d'un
-    morceau ou sur son début, donc on ne sait pas s'il vaut la peine
-    d'attendre.
+    CC-BY demande l'auteur, l'œuvre, la licence et une source qu'on puisse
+    taper. Le domaine seul : sur un flux rien ne se clique, et personne ne
+    recopie une chaîne de requête.
     """
     en_cours = programme.get("en_cours")
     if en_cours is None:
@@ -1902,137 +2015,86 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     echelle = largeur / 1600
     marge = int(PLAY_MARGE * echelle)
     pas = int(PLAY_PAS * echelle)
-    cote = int(PLAY_POCHETTE * echelle)
+    maintenant = int(PLAY_MAINTENANT * echelle)
+    voisine = int(PLAY_VOISINE * echelle)
+    tete = int(20 * echelle)
     duree = float(programme.get("duree") or 0.0)
     ecoule = min(float(programme.get("ecoule") or 0.0), duree)
-    suite = list(programme.get("suite") or [])
+    suite = list(programme.get("suite") or [])[:2]
     avant = programme.get("avant")
 
-    titre = _coupe(f"{en_cours['auteur']} — {en_cours['titre']}", 38)
-    # Le domaine seul, et non l'adresse entière.
-    #
-    # On écrivait « CC0 · play.dogmazic.net/artists.php?action=show&artist=7208 ».
-    # Sur un flux vidéo rien ne se clique : une adresse n'y sert que si on peut
-    # la taper, et personne ne tape une chaîne de requête. Le domaine se tape,
-    # et le nom de l'auteur est écrit juste au-dessus — ce qui suffit pour l'y
-    # retrouver. C'était en plus la ligne la plus voyante du lecteur, en cyan
-    # vif, pour le texte le moins utile de l'écran.
-    #
-    # La licence, elle, ne bouge pas : CC-BY demande l'auteur, l'œuvre et la
-    # licence, et les trois sont là.
+    titre = _coupe(f"{en_cours['auteur']} — {en_cours['titre']}", 52)
     licence = str(en_cours["licence"])
     domaine = str(en_cours["url"]).split("//")[-1].split("/")[0]
     horloge = f"{_mmss(ecoule)} / {_mmss(duree)}" if duree > 0 else ""
 
-    def large_de(texte: str, part: float) -> int:
-        return cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX,
-                               part * echelle, 2)[0][0]
-
-    # La colonne de gauche est la plus large des trois choses qu'elle porte,
-    # et la jauge prend toute cette largeur : une jauge plus courte que le
-    # titre ressemble à un soulignement, une jauge aussi large que la colonne
-    # ressemble à une jauge.
-    horloge_l = large_de(horloge, 0.46) if horloge else 0
-    colonne = max(large_de(titre, 0.62),
-                  large_de(licence, 0.44) + large_de(domaine, 0.46) + int(28 * echelle),
-                  large_de("NOW PLAYING", 0.46) + int(36 * echelle),
-                  int(300 * echelle))
-
-    file = [("UP NEXT", AMBRE)]
-    for i, fiche in enumerate(suite):
-        file.append((f"{i + 1}  " + _coupe(f"{fiche['auteur']} — {fiche['titre']}", 34),
-                     BLANC if i == 0 else PLAY_GRIS))
-    if avant:
-        file.append(("JUST PLAYED  "
-                     + _coupe(f"{avant['auteur']} — {avant['titre']}", 28),
-                     GRIS_ENCART))
-    file_large = max([large_de(t, 0.52) for t, _ in file] or [0])
-
-    bloc_h = max(cote, pas * 4) + 2 * marge
-    bloc_l = cote + 3 * marge + colonne + marge + horloge_l
-    if file:
-        bloc_l += marge * 2 + file_large
+    bloc_h = tete + maintenant + 2 * marge
     bas = hauteur - int(AGENDA_H * echelle)
     haut = bas - bloc_h
-    # Un cadre fin plutôt qu'un liseré vert plein sur la tranche gauche. Le
-    # liseré était un aplat de six pixels, la seule surface pleine de tout le
-    # flux : il tirait l'œil vers le bord gauche, c'est-à-dire vers rien, et
-    # il ne ressemblait à aucun autre encart. Au trait, le bloc est délimité
-    # de la même main que la machine, la carte et la photo — et c'est le
-    # vumètre qui dit maintenant, tout seul, que l'appareil est allumé.
-    #
-    # Et du même fond que les deux barres latérales : dégradé et coins
-    # adoucis. Trois encarts sur le même écran avec trois fonds différents, on
-    # voit la différence avant de voir les encarts.
-    fond_encart(image, (0, haut), (min(largeur, bloc_l) - 1, bas - 1), echelle)
+    # Toute la largeur, le même fond que les deux barres : une console, pas
+    # un ticket collé dans le coin. Les coins adoucis restent, c'est le
+    # même meuble.
+    fond_encart(image, (0, haut), (largeur - 1, bas - 1), echelle)
 
-    gauche = marge
-    pochette = en_cours.get("pochette")
-    if pochette:
-        vignette = cv2.imread(str(dossier / pochette))
-        if vignette is not None:
-            vignette = cv2.resize(vignette, (cote, cote), interpolation=cv2.INTER_AREA)
-            y = haut + (bloc_h - cote) // 2
-            image[y:y + cote, gauche:gauche + cote] = vignette
-            cadre_encart(image, (gauche - 1, y - 1),
-                         (gauche + cote, y + cote), echelle)
-            gauche += cote + marge
-    gauche += marge
+    y_mot = haut + marge + tete - int(6 * echelle)
+    y_now = haut + marge + tete
+    y_vois = y_now + (maintenant - voisine) // 2
 
-    base = haut + marge + pas - int(9 * echelle)
-    pris = _vumetre(image, gauche, base, echelle, energie, seconde)
-    cv2.putText(image, "NOW PLAYING", (gauche + pris + marge, base),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.46 * echelle, VERT, 2, cv2.LINE_AA)
-    # Le même trait que sous le titre des deux barres : il sépare l'en-tête du
-    # contenu au lieu de laisser « NOW PLAYING » être la première ligne.
-    trait = base + int(round(8 * echelle))
-    cv2.line(image, (gauche, trait), (gauche + colonne, trait),
+    x = marge
+    if avant:
+        _etiquette_bac(image, "JUST PLAYED", x, y_mot, voisine, echelle,
+                       GRIS_ENCART)
+        _pose_pochette(image, _pochette_de(avant, dossier, voisine),
+                       x, y_vois, voisine, echelle, PLAY_VOILE)
+        _legende_pochette(image, avant, x, y_vois, voisine, echelle,
+                          GRIS_ENCART)
+        x += voisine + int(14 * echelle)
+
+    _pose_pochette(image, _pochette_de(en_cours, dossier, maintenant),
+                   x, y_now, maintenant, echelle, 1.0)
+    x += maintenant + int(20 * echelle)
+
+    n_suite = len(suite)
+    x_suite = largeur - marge - (n_suite * voisine + max(0, n_suite - 1) * marge)
+    colonne = max(int(160 * echelle), x_suite - x - marge)
+
+    pris = _vumetre(image, x, y_mot, echelle, energie, seconde)
+    cv2.putText(image, "NOW PLAYING", (x + pris + int(10 * echelle), y_mot),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.40 * echelle, VERT, 1, cv2.LINE_AA)
+    trait = y_mot + int(round(8 * echelle))
+    cv2.line(image, (x, trait), (x + colonne, trait),
              tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
              cv2.LINE_AA)
-    cv2.putText(image, titre, (gauche, base + pas),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.62 * echelle, BLANC, 2, cv2.LINE_AA)
+    cv2.putText(image, titre, (x, y_mot + pas),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.64 * echelle, BLANC, 2, cv2.LINE_AA)
 
-    # La jauge, sur la troisième ligne. Un rail sombre sur toute la colonne, la
-    # part écoulée en clair par-dessus, et un bouton rond au bout : le rail
-    # seul se lit comme un trait de séparation, c'est le bouton qui dit qu'il
-    # avance.
     if duree > 0:
-        rail_y = base + int(pas * 1.8)
+        rail_y = y_mot + int(pas * 1.85)
         epais = max(2, int(PLAY_JAUGE_H * echelle))
-        # La même jauge que la température et la charge, en face. Elle mesure
-        # une part elle aussi, et trois jauges sur un écran doivent être la
-        # même jauge.
-        pose_jauge(image, gauche, rail_y, colonne,
-                   ecoule / duree, BLANC, echelle)
-        fait = int(colonne * max(0.0, min(1.0, ecoule / duree)))
-        cv2.circle(image, (gauche + fait, rail_y + epais // 2),
+        rail = max(int(80 * echelle), colonne - int(110 * echelle))
+        pose_jauge(image, x, rail_y, rail, ecoule / duree, BLANC, echelle)
+        fait = int(rail * max(0.0, min(1.0, ecoule / duree)))
+        cv2.circle(image, (x + fait, rail_y + epais // 2),
                    max(2, int(4 * echelle)), BLANC, -1, cv2.LINE_AA)
-        cv2.putText(image, horloge, (gauche + colonne + marge,
+        cv2.putText(image, horloge, (x + rail + marge,
                                      rail_y + epais // 2 + int(5 * echelle)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.46 * echelle, PLAY_GRIS, 1,
                     cv2.LINE_AA)
-    # La licence en pastille, le domaine en gris à côté. La licence est ce que
-    # CC-BY exige et elle tient en quatre signes : encadrée, elle se lit d'un
-    # coup d'œil et ne se confond pas avec une adresse.
-    suite_x = pose_pastille(image, licence, gauche, base + pas * 3, echelle)
-    cv2.putText(image, domaine, (suite_x + int(8 * echelle), base + pas * 3),
+    suite_x = pose_pastille(image, licence, x, y_mot + pas * 3, echelle)
+    cv2.putText(image, domaine, (suite_x + int(8 * echelle), y_mot + pas * 3),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.46 * echelle, GRIS_ENCART, 1,
                 cv2.LINE_AA)
 
-    if not file:
+    if not suite:
         return
-    # La file à droite, une ligne par entrée et alignées entre elles. Le
-    # premier à venir est en blanc, le second en gris : c'est un ordre, et un
-    # ordre se lit mieux en deux intensités qu'en deux numéros.
-    droite = gauche + colonne + marge + horloge_l + 2 * marge
-    for i, (texte, teinte) in enumerate(file):
-        cv2.putText(image, texte, (droite, base + pas * i),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    (0.46 if i == 0 else 0.52) * echelle, teinte, 2, cv2.LINE_AA)
-        if i == 0:
-            cv2.line(image, (droite, trait), (droite + file_large, trait),
-                     tuple(int(c * 0.55) for c in CYAN),
-                     max(1, int(round(echelle))), cv2.LINE_AA)
+    _etiquette_bac(image, "UP NEXT", x_suite, y_mot, voisine, echelle, AMBRE)
+    for i, fiche in enumerate(suite):
+        px = x_suite + i * (voisine + marge)
+        _pose_pochette(image, _pochette_de(fiche, dossier, voisine),
+                       px, y_vois, voisine, echelle,
+                       0.72 if i == 0 else 0.45)
+        _legende_pochette(image, fiche, px, y_vois, voisine, echelle,
+                          BLANC if i == 0 else PLAY_GRIS)
 
 
 # Le silence qu'il faut avant d'aller chercher dans les archives, et le temps
@@ -4316,6 +4378,38 @@ def fond_bandeau(image: np.ndarray, y0: int, y1: int, echelle: float,
              max(1, int(round(echelle))), cv2.LINE_AA)
 
 
+# Même corps, même écart, même trait que le badge LIVE. Les deux encarts se
+# répondent : à droite le direct, à gauche la machine qui le tient.
+BADGE_TAILLE = 0.70
+BADGE_PAS = 34
+BADGE_RAYON = 7
+
+
+def pose_badge(image: np.ndarray, mot: str, x: int, y: int, echelle: float,
+               quand: float, *, vivant: bool = True,
+               teinte_mot: tuple[int, int, int] | None = None,
+               teinte_point: tuple[int, int, int] | None = None) -> int:
+    """Un mot de chaîne, avec le point qui bat à la seconde.
+
+    Le point rouge n'appartient qu'au direct : partout ailleurs il veut dire
+    « ça tourne, là, maintenant ». Le Raspberry a le même geste, en cyan —
+    la machine est vivante, ce n'est pas le badge du flux.
+    """
+    pas = int(BADGE_PAS * echelle)
+    rayon = int(BADGE_RAYON * echelle)
+    taille = BADGE_TAILLE * echelle
+    mot_teinte = teinte_mot if teinte_mot is not None else (BLANC if vivant else AMBRE)
+    point = teinte_point if teinte_point is not None else (ROUGE if vivant else AMBRE)
+    if vivant and int(quand) % 2 == 0:
+        cv2.circle(image, (x + rayon, y - rayon), rayon, point, -1)
+    elif not vivant:
+        cv2.circle(image, (x + rayon, y - rayon), rayon, point, -1)
+    cv2.putText(image, mot, (x + pas, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
+                mot_teinte, 2, cv2.LINE_AA)
+    large = cv2.getTextSize(mot, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
+    return pas + large
+
+
 def pose_titre_encart(image: np.ndarray, texte: str, x: int, ligne: int,
                       large: int, echelle: float) -> None:
     """Le nom d'un encart, souligné d'un trait court.
@@ -4750,6 +4844,35 @@ BONJOUR_S = 8.0
 # l'horizon, réfraction comprise. C'est la définition de la NOAA, elle ne doit
 # rien au cadrage de cette caméra-ci et vaudra pour la suivante.
 HORIZON = -0.833
+
+
+DEPLOI_S = 6.0
+
+
+def pose_deploiement(image: np.ndarray, version: str, age: float) -> None:
+    """Le numéro qui vient d'arriver, une fois, au redémarrage du flux.
+
+    Un déploiement sans trace à l'écran, on ne sait pas s'il a pris. Le mot
+    et le numéro tiennent six secondes, comme un bonjour : assez pour le
+    lire, pas assez pour rester collé sur la montagne.
+    """
+    if age < 0 or age > DEPLOI_S or not version:
+        return
+    force = min(1.0, age / 0.6, (DEPLOI_S - age) / 0.8)
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    calque = image.copy()
+    for i, (mot, taille) in enumerate((("DEPLOYED", 1.15), (f"v{version}", 1.8))):
+        echelle_mot = taille * echelle
+        epaisseur = max(2, int(4 * echelle))
+        (large, haut), _ = cv2.getTextSize(mot, cv2.FONT_HERSHEY_DUPLEX, echelle_mot, epaisseur)
+        x = (largeur - large) // 2
+        y = int(hauteur * 0.40) + i * int(88 * echelle) + haut // 2
+        cv2.putText(calque, mot, (x, y), cv2.FONT_HERSHEY_DUPLEX, echelle_mot,
+                    (0, 0, 0), epaisseur + max(3, int(6 * echelle)), cv2.LINE_AA)
+        cv2.putText(calque, mot, (x, y), cv2.FONT_HERSHEY_DUPLEX, echelle_mot,
+                    CYAN, epaisseur, cv2.LINE_AA)
+    cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
 
 
 def pose_bonjour(image: np.ndarray, nom: str, age: float) -> None:
@@ -5662,7 +5785,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         musique.dis(tirage.choice(musique.felicitations))
                     log.info("Prise à l'écran : %s — %s", neuve["label"],
                              musique.voix_dit or "sans voix")
-            poses = dessine(image, vus, quand)
+            poses = visibles(vus, quand)
             if poses:
                 dernier_vu = quand
                 # L'horloge de l'ennui est à part, et c'est tout l'intérêt :
@@ -5930,6 +6053,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             pose_machine(toile, machine, photo_machine, ville, remue,
                          carte=carte_californie, ou=ou_machine, quand=quand)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
+            pose_deploiement(toile, __version__, quand - ouvert)
             # Relu de temps en temps et jamais à chaque image : le fichier
             # est écrit par un autre programme, et un agenda ne change pas
             # plus d'une fois par jour.

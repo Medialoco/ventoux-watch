@@ -27,9 +27,9 @@ import numpy as np
 from watcher.geometry import assign_zone
 from watcher.gtfs import GtfsIndex, load_feed
 from watcher.main import (STREAM_RETRY_MAX_S, STREAM_RETRY_S, _box_of_the_named, _crossed_sky,
-                          _might_be_bus, _next_wait, _note_interruption, _published, _utc)
+                          _might_be_bus, _next_wait, _note_interruption, _paint_box, _published, _utc)
 from watcher.naming import Decision
-from watcher.motion import MotionDetector, Track
+from watcher.motion import MotionDetector, Track, _better_view, _blob_clipped
 from watcher.naming import (RIEN_A_JUGER, SIZE_DOUBT_MAX, Detection, Observation, Trip, choose_aircraft,
                             decide, in_camera_view)
 from watcher.review import apply_review, parse_review
@@ -710,6 +710,31 @@ class MotionTests(unittest.TestCase):
         step = detector.step(white, 10)
         self.assertTrue(step.global_change)
         self.assertEqual(step.ended, [])
+
+    def test_a_clipped_smear_is_not_a_better_view_of_the_car(self):
+        """4 octobre, 18 h. La voiture blanche était entière ; le dernier
+        rectangle, coupé par le bas, était plus grand et vide.
+
+        Une mesure coupée n'est pas une meilleure vue. Sur la route on garde
+        la tache encore entière. Sur la pente, une plume qui sort du cadre
+        reste la plus grande : là, grandir *est* le signal.
+        """
+        frame = np.zeros((1080, 1920, 3), np.uint8)
+        piste = Track(id=1, zone="roundabout", best_area=0.012,
+                      best_bbox=(200, 700, 160, 90))
+        entiere = {"area_ratio": 0.018, "bbox": (240, 680, 180, 100)}
+        flaque = {"area_ratio": 0.040, "bbox": (0, 850, 320, 230)}
+        self.assertFalse(_blob_clipped(entiere["bbox"], frame))
+        self.assertTrue(_blob_clipped(flaque["bbox"], frame))
+        self.assertTrue(_better_view(piste, entiere, frame))
+        piste.best_area = 0.018
+        piste.best_bbox = entiere["bbox"]
+        self.assertFalse(_better_view(piste, flaque, frame),
+                         "la flaque coupée ne remplace pas la voiture")
+        plume = Track(id=2, zone="slope", best_area=0.018,
+                      best_bbox=(800, 200, 80, 120))
+        self.assertTrue(_better_view(plume, flaque, frame),
+                        "une plume coupée peut encore être la plus grande")
 
 
 class GtfsTests(unittest.TestCase):
@@ -1534,6 +1559,20 @@ class FogTests(unittest.TestCase):
                                 (800, 930, 200, 100))
         self.assertIsNotNone(box)
         self.assertAlmostEqual(box[0] + box[2] / 2, 1190 / 1920, places=2)
+
+    def test_the_paint_is_read_on_the_car_not_on_the_road(self):
+        """La couleur vient de la carrosserie. Lue sur la tache, une blanche
+        sur le bitume sortait « Voiture » sans adjectif."""
+        from watcher.detect import body_colour
+
+        frame = np.full((108, 192, 3), 80, np.uint8)
+        frame[70:86, 20:55] = (230, 230, 230)
+        carrosserie = (20, 70, 35, 16)
+        tache = (5, 60, 90, 45)
+        hits = [Detection("car", 0.89, box=carrosserie)]
+        self.assertEqual(_paint_box(hits, tache), carrosserie)
+        self.assertEqual(body_colour(frame, carrosserie), "blanc")
+        self.assertNotEqual(body_colour(frame, tache), "blanc")
 
     def test_a_cloud_drifting_over_the_slope_is_not_a_start_of_fire(self):
         """The three false starts of 27 September, by their own measurements.
@@ -3295,6 +3334,31 @@ class DiffusionTests(unittest.TestCase):
         self.assertEqual(stream.dessine(np.zeros((360, 640, 3), np.uint8),
                                         [dict(vu)], debut + 6.0), 0)
 
+    def test_a_huge_clipped_smear_does_not_keep_the_box(self):
+        """Même voiture, l'inverse : le dernier point est plus grand, coupé,
+        et vide. Le rectangle doit rester à la taille de la voiture, sur
+        le dernier endroit où elle était encore entière.
+        """
+        debut = 1_000_000.0
+        vu = {"t": debut + 6.0, "label": "Voiture", "sur": True, "type": "vehicle",
+              "box": [0.0, 0.79, 0.17, 0.21],
+              "trace": [[debut, 0.18, 0.76, 0.08, 0.07],
+                        [debut + 3.0, 0.13, 0.75, 0.10, 0.08],
+                        [debut + 6.0, 0.00, 0.79, 0.17, 0.21]]}
+        x, y, w, h = stream.suit(vu, debut + 6.0)
+        self.assertLess(w, 0.12)
+        self.assertLess(h, 0.12)
+        self.assertGreater(x, 0.05)
+        _, fin = stream.presence(vu)
+        self.assertEqual(fin, debut + 3.0)
+
+    def test_the_box_is_drawn_once_on_the_canvas(self):
+        """Posé sur l'image puis recopié, il se dédoublait à côté de la voiture."""
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("poses = visibles(vus, quand)", source)
+        self.assertNotIn("dessine(image, vus, quand)", source)
+        self.assertIn("dessine(toile, vus, quand, vue=cadrage)", source)
+
     def test_the_box_shrinks_when_the_car_is_still_far(self):
         """Le rectangle du premier plan, posé sur la voiture au loin, est vide.
 
@@ -4544,6 +4608,19 @@ class DiffusionTests(unittest.TestCase):
                         float(np.abs(milieu.astype(int) - fond).mean()))
         self.assertTrue(np.array_equal(fini, fond))
 
+    def test_a_new_deploy_shows_the_release_number(self):
+        """Sans numéro à l'écran, on ne sait pas si le déploiement a pris."""
+        import watcher
+        fond = np.full((360, 640, 3), 30, np.uint8)
+        dit = fond.copy()
+        stream.pose_deploiement(dit, watcher.__version__, stream.DEPLOI_S / 2)
+        self.assertFalse(np.array_equal(dit, fond))
+        fini = fond.copy()
+        stream.pose_deploiement(fini, watcher.__version__, stream.DEPLOI_S + 0.2)
+        self.assertTrue(np.array_equal(fini, fond))
+        self.assertIn("pose_deploiement(", inspect.getsource(stream.diffuse))
+        self.assertIn("__version__", inspect.getsource(stream.diffuse))
+
     def test_the_clock_names_the_commune_the_camera_stands_in(self):
         """Sous une image du Ventoux, « PARIS » se lit comme un lieu, et il est faux.
 
@@ -5165,6 +5242,42 @@ class LecteurTests(unittest.TestCase):
         self.assertLess(bout, x + large + 20)
         # Rien n'est écrit au-delà du bord annoncé.
         self.assertEqual(int(np.count_nonzero(image[:, bout + 2:])), 0)
+
+    def test_the_player_spans_the_full_width(self):
+        """Un ticket dans le coin, ce n'est plus un lecteur."""
+        image = self._rendu("https://play.dogmazic.net")
+        encre = np.argwhere(image.any(axis=2))
+        self.assertLessEqual(int(encre[:, 1].min()), 8)
+        self.assertGreaterEqual(int(encre[:, 1].max()), image.shape[1] - 8)
+
+    def test_previous_and_next_covers_are_drawn(self):
+        """Le précédent et le suivant se voient, ils ne se lisent plus seulement."""
+        dossier = Path(tempfile.mkdtemp())
+        couleurs = {
+            "avant.jpg": (40, 80, 220),
+            "now.jpg": (40, 220, 80),
+            "next.jpg": (220, 80, 40),
+        }
+        for nom, bgr in couleurs.items():
+            cv2.imwrite(str(dossier / nom), np.full((80, 80, 3), bgr, np.uint8))
+        image = np.zeros((720, 1280, 3), np.uint8)
+        stream.pose_bloc_musique(image, {
+            "avant": {"auteur": "A", "titre": "Un", "licence": "CC0",
+                      "url": "https://play.dogmazic.net", "pochette": "avant.jpg"},
+            "en_cours": {"auteur": "B", "titre": "Deux", "licence": "CC0",
+                         "url": "https://play.dogmazic.net", "pochette": "now.jpg"},
+            "ecoule": 80.0, "duree": 200.0,
+            "suite": [{"auteur": "C", "titre": "Trois", "licence": "CC0",
+                       "url": "https://play.dogmazic.net", "pochette": "next.jpg"}],
+        }, dossier, 0.4, 1.0)
+        bande = image[520:680]
+        # Reculée à 0,55 : le rouge du précédent ne reste pas au-dessus de 140.
+        self.assertGreater(int(np.count_nonzero(bande[:, :220, 2] > 90)), 80,
+                           "la pochette précédente (rouge) manque à gauche")
+        self.assertGreater(int(np.count_nonzero(bande[:, 200:520, 1] > 140)), 80,
+                           "la pochette en cours (verte) manque au milieu")
+        self.assertGreater(int(np.count_nonzero(bande[:, 1000:, 0] > 90)), 80,
+                           "la pochette à suivre (bleue) manque à droite")
 
 
 class HorlogeDuCreditTests(unittest.TestCase):

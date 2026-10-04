@@ -232,7 +232,7 @@ class MotionDetector:
             track.updated = now
             if len(track.trace) < TRACE_MAX:
                 track.trace.append((now, blob["bbox"]))
-            if blob["area_ratio"] >= track.best_area:
+            if _better_view(track, blob, frame):
                 track.best_area = blob["area_ratio"]
                 track.best_bbox = blob["bbox"]
                 track.best_jpeg = _jpeg(frame)
@@ -465,6 +465,35 @@ def _blobs(mask: np.ndarray, scale: float) -> list[dict]:
             }
         )
     return blobs
+
+
+def _blob_clipped(bbox: tuple[int, int, int, int], frame: np.ndarray) -> bool:
+    """La tache touche-t-elle le bord de l'image ?
+
+    Coupée, sa taille n'est plus une mesure de la chose : c'est un plancher.
+    """
+    haut, large = frame.shape[:2]
+    x, y, w, h = bbox
+    mx, my = max(1, int(0.002 * large)), max(1, int(0.002 * haut))
+    return x <= mx or y <= my or x + w >= large - mx or y + h >= haut - my
+
+
+def _better_view(track: Track, blob: dict, frame: np.ndarray) -> bool:
+    """Cette tache est-elle une meilleure vue de la chose que celle qu'on garde ?
+
+    La plus grande est d'ordinaire la plus proche. Pas quand elle est coupée
+    par le cadre : cette taille est un plancher, et sur la route c'est souvent
+    la flaque qu'une voiture laisse en sortant. Une plume qui grandit hors du
+    haut de la pente, c'est l'inverse — là, la croissance *est* la chose —
+    donc le ciel et le versant prennent encore la plus grande, coupée ou non.
+    """
+    if blob["area_ratio"] < track.best_area:
+        return False
+    if track.zone in {"sky", "slope"}:
+        return True
+    if not _blob_clipped(blob["bbox"], frame):
+        return True
+    return _blob_clipped(track.best_bbox, frame)
 
 
 def _foot_x(contour: np.ndarray, width: int) -> float:

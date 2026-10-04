@@ -382,7 +382,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         weather=current.weather,
         surface=surface,
         near_road=scene_map.drivable_near(box) if box else True,
-        colour=body_colour(frame, track.best_bbox) if frame is not None and current.period == "day" else "",
+        colour=body_colour(frame, _paint_box(detections, moved) or track.best_bbox) if frame is not None and current.period == "day" else "",
         landmark=(landmark or {}).get("name", ""),
         fixture=(fixture or {}).get("name", ""),
         lit_ratio=lit,
@@ -753,6 +753,21 @@ def _covers(box, other) -> float:
     wide = max(0, min(ax + aw, bx + bw) - max(ax, bx))
     tall = max(0, min(ay + ah, by + bh) - max(ay, by))
     return (wide * tall) / float(max(1, bw * bh))
+
+
+def _paint_box(detections, moved=None):
+    """La carrosserie lue, pas la tache : c'est là qu'est la peinture.
+
+    Le 4 octobre peu avant 18 h, une voiture blanche a été publiée « Voiture »
+    sans couleur : on lisait le milieu de la tache, donc surtout le bitume.
+    """
+    hits = [hit for hit in detections if hit.box]
+    if not hits:
+        return None
+    if moved:
+        recouvre = [hit for hit in hits if _overlap(hit.box, moved) >= BOX_OVERLAP]
+        hits = recouvre or hits
+    return max(hits, key=lambda hit: hit.conf).box
 
 
 def _box_of_the_named(frame, decision, detections, moved=None) -> tuple[float, float, float, float] | None:
