@@ -1834,7 +1834,7 @@ BORD_HAUT = 46
 # La bande du bas tient la console musique entière plus le bandeau. Un peu
 # plus haute qu'avant : trois pochettes côte à côte demandent de la place,
 # et le pavé d'un seul disque n'y suffisait plus.
-BORD_BAS = 214
+BORD_BAS = 228
 
 
 def fenetre(forme: tuple[int, int], largeur: int,
@@ -1892,43 +1892,45 @@ PLAY_PAS = 24
 PLAY_MAINTENANT = 112
 PLAY_VOISINE = 80
 PLAY_JAUGE_H = 5
-PLAY_BARRES = 14
-PLAY_BARRE_L = 3
+PLAY_BARRES = 36
 PLAY_BARRE_ECART = 3
-PLAY_BARRE_H = 26
+PLAY_EQ_H = PLAY_MAINTENANT
 PLAY_GRIS = (120, 120, 120)
 PLAY_RAIL = (64, 64, 64)
 PLAY_VOILE = 0.72
 
 
-def _vumetre(image: np.ndarray, x: int, base: int, echelle: float,
-             energie: float, seconde: float) -> int:
-    """Les barres qui montent avec le son. Rend la largeur occupée.
+def _vumetre(image: np.ndarray, x: int, base: int, largeur: int,
+             echelle: float, energie: float, seconde: float) -> None:
+    """L'égaliseur, au milieu, là où la console était vide.
 
     C'est le seul endroit du flux où une chose dessinée bouge parce que le son
-    bouge, et c'est pour ça qu'il est là : la jauge dit où on en est dans le
-    morceau, le vumètre dit qu'il y a bien du son qui sort. Les deux ensemble
-    font la différence entre un bloc de texte sur la musique et un appareil
-    qui joue.
+    bouge. Il remplit la colonne du centre : trop petit, collé au titre, il
+    laissait un trou. Ici il occupe la largeur qu'on lui donne.
 
     Il ne mesure rien d'utile et ne prétend pas le contraire : il est posé
     contre l'étiquette du morceau, pas contre l'image, et personne ne peut le
     prendre pour une lecture de la montagne.
     """
-    large = max(1, int(PLAY_BARRE_L * echelle))
-    ecart = max(2, int(PLAY_BARRE_ECART * echelle))
-    haut_max = max(4, int(PLAY_BARRE_H * echelle))
-    for i in range(PLAY_BARRES):
-        # Chaque barre suit le son avec sa propre lenteur, sinon elles
-        # montent et descendent ensemble et ça fait un bloc qui respire.
-        onde = 0.55 + 0.45 * math.sin(seconde * (2.6 + i * 0.55) + i * 1.1)
-        haut = max(2, int(haut_max * (0.18 + min(1.0, energie * 6.0) * onde)))
-        # Vert, puis ambre sur les dernières : une console, pas une alarme.
+    if largeur < 8:
+        return
+    n = PLAY_BARRES
+    ecart = max(1, int(PLAY_BARRE_ECART * echelle))
+    large = max(2, (largeur - (n - 1) * ecart) // n)
+    haut_max = max(8, int(PLAY_EQ_H * echelle))
+    force = min(1.0, energie * 6.0)
+    for i in range(n):
+        # Chaque barre a sa propre lenteur, et le milieu monte plus haut :
+        # un égaliseur plat au centre n'en est pas un.
+        part = i / max(1, n - 1)
+        cloche = 0.55 + 0.45 * math.sin(part * math.pi)
+        onde = 0.50 + 0.50 * math.sin(seconde * (2.4 + i * 0.38) + i * 0.9)
+        haut = max(3, int(haut_max * (0.14 + force * cloche * onde)))
+        # Vert, puis ambre sur la fin : une console, pas une alarme.
         # Le rouge reste à LIVE.
-        teinte = AMBRE if i >= PLAY_BARRES - 3 else VERT
-        cv2.rectangle(image, (x + i * (large + ecart), base - haut),
-                      (x + i * (large + ecart) + large, base), teinte, -1)
-    return PLAY_BARRES * (large + ecart) - ecart
+        teinte = AMBRE if i >= n - 6 else VERT
+        gx = x + i * (large + ecart)
+        cv2.rectangle(image, (gx, base - haut), (gx + large, base), teinte, -1)
 
 
 def _pochette_de(fiche: dict | None, dossier: Path, cote: int) -> np.ndarray:
@@ -1975,23 +1977,34 @@ def _etiquette_bac(image: np.ndarray, texte: str, x: int, y: int,
                 0.36 * echelle, teinte, 1, cv2.LINE_AA)
 
 
-def _legende_pochette(image: np.ndarray, fiche: dict, x: int, y: int,
-                      cote: int, echelle: float,
-                      teinte: tuple[int, int, int]) -> None:
-    """Le nom, écrit dans le bas de la pochette, pas en dessous.
+def _credit_piste(image: np.ndarray, fiche: dict | None, x: int, y: int,
+                  large: int, echelle: float,
+                  teinte_auteur: tuple[int, int, int],
+                  teinte_titre: tuple[int, int, int],
+                  corps_auteur: float, corps_titre: float) -> None:
+    """L'artiste, puis le titre. Deux lignes, pas un seul « auteur — titre ».
 
-    En dessous il sortait de la bande noire. Ici il reste dans le bac.
+    Collés en une ligne, les deux se perdaient. Séparés, l'artiste est une
+    signature et le titre est ce qu'on écoute. Le précédent et le suivant
+    ont droit au même geste, plus petit.
     """
-    bande = max(10, int(16 * echelle))
-    y0 = y + cote - bande
-    image[y0:y + cote, x:x + cote] = (
-        image[y0:y + cote, x:x + cote].astype(np.float32) * 0.28
-    ).astype(np.uint8)
-    nom = _coupe(f"{fiche.get('auteur', '')} — {fiche.get('titre', '')}", 14)
-    cv2.putText(image, nom, (x + max(2, int(3 * echelle)),
-                             y + cote - max(3, int(4 * echelle))),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.28 * echelle, teinte, 1,
-                cv2.LINE_AA)
+    if not fiche or large < 8:
+        return
+
+    def dans_la_largeur(texte: str, corps: float, epais: int) -> str:
+        mot = str(texte or "")
+        while mot and cv2.getTextSize(
+                mot, cv2.FONT_HERSHEY_SIMPLEX, corps * echelle, epais)[0][0] > large:
+            mot = mot[:-1]
+        return mot if mot == str(texte or "") else (mot[:-1] + "…" if mot else "")
+
+    auteur = dans_la_largeur(str(fiche.get("auteur") or ""), corps_auteur, 1)
+    titre = dans_la_largeur(str(fiche.get("titre") or ""), corps_titre, 2)
+    pas = max(14, int(22 * echelle * (corps_titre / 0.50)))
+    cv2.putText(image, auteur, (x, y), cv2.FONT_HERSHEY_SIMPLEX,
+                corps_auteur * echelle, teinte_auteur, 1, cv2.LINE_AA)
+    cv2.putText(image, titre, (x, y + pas), cv2.FONT_HERSHEY_SIMPLEX,
+                corps_titre * echelle, teinte_titre, 2, cv2.LINE_AA)
 
 
 def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
@@ -2014,7 +2027,6 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
     marge = int(PLAY_MARGE * echelle)
-    pas = int(PLAY_PAS * echelle)
     maintenant = int(PLAY_MAINTENANT * echelle)
     voisine = int(PLAY_VOISINE * echelle)
     tete = int(20 * echelle)
@@ -2023,12 +2035,12 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     suite = list(programme.get("suite") or [])[:2]
     avant = programme.get("avant")
 
-    titre = _coupe(f"{en_cours['auteur']} — {en_cours['titre']}", 52)
     licence = str(en_cours["licence"])
     domaine = str(en_cours["url"]).split("//")[-1].split("/")[0]
     horloge = f"{_mmss(ecoule)} / {_mmss(duree)}" if duree > 0 else ""
 
-    bloc_h = tete + maintenant + 2 * marge
+    extra = int(22 * echelle)
+    bloc_h = tete + maintenant + extra + 2 * marge
     bas = hauteur - int(AGENDA_H * echelle)
     haut = bas - bloc_h
     # Toute la largeur, le même fond que les deux barres : une console, pas
@@ -2039,6 +2051,7 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     y_mot = haut + marge + tete - int(6 * echelle)
     y_now = haut + marge + tete
     y_vois = y_now + (maintenant - voisine) // 2
+    credit_w = int(190 * echelle)
 
     x = marge
     if avant:
@@ -2046,30 +2059,35 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
                        GRIS_ENCART)
         _pose_pochette(image, _pochette_de(avant, dossier, voisine),
                        x, y_vois, voisine, echelle, PLAY_VOILE)
-        _legende_pochette(image, avant, x, y_vois, voisine, echelle,
-                          GRIS_ENCART)
-        x += voisine + int(14 * echelle)
+        _credit_piste(image, avant, x + voisine + int(8 * echelle),
+                      y_vois + int(22 * echelle), credit_w, echelle,
+                      GRIS_ENCART, BLANC, 0.44, 0.56)
+        x += voisine + credit_w + int(18 * echelle)
 
     _pose_pochette(image, _pochette_de(en_cours, dossier, maintenant),
                    x, y_now, maintenant, echelle, 1.0)
-    x += maintenant + int(20 * echelle)
+    x += maintenant + int(16 * echelle)
 
     n_suite = len(suite)
-    x_suite = largeur - marge - (n_suite * voisine + max(0, n_suite - 1) * marge)
-    colonne = max(int(160 * echelle), x_suite - x - marge)
+    large_suite = (n_suite * (voisine + int(8 * echelle) + credit_w)
+                   + max(0, n_suite - 1) * marge) if n_suite else 0
+    x_suite = largeur - marge - large_suite
+    colonne = max(int(180 * echelle), x_suite - x - marge)
 
-    pris = _vumetre(image, x, y_mot, echelle, energie, seconde)
-    cv2.putText(image, "NOW PLAYING", (x + pris + int(10 * echelle), y_mot),
+    cv2.putText(image, "NOW PLAYING", (x, y_mot),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.40 * echelle, VERT, 1, cv2.LINE_AA)
-    trait = y_mot + int(round(8 * echelle))
-    cv2.line(image, (x, trait), (x + colonne, trait),
-             tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
-             cv2.LINE_AA)
-    cv2.putText(image, titre, (x, y_mot + pas),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.64 * echelle, BLANC, 2, cv2.LINE_AA)
-
+    eq_base = y_now + maintenant
+    _vumetre(image, x, eq_base, colonne, echelle, energie, seconde)
+    bande_h = int(50 * echelle)
+    haut_bande = max(y_now, eq_base - bande_h)
+    if colonne > 4 and bande_h > 4:
+        bande = image[haut_bande:eq_base, x:x + colonne]
+        image[haut_bande:eq_base, x:x + colonne] = (
+            bande.astype(np.float32) * 0.28).clip(0, 255).astype(np.uint8)
+    _credit_piste(image, en_cours, x, haut_bande + int(18 * echelle), colonne,
+                  echelle, CYAN, BLANC, 0.52, 0.78)
     if duree > 0:
-        rail_y = y_mot + int(pas * 1.85)
+        rail_y = min(eq_base + int(10 * echelle), bas - marge - int(16 * echelle))
         epais = max(2, int(PLAY_JAUGE_H * echelle))
         rail = max(int(80 * echelle), colonne - int(110 * echelle))
         pose_jauge(image, x, rail_y, rail, ecoule / duree, BLANC, echelle)
@@ -2080,21 +2098,26 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
                                      rail_y + epais // 2 + int(5 * echelle)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.46 * echelle, PLAY_GRIS, 1,
                     cv2.LINE_AA)
-    suite_x = pose_pastille(image, licence, x, y_mot + pas * 3, echelle)
-    cv2.putText(image, domaine, (suite_x + int(8 * echelle), y_mot + pas * 3),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.46 * echelle, GRIS_ENCART, 1,
+    suite_x = pose_pastille(image, licence, x, bas - marge - int(2 * echelle),
+                            echelle)
+    cv2.putText(image, domaine, (suite_x + int(8 * echelle),
+                                 bas - marge - int(2 * echelle)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.40 * echelle, GRIS_ENCART, 1,
                 cv2.LINE_AA)
 
     if not suite:
         return
     _etiquette_bac(image, "UP NEXT", x_suite, y_mot, voisine, echelle, AMBRE)
     for i, fiche in enumerate(suite):
-        px = x_suite + i * (voisine + marge)
+        px = x_suite + i * (voisine + int(8 * echelle) + credit_w + marge)
         _pose_pochette(image, _pochette_de(fiche, dossier, voisine),
                        px, y_vois, voisine, echelle,
                        0.72 if i == 0 else 0.45)
-        _legende_pochette(image, fiche, px, y_vois, voisine, echelle,
-                          BLANC if i == 0 else PLAY_GRIS)
+        _credit_piste(image, fiche, px + voisine + int(8 * echelle),
+                      y_vois + int(22 * echelle), credit_w, echelle,
+                      AMBRE if i == 0 else GRIS_ENCART,
+                      BLANC if i == 0 else PLAY_GRIS,
+                      0.44, 0.56)
 
 
 # Le silence qu'il faut avant d'aller chercher dans les archives, et le temps

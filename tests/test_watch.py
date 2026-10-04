@@ -5279,6 +5279,35 @@ class LecteurTests(unittest.TestCase):
         self.assertGreater(int(np.count_nonzero(bande[:, 1000:, 0] > 90)), 80,
                            "la pochette à suivre (bleue) manque à droite")
 
+    def test_artist_and_title_are_written_apart_for_every_slot(self):
+        """Collés en une ligne, artiste et titre se perdaient tous les deux."""
+        dits: list[str] = []
+        vrai = cv2.putText
+
+        def espion(image, texte, *suite, **nommes):
+            dits.append(texte)
+            return vrai(image, texte, *suite, **nommes)
+
+        with mock.patch.object(stream.cv2, "putText", espion):
+            stream.pose_bloc_musique(
+                np.zeros((720, 1280, 3), np.uint8), self._programme(),
+                Path("."), 0.4, 1.0)
+        self.assertIn("thepriben", dits)
+        self.assertIn("Mont Serein 002.01", dits)
+        self.assertIn("Mont Serein 002.02", dits)
+        self.assertIn("Mont Serein 002.03", dits)
+        self.assertFalse(any(" — " in mot for mot in dits),
+                         "artiste et titre ne doivent plus être collés")
+
+    def test_the_equalizer_fills_the_empty_middle(self):
+        """Le trou du milieu, c'est là que les barres doivent être."""
+        image = np.zeros((720, 1280, 3), np.uint8)
+        stream.pose_bloc_musique(image, self._programme(), Path("."), 0.5, 1.2)
+        milieu = image[520:680, 420:860]
+        verts = int(np.count_nonzero(np.all(milieu == stream.VERT, axis=2)))
+        ambres = int(np.count_nonzero(np.all(milieu == stream.AMBRE, axis=2)))
+        self.assertGreater(verts + ambres, 200, "l'égaliseur n'occupe pas le centre")
+
 
 class HorlogeDuCreditTests(unittest.TestCase):
     """Le crédit date la musique entendue, pas celle qu'on vient de verser.
