@@ -6,7 +6,9 @@
 
 A Raspberry Pi 5 on a desk in Los Angeles watches the webcam at the Mont Serein pass, 1,389 m up Mont Ventoux. One frame a second. OpenCV finds what moved, YOLO names the crop, and the Pi rebuilds the picture: the photograph, the rectangle, the overlays, the music. The watch is the work. The stream is the show.
 
-The watch sees a lot of motion. A class is published, a good catch, only when it is sure enough. The number on each card is those sure catches per hundred motions. Los Angeles is on the left, Beaumont-du-Ventoux on the right. A catch counts for both. Each side resets at its own midnight, and the two midnights are not the same hour.
+The watch sees a lot of motion. A class is published, a good catch, only when it is sure enough. Under each card, a reel shows that day’s ratio, sure catches over motions, 0/0 until the day sees one. Los Angeles is on the left, Beaumont-du-Ventoux on the right. A catch counts for both. Each side resets at its own midnight, and the two midnights are not the same hour.
+
+Watcher **v0.6.2**.
 
 The live picture is on [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). The site is [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Twenty ways the picture changes are written there, each one from the code that is running.
 
@@ -14,7 +16,7 @@ The live picture is on [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). T
 
 *24 September 2026, 23:41 Paris time. The photograph was taken at 14:41 in Los Angeles.*
 
-The music is free, around the clock, with the licence on screen for every track. It comes from [Dogmazic](https://play.dogmazic.net/), and the stream’s playlist is [public](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803). Fourteen hours, one hundred and fifty-three tracks. Four of those hours are the album [Mont Serein](https://play.dogmazic.net/albums.php?action=show&album=11242), written for this slope by [thepriben](https://play.dogmazic.net/artists.php?action=show&artist=7208).
+The music is free, around the clock, with the licence on screen for every track. It comes from [Dogmazic](https://play.dogmazic.net/), and the stream’s playlist is [public](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803). Fourteen hours, one hundred and fifty-three tracks. Four of those hours are the album [Mont Serein 002](https://play.dogmazic.net/albums.php?action=show&album=11242), written for this project by [thepriben](https://play.dogmazic.net/artists.php?action=show&artist=7208).
 
 Sizes are read in metres, from the camera’s pose and a terrain model. Above 5.5 m it is not a car, whatever the network says. Below two metres it is not a bus. When the measurement cannot be trusted, it is thrown away. Zero means we do not know.
 

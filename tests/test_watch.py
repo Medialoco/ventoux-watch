@@ -7135,11 +7135,19 @@ class RechercheTests(unittest.TestCase):
 
         with mock.patch.object(stream.cv2, "putText", espion):
             self._deux_encarts(compte, quand)
-        for interdit in ("FRANCE", "US", "PRIS/VUS", "PRIS", "VUS", "1", "4", "2", "8"):
+        for interdit in ("FRANCE", "US", "PRIS/VUS", "PRIS", "VUS", "25%"):
             self.assertNotIn(interdit, mots)
-        self.assertEqual(mots.count("25%"), 2)
-        vide = self._deux_encarts({"paris": {}, "los_angeles": {}}, quand)
-        self.assertEqual(int(np.count_nonzero(np.all(vide == stream.VERT, axis=2))), 0)
+        self.assertIn("1/4", mots)
+        self.assertIn("2/8", mots)
+        mots_vides = []
+
+        def espion_vide(image, texte, *suite, **nommes):
+            mots_vides.append(texte)
+            return vrai(image, texte, *suite, **nommes)
+
+        with mock.patch.object(stream.cv2, "putText", espion_vide):
+            self._deux_encarts({"paris": {}, "los_angeles": {}}, quand)
+        self.assertEqual(mots_vides.count("0/0"), 2)
 
     def test_each_midnight_resets_its_own_side(self):
         """Minuit à Beaumont ne vide pas la journée de Los Angeles, et l'inverse."""
