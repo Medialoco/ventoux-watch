@@ -3600,11 +3600,10 @@ OURS_PREUVE_MOT = "REPLAY · 2025"
 
 def pose_preuve_ours(image: np.ndarray, photo: np.ndarray | None,
                      phase: float, vue: tuple[int, int, int, int]) -> None:
-    """La preuve, en petit, en bas à droite, filtrée comme une rediffusion.
+    """La preuve, au même coin que le direct pendant la vue 3D.
 
-    Le mot est celui d'une archive : REPLAY, et l'année de la photo. Le
-    filtre est le même que pour un passage qui revient. La carte tient
-    dans la bande noire, donc elle ne couvre pas la route.
+    En bas à droite de la fenêtre, filtrée comme une rediffusion. Le mot
+    est celui d'une archive : REPLAY, et l'année de la photo.
     """
     if photo is None or photo.size == 0 or phase < OURS_MARCHE_S:
         return
@@ -3613,38 +3612,25 @@ def pose_preuve_ours(image: np.ndarray, photo: np.ndarray | None,
     force = min(1.0, depuis / OURS_PREUVE_FONDU_S, max(0.0, reste) / OURS_PREUVE_FONDU_S)
     if force < 0.03:
         return
-    hauteur, largeur = image.shape[:2]
-    gauche, _cime, large_vue, _haute = vue
-    echelle = largeur / 1600
-    droite = gauche + large_vue
-    bande = largeur - droite
-    if bande < int(OURS_PREUVE_BANDE * echelle):
-        return
-    marge = max(6, int(8 * echelle))
-    poche_l = bande - 2 * marge
-    legend = int(16 * echelle)
-    bas = hauteur - int((AGENDA_H + 6) * echelle)
-    poche_h = int(120 * echelle)
-    if poche_l < 36 or bas - poche_h < 0:
-        return
+    x, y, large, haut = vue
+    echelle = image.shape[1] / 1600
+    marge = int(18 * echelle)
+    petit_l = max(96, int(large * 0.26))
     filtre = floute(photo)
-    ph, pw = filtre.shape[:2]
-    scale = min(poche_l / pw, (poche_h - legend) / ph)
-    tw, th = max(12, int(pw * scale)), max(12, int(ph * scale))
-    tw, th = min(tw, poche_l), min(th, poche_h - legend)
-    petit = cv2.resize(filtre, (tw, th), interpolation=cv2.INTER_AREA)
-    x = largeur - marge - tw
-    y = bas - legend - th
-    if x < droite or y < 0:
+    petit_h = max(54, int(petit_l * filtre.shape[0] / max(filtre.shape[1], 1)))
+    gx = x + large - petit_l - marge
+    gy = y + haut - petit_h - marge
+    if gx < x or gy < y or gx + petit_l > image.shape[1] or gy + petit_h > image.shape[0]:
         return
-    pad = max(3, int(4 * echelle))
+    petit = cv2.resize(filtre, (petit_l, petit_h), interpolation=cv2.INTER_AREA)
     calque = image.copy()
-    fond_encart(calque, (max(0, x - pad), max(0, y - pad)),
-                (min(largeur - 1, x + tw + pad - 1),
-                 min(hauteur - 1, y + th + legend + pad - 1)), echelle)
-    calque[y:y + th, x:x + tw] = petit
-    cv2.putText(calque, OURS_PREUVE_MOT, (x, y + th + legend - 2),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.32 * echelle, AMBRE, 1, cv2.LINE_AA)
+    calque[gy:gy + petit_h, gx:gx + petit_l] = petit
+    cadre_encart(calque, (gx - 1, gy - 1), (gx + petit_l, gy + petit_h), echelle)
+    taille = 0.42 * echelle
+    base = gy - int(7 * echelle)
+    cv2.putText(calque, OURS_PREUVE_MOT, (gx, max(int(12 * echelle), base)),
+                cv2.FONT_HERSHEY_SIMPLEX, taille, AMBRE, max(1, int(echelle)),
+                cv2.LINE_AA)
     cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
 
 
@@ -5090,50 +5076,8 @@ def phrase_salle(racine: Path) -> Path | None:
 def pose_salle(image: np.ndarray, vue: tuple[int, int, int, int],
                abonnes: int | None, en_direct: int | None, age: float,
                tenue: float = SALLE_TENUE_S) -> None:
-    """Le compte, dans le haut de la bande où le danseur droit sort parfois.
-
-    Il danse en bas de cette bande. Le compte reste au-dessus, donc les deux
-    peuvent être là en même temps sans se marcher dessus.
-    """
-    if age < 0 or age > tenue:
-        return
-    if abonnes is None:
-        return
-    force = min(1.0, age / 0.3, (tenue - age) / 0.5)
-    gx, gy, gw, gh = vue
-    hauteur, largeur = image.shape[:2]
-    droite = gx + gw
-    barre = largeur - droite
-    if barre < 36:
-        return
-    lignes: list[tuple[str, tuple[int, int, int]]] = [
-        (groupe(abonnes), BLANC),
-        ("ABONNES", AMBRE),
-    ]
-    echelle = largeur / 1600
-    taille = 0.55 * echelle
-    trait = max(1, int(round(2 * echelle)))
-    police = cv2.FONT_HERSHEY_SIMPLEX
-    while taille > 0.28 * echelle:
-        large = max(cv2.getTextSize(texte, police, taille, trait)[0][0]
-                    for texte, _ in lignes)
-        if large <= barre * 0.90:
-            break
-        taille *= 0.9
-    pas = int(round(22 * echelle * taille / (0.55 * echelle)))
-    bloc = pas * len(lignes)
-    y = gy + max(int(8 * echelle), (gh - bloc) // 5)
-    cx = droite + barre // 2
-    for texte, couleur in lignes:
-        (lw, lh), _ = cv2.getTextSize(texte, police, taille, trait)
-        x = cx - lw // 2
-        bas = min(hauteur - 2, y + lh)
-        encre = tuple(int(c * force) for c in couleur)
-        cv2.putText(image, texte, (x, bas), police, taille,
-                    (0, 0, 0), trait + 2, cv2.LINE_AA)
-        cv2.putText(image, texte, (x, bas), police, taille,
-                    encre, trait, cv2.LINE_AA)
-        y += pas
+    """Plus rien. Le compte d'abonnés et « en direct » ont quitté l'image."""
+    return
 
 
 # Les seuils du Pi 5 lui-même : il réduit sa fréquence à 80 °C et se met à

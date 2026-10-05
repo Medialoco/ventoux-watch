@@ -5272,15 +5272,17 @@ class PortraitMachineTests(unittest.TestCase):
         self.assertIn("MACHINE_MERCI", inspect.getsource(stream.pose_portrait_machine))
 
     def test_the_bear_proof_is_a_small_replay_at_the_bottom_right(self):
-        """La photo-preuve tient dans la bande de droite, filtrée, datée 2025."""
+        """La photo-preuve est dans la fenêtre, au coin du direct."""
         photo = np.full((90, 140, 3), 160, np.uint8)
         image = np.zeros((720, 1280, 3), np.uint8)
         vue = (175, 36, 929, 522)
         stream.pose_preuve_ours(image, photo, stream.OURS_MARCHE_S + 2.0, vue)
-        encre = np.argwhere(image.any(axis=2))
-        self.assertTrue(len(encre))
-        self.assertGreaterEqual(int(encre[:, 1].min()), vue[0] + vue[2])
-        self.assertGreater(int(encre[:, 0].min()), vue[1] + vue[3] // 2)
+        x, y, large, haut = vue
+        coin = image[y + haut // 2:y + haut, x + large // 2:x + large]
+        self.assertGreater(int(np.count_nonzero(coin)), 0)
+        dehors = image.copy()
+        dehors[y:y + haut, x:x + large] = 0
+        self.assertEqual(int(np.count_nonzero(dehors)), 0)
 
     def test_a_catch_stays_on_top_of_the_portrait(self):
         """Un disque au milieu ne doit pas éteindre la veille."""
@@ -5903,15 +5905,16 @@ class OursTests(unittest.TestCase):
                 & (toile[:, :, 2] < 40))
 
     def test_the_proof_sits_in_the_band_during_the_dance(self):
-        """C'est la preuve que c'est chez lui. Elle se lit à côté, pas dessus."""
+        """Même coin que le direct pendant la vue 3D : bas droite de la fenêtre."""
         from watcher.stream import pose_ours, OURS_MARCHE_S
         toile, (x, y, large, haut) = self._scene()
+        avant = toile.copy()
         pose_ours(toile, self._quand(OURS_MARCHE_S + 2.0), self._decoupe(),
                   vue=(x, y, large, haut), preuve=self._preuve())
-        preuve = self._ou_est_la_preuve(toile)
-        self.assertTrue(preuve[:, :x].any(), "la preuve n'est pas dans la bande")
-        self.assertFalse(preuve[y:y + haut, x:x + large].any(),
-                         "la preuve mange la route")
+        coin = toile[y + haut // 2:y + haut, x + large // 2:x + large]
+        etait = avant[y + haut // 2:y + haut, x + large // 2:x + large]
+        self.assertFalse(np.array_equal(coin, etait),
+                         "la preuve n'est pas en bas à droite de la fenêtre")
 
     def test_the_proof_waits_until_he_is_home(self):
         """Pendant la marche, ce n'est pas encore le moment."""
@@ -5921,14 +5924,15 @@ class OursTests(unittest.TestCase):
                   preuve=self._preuve())
         self.assertFalse(self._ou_est_la_preuve(toile).any())
 
-    def test_a_short_has_no_band_so_no_proof(self):
-        """Sans bande, coller la photo ce serait la coller sur la montagne."""
+    def test_a_full_frame_still_shows_the_proof(self):
+        """Le coin est celui du direct, même quand il n'y a pas de bande noire."""
         from watcher.stream import pose_ours, OURS_MARCHE_S
         toile = np.zeros((1080, 1920, 3), np.uint8)
         vue = (0, 0, 1920, 1080)
         pose_ours(toile, self._quand(OURS_MARCHE_S + 2.0), self._decoupe(),
                   vue=vue, preuve=self._preuve())
-        self.assertFalse(self._ou_est_la_preuve(toile).any())
+        coin = toile[540:, 960:]
+        self.assertGreater(int(np.count_nonzero(coin)), 0)
 
 
 class IncrustationDirectTests(unittest.TestCase):
