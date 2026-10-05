@@ -5515,13 +5515,14 @@ FROID_C = 20.0
 BRIDE_C = 85.0
 # Les lignes de l'encart machine, en pixels d'un cadre de mille six cents :
 # titre, date, heure, ville. Date et heure sont aux mêmes cotes que l'horloge
-# d'en face. Entre l'heure et le lieu, le rapport du jour — sans titre, le
-# lieu est déjà écrit. Température et charge sont en bas : elles ont un
-# plafond, elles ne disputent pas la place au chiffre.
-MACHINE_LIGNES = (26, 60, 96, 214)
+# d'en face. Le rapport n'est pas ici : il a sa vitre, collée dessous.
+# Température et charge sont sous l'iconographie.
+MACHINE_LIGNES = (26, 60, 96, 180)
 # La bande laissée aux deux jauges, sous le disque. Elle allonge l'encart
 # d'autant, pour que la carte ne rétrécisse pas.
 JAUGE_BANDE = 74
+# La vitre collée sous chaque encart. Même hauteur des deux côtés.
+JACKPOT_H = 86
 
 
 def _pose_portrait(image: np.ndarray, seconde: float,
@@ -5756,14 +5757,14 @@ def _pourcent(pris: int, vus: int) -> int:
 
 def ratios_du_jour(compte: dict | None, quand: float
                    ) -> tuple[tuple[int, int, tuple], tuple[int, int, tuple]]:
-    """Los Angeles, puis Beaumont : pris, vus, et la teinte du pourcentage.
+    """Los Angeles, puis Beaumont : pris, vus, et la teinte du rapport.
 
-    Le chiffre affiché est les prises sûres pour cent mouvements. Une prise
-    compte des deux côtés. Chaque côté lit sa propre date, donc minuit à
-    Beaumont vide le pourcentage de droite pendant que Los Angeles continue,
-    et l'inverse neuf heures plus tard. Le vert est le pourcentage le plus
-    haut. L'autre reste blanc. À égalité, ou tant qu'une journée n'a rien vu,
-    les deux restent blancs.
+    Le chiffre affiché est les prises sûres sur les mouvements, 0/0 tant
+    que la journée n'a rien vu. Une prise compte des deux côtés. Chaque
+    côté lit sa propre date, donc minuit à Beaumont remet la vitre de
+    droite à 0/0 pendant que Los Angeles continue, et l'inverse neuf heures
+    plus tard. Le vert est le meilleur taux. L'autre reste blanc. À
+    égalité, les deux restent blancs. 0/0 ne mène pas.
     """
     compte = compte or {}
     france = datetime.fromtimestamp(quand, PARIS).date().isoformat()
@@ -5781,61 +5782,70 @@ def ratios_du_jour(compte: dict | None, quand: float
             (*beau, teinte(p_beau, p_los)))
 
 
-def pose_ratio(image: np.ndarray, x: int, y: int, large: int, haut: int,
-               pris: int, vus: int, teinte: tuple, instant: float) -> None:
-    """Le pourcentage, centré, sans légende.
+def pose_jackpot(image: np.ndarray, x0: int, x1: int, y0: int,
+                 pris: int, vus: int, teinte: tuple, instant: float) -> None:
+    """Une vitre de machine à sous, collée sous l'encart.
 
-    Le lieu est déjà sur l'encart. Tant que la journée n'a pas vu de
-    mouvement, la place reste vide : c'est le reset de minuit. Ensuite un
-    seul chiffre, les prises sûres pour cent mouvements. Un filet ambre
-    passe dessous, une ampoule le parcourt. Le rouge n'y entre pas.
+    Le rapport s'y lit 0/0, prises sur mouvements. Le lieu est déjà écrit
+    au-dessus, donc la vitre n'a pas de titre. Deux rangées d'ampoules
+    courent en sens inverse. Le rouge n'y entre pas : il est au direct.
     """
-    pct = _pourcent(pris, vus)
-    if pct < 0 or large < 28 or haut < 22:
-        return
     hauteur, largeur = image.shape[:2]
-    x = max(0, min(x, largeur - 2))
-    y = max(0, min(y, hauteur - 2))
-    large = min(large, largeur - 1 - x)
-    haut = min(haut, hauteur - 1 - y)
-    if large < 28 or haut < 22:
+    if x1 - x0 < 36:
         return
     echelle = largeur / 1600
+    haut = int(JACKPOT_H * echelle)
+    y0 = max(0, min(y0, hauteur - 2))
+    y1 = min(hauteur - 1, y0 + haut - 1)
+    x0 = max(0, min(x0, largeur - 2))
+    x1 = max(x0 + 2, min(x1, largeur - 1))
+    if y1 - y0 < 22:
+        return
+    fond_encart(image, (x0, y0), (x1, y1), echelle)
+    marge = max(5, int(8 * echelle))
+    a = (x0 + marge, y0 + marge)
+    b = (x1 - marge, y1 - marge)
+    if b[0] - a[0] < 16 or b[1] - a[1] < 12:
+        return
+    cv2.rectangle(image, a, b, (6, 8, 14), -1)
+    or_trait = tuple(int(c * 0.9) for c in AMBRE)
+    ep = max(1, int(round(1.5 * echelle)))
+    cv2.rectangle(image, a, b, or_trait, ep, cv2.LINE_AA)
+    cv2.rectangle(image, (a[0] + 3, a[1] + 3), (b[0] - 3, b[1] - 3),
+                  tuple(int(c * 0.28) for c in AMBRE), max(1, ep), cv2.LINE_AA)
+
+    def ampoules(y: int, sens: int) -> None:
+        pas = max(8, int(12 * echelle))
+        n = max(1, (b[0] - a[0]) // pas)
+        allume = int(instant * 7) % n
+        rayon = max(1, int(round(2.1 * echelle)))
+        for i in range(n):
+            cx = a[0] + int((i + 0.5) * (b[0] - a[0]) / n)
+            if not (0 <= cx < largeur and 0 <= y < hauteur):
+                continue
+            rang = (n - 1 - i) if sens < 0 else i
+            couleur = AMBRE if (rang + allume) % 2 == 0 else CYAN
+            if rang != allume:
+                couleur = tuple(max(0, c // 5) for c in couleur)
+            cv2.circle(image, (cx, y), rayon, couleur, -1, cv2.LINE_AA)
+
+    ampoules(y0 + marge // 2, 1)
+    ampoules(y1 - marge // 2, -1)
+    texte = f"{pris}/{vus}"
     epais = max(2, int(round(2 * echelle)))
-    taille = 1.35 * echelle
-    texte = f"{pct}%"
+    taille = 1.15 * echelle
+    verre_l = b[0] - a[0] - 8
+    verre_h = b[1] - a[1] - 6
     for _ in range(8):
-        (lt, ht), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, taille, epais)
-        if lt <= large - 6 and ht <= haut * 0.72:
+        (lt, ht), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_DUPLEX, taille, epais)
+        if lt <= verre_l and ht <= verre_h:
             break
         taille *= 0.88
         epais = max(1, int(round(epais * 0.9)))
-    (lt, ht), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, taille, epais)
-    trou = max(3, int(5 * echelle))
-    trait = max(1, int(round(echelle)))
-    total = ht + trou + trait
-    base = y + max(0, (haut - total) // 2) + ht
-    filet = base + trou
-    cv2.putText(image, texte, (x + (large - lt) // 2, base),
-                cv2.FONT_HERSHEY_SIMPLEX, taille, teinte, epais, cv2.LINE_AA)
-    if filet >= hauteur:
-        return
-    bx = x + (large - lt) // 2
-    ambre = tuple(int(c * 0.75) for c in AMBRE)
-    cv2.line(image, (bx, filet), (bx + lt, filet), ambre, trait, cv2.LINE_AA)
-    pas = max(7, int(10 * echelle))
-    n = max(1, lt // pas)
-    allume = int(instant * 4) % n
-    rayon = max(1, int(round(1.6 * echelle)))
-    for i in range(n):
-        cx = bx + int((i + 0.5) * lt / n)
-        if not (0 <= cx < largeur):
-            continue
-        if i == allume:
-            cv2.circle(image, (cx, filet), rayon + 1, AMBRE, -1, cv2.LINE_AA)
-        else:
-            cv2.circle(image, (cx, filet), rayon,
-                       tuple(max(0, c // 4) for c in AMBRE), -1, cv2.LINE_AA)
+    (lt, ht), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_DUPLEX, taille, epais)
+    cv2.putText(image, texte,
+                (a[0] + (b[0] - a[0] - lt) // 2, a[1] + (b[1] - a[1] + ht) // 2),
+                cv2.FONT_HERSHEY_DUPLEX, taille, teinte, epais, cv2.LINE_AA)
 
 
 def pose_mesures(image: np.ndarray, x: int, bord: int, y: int, haut: int,
@@ -5863,7 +5873,7 @@ def pose_mesures(image: np.ndarray, x: int, bord: int, y: int, haut: int,
 ABSU_PERIODE_S = 360.0
 ABSU_TENUE_S = 16.0
 ABSU_LIGNES = (
-    "SURE CATCHES PER HUNDRED MOTIONS",
+    "CATCHES OVER MOTIONS",
     "A CATCH COUNTS ON BOTH SIDES",
     "EACH SIDE RESETS AT ITS MIDNIGHT",
     "THIS IS ABSURD",
@@ -5965,10 +5975,12 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     haut_reste = sommet + int(ENCART_DESSIN * echelle)
     a_dessin = bool((carte and ou) or (vignette is not None and vignette.size))
     bande = int(JAUGE_BANDE * echelle)
+    jack = int(JACKPOT_H * echelle) if ratio is not None else 0
     if a_dessin:
-        bas = int(ENCART_BAS * echelle) + int(remue)
+        bas_total = int(ENCART_BAS * echelle) + int(remue)
     else:
-        bas = sommet + int(MACHINE_LIGNES[-1] * echelle) + bande + marge
+        bas_total = sommet + int(MACHINE_LIGNES[-1] * echelle) + bande + marge + jack
+    bas = bas_total - jack
     fond_encart(image, (0, sommet), (droite - 1, bas - 1), echelle)
     bord = droite - marge
     titre, date_y, heure_y, ville_y = (
@@ -5980,11 +5992,6 @@ def pose_machine(image: np.ndarray, etat: dict | None,
              tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
              cv2.LINE_AA)
     pose_date_heure(image, marge, date_y, heure_y, jour, heure, echelle)
-    if ratio is not None:
-        ry = heure_y + int(8 * echelle)
-        rh = ville_y - int(16 * echelle) - ry
-        pose_ratio(image, marge, ry, bord - marge, rh,
-                   int(ratio[0]), int(ratio[1]), ratio[2], instant)
     pose_lieu(image, lieu, marge, ville_y, taille * HORLOGE_LIEU, echelle)
     if a_dessin:
         pose_carte_et_photo(
@@ -5996,6 +6003,9 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     # arrêtent la diffusion. Elles ferment l'encart, sous la carte.
     pose_mesures(image, marge, bord, bas - marge - bande, bande,
                  degres, etat["charge"], couleur, echelle)
+    if ratio is not None:
+        pose_jackpot(image, 0, droite - 1, bas,
+                     int(ratio[0]), int(ratio[1]), ratio[2], instant)
 
 
 BONJOUR_S = 8.0
@@ -6083,7 +6093,7 @@ HORLOGE_LIEU = 0.62
 # de texte, qui n'a aucune raison d'être le même des deux côtés.
 # 470, plus le creux du rapport (214 − 180) et la bande des jauges. Les
 # cartes gardent leur hauteur : on a descendu le bas, pas remonté le dessin.
-ENCART_BAS = 470 + (214 - 180) + JAUGE_BANDE
+ENCART_BAS = 470 + JAUGE_BANDE + JACKPOT_H
 ENCART_LARGE = 170
 # Sous le texte, les deux encarts ont la même recette : une silhouette de
 # pays, puis un disque. Même hauteur de départ, mêmes tailles, le disque
@@ -6512,8 +6522,10 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     badge_y, date_y, heure_y, ville_y = (
         sommet + int(r * echelle) for r in HORLOGE_LIGNES)
     haut_carte = sommet + int(ENCART_DESSIN * echelle)
-    bas = (int(ENCART_BAS * echelle) + int(remue) if dessin
-           else ville_y + marge)
+    jack = int(JACKPOT_H * echelle) if ratio is not None else 0
+    bas_total = (int(ENCART_BAS * echelle) + int(remue) if dessin
+                 else ville_y + marge + jack)
+    bas = bas_total - jack
     # La même bande que les jauges d'en face, vide ici : les deux
     # silhouettes et les deux disques s'arrêtent sur la même ligne, et
     # température et charge passent dessous, seulement du côté machine.
@@ -6538,17 +6550,15 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
              tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
              cv2.LINE_AA)
     pose_date_heure(image, x, date_y, heure_y, jour, heure, echelle)
-    if ratio is not None:
-        ry = heure_y + int(8 * echelle)
-        rh = ville_y - int(16 * echelle) - ry
-        pose_ratio(image, x, ry, largeur - marge - x, rh,
-                   int(ratio[0]), int(ratio[1]), ratio[2], quand)
     pose_lieu(image, lieu, x, ville_y, LIEU_CORPS * echelle * HORLOGE_LIEU, echelle)
     if dessin:
         teinte = tamise_la_photo(photo) if photo is not None else None
         pose_carte_et_photo(
             image, x, haut_carte, largeur - marge - x,
             bas - haut_carte - marge - bande, carte, ou, teinte, echelle)
+    if ratio is not None:
+        pose_jackpot(image, gauche, largeur - 1, bas,
+                     int(ratio[0]), int(ratio[1]), ratio[2], quand)
 
 
 def _entree(url: str, recul: int) -> subprocess.Popen:
