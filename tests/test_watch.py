@@ -5264,7 +5264,23 @@ class PortraitMachineTests(unittest.TestCase):
             vue=(175, 36, 929, 522)))
         self.assertEqual(stream.MACHINE_MERCI, "Thanks Raspberry!")
         self.assertGreater(stream.MACHINE_PERIODE_S, 1151.0)
+        self.assertGreater(stream.DOGMAZIC_PERIODE_S, stream.MACHINE_PERIODE_S)
+        self.assertEqual(stream.OPENCV_MERCI, "Thanks OpenCV!")
+        self.assertEqual(stream.YOLO_MERCI, "Thanks YOLO11!")
+        self.assertNotIn("NOUS SOMMES", inspect.getsource(stream.pose_salle))
+        self.assertNotIn("phrase_salle(", inspect.getsource(stream.diffuse))
         self.assertIn("MACHINE_MERCI", inspect.getsource(stream.pose_portrait_machine))
+
+    def test_the_bear_proof_is_a_small_replay_at_the_bottom_right(self):
+        """La photo-preuve tient dans la bande de droite, filtrée, datée 2025."""
+        photo = np.full((90, 140, 3), 160, np.uint8)
+        image = np.zeros((720, 1280, 3), np.uint8)
+        vue = (175, 36, 929, 522)
+        stream.pose_preuve_ours(image, photo, stream.OURS_MARCHE_S + 2.0, vue)
+        encre = np.argwhere(image.any(axis=2))
+        self.assertTrue(len(encre))
+        self.assertGreaterEqual(int(encre[:, 1].min()), vue[0] + vue[2])
+        self.assertGreater(int(encre[:, 0].min()), vue[1] + vue[3] // 2)
 
     def test_a_catch_stays_on_top_of_the_portrait(self):
         """Un disque au milieu ne doit pas éteindre la veille."""

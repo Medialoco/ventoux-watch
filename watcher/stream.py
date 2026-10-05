@@ -3595,14 +3595,16 @@ def _il_crie(image: np.ndarray, vue: tuple[int, int, int, int], seconde: float) 
                 OURS_JAUNE, trait, cv2.LINE_AA)
 
 
+OURS_PREUVE_MOT = "REPLAY · 2025"
+
+
 def pose_preuve_ours(image: np.ndarray, photo: np.ndarray | None,
                      phase: float, vue: tuple[int, int, int, int]) -> None:
-    """La preuve, dans la bande noire : c'est bien chez lui, le rond-point.
+    """La preuve, en petit, en bas à droite, filtrée comme une rediffusion.
 
-    Pas sur la route. La photo dit ce que le cri affirme, et elle le dit à
-    côté, comme on pose une pièce à côté d'un témoignage. Sans bande — un
-    Short, un cadre plein — elle se tait : mieux vaut rien qu'une carte
-    collée sur la montagne.
+    Le mot est celui d'une archive : REPLAY, et l'année de la photo. Le
+    filtre est le même que pour un passage qui revient. La carte tient
+    dans la bande noire, donc elle ne couvre pas la route.
     """
     if photo is None or photo.size == 0 or phase < OURS_MARCHE_S:
         return
@@ -3612,45 +3614,37 @@ def pose_preuve_ours(image: np.ndarray, photo: np.ndarray | None,
     if force < 0.03:
         return
     hauteur, largeur = image.shape[:2]
-    gauche, cime, large_vue, haute_vue = vue
+    gauche, _cime, large_vue, _haute = vue
     echelle = largeur / 1600
-    bande = gauche
+    droite = gauche + large_vue
+    bande = largeur - droite
     if bande < int(OURS_PREUVE_BANDE * echelle):
         return
-    marge = int(12 * echelle)
-    haut_libre = max(cime + marge, int(ENCART_BAS * echelle) + marge)
-    bas_libre = min(cime + haute_vue - marge,
-                    hauteur - int((AGENDA_H + 8) * echelle))
-    if bas_libre - haut_libre < int(110 * echelle):
-        haut_libre = cime + marge
-        bas_libre = cime + haute_vue - marge
+    marge = max(6, int(8 * echelle))
     poche_l = bande - 2 * marge
-    poche_h = bas_libre - haut_libre
-    if poche_l < 40 or poche_h < 40:
+    legend = int(16 * echelle)
+    bas = hauteur - int((AGENDA_H + 6) * echelle)
+    poche_h = int(120 * echelle)
+    if poche_l < 36 or bas - poche_h < 0:
         return
-    ph, pw = photo.shape[:2]
-    zoom = 1.0 + 0.035 * min(1.0, depuis / OURS_DANSE_S)
-    scale = min(poche_l / pw, poche_h / ph) * zoom
-    tw, th = int(pw * scale), int(ph * scale)
-    tw, th = min(tw, poche_l), min(th, poche_h)
-    if tw < 12 or th < 12:
+    filtre = floute(photo)
+    ph, pw = filtre.shape[:2]
+    scale = min(poche_l / pw, (poche_h - legend) / ph)
+    tw, th = max(12, int(pw * scale)), max(12, int(ph * scale))
+    tw, th = min(tw, poche_l), min(th, poche_h - legend)
+    petit = cv2.resize(filtre, (tw, th), interpolation=cv2.INTER_AREA)
+    x = largeur - marge - tw
+    y = bas - legend - th
+    if x < droite or y < 0:
         return
-    petit = cv2.resize(photo, (tw, th), interpolation=cv2.INTER_AREA)
-    x = (bande - tw) // 2
-    y = bas_libre - th
-    if y < haut_libre:
-        y = haut_libre
-    if x < 0 or y < 0 or x + tw > largeur or y + th > hauteur:
-        return
-    pad = max(3, int(6 * echelle))
+    pad = max(3, int(4 * echelle))
     calque = image.copy()
     fond_encart(calque, (max(0, x - pad), max(0, y - pad)),
                 (min(largeur - 1, x + tw + pad - 1),
-                 min(hauteur - 1, y + th + pad - 1)), echelle)
+                 min(hauteur - 1, y + th + legend + pad - 1)), echelle)
     calque[y:y + th, x:x + tw] = petit
-    cadre_encart(calque, (max(0, x - pad), max(0, y - pad)),
-                 (min(largeur - 1, x + tw + pad - 1),
-                  min(hauteur - 1, y + th + pad - 1)), echelle)
+    cv2.putText(calque, OURS_PREUVE_MOT, (x, y + th + legend - 2),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.32 * echelle, AMBRE, 1, cv2.LINE_AA)
     cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
 
 
@@ -4158,7 +4152,7 @@ PISTE_DESCENTE_S = 20.0
 # premier, et sept secondes : assez pour voir que c'est un Raspberry Pi, pas
 # assez pour oublier la montagne. Deux minutes de retard, le temps que
 # YouTube ouvre l'image — plus tôt, on la montrerait à personne.
-MACHINE_PERIODE_S = 1483.0
+MACHINE_PERIODE_S = 2963.0
 MACHINE_TENUE_S = 7.0
 MACHINE_RETARD_S = 120.0
 # Largeur de la photo, en part de la fenêtre caméra. Assez pour le ventilateur
@@ -4168,13 +4162,23 @@ MACHINE_PORTRAIT = 0.32
 MACHINE_MERCI = "Thanks Raspberry!"
 
 # Dogmazic, le même numéro : leur chien orange au milieu, et on les
-# remercie. Vingt-sept minutes, un autre premier, neuf minutes de retard
-# pour ne pas tomber sur le Raspberry au redémarrage.
-DOGMAZIC_PERIODE_S = 1607.0
+# remercie. Moins souvent que le Raspberry, un autre premier, neuf minutes
+# de retard pour ne pas tomber dessus au redémarrage.
+DOGMAZIC_PERIODE_S = 3221.0
 DOGMAZIC_TENUE_S = MACHINE_TENUE_S
 DOGMAZIC_RETARD_S = 540.0
 DOGMAZIC_PORTRAIT = MACHINE_PORTRAIT
 DOGMAZIC_MERCI = "Thanks Dogmazic!"
+# Deux lignes, sans photo : OpenCV voit le mouvement, YOLO11 le nomme.
+# Moins souvent encore, et décalés pour ne pas parler en même temps.
+OPENCV_PERIODE_S = 2477.0
+OPENCV_TENUE_S = 5.0
+OPENCV_RETARD_S = 900.0
+OPENCV_MERCI = "Thanks OpenCV!"
+YOLO_PERIODE_S = 2741.0
+YOLO_TENUE_S = 5.0
+YOLO_RETARD_S = 1500.0
+YOLO_MERCI = "Thanks YOLO11!"
 
 # Le plateau, maintenant que les numéros ont dit leur période et leur
 # durée. L'ordre départage les ex æquo : le tapis d'abord parce qu'il passe
@@ -4189,6 +4193,8 @@ PLATEAU = (
     ("batiment", BATIMENT_PERIODE_S, BATIMENT_RELEVE_S, 0.0),
     ("machine", MACHINE_PERIODE_S, MACHINE_TENUE_S, MACHINE_RETARD_S),
     ("dogmazic", DOGMAZIC_PERIODE_S, DOGMAZIC_TENUE_S, DOGMAZIC_RETARD_S),
+    ("opencv", OPENCV_PERIODE_S, OPENCV_TENUE_S, OPENCV_RETARD_S),
+    ("yolo", YOLO_PERIODE_S, YOLO_TENUE_S, YOLO_RETARD_S),
     # L'ours en dernier parce qu'il écrit en travers du ciel, et qu'il vaut
     # mieux qu'il cède le passage plutôt que de crier par-dessus le tapis.
     #
@@ -5091,7 +5097,7 @@ def pose_salle(image: np.ndarray, vue: tuple[int, int, int, int],
     """
     if age < 0 or age > tenue:
         return
-    if abonnes is None and (en_direct is None or en_direct < 1):
+    if abonnes is None:
         return
     force = min(1.0, age / 0.3, (tenue - age) / 0.5)
     gx, gy, gw, gh = vue
@@ -5100,19 +5106,10 @@ def pose_salle(image: np.ndarray, vue: tuple[int, int, int, int],
     barre = largeur - droite
     if barre < 36:
         return
-    lignes: list[tuple[str, tuple[int, int, int]]] = []
-    if abonnes is not None:
-        lignes.append((groupe(abonnes), BLANC))
-        lignes.append(("ABONNES", AMBRE))
-    if en_direct is not None and en_direct >= 1:
-        lignes.append(("NOUS SOMMES", BLANC))
-        lignes.append((groupe(en_direct), BLANC))
-        lignes.append(("EN DIRECT", AMBRE))
-    elif en_direct == 0 and abonnes is not None:
-        lignes.append(("0", BLANC))
-        lignes.append(("EN DIRECT", AMBRE))
-    if not lignes:
-        return
+    lignes: list[tuple[str, tuple[int, int, int]]] = [
+        (groupe(abonnes), BLANC),
+        ("ABONNES", AMBRE),
+    ]
     echelle = largeur / 1600
     taille = 0.55 * echelle
     trait = max(1, int(round(2 * echelle)))
@@ -5591,6 +5588,34 @@ def _pose_portrait(image: np.ndarray, seconde: float,
         cv2.putText(calque, pied_droit, (cx + rayon - large, ligne),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.54 * echelle, couleur, 2,
                     cv2.LINE_AA)
+    cv2.addWeighted(calque, 0.92 * force, image, 1.0 - 0.92 * force, 0.0, dst=image)
+    return True
+
+
+def pose_merci(image: np.ndarray, seconde: float, occasion: str, merci: str,
+               tenue: float, vue: tuple[int, int, int, int] | None = None,
+               nuit: bool = False) -> bool:
+    """Une ligne de remerciement, sans photo, dans le haut de la fenêtre."""
+    phase = en_scene(occasion, seconde, nuit)
+    if phase is None:
+        return False
+    force = min(phase, tenue - phase, 1.0)
+    if force < 0.02:
+        return True
+    hauteur, largeur = image.shape[:2]
+    gauche, cime, large_vue, _haute = vue or (0, 0, largeur, hauteur)
+    echelle = largeur / 1600
+    taille = 0.72 * echelle
+    epais = max(1, int(round(2 * echelle)))
+    (mw, mh), _ = cv2.getTextSize(merci, cv2.FONT_HERSHEY_SIMPLEX, taille, epais)
+    ox = gauche + (large_vue - mw) // 2
+    oy = cime + mh + int(18 * echelle)
+    calque = image.copy()
+    marge = max(4, int(6 * echelle))
+    cv2.rectangle(calque, (ox - marge, oy - mh - marge),
+                  (ox + mw + marge, oy + marge // 2), (10, 16, 18), -1)
+    cv2.putText(calque, merci, (ox, oy), cv2.FONT_HERSHEY_SIMPLEX, taille,
+                CYAN, epais, cv2.LINE_AA)
     cv2.addWeighted(calque, 0.92 * force, image, 1.0 - 0.92 * force, 0.0, dst=image)
     return True
 
@@ -7205,6 +7230,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                             musique.dis(tirage.choice(musique.remerciements))
                         log.info("Portrait de la machine : %s",
                                  musique.voix_dit or "sans voix")
+                pose_merci(toile, quand - origine, "opencv", OPENCV_MERCI,
+                           OPENCV_TENUE_S, vue=cadrage, nuit=not fait_jour)
+                pose_merci(toile, quand - origine, "yolo", YOLO_MERCI,
+                           YOLO_TENUE_S, vue=cadrage, nuit=not fait_jour)
                 if ou_en_est is not None:
                     # Une fois, pas à chaque image : il grogne en descendant,
                     # et il crie une fois arrivé sur l'îlot.
@@ -7320,12 +7349,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     salle_feu = time.time()
                     salle_abonnes, salle_direct = abo, directs
                     salle_tenue = SALLE_TENUE_S
-                    clip = phrase_salle(racine)
-                    if clip is not None:
-                        musique.dis(clip)
-                        salle_tenue = max(
-                            SALLE_TENUE_S,
-                            clip.stat().st_size / (ECHANTILLONS_S * VOIES * 2) + 0.6)
                     if directs is not None and directs >= 1:
                         log.info("Salle : %s abonnés, %s en direct", abo, directs)
                     else:

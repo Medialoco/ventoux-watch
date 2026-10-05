@@ -8,7 +8,7 @@ Un Raspberry Pi 5, sur un bureau à Los Angeles, regarde la webcam du col du Mon
 
 La veille voit beaucoup de mouvement. Une classe n’est publiée, un good catch, que lorsqu’elle est assez sûre. Sous chaque encart, une vitre affiche le rapport du jour, prises sur mouvements, 0/0 tant que la journée n’a rien vu. Los Angeles est à gauche, Beaumont-du-Ventoux à droite. Une prise compte des deux côtés. Chaque côté se remet à zéro à son minuit, et les deux minuits ne tombent pas à la même heure.
 
-Veilleur **v0.6.3**.
+Veilleur **v0.6.4**.
 
 Le direct est sur [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). Le site est [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Vingt façons dont l’image change y sont écrites, chacune d’après le code qui tourne.
 
