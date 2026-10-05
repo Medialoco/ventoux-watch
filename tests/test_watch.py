@@ -7200,24 +7200,8 @@ class RechercheTests(unittest.TestCase):
         self.assertGreater(poses["TEMP"], poses["LOS ANGELES"])
         self.assertGreater(poses["LOAD"], poses["TEMP"])
 
-    def test_the_two_days_are_said_and_then_stop(self):
-        self.assertGreaterEqual(stream._age_absurde(3.0), 0)
-        self.assertLess(stream._age_absurde(stream.ABSU_TENUE_S + 1), 0)
-        vue = (200, 40, 800, 400)
-        toile = np.zeros((720, 1280, 3), np.uint8)
-        stream.pose_absurde(toile, vue, 1.0)
-        self.assertGreater(int(np.count_nonzero(toile)), 0)
-        self.assertEqual(int(np.count_nonzero(np.all(toile == stream.ROUGE, axis=2))), 0)
-        mots = []
-        vrai = cv2.putText
-
-        def espion(image, texte, *suite, **nommes):
-            mots.append(texte)
-            return vrai(image, texte, *suite, **nommes)
-
-        with mock.patch.object(stream.cv2, "putText", espion):
-            for i in range(4):
-                stream.pose_absurde(
-                    np.zeros((720, 1280, 3), np.uint8), vue,
-                    (i + 0.5) * stream.ABSU_TENUE_S / 4)
-        self.assertEqual(list(dict.fromkeys(mots)), list(stream.ABSU_LIGNES))
+    def test_the_absurd_lines_are_gone(self):
+        source = inspect.getsource(stream.diffuse)
+        for ligne in ("CATCHES OVER MOTIONS", "A CATCH COUNTS ON BOTH SIDES",
+                      "EACH SIDE RESETS AT ITS MIDNIGHT", "THIS IS ABSURD"):
+            self.assertNotIn(ligne, source)

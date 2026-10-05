@@ -5917,17 +5917,6 @@ def pose_mesures(image: np.ndarray, x: int, bord: int, y: int, haut: int,
                VERT if charge < 0.75 else AMBRE, echelle)
 
 
-# Quatre phrases, une à la fois, le temps de les lire. Le rapport est déjà
-# à l'écran : ceci dit ce qu'il mesure, et pourquoi les deux côtés
-# n'affichent pas le même jour.
-ABSU_PERIODE_S = 360.0
-ABSU_TENUE_S = 16.0
-ABSU_LIGNES = (
-    "CATCHES OVER MOTIONS",
-    "A CATCH COUNTS ON BOTH SIDES",
-    "EACH SIDE RESETS AT ITS MIDNIGHT",
-    "THIS IS ABSURD",
-)
 # Huit secondes, le temps de lire la ligne. Chaque côté a le sien.
 RESET_S = 8.0
 
@@ -5952,26 +5941,6 @@ def note_minuit(quand: float, memoire: dict) -> str | None:
     if 0 <= quand - memoire.get("feu_los", -1e9) < RESET_S:
         return "NEW DAY IN LOS ANGELES"
     return None
-
-
-def _age_absurde(quand: float) -> float:
-    """L'âge dans la phrase, ou un négatif quand ce n'est pas l'heure."""
-    phase = quand % ABSU_PERIODE_S
-    return phase if phase < ABSU_TENUE_S else -1.0
-
-
-def pose_absurde(image: np.ndarray, vue: tuple[int, int, int, int],
-                 age: float) -> None:
-    """Une phrase sous la montagne, puis la suivante.
-
-    Le chiffre ne se légende pas lui-même. De temps en temps le flux dit
-    ce que le rapport compte, qu'une prise vaut pour les deux côtés, et
-    que les deux journées ne commencent pas ensemble.
-    """
-    if age < 0 or age >= ABSU_TENUE_S:
-        return
-    i = min(len(ABSU_LIGNES) - 1, int(age / ABSU_TENUE_S * len(ABSU_LIGNES)))
-    pose_annonce(image, vue, (ABSU_LIGNES[i],))
 
 
 def pose_machine(image: np.ndarray, etat: dict | None,
@@ -7365,7 +7334,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             dit = musique.dit_quoi() if musique.parle() else ""
             age_never = time.time() - never_feu if never_feu else -1.0
             age_dijon = time.time() - dijon_feu if dijon_feu else -1.0
-            age_jeu = _age_absurde(quand)
             phrase_minuit = note_minuit(quand, minuit)
             if phrase_minuit:
                 pose_annonce(toile, cadrage, (phrase_minuit,))
@@ -7387,8 +7355,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 pose_annonce(toile, cadrage, ("DAVID VINCENT OR VINCENT DAVID",))
             elif dit == "normandy":
                 pose_annonce(toile, cadrage, ("BIG UP TO THE NORMANDY!",))
-            elif age_jeu >= 0:
-                pose_absurde(toile, cadrage, age_jeu)
             pose_salle(toile, cadrage, salle_abonnes, salle_direct,
                        time.time() - salle_feu if salle_feu else -1.0,
                        salle_tenue)
