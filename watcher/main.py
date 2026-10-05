@@ -262,6 +262,7 @@ def main() -> None:
     cherche: dict[int, dict] = {}
     annonces: set[int] = set()
     score = _charge_score(root / "data" / "score.json")
+    _aligne_prises(score, store.events, root / "data" / "score.json")
     pending: list[dict] = []
     last_fire: dict[str, float] = {}
     alerted: set[int] = set()
@@ -561,9 +562,15 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         log.info("Recadrage gardé pour %s : %s [%s]", decision.label, close, track.code)
     log.info("Publié %s %s [%s]", decision.type, decision.label, track.code)
     _ligne_code(track, decision)
+    # Le good catch attend 0,60. Le compteur, lui, retient toute classe
+    # publiée : sinon un vélo lu à 0,50 disparaît des deux journées, et
+    # passé minuit en France il ne reste plus que du côté américain.
+    if (score is not None and decision.type in CLASSES_SURES
+            and not getattr(track, "compte", False)):
+        track.compte = True
+        _marque_prise(score, now, store.root / "score.json")
     if sure and score is not None:
         track.tenu = True
-        _marque_prise(score, now, store.root / "score.json")
     if decision.type in CLIP_TYPES:
         pending.append({"id": event["id"], "after": now + 4, "started": track.started - 8})
 
@@ -712,8 +719,37 @@ def _marque_vue(score: dict, prise: float, chemin: Path) -> None:
     _ecrit_score(chemin, score)
 
 
+def _aligne_prises(score: dict, events: list, chemin: Path) -> None:
+    """Le numérateur reprend les classes déjà publiées.
+
+    Le fichier du jour ne gardait que les good catch, au-dessus de 0,60.
+    Une classe publiée en dessous existait dans l'historique et manquait
+    au tableau. On réécrit le numérateur depuis l'historique, sans toucher
+    aux mouvements déjà comptés.
+    """
+    comptes: dict[str, dict[str, int]] = {"paris": {}, "los_angeles": {}}
+    for event in events:
+        if not isinstance(event, dict) or event.get("type") not in CLASSES_SURES:
+            continue
+        try:
+            instant = datetime.strptime(event["t"], "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=timezone.utc).timestamp()
+        except (KeyError, TypeError, ValueError):
+            continue
+        france, amerique = _jours_de(instant)
+        comptes["paris"][france] = comptes["paris"].get(france, 0) + 1
+        comptes["los_angeles"][amerique] = comptes["los_angeles"].get(amerique, 0) + 1
+    for camp in ("paris", "los_angeles"):
+        for jour, cellule in (score.get(camp) or {}).items():
+            if isinstance(cellule, dict):
+                cellule["pris"] = comptes[camp].get(jour, 0)
+        for jour, n in comptes[camp].items():
+            _cellule(score, camp, jour)["pris"] = n
+    _ecrit_score(chemin, score)
+
+
 def _marque_prise(score: dict, prise: float, chemin: Path) -> None:
-    """Un good catch profite aux deux camps, chacun sur sa journée en cours."""
+    """Une classe publiée profite aux deux camps, chacun sur sa journée en cours."""
     france, amerique = _jours_de(prise)
     _cellule(score, "paris", france)["pris"] += 1
     _cellule(score, "los_angeles", amerique)["pris"] += 1

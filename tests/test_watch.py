@@ -7102,6 +7102,30 @@ class RechercheTests(unittest.TestCase):
         self.assertEqual(score["paris"]["2026-10-06"], {"vus": 1, "pris": 1})
         self.assertEqual(score["los_angeles"]["2026-10-05"], {"vus": 1, "pris": 1})
 
+    def test_a_published_class_stays_on_the_american_day(self):
+        """Un vélo publié sous 0,60 reste sur la journée de Los Angeles.
+
+        Minuit à Beaumont a déjà ouvert le 6. La vitre de droite ne le
+        montre plus. Celle de gauche est encore au 5, et c'est là qu'il est.
+        """
+        events = [
+            {"t": "2026-10-05T17:58:10Z", "type": "cycle"},
+            {"t": "2026-10-05T17:58:06Z", "type": "motion"},
+        ]
+        score = {
+            "paris": {
+                "2026-10-05": {"vus": 199, "pris": 0},
+                "2026-10-06": {"vus": 7, "pris": 0},
+            },
+            "los_angeles": {"2026-10-05": {"vus": 206, "pris": 0}},
+        }
+        with tempfile.TemporaryDirectory() as dossier:
+            main._aligne_prises(score, events, Path(dossier) / "score.json")
+        self.assertEqual(score["los_angeles"]["2026-10-05"]["pris"], 1)
+        self.assertEqual(score["paris"]["2026-10-05"]["pris"], 1)
+        self.assertEqual(score["paris"]["2026-10-06"]["pris"], 0)
+        self.assertEqual(score["los_angeles"]["2026-10-05"]["vus"], 206)
+
     def _deux_encarts(self, compte, quand):
         image = np.zeros((720, 1280, 3), np.uint8)
         los, beau = stream.ratios_du_jour(compte, quand)

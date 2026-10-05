@@ -75,6 +75,9 @@ class Track:
     code: str = ""
     # Déjà fêté : on ne redemande plus la classe, et on ne compte pas deux fois.
     tenu: bool = False
+    # Déjà porté au tableau. Une classe publiée compte même sous la barre
+    # du good catch, et une relecture plus tard ne doit pas la compter encore.
+    compte: bool = False
     essai: float = 0.0
 
     def __post_init__(self) -> None:
