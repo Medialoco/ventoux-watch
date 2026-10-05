@@ -6,6 +6,8 @@
 
 A Raspberry Pi 5 on a desk in Los Angeles watches the webcam at the Mont Serein pass, 1,389 m up Mont Ventoux. One frame a second. OpenCV finds what moved, YOLO names the crop, and the Pi rebuilds the picture: the photograph, the rectangle, the overlays, the music. The watch is the work. The stream is the show.
 
+The watch sees a lot of motion. A class is published, a good catch, only when it is sure enough. The number on each card is those sure catches per hundred motions. Los Angeles is on the left, Beaumont-du-Ventoux on the right. A catch counts for both. Each side resets at its own midnight, and the two midnights are not the same hour.
+
 The live picture is on [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). The site is [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Twenty ways the picture changes are written there, each one from the code that is running.
 
 ![Mont Serein at night: roundabout, road, slope and the summit beacon](docs/mont-serein-nuit.png)

@@ -6,6 +6,8 @@
 
 Un Raspberry Pi 5, sur un bureau à Los Angeles, regarde la webcam du col du Mont Serein, à 1 389 m sur le mont Ventoux. Une image par seconde. OpenCV trouve ce qui a bougé, YOLO nomme la découpe, et le Pi reconstruit le cadre : la photographie, le rectangle, les encarts, la musique. La veille est le travail. Le flux est le spectacle.
 
+La veille voit beaucoup de mouvement. Une classe n’est publiée, un good catch, que lorsqu’elle est assez sûre. Le chiffre de chaque encart, ce sont ces prises pour cent mouvements. Los Angeles est à gauche, Beaumont-du-Ventoux à droite. Une prise compte des deux côtés. Chaque côté se remet à zéro à son minuit, et les deux minuits ne tombent pas à la même heure.
+
 Le direct est sur [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). Le site est [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Vingt façons dont l’image change y sont écrites, chacune d’après le code qui tourne.
 
 ![Mont Serein, de nuit : rond-point, route, pente et balise du sommet](docs/mont-serein-nuit.png)

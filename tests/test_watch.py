@@ -4276,7 +4276,10 @@ class DiffusionTests(unittest.TestCase):
         source = inspect.getsource(stream.diffuse)
         # L'interruption est dans la m\u00eame condition que la fin du compte \u00e0
         # rebours : s\u00e9par\u00e9es, l'une pourrait un jour \u00eatre d\u00e9plac\u00e9e sans l'autre.
-        self.assertIn("if survol is not None and (poses or", source)
+        self.assertNotIn("if survol is not None and (poses or", source)
+        self.assertIn("vue3d_poste", source)
+        self.assertIn("if a_poser is None:", source)
+        self.assertNotIn("if a_poser is None and survol is None:", source)
         self.assertIn("or quand - survol > tenue)", source)
         for duree in (stream.VUE3D_TENUE_S, stream.VUE3D_NUIT_S):
             self.assertLess(duree, stream.VUE3D_PAUSE_S / 4,
@@ -6308,17 +6311,10 @@ class CeQuOnMontreEtQuandOnLeMontre(unittest.TestCase):
         self.assertEqual(stream._quand_dit("pas une date"), "pas une date")
 
     def test_the_flyover_turns_by_day_and_stands_still_by_night(self):
-        """Le mouvement est ce qui trahit un rendu posé sur une nuit noire.
-
-        Un survol qui tourne à trois heures du matin ne montre pas le relief :
-        il montre qu'on a collé une autre vidéo, parce que le rendu est en
-        plein soleil et que le mouvement le souligne. Un plan fixe ne fait pas
-        cette promesse — il se donne pour une maquette, ce qu'il est, et c'est
-        la nuit qu'on en a le plus besoin puisque c'est la nuit qu'on ne voit
-        rien.
+        """Le relief reste fixe. La nuit, le plein soleil du rendu est baissé.
 
         La condition reste le soleil au-dessus de l'horizon et non une heure :
-        c'est elle qui décide lequel des deux on joue, et elle vaudra telle
+        c'est elle qui décide lequel des deux on pose, et elle vaudra telle
         quelle sur la caméra suivante.
         """
         source = inspect.getsource(stream.diffuse)
@@ -6328,9 +6324,7 @@ class CeQuOnMontreEtQuandOnLeMontre(unittest.TestCase):
         # le noir, ni une image fixe rester en place au lever du jour.
         self.assertIn("survol, survol_de_jour = quand, fait_jour", source)
         self.assertIn("fait_jour != survol_de_jour", source)
-        # Et la nuit dure moins longtemps : un plan fixe se lit en entier dès
-        # les premières secondes, là où un survol apprend quelque chose
-        # jusqu'au bout.
+        self.assertIn("vue3d_poste(images3d, nuit=not survol_de_jour)", source)
         self.assertLess(stream.VUE3D_NUIT_S, stream.VUE3D_TENUE_S)
 
     def test_the_still_flyover_shows_the_far_end_of_the_trip(self):
@@ -6351,6 +6345,7 @@ class CeQuOnMontreEtQuandOnLeMontre(unittest.TestCase):
         self.assertEqual(len(set(vus)), 1)
         self.assertEqual(vus[0], str(images[len(images) // 2]))
         self.assertIsNone(stream.vue3d_arretee([]))
+        self.assertIsNone(stream.vue3d_poste([], False))
 
 
 class LeMotSeLitOuNeSertARien(unittest.TestCase):
@@ -7088,13 +7083,111 @@ class RechercheTests(unittest.TestCase):
         self.assertEqual(score["paris"]["2026-10-06"], {"vus": 1, "pris": 1})
         self.assertEqual(score["los_angeles"]["2026-10-05"], {"vus": 1, "pris": 1})
 
-    def test_the_board_shows_both_camps_on_the_left(self):
+    def _deux_encarts(self, compte, quand):
         image = np.zeros((720, 1280, 3), np.uint8)
+        los, beau = stream.ratios_du_jour(compte, quand)
+        etat = {"degres": 90.0, "charge": 0.9, "debout": 10.0, "libre": 1.0}
+        stream.pose_machine(image, etat, None, "Los Angeles", quand=quand,
+                            ratio=los)
+        stream.pose_horloge(image, quand, commune="Beaumont-du-Ventoux",
+                            ratio=beau)
+        return image
+
+    def test_the_better_ratio_can_sit_on_either_side(self):
+        """Beaumont mène parfois. Le vert suit le taux, pas le côté."""
         quand = datetime(2026, 10, 5, 18, 0, tzinfo=timezone.utc).timestamp()
-        compte = {
+        beau_mene = {
             "paris": {"2026-10-05": {"pris": 3, "vus": 12}},
             "los_angeles": {"2026-10-05": {"pris": 1, "vus": 8}},
         }
-        stream.pose_partie(image, compte, quand)
-        self.assertGreater(int(np.count_nonzero(image[:, :220])), 0)
-        self.assertEqual(int(np.count_nonzero(image[:, 400:])), 0)
+        los_mene = {
+            "paris": {"2026-10-05": {"pris": 1, "vus": 9}},
+            "los_angeles": {"2026-10-05": {"pris": 4, "vus": 5}},
+        }
+        milieu = 640
+
+        def verts(image):
+            masque = np.all(image == stream.VERT, axis=2)
+            return (int(np.count_nonzero(masque[:, :milieu])),
+                    int(np.count_nonzero(masque[:, milieu:])))
+
+        gauche, droite = verts(self._deux_encarts(beau_mene, quand))
+        self.assertEqual(gauche, 0, "Los Angeles est vert alors que Beaumont mène")
+        self.assertGreater(droite, 0)
+        gauche, droite = verts(self._deux_encarts(los_mene, quand))
+        self.assertGreater(gauche, 0)
+        self.assertEqual(droite, 0, "Beaumont est vert alors que Los Angeles mène")
+
+    def test_a_tie_stays_white_and_the_ratio_has_no_title(self):
+        quand = datetime(2026, 10, 5, 18, 0, tzinfo=timezone.utc).timestamp()
+        compte = {
+            "paris": {"2026-10-05": {"pris": 1, "vus": 4}},
+            "los_angeles": {"2026-10-05": {"pris": 2, "vus": 8}},
+        }
+        image = self._deux_encarts(compte, quand)
+        self.assertEqual(int(np.count_nonzero(np.all(image == stream.VERT, axis=2))), 0)
+        mots = []
+        vrai = cv2.putText
+
+        def espion(image, texte, *suite, **nommes):
+            mots.append(texte)
+            return vrai(image, texte, *suite, **nommes)
+
+        with mock.patch.object(stream.cv2, "putText", espion):
+            self._deux_encarts(compte, quand)
+        for interdit in ("FRANCE", "US", "PRIS/VUS", "PRIS", "VUS", "1", "4", "2", "8"):
+            self.assertNotIn(interdit, mots)
+        self.assertEqual(mots.count("25%"), 2)
+        vide = self._deux_encarts({"paris": {}, "los_angeles": {}}, quand)
+        self.assertEqual(int(np.count_nonzero(np.all(vide == stream.VERT, axis=2))), 0)
+
+    def test_each_midnight_resets_its_own_side(self):
+        """Minuit à Beaumont ne vide pas la journée de Los Angeles, et l'inverse."""
+        memoire: dict = {}
+        avant = datetime(2026, 10, 5, 23, 59, tzinfo=ZoneInfo("Europe/Paris")).timestamp()
+        self.assertIsNone(stream.note_minuit(avant, memoire))
+        beaumont = datetime(2026, 10, 6, 0, 0, 5, tzinfo=ZoneInfo("Europe/Paris")).timestamp()
+        self.assertEqual(stream.note_minuit(beaumont, memoire), "NEW DAY IN BEAUMONT")
+        los = datetime(2026, 10, 6, 0, 0, 5, tzinfo=ZoneInfo("America/Los_Angeles")).timestamp()
+        self.assertEqual(stream.note_minuit(los, memoire), "NEW DAY IN LOS ANGELES")
+        self.assertEqual(stream._pourcent(0, 0), -1)
+        self.assertEqual(stream._pourcent(82, 100), 82)
+
+    def test_temp_and_load_close_the_machine_card(self):
+        """Sous le lieu, pas entre l'heure et le lieu."""
+        poses = {}
+        vrai = cv2.putText
+
+        def espion(image, texte, org, *suite, **nommes):
+            if texte in {"TEMP", "LOAD", "LOS ANGELES"}:
+                poses[texte] = org[1]
+            return vrai(image, texte, org, *suite, **nommes)
+
+        etat = {"degres": 46.0, "charge": 0.3, "debout": 10.0, "libre": 1.0}
+        with mock.patch.object(stream.cv2, "putText", espion):
+            stream.pose_machine(np.zeros((720, 1280, 3), np.uint8), etat,
+                                ville="Los Angeles", quand=0.0)
+        self.assertGreater(poses["TEMP"], poses["LOS ANGELES"])
+        self.assertGreater(poses["LOAD"], poses["TEMP"])
+
+    def test_the_two_days_are_said_and_then_stop(self):
+        self.assertGreaterEqual(stream._age_absurde(3.0), 0)
+        self.assertLess(stream._age_absurde(stream.ABSU_TENUE_S + 1), 0)
+        vue = (200, 40, 800, 400)
+        toile = np.zeros((720, 1280, 3), np.uint8)
+        stream.pose_absurde(toile, vue, 1.0)
+        self.assertGreater(int(np.count_nonzero(toile)), 0)
+        self.assertEqual(int(np.count_nonzero(np.all(toile == stream.ROUGE, axis=2))), 0)
+        mots = []
+        vrai = cv2.putText
+
+        def espion(image, texte, *suite, **nommes):
+            mots.append(texte)
+            return vrai(image, texte, *suite, **nommes)
+
+        with mock.patch.object(stream.cv2, "putText", espion):
+            for i in range(4):
+                stream.pose_absurde(
+                    np.zeros((720, 1280, 3), np.uint8), vue,
+                    (i + 0.5) * stream.ABSU_TENUE_S / 4)
+        self.assertEqual(list(dict.fromkeys(mots)), list(stream.ABSU_LIGNES))

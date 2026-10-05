@@ -1792,6 +1792,10 @@ VUE3D_PAUSE_S = 1800.0
 # et n'a plus rien à donner ensuite, là où un survol qui tourne apprend quelque
 # chose du relief jusqu'au bout.
 VUE3D_NUIT_S = 90.0
+# Le rendu est en plein soleil. La nuit, le laisser tel quel dirait qu'il
+# fait jour. Ce n'est pas un réglage de cette caméra : une maquette de jour
+# posée sur une pente noire ment sur l'heure.
+VUE3D_NUIT = 0.4
 
 
 def charge_vue3d(racine: Path) -> list[Path]:
@@ -1822,6 +1826,21 @@ def image_vue3d(images: list[Path], age: float, par_seconde: float) -> np.ndarra
         return None
     rang = int(max(0.0, age) * par_seconde) % len(images)
     return cv2.imread(str(images[rang]))
+
+
+def vue3d_poste(images: list[Path], nuit: bool) -> np.ndarray | None:
+    """Le point de vue de la caméra, une image, qui ne bouge pas.
+
+    La première image du survol est ce point de vue. Un rectangle mesuré
+    sur la webcam s'y pose sans être traduit. La nuit, le plein soleil du
+    rendu est baissé.
+    """
+    if not images:
+        return None
+    image = cv2.imread(str(images[0]))
+    if image is None or not nuit:
+        return image
+    return np.clip(image.astype(np.float32) * VUE3D_NUIT, 0, 255).astype(np.uint8)
 
 
 def vue3d_arretee(images: list[Path]) -> np.ndarray | None:
@@ -5495,10 +5514,14 @@ def pose_direct(toile: np.ndarray, camera: np.ndarray,
 FROID_C = 20.0
 BRIDE_C = 85.0
 # Les lignes de l'encart machine, en pixels d'un cadre de mille six cents :
-# titre, date, heure, température, sa jauge, la charge, sa jauge, la ville.
-# Date et heure sont aux mêmes cotes que l'horloge d'en face. Le disque et
-# l'âge ont sauté : ce n'était pas l'heure de Los Angeles.
-MACHINE_LIGNES = (26, 60, 96, 124, 132, 154, 162, 180)
+# titre, date, heure, ville. Date et heure sont aux mêmes cotes que l'horloge
+# d'en face. Entre l'heure et le lieu, le rapport du jour — sans titre, le
+# lieu est déjà écrit. Température et charge sont en bas : elles ont un
+# plafond, elles ne disputent pas la place au chiffre.
+MACHINE_LIGNES = (26, 60, 96, 214)
+# La bande laissée aux deux jauges, sous le disque. Elle allonge l'encart
+# d'autant, pour que la carte ne rétrécisse pas.
+JAUGE_BANDE = 74
 
 
 def _pose_portrait(image: np.ndarray, seconde: float,
@@ -5724,50 +5747,171 @@ def _cellule_du_jour(compte: dict, camp: str, jour: str) -> tuple[int, int]:
     return int(cellule.get("pris") or 0), int(cellule.get("vus") or 0)
 
 
-def pose_partie(image: np.ndarray, compte: dict, quand: float) -> None:
-    """France contre Los Angeles, à gauche, sous l'encart de la machine.
+def _pourcent(pris: int, vus: int) -> int:
+    """Prises sûres pour cent mouvements, ou -1 si la journée n'a pas commencé."""
+    if vus <= 0:
+        return -1
+    return (100 * pris + vus // 2) // vus
 
-    Le chiffre est les good catchs sur les mouvements. Un catch compte pour
-    les deux camps : ils ne font que commencer leur journée à des heures
-    différentes, donc les totaux divergent autour de minuit et se rejoignent
-    le reste du temps. Le plus haut taux est en vert, l'autre en blanc.
-    Égalité, les deux restent blancs : il n'y a pas de vainqueur à déclarer.
+
+def ratios_du_jour(compte: dict | None, quand: float
+                   ) -> tuple[tuple[int, int, tuple], tuple[int, int, tuple]]:
+    """Los Angeles, puis Beaumont : pris, vus, et la teinte du pourcentage.
+
+    Le chiffre affiché est les prises sûres pour cent mouvements. Une prise
+    compte des deux côtés. Chaque côté lit sa propre date, donc minuit à
+    Beaumont vide le pourcentage de droite pendant que Los Angeles continue,
+    et l'inverse neuf heures plus tard. Le vert est le pourcentage le plus
+    haut. L'autre reste blanc. À égalité, ou tant qu'une journée n'a rien vu,
+    les deux restent blancs.
     """
-    if not compte:
-        return
-    largeur = image.shape[1]
-    echelle = largeur / 1600
+    compte = compte or {}
     france = datetime.fromtimestamp(quand, PARIS).date().isoformat()
     amerique = datetime.fromtimestamp(quand, LOS_ANGELES).date().isoformat()
-    lignes = (
-        ("FRANCE", *_cellule_du_jour(compte, "paris", france)),
-        ("LOS ANGELES", *_cellule_du_jour(compte, "los_angeles", amerique)),
-    )
-    taux = []
-    for _, pris, vus in lignes:
-        taux.append(pris / vus if vus else -1.0)
-    meilleur = max(taux)
-    marge = int(12 * echelle)
-    x = marge
-    y0 = int(ENCART_BAS * echelle) + int(16 * echelle)
-    plaque_l = int(210 * echelle)
-    pas = int(28 * echelle)
-    plaque_h = int(22 * echelle) + pas * 2
-    if y0 + plaque_h >= image.shape[0] - int(40 * echelle):
+    los = _cellule_du_jour(compte, "los_angeles", amerique)
+    beau = _cellule_du_jour(compte, "paris", france)
+    p_los, p_beau = _pourcent(*los), _pourcent(*beau)
+
+    def teinte(le_sien: int, l_autre: int) -> tuple:
+        if le_sien >= 0 and le_sien > l_autre:
+            return VERT
+        return BLANC
+
+    return ((*los, teinte(p_los, p_beau)),
+            (*beau, teinte(p_beau, p_los)))
+
+
+def pose_ratio(image: np.ndarray, x: int, y: int, large: int, haut: int,
+               pris: int, vus: int, teinte: tuple, instant: float) -> None:
+    """Le pourcentage, centré, sans légende.
+
+    Le lieu est déjà sur l'encart. Tant que la journée n'a pas vu de
+    mouvement, la place reste vide : c'est le reset de minuit. Ensuite un
+    seul chiffre, les prises sûres pour cent mouvements. Un filet ambre
+    passe dessous, une ampoule le parcourt. Le rouge n'y entre pas.
+    """
+    pct = _pourcent(pris, vus)
+    if pct < 0 or large < 28 or haut < 22:
         return
-    fond_encart(image, (x - int(6 * echelle), y0 - int(16 * echelle)),
-                (x + plaque_l, y0 + plaque_h), echelle)
-    cv2.putText(image, "PRIS/VUS", (x, y0), cv2.FONT_HERSHEY_SIMPLEX,
-                0.38 * echelle, GRIS_ENCART, 1, cv2.LINE_AA)
-    for i, (nom, pris, vus) in enumerate(lignes):
-        y = y0 + pas * (i + 1)
-        teinte = VERT if taux[i] >= 0 and taux[i] == meilleur and taux.count(meilleur) == 1 else BLANC
-        cv2.putText(image, nom, (x, y), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.42 * echelle, GRIS_ENCART, 1, cv2.LINE_AA)
-        valeur = f"{pris}/{vus}"
-        (lw, _), _ = cv2.getTextSize(valeur, cv2.FONT_HERSHEY_SIMPLEX, 0.62 * echelle, 2)
-        cv2.putText(image, valeur, (x + plaque_l - lw - int(8 * echelle), y),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.62 * echelle, teinte, 2, cv2.LINE_AA)
+    hauteur, largeur = image.shape[:2]
+    x = max(0, min(x, largeur - 2))
+    y = max(0, min(y, hauteur - 2))
+    large = min(large, largeur - 1 - x)
+    haut = min(haut, hauteur - 1 - y)
+    if large < 28 or haut < 22:
+        return
+    echelle = largeur / 1600
+    epais = max(2, int(round(2 * echelle)))
+    taille = 1.35 * echelle
+    texte = f"{pct}%"
+    for _ in range(8):
+        (lt, ht), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, taille, epais)
+        if lt <= large - 6 and ht <= haut * 0.72:
+            break
+        taille *= 0.88
+        epais = max(1, int(round(epais * 0.9)))
+    (lt, ht), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, taille, epais)
+    trou = max(3, int(5 * echelle))
+    trait = max(1, int(round(echelle)))
+    total = ht + trou + trait
+    base = y + max(0, (haut - total) // 2) + ht
+    filet = base + trou
+    cv2.putText(image, texte, (x + (large - lt) // 2, base),
+                cv2.FONT_HERSHEY_SIMPLEX, taille, teinte, epais, cv2.LINE_AA)
+    if filet >= hauteur:
+        return
+    bx = x + (large - lt) // 2
+    ambre = tuple(int(c * 0.75) for c in AMBRE)
+    cv2.line(image, (bx, filet), (bx + lt, filet), ambre, trait, cv2.LINE_AA)
+    pas = max(7, int(10 * echelle))
+    n = max(1, lt // pas)
+    allume = int(instant * 4) % n
+    rayon = max(1, int(round(1.6 * echelle)))
+    for i in range(n):
+        cx = bx + int((i + 0.5) * lt / n)
+        if not (0 <= cx < largeur):
+            continue
+        if i == allume:
+            cv2.circle(image, (cx, filet), rayon + 1, AMBRE, -1, cv2.LINE_AA)
+        else:
+            cv2.circle(image, (cx, filet), rayon,
+                       tuple(max(0, c // 4) for c in AMBRE), -1, cv2.LINE_AA)
+
+
+def pose_mesures(image: np.ndarray, x: int, bord: int, y: int, haut: int,
+                 degres: float, charge: float, couleur: tuple,
+                 echelle: float) -> None:
+    """Température et charge, en bas de l'encart, l'une sous l'autre."""
+    if haut < int(28 * echelle) or bord - x < 20:
+        return
+    pas = haut / 4
+    temp = y + pas
+    pose_duo(image, "TEMP", f"{degres:.1f} C", x, bord, int(temp), echelle,
+             teinte=couleur)
+    pose_jauge(image, x, int(temp + 4 * echelle), bord - x,
+               (degres - FROID_C) / (BRIDE_C - FROID_C), couleur, echelle)
+    charge_y = y + 3 * pas
+    pose_duo(image, "LOAD", f"{charge * 100:.0f}%", x, bord, int(charge_y),
+             echelle)
+    pose_jauge(image, x, int(charge_y + 4 * echelle), bord - x, charge,
+               VERT if charge < 0.75 else AMBRE, echelle)
+
+
+# Quatre phrases, une à la fois, le temps de les lire. Le rapport est déjà
+# à l'écran : ceci dit ce qu'il mesure, et pourquoi les deux côtés
+# n'affichent pas le même jour.
+ABSU_PERIODE_S = 360.0
+ABSU_TENUE_S = 16.0
+ABSU_LIGNES = (
+    "SURE CATCHES PER HUNDRED MOTIONS",
+    "A CATCH COUNTS ON BOTH SIDES",
+    "EACH SIDE RESETS AT ITS MIDNIGHT",
+    "THIS IS ABSURD",
+)
+# Huit secondes, le temps de lire la ligne. Chaque côté a le sien.
+RESET_S = 8.0
+
+
+def note_minuit(quand: float, memoire: dict) -> str | None:
+    """La phrase du côté dont la date vient de changer, sinon rien.
+
+    Le premier appel note les deux dates et se tait : un démarrage n'est
+    pas un minuit. Ensuite, minuit à Beaumont vide la journée de droite,
+    minuit à Los Angeles vide celle de gauche. Neuf heures les séparent.
+    """
+    los = datetime.fromtimestamp(quand, LOS_ANGELES).date()
+    beau = datetime.fromtimestamp(quand, PARIS).date()
+    if "beau" in memoire and beau != memoire["beau"]:
+        memoire["feu_beau"] = quand
+    if "los" in memoire and los != memoire["los"]:
+        memoire["feu_los"] = quand
+    memoire["beau"] = beau
+    memoire["los"] = los
+    if 0 <= quand - memoire.get("feu_beau", -1e9) < RESET_S:
+        return "NEW DAY IN BEAUMONT"
+    if 0 <= quand - memoire.get("feu_los", -1e9) < RESET_S:
+        return "NEW DAY IN LOS ANGELES"
+    return None
+
+
+def _age_absurde(quand: float) -> float:
+    """L'âge dans la phrase, ou un négatif quand ce n'est pas l'heure."""
+    phase = quand % ABSU_PERIODE_S
+    return phase if phase < ABSU_TENUE_S else -1.0
+
+
+def pose_absurde(image: np.ndarray, vue: tuple[int, int, int, int],
+                 age: float) -> None:
+    """Une phrase sous la montagne, puis la suivante.
+
+    Le chiffre ne se légende pas lui-même. De temps en temps le flux dit
+    ce que le rapport compte, qu'une prise vaut pour les deux côtés, et
+    que les deux journées ne commencent pas ensemble.
+    """
+    if age < 0 or age >= ABSU_TENUE_S:
+        return
+    i = min(len(ABSU_LIGNES) - 1, int(age / ABSU_TENUE_S * len(ABSU_LIGNES)))
+    pose_annonce(image, vue, (ABSU_LIGNES[i],))
 
 
 def pose_machine(image: np.ndarray, etat: dict | None,
@@ -5775,7 +5919,8 @@ def pose_machine(image: np.ndarray, etat: dict | None,
                  remue: float = 0.0,
                  carte: list | None = None,
                  ou: tuple[float, float] | None = None,
-                 quand: float | None = None) -> None:
+                 quand: float | None = None,
+                 ratio: tuple | None = None) -> None:
     """L'encart machine, en haut à gauche, en face de l'horloge.
 
     Une webcam qui tourne vingt-quatre heures sur vingt-quatre tient à une
@@ -5818,12 +5963,15 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     )
     droite = max(large + 2 * marge, int(ENCART_LARGE * echelle) + 2 * marge)
     haut_reste = sommet + int(ENCART_DESSIN * echelle)
-    bas = int(ENCART_BAS * echelle) + int(remue)
-    if (vignette is None or vignette.size == 0) and not (carte and ou):
-        bas = sommet + int(MACHINE_LIGNES[-1] * echelle) + marge
+    a_dessin = bool((carte and ou) or (vignette is not None and vignette.size))
+    bande = int(JAUGE_BANDE * echelle)
+    if a_dessin:
+        bas = int(ENCART_BAS * echelle) + int(remue)
+    else:
+        bas = sommet + int(MACHINE_LIGNES[-1] * echelle) + bande + marge
     fond_encart(image, (0, sommet), (droite - 1, bas - 1), echelle)
     bord = droite - marge
-    titre, date_y, heure_y, temp_y, jauge_c, charge, jauge_l, ville_y = (
+    titre, date_y, heure_y, ville_y = (
         sommet + int(r * echelle) for r in MACHINE_LIGNES)
     pose_badge(image, "RASPBERRY PI 5", marge, titre, echelle, instant,
                teinte_mot=BLANC, teinte_point=CYAN)
@@ -5832,21 +5980,22 @@ def pose_machine(image: np.ndarray, etat: dict | None,
              tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
              cv2.LINE_AA)
     pose_date_heure(image, marge, date_y, heure_y, jour, heure, echelle)
-    # Température et charge restent : ce sont les deux grandeurs qui ont un
-    # plafond connu et qui arrêtent la diffusion. Plus de disque, plus d'âge.
-    pose_duo(image, "TEMP", f"{degres:.1f} C", marge, bord, temp_y, echelle,
-             teinte=couleur)
-    pose_jauge(image, marge, jauge_c, bord - marge,
-               (degres - FROID_C) / (BRIDE_C - FROID_C), couleur, echelle)
-    pose_duo(image, "LOAD", f"{etat['charge'] * 100:.0f}%", marge, bord,
-             charge, echelle)
-    pose_jauge(image, marge, jauge_l, bord - marge, etat["charge"],
-               VERT if etat["charge"] < 0.75 else AMBRE, echelle)
+    if ratio is not None:
+        ry = heure_y + int(8 * echelle)
+        rh = ville_y - int(16 * echelle) - ry
+        pose_ratio(image, marge, ry, bord - marge, rh,
+                   int(ratio[0]), int(ratio[1]), ratio[2], instant)
     pose_lieu(image, lieu, marge, ville_y, taille * HORLOGE_LIEU, echelle)
-    pose_carte_et_photo(
-        image, marge, haut_reste, droite - 2 * marge, bas - haut_reste - marge,
-        carte, ou, tamise_la_photo(vignette) if vignette is not None else None,
-        echelle)
+    if a_dessin:
+        pose_carte_et_photo(
+            image, marge, haut_reste, droite - 2 * marge,
+            bas - haut_reste - marge - bande,
+            carte, ou, tamise_la_photo(vignette) if vignette is not None else None,
+            echelle)
+    # Température et charge ont un plafond connu, et ce sont elles qui
+    # arrêtent la diffusion. Elles ferment l'encart, sous la carte.
+    pose_mesures(image, marge, bord, bas - marge - bande, bande,
+                 degres, etat["charge"], couleur, echelle)
 
 
 BONJOUR_S = 8.0
@@ -5932,7 +6081,9 @@ HORLOGE_LIEU = 0.62
 # Chacun écrit son texte, puis son image prend tout ce qui reste jusqu'en bas.
 # Sans cette ligne commune, les deux hauteurs dépendaient du nombre de lignes
 # de texte, qui n'a aucune raison d'être le même des deux côtés.
-ENCART_BAS = 470         # depuis le haut de l'image, à la largeur de référence
+# 470, plus le creux du rapport (214 − 180) et la bande des jauges. Les
+# cartes gardent leur hauteur : on a descendu le bas, pas remonté le dessin.
+ENCART_BAS = 470 + (214 - 180) + JAUGE_BANDE
 ENCART_LARGE = 170
 # Sous le texte, les deux encarts ont la même recette : une silhouette de
 # pays, puis un disque. Même hauteur de départ, mêmes tailles, le disque
@@ -6317,7 +6468,8 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                  carte: list | None = None,
                  ou: tuple[float, float] | None = None,
                  remue: float = 0.0,
-                 photo: np.ndarray | None = None) -> None:
+                 photo: np.ndarray | None = None,
+                 ratio: tuple | None = None) -> None:
     """L'heure qui tourne, en haut à droite, avec le point rouge des chaînes.
 
     Le point clignote à la seconde : c'est ce qui fait qu'un écran fixe a l'air
@@ -6362,6 +6514,10 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     haut_carte = sommet + int(ENCART_DESSIN * echelle)
     bas = (int(ENCART_BAS * echelle) + int(remue) if dessin
            else ville_y + marge)
+    # La même bande que les jauges d'en face, vide ici : les deux
+    # silhouettes et les deux disques s'arrêtent sur la même ligne, et
+    # température et charge passent dessous, seulement du côté machine.
+    bande = int(JAUGE_BANDE * echelle) if dessin else 0
     fond_encart(image, (gauche, sommet), (largeur - 1, bas - 1), echelle)
     rayon = int(7 * echelle)
     x = gauche + marge
@@ -6382,12 +6538,17 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
              tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
              cv2.LINE_AA)
     pose_date_heure(image, x, date_y, heure_y, jour, heure, echelle)
+    if ratio is not None:
+        ry = heure_y + int(8 * echelle)
+        rh = ville_y - int(16 * echelle) - ry
+        pose_ratio(image, x, ry, largeur - marge - x, rh,
+                   int(ratio[0]), int(ratio[1]), ratio[2], quand)
     pose_lieu(image, lieu, x, ville_y, LIEU_CORPS * echelle * HORLOGE_LIEU, echelle)
     if dessin:
         teinte = tamise_la_photo(photo) if photo is not None else None
         pose_carte_et_photo(
             image, x, haut_carte, largeur - marge - x,
-            bas - haut_carte - marge, carte, ou, teinte, echelle)
+            bas - haut_carte - marge - bande, carte, ou, teinte, echelle)
 
 
 def _entree(url: str, recul: int) -> subprocess.Popen:
@@ -6635,6 +6796,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     demain: dict = {}
     jour_calcule = None
     bonjour = origine - 10_000.0
+    minuit: dict = {}
     nom_du_lieu = (cfg.get("camera") or {}).get("nom") or "Ventoux"
     # La commune, résolue une fois pour toutes par scripts/commune_du_site.py
     # depuis la position de la caméra. Une autre caméra n'a qu'à relancer le
@@ -6874,39 +7036,31 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     a_poser = rediff[0]
                 else:
                     rediff, fin_rediff, dernier_vu = None, quand, quand
-            # Le survol du terrain, quand rien ne se passe et pas trop souvent.
+            # Le relief, quand rien ne se passe et pas trop souvent.
             #
-            # Il s'arrête net si la veille voit quelque chose : on a passé des
-            # semaines à ne pas rater une voiture, ce n'est pas pour la cacher
-            # derrière un décor calculé. Deux minutes interrompues valent mieux
-            # que deux minutes complètes par-dessus l'évènement.
-            # De jour il tourne, de nuit il s'arrête sur une image.
-            #
-            # Un survol qui tourne au milieu d'une nuit noire ne montre pas le
-            # relief : il montre qu'on a collé une autre vidéo, parce que le
-            # rendu est en plein soleil et que le mouvement le souligne. Un
-            # plan fixe ne fait pas cette promesse-là. Il se donne pour ce
-            # qu'il est — une maquette du terrain — et c'est la nuit qu'on en
-            # a le plus besoin, puisque c'est la nuit qu'on ne voit rien.
+            # Il ne bouge pas. Le point de vue est celui de la caméra, donc
+            # le rectangle de la veille se pose dessus sans mentir sur
+            # l'endroit. De jour le rendu reste en plein soleil. De nuit il
+            # est le même cadre, baissé : un soleil collé sur une pente noire
+            # dirait la mauvaise heure.
             #
             # Le soleil au-dessus de l'horizon reste la condition physique :
-            # c'est elle qui décide lequel des deux on joue, pas une heure.
+            # c'est elle qui décide lequel des deux on pose, pas une heure.
             fait_jour = (hauteur_soleil or -90.0) > HORIZON
             tenue = VUE3D_TENUE_S if survol_de_jour else VUE3D_NUIT_S
-            if survol is not None and (poses or fait_jour != survol_de_jour
+            if survol is not None and (fait_jour != survol_de_jour
                                        or quand - survol > tenue):
                 fin_survol, survol = quand, None
             elif (survol is None and images3d and rediff is None and a_poser is None
                   and quand - dernier_vu > CREUX_S
                   and quand - fin_survol > VUE3D_PAUSE_S):
                 survol, survol_de_jour = quand, fait_jour
-                log.info("Survol du terrain (%s) pendant %.0f s",
-                         "animé" if fait_jour else "arrêté",
+                log.info("Relief fixe (%s) pendant %.0f s",
+                         "jour" if fait_jour else "nuit",
                          VUE3D_TENUE_S if fait_jour else VUE3D_NUIT_S)
             vue = image
             if survol is not None:
-                dessus = (image_vue3d(images3d, quand - survol, cfg["stream_fps"])
-                          if survol_de_jour else vue3d_arretee(images3d))
+                dessus = vue3d_poste(images3d, nuit=not survol_de_jour)
                 if dessus is None:
                     fin_survol, survol = quand, None
                 else:
@@ -7035,9 +7189,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # de la caméra ils disparaissaient sous l'éléphant ou sous le
             # Raspberry : on croyait la veille éteinte dès qu'un effet
             # occupait le milieu. Ils restent donc par-dessus, dans la
-            # fenêtre. Pas sur une rediffusion ni sur le relief : ce n'est
-            # plus la vue, un rectangle y mentirait.
-            if a_poser is None and survol is None:
+            # fenêtre. Sur le relief aussi : il est au point de vue de la
+            # caméra et il ne bouge pas, donc le rectangle dit le même
+            # endroit. Pas sur une rediffusion : là, ce n'est plus la vue.
+            if a_poser is None:
                 dessine(toile, [vu for vu in vus if not cherche_encore(vu, pistes, quand)],
                         quand, vue=cadrage)
                 pose_recherches(toile, pistes, cadrage, vus, quand)
@@ -7145,7 +7300,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             dit = musique.dit_quoi() if musique.parle() else ""
             age_never = time.time() - never_feu if never_feu else -1.0
             age_dijon = time.time() - dijon_feu if dijon_feu else -1.0
-            if 0 <= age_never <= NEVER_TENUE_S:
+            age_jeu = _age_absurde(quand)
+            phrase_minuit = note_minuit(quand, minuit)
+            if phrase_minuit:
+                pose_annonce(toile, cadrage, (phrase_minuit,))
+            elif 0 <= age_never <= NEVER_TENUE_S:
                 pose_never(toile, cadrage, photo_never, photo_butterbane,
                            age_never)
             elif 0 <= age_dijon <= DIJON_TENUE_S:
@@ -7163,6 +7322,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 pose_annonce(toile, cadrage, ("DAVID VINCENT OR VINCENT DAVID",))
             elif dit == "normandy":
                 pose_annonce(toile, cadrage, ("BIG UP TO THE NORMANDY!",))
+            elif age_jeu >= 0:
+                pose_absurde(toile, cadrage, age_jeu)
             pose_salle(toile, cadrage, salle_abonnes, salle_direct,
                        time.time() - salle_feu if salle_feu else -1.0,
                        salle_tenue)
@@ -7174,16 +7335,17 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # il se remarque sur la durée, et seulement parce que le fil qui
             # relie les deux encarts s'incline avec eux.
             remue = flottement(quand - origine, largeur / 1600)
+            los, beau = ratios_du_jour(tableau, quand)
             pose_horloge(toile, quand, direct=rediff is None and survol is None,
                          autre="REPLAY" if rediff is not None else "3D MODEL",
                          commune=commune, carte=carte_pays, ou=ou_camera,
-                         remue=-remue, photo=photo_trampoline)
+                         remue=-remue, photo=photo_trampoline, ratio=beau)
             ou_machine = None
             if machine_ou.get("lat") is not None:
                 ou_machine = (float(machine_ou["lat"]), float(machine_ou["lon"]))
             pose_machine(toile, machine, photo_machine, ville, remue,
-                         carte=carte_californie, ou=ou_machine, quand=quand)
-            pose_partie(toile, tableau, quand)
+                         carte=carte_californie, ou=ou_machine, quand=quand,
+                         ratio=los)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             pose_deploiement(toile, __version__, quand - ouvert)
             # La voix part avec le mot, une fois, dans les premières secondes.
