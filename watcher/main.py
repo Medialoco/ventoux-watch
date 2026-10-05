@@ -740,11 +740,18 @@ def _aligne_prises(score: dict, events: list, chemin: Path) -> None:
         comptes["paris"][france] = comptes["paris"].get(france, 0) + 1
         comptes["los_angeles"][amerique] = comptes["los_angeles"].get(amerique, 0) + 1
     for camp in ("paris", "los_angeles"):
-        for jour, cellule in (score.get(camp) or {}).items():
-            if isinstance(cellule, dict):
-                cellule["pris"] = comptes[camp].get(jour, 0)
-        for jour, n in comptes[camp].items():
-            _cellule(score, camp, jour)["pris"] = n
+        jours = score.setdefault(camp, {})
+        for jour in list(jours):
+            cellule = jours.get(jour)
+            if not isinstance(cellule, dict):
+                continue
+            # Une journée sans mouvement n'est pas affichée. En créer une
+            # seulement pour y poser d'anciennes classes donnait un 538/0
+            # qui n'a jamais été compté par le tableau.
+            if int(cellule.get("vus") or 0) <= 0:
+                del jours[jour]
+                continue
+            cellule["pris"] = comptes[camp].get(jour, 0)
     _ecrit_score(chemin, score)
 
 
