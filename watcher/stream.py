@@ -3602,8 +3602,8 @@ def pose_preuve_ours(image: np.ndarray, photo: np.ndarray | None,
                      phase: float, vue: tuple[int, int, int, int]) -> None:
     """La preuve, au même coin que le direct pendant la vue 3D.
 
-    En bas à droite de la fenêtre, filtrée comme une rediffusion. Le mot
-    est celui d'une archive : REPLAY, et l'année de la photo.
+    En bas à droite de la fenêtre. La couleur reste : un léger flou suffit
+    à dire que ce n'est pas le direct. Le mot est celui d'une archive.
     """
     if photo is None or photo.size == 0 or phase < OURS_MARCHE_S:
         return
@@ -3616,13 +3616,13 @@ def pose_preuve_ours(image: np.ndarray, photo: np.ndarray | None,
     echelle = image.shape[1] / 1600
     marge = int(18 * echelle)
     petit_l = max(96, int(large * 0.26))
-    filtre = floute(photo)
-    petit_h = max(54, int(petit_l * filtre.shape[0] / max(filtre.shape[1], 1)))
+    petit_h = max(54, int(petit_l * photo.shape[0] / max(photo.shape[1], 1)))
     gx = x + large - petit_l - marge
     gy = y + haut - petit_h - marge
     if gx < x or gy < y or gx + petit_l > image.shape[1] or gy + petit_h > image.shape[0]:
         return
-    petit = cv2.resize(filtre, (petit_l, petit_h), interpolation=cv2.INTER_AREA)
+    petit = cv2.resize(photo, (petit_l, petit_h), interpolation=cv2.INTER_AREA)
+    petit = cv2.GaussianBlur(petit, (0, 0), 1.1)
     calque = image.copy()
     calque[gy:gy + petit_h, gx:gx + petit_l] = petit
     cadre_encart(calque, (gx - 1, gy - 1), (gx + petit_l, gy + petit_h), echelle)
