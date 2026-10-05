@@ -4388,7 +4388,7 @@ def hampe_du_lampadaire(camera: dict, distance_m: float, rapport: float) -> floa
 
 def pose_lampadaire(image: np.ndarray, tete: tuple[float, float],
                     epaule: tuple[float, float], pied: tuple[float, float],
-                    seconde: float) -> None:
+                    seconde: float, allume: bool = False) -> None:
     """Un lampadaire de livre d'images, posé sur le vrai.
 
     Sur le vrai et non à côté : sa lanterne tombe sur l'ampoule qu'OpenStreetMap
@@ -4410,11 +4410,11 @@ def pose_lampadaire(image: np.ndarray, tete: tuple[float, float],
     allumée. Dessiner une lampe éteinte en train d'éclairer serait le genre de
     petit mensonge dont ce flux n'a pas besoin.
 
-    Sa lueur n'est pas dessinée : elle est vraie, et on l'amplifie. La lampe
-    est allumée pour de bon et sa lumière est dans les pixels ; en remonter le
-    contraste autour de l'ampoule donne un halo qui respire sans qu'on ait
-    inventé une seule lueur. C'est la même règle que pour le ciel — ce flux
-    passe son temps à juger des lueurs, il n'a pas à en fabriquer.
+    Sur la webcam, sa lueur n'est pas dessinée : elle est vraie, et on
+    l'amplifie. La lampe est allumée pour de bon et sa lumière est dans les
+    pixels. Sur la maquette de nuit, il n'y a pas d'ampoule : « allume » peint
+    alors une lueur chaude, sinon le lampadaire resterait éteint sur un rendu
+    de jour qu'on a seulement baissé.
 
     Et le souffle est lent. Pas de scintillement : une lampe qui clignote se
     lit comme une panne.
@@ -4428,24 +4428,29 @@ def pose_lampadaire(image: np.ndarray, tete: tuple[float, float],
     lanterne = max(4, int(long_px * 0.055))
     souffle = 0.88 + 0.12 * math.sin(seconde * 0.5)
 
-    # Pas de halo inventé. La lampe est vraiment allumée et sa lueur est
-    # vraiment dans les pixels : on l'amplifie au lieu d'en dessiner une
-    # par-dessus. La différence n'est pas qu'esthétique — un halo dessiné est
-    # une lueur de plus dans une image où la veille passe son temps à juger
-    # des lueurs, et c'est précisément ce qu'on vient de retirer du ciel.
+    # Sur la webcam, pas de halo inventé. La lampe est vraiment allumée et
+    # sa lueur est dans les pixels : on l'amplifie. Multiplier et non
+    # ajouter : un fond noir reste noir.
     #
-    # Multiplier et non ajouter : là où il n'y a pas de lumière, rien
-    # n'apparaît. Un fond noir reste noir, et on ne peut donc pas faire naître
-    # de lueur là où il n'y en avait pas.
-    autour = max(8, int(lanterne * 5 * souffle))
+    # Sur la maquette, le rendu n'a pas d'ampoule. Ajouter une lueur chaude
+    # est le seul moyen qu'elle soit allumée une fois le soleil du modèle
+    # baissé.
+    autour = max(8, int(lanterne * (7 if allume else 5) * souffle))
     x0, y0 = max(0, x - autour), max(0, y - autour)
     x1, y1 = min(largeur, x + autour), min(hauteur, y + autour)
     if x1 > x0 and y1 > y0:
         zone = image[y0:y1, x0:x1].astype(np.float32)
         maille_y, maille_x = np.mgrid[y0:y1, x0:x1]
         loin = np.hypot(maille_x - x, maille_y - y) / autour
-        gain = 1.0 + LAMP_GAIN * np.clip(1.0 - loin, 0.0, 1.0) ** 2
-        image[y0:y1, x0:x1] = np.clip(zone * gain[:, :, None], 0, 255).astype(np.uint8)
+        pres = np.clip(1.0 - loin, 0.0, 1.0) ** 2
+        if allume:
+            chaud = np.array(AMBRE, np.float32) * (0.92 * souffle)
+            image[y0:y1, x0:x1] = np.clip(
+                zone + chaud * pres[:, :, None], 0, 255).astype(np.uint8)
+        else:
+            gain = 1.0 + LAMP_GAIN * pres
+            image[y0:y1, x0:x1] = np.clip(
+                zone * gain[:, :, None], 0, 255).astype(np.uint8)
     calque = image.copy()
 
     # Le mât, qui s'épaissit vers le bas comme tous les mâts dessinés, et qui
@@ -4487,10 +4492,10 @@ def pose_lampadaire(image: np.ndarray, tete: tuple[float, float],
                       [x + lanterne, y + lanterne],
                       [x + int(lanterne * 0.62), y - int(lanterne * 0.5)],
                       [x - int(lanterne * 0.62), y - int(lanterne * 0.5)]])
-    # Le verre reste vide : c'est du verre. Il était peint en jaune plein, ce
-    # qui bouchait la lanterne et cachait la seule chose qu'on voulait voir
-    # dedans — la vraie ampoule, qui est allumée et qui est juste derrière. On
-    # ne dessine donc que la ferronnerie, et la lumière passe au travers.
+    # Sur la webcam le verre reste vide : la vraie ampoule est derrière.
+    # Sur la maquette il n'y a rien derrière, donc le verre porte la lumière.
+    if allume:
+        cv2.fillPoly(calque, [verre], (150, 220, 255), cv2.LINE_AA)
     cv2.polylines(calque, [verre], True, LAMP_FER, max(2, fer - 1), cv2.LINE_AA)
     chapeau = np.int32([[x - int(lanterne * 1.25), y - int(lanterne * 0.5)],
                         [x + int(lanterne * 1.25), y - int(lanterne * 0.5)],
@@ -5782,13 +5787,56 @@ def ratios_du_jour(compte: dict | None, quand: float
             (*beau, teinte(p_beau, p_los)))
 
 
+def _jackpot_pourcent(pris: int, vus: int) -> int:
+    """Entier du rapport prises sur mouvements, fois cent."""
+    if vus <= 0:
+        return 0
+    return _pourcent(pris, vus)
+
+
+def _pose_digits_jackpot(image: np.ndarray, a: tuple, b: tuple,
+                         y_haut: int, y_bas: int, chaine: str,
+                         teinte: tuple, echelle: float) -> None:
+    """Trois fentes, un chiffre par fente, comme un compteur de machine."""
+    n = len(chaine)
+    if n < 1 or y_bas - y_haut < 8:
+        return
+    gap = max(2, int(3 * echelle))
+    marge_x = max(4, int(6 * echelle))
+    inner_w = b[0] - a[0] - 2 * marge_x
+    inner_h = y_bas - y_haut - 2
+    slot_w = max(8, (inner_w - gap * (n - 1)) // n)
+    ep = max(1, int(round(1.2 * echelle)))
+    police = cv2.FONT_HERSHEY_DUPLEX
+    for i, car in enumerate(chaine):
+        sx0 = a[0] + marge_x + i * (slot_w + gap)
+        sx1 = sx0 + slot_w
+        cv2.rectangle(image, (sx0, y_haut), (sx1, y_bas), (2, 3, 8), -1)
+        cv2.rectangle(image, (sx0, y_haut), (sx1, y_bas),
+                      tuple(int(c * 0.55) for c in AMBRE), ep, cv2.LINE_AA)
+        taille = 0.95 * echelle
+        epais = max(2, int(round(2 * echelle)))
+        for _ in range(6):
+            (lt, ht), _ = cv2.getTextSize(car, police, taille, epais)
+            if lt <= slot_w - 4 and ht <= inner_h - 4:
+                break
+            taille *= 0.88
+            epais = max(1, int(round(epais * 0.9)))
+        (lt, ht), _ = cv2.getTextSize(car, police, taille, epais)
+        ox = sx0 + (slot_w - lt) // 2
+        oy = y_haut + (inner_h + ht) // 2
+        cv2.putText(image, car, (ox, oy), police, taille, teinte, epais,
+                    cv2.LINE_AA)
+
+
 def pose_jackpot(image: np.ndarray, x0: int, x1: int, y0: int,
                  pris: int, vus: int, teinte: tuple, instant: float) -> None:
     """Une vitre de machine à sous, collée sous l'encart.
 
-    Le rapport s'y lit 0/0, prises sur mouvements. Le lieu est déjà écrit
-    au-dessus, donc la vitre n'a pas de titre. Deux rangées d'ampoules
-    courent en sens inverse. Le rouge n'y entre pas : il est au direct.
+    Le compteur affiche le rapport en entier, fois cent, chiffre par
+    chiffre. En petit, prises sur mouvements rappellent le ratio brut.
+    Le lieu est déjà écrit au-dessus. Deux rangées d'ampoules courent en
+    sens inverse. Le rouge n'y entre pas : il est au direct.
     """
     hauteur, largeur = image.shape[:2]
     if x1 - x0 < 36:
@@ -5831,21 +5879,23 @@ def pose_jackpot(image: np.ndarray, x0: int, x1: int, y0: int,
 
     ampoules(y0 + marge // 2, 1)
     ampoules(y1 - marge // 2, -1)
-    texte = f"{pris}/{vus}"
-    epais = max(2, int(round(2 * echelle)))
-    taille = 1.15 * echelle
-    verre_l = b[0] - a[0] - 8
-    verre_h = b[1] - a[1] - 6
-    for _ in range(8):
-        (lt, ht), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_DUPLEX, taille, epais)
-        if lt <= verre_l and ht <= verre_h:
-            break
-        taille *= 0.88
-        epais = max(1, int(round(epais * 0.9)))
-    (lt, ht), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_DUPLEX, taille, epais)
-    cv2.putText(image, texte,
-                (a[0] + (b[0] - a[0] - lt) // 2, a[1] + (b[1] - a[1] + ht) // 2),
-                cv2.FONT_HERSHEY_DUPLEX, taille, teinte, epais, cv2.LINE_AA)
+    pct = _jackpot_pourcent(pris, vus)
+    chiffres = f"{pct:03d}"
+    petit_h = max(10, int(14 * echelle))
+    y_chiffres_h = a[1] + 2
+    y_chiffres_b = b[1] - petit_h - 2
+    if y_chiffres_b - y_chiffres_h >= 12:
+        _pose_digits_jackpot(image, a, b, y_chiffres_h, y_chiffres_b,
+                             chiffres, teinte, echelle)
+    detail = f"{pris}/{vus}"
+    taille_p = 0.36 * echelle
+    ep_p = max(1, int(round(1 * echelle)))
+    (ld, hd), _ = cv2.getTextSize(detail, cv2.FONT_HERSHEY_SIMPLEX, taille_p, ep_p)
+    y_detail = b[1] - max(2, int(3 * echelle))
+    cv2.putText(image, detail,
+                (a[0] + (b[0] - a[0] - ld) // 2, y_detail),
+                cv2.FONT_HERSHEY_SIMPLEX, taille_p, GRIS_ENCART, ep_p,
+                cv2.LINE_AA)
 
 
 def pose_mesures(image: np.ndarray, x: int, bord: int, y: int, haut: int,
@@ -7074,6 +7124,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 if dessus is None:
                     fin_survol, survol = quand, None
                 else:
+                    # La maquette de nuit est un rendu de jour baissé. Sans
+                    # cette lanterne elle n'a pas de lampe allumée.
+                    if not survol_de_jour and lampadaire is not None:
+                        pose_lampadaire(dessus, *lampadaire, quand - origine,
+                                        allume=True)
                     vue = dessus
             # La webcam dans sa fenêtre, les encarts dans les bandes autour.
             toile = cadre(vue, largeur, hauteur)
@@ -7338,12 +7393,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                        time.time() - salle_feu if salle_feu else -1.0,
                        salle_tenue)
             pose_ruban(toile, ruban, quand - origine)
-            # Le flottement des deux encarts, lent et continu. Il sautait
-            # avant sur le beat, quelques secondes toutes les cinq minutes, et
-            # ça ne ressemblait pas à un mouvement : ça ressemblait à un
-            # défaut d'affichage. Celui-ci ne se remarque pas image par image ;
-            # il se remarque sur la durée, et seulement parce que le fil qui
-            # relie les deux encarts s'incline avec eux.
+            # Flottement lent des deux encarts, en opposition : un mouvement
+            # continu, pas un sursaut sur le beat.
             remue = flottement(quand - origine, largeur / 1600)
             los, beau = ratios_du_jour(tableau, quand)
             pose_horloge(toile, quand, direct=rediff is None and survol is None,

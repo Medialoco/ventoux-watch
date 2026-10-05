@@ -3989,6 +3989,25 @@ class DiffusionTests(unittest.TestCase):
                        source.index("pose_lampadaire")]
         self.assertIn("HORIZON", appel)
 
+    def test_the_night_model_lights_its_own_lamp(self):
+        """La maquette n'a pas d'ampoule. La nuit, on en allume une."""
+        from watcher import stream
+        tete, epaule, pied = (0.42, 0.34), (0.43, 0.50), (0.44, 0.74)
+        fond = np.full((180, 320, 3), 18, np.uint8)
+        eteint = fond.copy()
+        stream.pose_lampadaire(eteint, tete, epaule, pied, 1.0)
+        allume = fond.copy()
+        stream.pose_lampadaire(allume, tete, epaule, pied, 1.0, allume=True)
+        x, y = int(tete[0] * 320), int(tete[1] * 180)
+        coeur = allume[y, x].astype(int)
+        self.assertGreater(int(coeur[2]), int(coeur[0]) + 30,
+                           "la lanterne de la maquette n'est pas chaude")
+        self.assertGreater(int(allume[y, x, 2]), int(eteint[y, x, 2]))
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("pose_lampadaire(dessus, *lampadaire, quand - origine,\n"
+                      "                                        allume=True)", source)
+        self.assertIn("if not survol_de_jour and lampadaire is not None:", source)
+
     def test_the_submarine_crosses_the_sky_and_never_the_mountain(self):
         """Il traverse en entier, il reste au-dessus de la crête, et il attend.
 
@@ -7139,6 +7158,8 @@ class RechercheTests(unittest.TestCase):
             self.assertNotIn(interdit, mots)
         self.assertIn("1/4", mots)
         self.assertIn("2/8", mots)
+        self.assertEqual(stream._jackpot_pourcent(1, 4), 25)
+        self.assertEqual(stream._jackpot_pourcent(2, 8), 25)
         mots_vides = []
 
         def espion_vide(image, texte, *suite, **nommes):
@@ -7148,6 +7169,7 @@ class RechercheTests(unittest.TestCase):
         with mock.patch.object(stream.cv2, "putText", espion_vide):
             self._deux_encarts({"paris": {}, "los_angeles": {}}, quand)
         self.assertEqual(mots_vides.count("0/0"), 2)
+        self.assertEqual(stream._jackpot_pourcent(0, 0), 0)
 
     def test_each_midnight_resets_its_own_side(self):
         """Minuit à Beaumont ne vide pas la journée de Los Angeles, et l'inverse."""
