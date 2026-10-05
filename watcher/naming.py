@@ -32,6 +32,17 @@ BEAST_WORD = {"dog": "Chien", "horse": "Cheval", "cat": "Chat"}
 # Ce que dit le détecteur de mouvement quand il n'a pas de nom à donner : qu'il
 # a vu bouger, un point. Pas où, pas quoi — il ne le sait pas.
 MOUVEMENT = "Mouvement détecté"
+# Ce qu'on peut fêter, et la barre en dessous de laquelle on ne fête pas.
+#
+# La barre est celle du mot écrit sur le rectangle : au-dessus de 0,60, les
+# prises relues à l'œil ne comptaient aucun désaccord. Un « good catch » sous
+# cette barre féliciterait un doute. Le feu n'est pas dans la liste : le dire
+# est une alerte, pas un point.
+CLASSES_SURES = frozenset({
+    "vehicle", "car", "truck", "bus", "person", "cycle",
+    "plane", "aircraft", "animal",
+})
+CONFIANCE_SURE = 0.60
 SURFACE_WORD = {"forest": "la forêt", "meadow": "la prairie", "scree": "la pierraille",
                 "building": "un bâtiment", "road": "la route", "roundabout": "le rond-point",
                 "parking": "le parking", "island": "l'îlot", "playground": "l'aire de jeux",

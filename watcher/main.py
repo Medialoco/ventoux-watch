@@ -15,6 +15,7 @@ from collections import deque
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import cv2
 import numpy as np
@@ -29,8 +30,9 @@ from watcher.geometry import load_zones
 from watcher.gtfs import GtfsIndex, PARIS
 from watcher.memory import Memory
 from watcher.motion import MotionDetector, smoke_ratio, warm_ratio
-from watcher.naming import (RIEN_A_JUGER, Observation, decide, named_itself,
-                            refusal_words, write_observation)
+from watcher.naming import (CLASSES_SURES, CONFIANCE_SURE, RIEN_A_JUGER,
+                            Observation, decide, named_itself, refusal_words,
+                            write_observation)
 from watcher.opensky import SkyArchive
 from watcher.publish import publish
 from watcher.scene import SceneReader, ViewLog, solar_azimuth, solar_elevation
@@ -53,6 +55,19 @@ INTERRUPTION_FLOOR_S = 30
 # is what happened on 29 September, and on a thousand cameras the same loop
 # would be an attack on the very provider we depend on.
 STREAM_RETRY_S = 2
+# Combien de temps les pistes restent lisibles par le flux.
+#
+# Le flux montre la montagne avec une vingtaine de secondes de retard. Une
+# piste effacée à la seconde où elle se ferme n'atteint jamais l'écran : le
+# rectangle et son code se dessineraient sur une image déjà passée, dans un
+# fichier qui ne les contient plus. Quatre-vingt-dix secondes couvrent ce
+# retard, et la lecture du code, sans garder la nuit entière en mémoire.
+CHERCHE_S = 150.0
+# Un piéton reste souvent une minute. On redemande la classe tant qu'il est
+# là, pas seulement quand il part : le spectateur voit la recherche, et la
+# classe peut tomber pendant qu'il est encore dans le champ.
+RELIRE_S = 4.0
+LOS_ANGELES = ZoneInfo("America/Los_Angeles")
 STREAM_RETRY_MAX_S = 60
 
 
@@ -241,6 +256,12 @@ def main() -> None:
         log.warning("Pas de config/scene.json : lance scripts/build_scene.py pour lire les surfaces")
     drive = DriveUploader(str(root / cfg["drive"]["credentials"]), cfg["drive"].get("folder_id") or "")
     ring: deque[tuple[float, bytes]] = deque(maxlen=14)
+    # Les pistes encore assez fraîches pour que le flux les dessine, code
+    # compris. L'identifiant de piste en clé : une piste qui se ferme y
+    # reste jusqu'à ce que son dernier point ait plus de CHERCHE_S.
+    cherche: dict[int, dict] = {}
+    annonces: set[int] = set()
+    score = _charge_score(root / "data" / "score.json")
     pending: list[dict] = []
     last_fire: dict[str, float] = {}
     alerted: set[int] = set()
@@ -285,10 +306,14 @@ def main() -> None:
                         _note_ridge(_crete, current, prise)
                         last_ridge = now
                 step = motion.step(frame, prise)
+                _note_cherche(cherche, annonces, motion.tracks, step.ended, frame, prise,
+                              root / "data" / "cherche.json", score, root / "data" / "score.json")
                 for track in step.ended:
-                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map)
+                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map, score)
                 for track in _burning(motion.tracks, prise, cfg, scene_map, alerted):
-                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map)
+                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map, score)
+                for track in _a_relire(motion.tracks, prise):
+                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map, score, tot=True)
                 _flush_clips(pending, ring, prise, drive, store)
                 due = store.urgent or now - last_publish >= cfg["publish_interval_s"]
                 if (store.dirty or view.dirty) and due:
@@ -305,7 +330,9 @@ def main() -> None:
         wait = _next_wait(seen, wait)
 
 
-def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map=None) -> None:
+def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map=None, score=None, tot: bool = False) -> None:
+    if getattr(track, "tenu", False):
+        return
     frame = cv2.imdecode(np.frombuffer(track.best_jpeg, dtype=np.uint8), cv2.IMREAD_COLOR) if track.best_jpeg else None
     # L'image et la boîte doivent venir du même instant.
     #
@@ -454,6 +481,13 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         # Asked now and not before: a route costs a call to OpenSky, and until
         # the rule has settled on one aircraft there is nothing to ask about.
         decision.detail.update(describe_route(sky.route(decision.detail["icao24"], track.updated)))
+    # Pendant que la piste est ouverte, on ne garde que ce dont on est sûr.
+    # Le reste continue d'être cherché : un refus écrit toutes les quatre
+    # secondes noierait le journal et féliciterait un doute.
+    sure = (decision.publish and decision.type in CLASSES_SURES
+            and float(decision.confidence or 0) >= CONFIANCE_SURE)
+    if tot and not sure:
+        return
     def refuse(quiet: bool = False) -> None:
         """Écarter la tache, et en garder la trace quand son motif se fait rare.
 
@@ -464,8 +498,10 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         quelque chose qu'on ne savait pas déjà.
         """
         store.add_candidate(when, track.zone, decision.reason, decision.detail)
+        if track.zone != "sky":
+            _ligne_code(track, decision)
         if not quiet:
-            log.info("Candidat %s %s", track.zone, decision.reason)
+            log.info("Candidat %s %s [%s]", track.zone, decision.reason, track.code)
         if not _worth_keeping(decision.reason, cfg, last_fire, now):
             return
         detail = dict(decision.detail)
@@ -479,7 +515,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
                                 decision.confidence, track.best_jpeg, detail)
         store.keep_closeup(entry, frame, track.best_bbox, width_m)
         store.record_seen(entry["id"], write_observation(obs), habit=decision.type == "habit")
-        log.info("Refus gardé pour relecture : %s", decision.reason)
+        log.info("Refus gardé pour relecture : %s [%s]", decision.reason, track.code)
 
     if decision.type == "motion" and track.zone == "sky":
         refuse(quiet=True)
@@ -488,7 +524,8 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         refuse()
         return
     if memory.observe(track.zone, track.centroid, decision) != "record":
-        log.info("Compté sans nouvelle carte %s", decision.label)
+        log.info("Compté sans nouvelle carte %s [%s]", decision.label, track.code)
+        _ligne_code(track, decision)
         return
     if decision.type in {"motion", "habit"}:
         if _worth_reviewing(decision, cfg, last_fire, now):
@@ -499,7 +536,8 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
                                     decision.confidence, track.best_jpeg, decision.detail)
             store.keep_closeup(entry, frame, track.best_bbox, width_m)
             store.record_seen(entry["id"], write_observation(obs))
-            log.info("Passage soumis à revue %s", track.zone)
+            log.info("Passage soumis à revue %s [%s]", track.zone, track.code)
+            _ligne_code(track, decision)
             return
         refuse(quiet=True)
         return
@@ -520,13 +558,166 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
     # de se réduire à un compteur.
     store.record_seen(event["id"], write_observation(obs))
     if close and width_m >= BUS_LENGTH_M:
-        log.info("Recadrage gardé pour %s : %s", decision.label, close)
-    log.info("Publié %s %s", decision.type, decision.label)
+        log.info("Recadrage gardé pour %s : %s [%s]", decision.label, close, track.code)
+    log.info("Publié %s %s [%s]", decision.type, decision.label, track.code)
+    _ligne_code(track, decision)
+    if sure and score is not None:
+        track.tenu = True
+        _marque_prise(score, now, store.root / "score.json")
     if decision.type in CLIP_TYPES:
         pending.append({"id": event["id"], "after": now + 4, "started": track.started - 8})
 
 
 _LOCK = None
+
+
+def _ligne_code(track, decision) -> None:
+    """Une ligne, le code en tête, pour retrouver la piste qu'on a lue à l'écran.
+
+    Le code est fait pour être recopié. La suite dit ce que la règle a décidé
+    et ce que le modèle avait lu, afin qu'un « K7M » reçu dans un message
+    suffise à savoir si la classe a manqué, et de combien.
+    """
+    mesures = (decision.detail or {}).get("measured") or {}
+    lu = " ".join(mesures.get("seen_as") or []) or "rien"
+    issue = decision.type if decision.publish else "refus"
+    log.info("Code %s %s %s | %s", track.code, issue, decision.reason, lu)
+
+
+def _note_cherche(souvenir: dict, annonces: set, tracks, ended, frame, prise: float, chemin: Path,
+                  score: dict | None = None, score_chemin: Path | None = None) -> None:
+    """Écrit les pistes en cours, avec leur code, pour le flux.
+
+    Le ciel n'y entre pas. Une tache dans le ciel est presque toujours un
+    nuage ou un bord de capteur, et en écrire le code remplirait l'image
+    sans rien qu'on puisse aller vérifier sur la route.
+
+    Une piste n'est annoncée qu'une fois. Le fichier, lui, est réécrit à
+    chaque image : le flux lit le trajet, pas un événement.
+    """
+    if frame is None or not getattr(frame, "size", 0):
+        return
+    hauteur, largeur = frame.shape[:2]
+    if largeur < 1 or hauteur < 1:
+        return
+    for track in list(tracks) + list(ended):
+        if track.zone == "sky" or track.frames < 1:
+            continue
+        x, y, w, h = track.bbox
+        point = [round(float(prise), 2), round(x / largeur, 4), round(y / hauteur, 4),
+                 round(max(w, 1) / largeur, 4), round(max(h, 1) / hauteur, 4)]
+        fiche = souvenir.get(track.id)
+        if fiche is None:
+            fiche = {"code": track.code, "zone": track.zone, "points": []}
+            souvenir[track.id] = fiche
+        if track.id not in annonces:
+            annonces.add(track.id)
+            log.info("Mouvement %s %s", track.code, track.zone)
+            if score is not None and score_chemin is not None:
+                _marque_vue(score, prise, score_chemin)
+        if not fiche["points"] or abs(fiche["points"][-1][0] - point[0]) > 0.01:
+            fiche["points"].append(point)
+    for identifiant in [i for i, fiche in souvenir.items()
+                        if not fiche["points"] or prise - fiche["points"][-1][0] > CHERCHE_S]:
+        del souvenir[identifiant]
+    for fiche in souvenir.values():
+        fiche["points"] = [p for p in fiche["points"] if prise - p[0] <= CHERCHE_S]
+    payload = {"tracks": [{"code": fiche["code"], "zone": fiche["zone"], "points": fiche["points"]}
+                          for fiche in souvenir.values() if fiche["points"]]}
+    try:
+        chemin.parent.mkdir(parents=True, exist_ok=True)
+        temporaire = chemin.with_suffix(".json.tmp")
+        temporaire.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        temporaire.replace(chemin)
+    except OSError:
+        log.warning("Pistes en cours non écrites", exc_info=True)
+
+
+def _a_relire(tracks, maintenant: float) -> list:
+    """Les pistes encore ouvertes à qui on redemande la classe.
+
+    Un piéton qui reste une minute ne doit pas attendre d'être parti pour
+    avoir un nom. On redemande toutes les quelques secondes, et on ne publie
+    que si la lecture est assez sûre pour un point.
+    """
+    dus = []
+    for track in tracks:
+        if track.zone == "sky" or track.tenu or track.frames < 4:
+            continue
+        if maintenant - track.essai < RELIRE_S:
+            continue
+        track.essai = maintenant
+        dus.append(track)
+    return dus
+
+
+def _charge_score(chemin: Path) -> dict:
+    vide = {"paris": {}, "los_angeles": {}}
+    try:
+        brut = json.loads(chemin.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return vide
+    if not isinstance(brut, dict):
+        return vide
+    for camp in vide:
+        jours = brut.get(camp) or {}
+        if isinstance(jours, dict):
+            vide[camp] = {k: {"vus": int(v.get("vus") or 0), "pris": int(v.get("pris") or 0)}
+                          for k, v in jours.items() if isinstance(v, dict)}
+    return vide
+
+
+def _jours_de(prise: float) -> tuple[str, str]:
+    """La date française et la date américaine de cet instant.
+
+    Neuf heures les séparent. Un même passage tombe donc parfois sur deux
+    jours différents, et c'est tout l'écart entre les deux camps.
+    """
+    moment = datetime.fromtimestamp(prise, timezone.utc)
+    return (moment.astimezone(PARIS).date().isoformat(),
+            moment.astimezone(LOS_ANGELES).date().isoformat())
+
+
+def _cellule(score: dict, camp: str, jour: str) -> dict:
+    jours = score.setdefault(camp, {})
+    cellule = jours.get(jour)
+    if not isinstance(cellule, dict):
+        cellule = {"vus": 0, "pris": 0}
+        jours[jour] = cellule
+    return cellule
+
+
+def _ecrit_score(chemin: Path, score: dict) -> None:
+    # Trois jours suffisent : le tableau montre aujourd'hui, et la veille
+    # reste lisible si on veut comprendre un écart de minuit.
+    garde = {}
+    for camp in ("paris", "los_angeles"):
+        jours = score.get(camp) or {}
+        cles = sorted(jours)[-3:]
+        garde[camp] = {cle: jours[cle] for cle in cles}
+    try:
+        chemin.parent.mkdir(parents=True, exist_ok=True)
+        temporaire = chemin.with_suffix(".json.tmp")
+        temporaire.write_text(json.dumps(garde, ensure_ascii=False), encoding="utf-8")
+        temporaire.replace(chemin)
+    except OSError:
+        log.warning("Le tableau du jour n'a pas été écrit", exc_info=True)
+
+
+def _marque_vue(score: dict, prise: float, chemin: Path) -> None:
+    """Un mouvement compte pour les deux journées en cours."""
+    france, amerique = _jours_de(prise)
+    _cellule(score, "paris", france)["vus"] += 1
+    _cellule(score, "los_angeles", amerique)["vus"] += 1
+    _ecrit_score(chemin, score)
+
+
+def _marque_prise(score: dict, prise: float, chemin: Path) -> None:
+    """Un good catch profite aux deux camps, chacun sur sa journée en cours."""
+    france, amerique = _jours_de(prise)
+    _cellule(score, "paris", france)["pris"] += 1
+    _cellule(score, "los_angeles", amerique)["pris"] += 1
+    _ecrit_score(chemin, score)
 
 
 def _only_one(path: Path) -> bool:

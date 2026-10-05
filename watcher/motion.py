@@ -14,6 +14,28 @@ from watcher.geometry import assign_zone
 # passage mais quelque chose qui stationne, et la trajectoire n'apprend rien.
 TRACE_MAX = 120
 
+# Trois signes, dits à voix haute sans se tromper de lettre.
+#
+# Pas de 0, de O, de 1, de I ni de L : au téléphone comme dans un message,
+# ces cinq-là se confondent et le code qu'on me rapporte ne serait plus
+# celui de la piste. Vingt-trois lettres et huit chiffres font assez de
+# combinaisons pour qu'une nuit chargée ne rejoue pas le même avant longtemps.
+_LETTRES = "ABCDEFGHJKMNPQRSTUVWXYZ"
+_CHIFFRES = "23456789"
+
+
+def signe(numero: int) -> str:
+    """Un code court et stable pour une piste, du genre K7M.
+
+    On le lit sur l'image et on le redit tel quel. L'ordre est une lettre,
+    un chiffre, une lettre : trois signes, jamais une suite de chiffres
+    qu'on prendrait pour une heure.
+    """
+    n = max(0, int(numero) - 1)
+    return (_LETTRES[n % len(_LETTRES)]
+            + _CHIFFRES[(n // len(_LETTRES)) % len(_CHIFFRES)]
+            + _LETTRES[(n // (len(_LETTRES) * len(_CHIFFRES))) % len(_LETTRES)])
+
 
 @dataclass
 class Track:
@@ -50,6 +72,14 @@ class Track:
     foot_x: float = 0.0
     shade: float = 1.0
     texture: float = 0.0
+    code: str = ""
+    # Déjà fêté : on ne redemande plus la classe, et on ne compte pas deux fois.
+    tenu: bool = False
+    essai: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not self.code:
+            self.code = signe(self.id)
 
     @property
     def rise(self) -> float:

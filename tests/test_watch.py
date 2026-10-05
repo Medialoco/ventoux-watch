@@ -3253,7 +3253,7 @@ class DiffusionTests(unittest.TestCase):
         silence.
         """
         vu = {"t": 1000.0, "type": "vehicle", "label": "Voiture verte",
-              "box": [0.4, 0.8, 0.1, 0.1]}
+              "box": [0.4, 0.8, 0.1, 0.1], "confiance": 0.8}
         # Trop t\u00f4t : la t\u00eate de lecture n'a pas encore atteint la voiture.
         self.assertIsNone(stream.prise_a_feter([vu], 1000.0 - 5.0, set()))
         # Pendant : le rectangle est \u00e0 l'\u00e9cran, donc la f\u00eate a quelque chose \u00e0
@@ -3430,7 +3430,45 @@ class DiffusionTests(unittest.TestCase):
         source = inspect.getsource(stream.diffuse)
         self.assertIn("poses = visibles(vus, quand)", source)
         self.assertNotIn("dessine(image, vus, quand)", source)
-        self.assertIn("dessine(toile, vus, quand, vue=cadrage)", source)
+        self.assertIn("dessine(toile, [vu for vu in vus if not cherche_encore(vu, pistes, quand)],", source)
+        self.assertIn("pose_recherches(toile, pistes, cadrage, vus, quand)", source)
+
+    def test_a_motion_code_is_easy_to_read_back(self):
+        """Trois signes, une lettre puis un chiffre, sans les glyphes qui se confondent."""
+        from watcher.motion import signe
+        vus = {signe(n) for n in range(1, 400)}
+        self.assertEqual(len(vus), 399)
+        for code in vus:
+            self.assertEqual(len(code), 3)
+            self.assertIn(code[0], "ABCDEFGHJKMNPQRSTUVWXYZ")
+            self.assertIn(code[1], "23456789")
+            self.assertIn(code[2], "ABCDEFGHJKMNPQRSTUVWXYZ")
+            self.assertNotIn("0", code)
+            self.assertNotIn("O", code)
+            self.assertNotIn("1", code)
+            self.assertNotIn("I", code)
+            self.assertNotIn("L", code)
+        self.assertEqual(signe(1), signe(1))
+
+    def test_the_search_holds_its_code_until_the_class_lands(self):
+        """Avant l'heure de la fiche, on cherche. Après, le nom peut sortir."""
+        debut = 1_000_000.0
+        vu = {"t": debut + 6.0, "label": "Piéton", "sur": True, "type": "person",
+              "box": [0.40, 0.60, 0.08, 0.12],
+              "trace": [[debut, 0.40, 0.60, 0.08, 0.12],
+                        [debut + 6.0, 0.48, 0.62, 0.08, 0.12]]}
+        pistes = stream.pistes_visibles(
+            [{"code": "K7M", "points": [[debut, 0.40, 0.60, 0.08, 0.12],
+                                        [debut + 6.0, 0.48, 0.62, 0.08, 0.12]]}],
+            debut + 2.0)
+        self.assertEqual([p["code"] for p in pistes], ["K7M"])
+        self.assertTrue(stream.cherche_encore(vu, pistes, debut + 2.0))
+        self.assertFalse(stream.cherche_encore(vu, pistes, debut + 6.0))
+        image = np.zeros((360, 640, 3), np.uint8)
+        stream.pose_recherches(image, pistes, None, [vu], debut + 2.0)
+        self.assertGreater(int(np.count_nonzero(image)), 80)
+        self.assertEqual(stream.RECHERCHE_MOT, "DETECTION DE MOUVEMENT")
+        self.assertNotIn("é", stream.RECHERCHE_MOT)
 
     def test_the_box_shrinks_when_the_car_is_still_far(self):
         """Le rectangle du premier plan, posé sur la voiture au loin, est vide.
@@ -5215,8 +5253,9 @@ class PortraitMachineTests(unittest.TestCase):
         # Le portrait n'attend plus un creux : les rectangles se redessinent
         # après lui, dans la fenêtre.
         apres = source.split("pose_portrait_machine(")[-1]
-        self.assertIn("dessine(toile, vus, quand, vue=cadrage)", apres)
-        self.assertIn("dessine(toile, vus, quand, vue=cadrage)",
+        self.assertIn("dessine(toile, [vu for vu in vus if not cherche_encore(vu, pistes, quand)],", apres)
+        self.assertIn("pose_recherches(toile, pistes, cadrage, vus, quand)", apres)
+        self.assertIn("dessine(toile, [vu for vu in vus if not cherche_encore(vu, pistes, quand)],",
                       source.split("pose_portrait_dogmazic(")[-1])
 
     def test_effects_never_turn_the_watch_off(self):
@@ -6992,3 +7031,70 @@ class LeFlashNeCachePasCeQuIlAnnonce(unittest.TestCase):
         source = inspect.getsource(stream.diffuse)
         self.assertIn("pose_eclat(toile, cadrage, quand - attrape", source)
         self.assertIn("attrape_teinte = teinte_de(neuve)", source)
+
+
+class RechercheTests(unittest.TestCase):
+    def test_the_code_can_be_read_aloud(self):
+        from watcher.motion import signe
+        vus = {signe(i) for i in range(1, 400)}
+        self.assertEqual(len(vus), 399)
+        for code in vus:
+            self.assertEqual(len(code), 3)
+            self.assertNotIn(code[0], "01ILO")
+            self.assertNotIn(code[1], "01ILO")
+            self.assertNotIn(code[2], "01ILO")
+            self.assertTrue(code[1].isdigit())
+
+    def test_a_long_stay_keeps_its_box(self):
+        """Un piéton qui reste une minute est encore à l'écran à la fin."""
+        points = [[1000.0 + i, 0.4, 0.6, 0.05, 0.08] for i in range(60)]
+        vues = stream.pistes_visibles([{"code": "K7M", "points": points}], 1059.0)
+        self.assertEqual(len(vues), 1)
+        self.assertEqual(vues[0]["code"], "K7M")
+
+    def test_the_name_waits_until_the_class_lands(self):
+        vu = {"t": 1030.0, "box": [0.4, 0.6, 0.05, 0.08], "label": "Piéton",
+              "type": "person", "sur": True, "confiance": 0.8,
+              "trace": [[1000.0, 0.4, 0.6, 0.05, 0.08],
+                        [1030.0, 0.42, 0.6, 0.05, 0.08]]}
+        pistes = [{"code": "K7M", "box": (0.4, 0.6, 0.05, 0.08)}]
+        self.assertTrue(stream.cherche_encore(vu, pistes, 1010.0))
+        self.assertFalse(stream.cherche_encore(vu, pistes, 1030.0))
+
+    def test_a_doubt_is_not_a_catch(self):
+        doute = {"t": 1000.0, "type": "person", "label": "Piéton",
+                 "box": [0.4, 0.8, 0.05, 0.1], "confiance": 0.45}
+        sur = dict(doute, confiance=0.8)
+        self.assertIsNone(stream.prise_a_feter([doute], 1001.0, set()))
+        self.assertIs(stream.prise_a_feter([sur], 1001.0, set()), sur)
+
+    def test_confetti_falls_and_then_stops(self):
+        fond = np.zeros((360, 640, 3), np.uint8)
+        pendant = fond.copy()
+        stream.pose_confettis(pendant, 0.6, stream.ATTRAPE_S)
+        self.assertGreater(int(np.count_nonzero(pendant)), 0)
+        fini = fond.copy()
+        stream.pose_confettis(fini, stream.ATTRAPE_S + 0.1, stream.ATTRAPE_S)
+        self.assertTrue(np.array_equal(fini, fond))
+
+    def test_one_catch_scores_for_both_days(self):
+        """02 h à Paris est encore la veille à Los Angeles. Les deux comptent."""
+        instant = datetime(2026, 10, 6, 2, 0, tzinfo=ZoneInfo("Europe/Paris")).timestamp()
+        score = {"paris": {}, "los_angeles": {}}
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = Path(dossier) / "score.json"
+            main._marque_vue(score, instant, chemin)
+            main._marque_prise(score, instant, chemin)
+        self.assertEqual(score["paris"]["2026-10-06"], {"vus": 1, "pris": 1})
+        self.assertEqual(score["los_angeles"]["2026-10-05"], {"vus": 1, "pris": 1})
+
+    def test_the_board_shows_both_camps_on_the_left(self):
+        image = np.zeros((720, 1280, 3), np.uint8)
+        quand = datetime(2026, 10, 5, 18, 0, tzinfo=timezone.utc).timestamp()
+        compte = {
+            "paris": {"2026-10-05": {"pris": 3, "vus": 12}},
+            "los_angeles": {"2026-10-05": {"pris": 1, "vus": 8}},
+        }
+        stream.pose_partie(image, compte, quand)
+        self.assertGreater(int(np.count_nonzero(image[:, :220])), 0)
+        self.assertEqual(int(np.count_nonzero(image[:, 400:])), 0)

@@ -401,10 +401,11 @@ def identifications(chemin: Path, depuis: float) -> list[dict]:
             continue
         if quand < depuis:
             continue
+        confiance = float(event.get("confidence") or 0.0)
         gardes.append({"t": quand, "box": boite, "label": event.get("label") or "",
                        "type": event.get("type"), "trace": detail.get("trace") or [],
-                       "sur": nomme(event.get("label") or "",
-                                    float(event.get("confidence") or 0.0))})
+                       "confiance": confiance,
+                       "sur": nomme(event.get("label") or "", confiance)})
     return gardes
 
 
@@ -704,6 +705,156 @@ def dessine(image: np.ndarray, vus: list[dict], quand: float,
     return poses
 
 
+# LE TEMPS QUE LA CLASSE TOMBE
+# ----------------------------
+# La veille suit la tache bien avant de savoir ce que c'est. Jusqu'ici l'écran
+# restait muet pendant tout ce temps, et un piéton qui s'arrêtait devant la
+# cabane n'existait pas : la classe ne se demande qu'à la fin de la piste.
+#
+# On montre donc la recherche. Le rectangle est rouge, comme tout ce qui n'a
+# pas encore de nom. Le code, en grand, est fait pour être recopié : trois
+# signes, une lettre, un chiffre, une lettre. « K7M » dans un message suffit
+# à retrouver la piste.
+RECHERCHE_MOT = "DETECTION DE MOUVEMENT"
+# Une piste d'une seule image doit rester assez longtemps pour qu'on lise le
+# code. Au-delà, le rectangle suit le trajet et s'arrête avec lui.
+RECHERCHE_LECTURE_S = 2.5
+
+
+def lire_recherches(chemin: Path) -> list[dict]:
+    """Les pistes que la veille est en train de suivre, code compris."""
+    try:
+        brut = json.loads(chemin.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    tracks = brut.get("tracks") if isinstance(brut, dict) else None
+    if not isinstance(tracks, list):
+        return []
+    propres = []
+    for piste in tracks:
+        code = str(piste.get("code") or "")
+        points = [p for p in (piste.get("points") or []) if isinstance(p, list) and len(p) >= 5]
+        if len(code) != 3 or not points:
+            continue
+        propres.append({"code": code, "zone": str(piste.get("zone") or ""), "points": points})
+    return propres
+
+
+def pistes_visibles(tracks: list[dict], quand: float) -> list[dict]:
+    """Les pistes qui occupent l'image à cet instant, boîte interpolée."""
+    vues = []
+    for piste in tracks:
+        points = piste["points"]
+        debut = float(points[0][0])
+        fin = float(points[-1][0])
+        if fin - debut < RECHERCHE_LECTURE_S:
+            fin = debut + RECHERCHE_LECTURE_S
+        if not debut <= quand <= fin:
+            continue
+        if len(points) == 1 or quand >= float(points[-1][0]):
+            boite = tuple(points[-1][1:5])
+        else:
+            boite = _interpole(points, quand)
+        vues.append({"code": piste["code"], "box": boite})
+    return vues
+
+
+def cherche_encore(vu: dict, pistes: list[dict], quand: float) -> bool:
+    """Vrai tant que la tache est là et que la classe n'est pas encore tombée.
+
+    La fiche datée est la fin de la piste : avant cette heure, le nom qu'elle
+    porte n'était pas connu. On laisse le rectangle rouge et le code, et le
+    « good catch » attend.
+    """
+    if not pistes or quand >= float(vu.get("t") or 0):
+        return False
+    debut, fin = presence(vu)
+    if not debut <= quand <= fin:
+        return False
+    boite = suit(vu, quand)
+    return any(_recouvre(boite, tuple(piste["box"])) > 0.15 for piste in pistes)
+
+
+def _classe_connue(piste: dict, vus: list[dict], quand: float) -> bool:
+    """Vrai quand une prise nommée recouvre déjà cette tache."""
+    for vu in vus:
+        if quand < float(vu.get("t") or 0):
+            continue
+        debut, fin = presence(vu)
+        if not debut <= quand <= fin:
+            continue
+        if _recouvre(suit(vu, quand), tuple(piste["box"])) > 0.15:
+            return True
+    return False
+
+
+def pose_recherches(image: np.ndarray, pistes: list[dict],
+                    vue: tuple[int, int, int, int] | None,
+                    vus: list[dict], quand: float) -> None:
+    """Le rectangle rouge, le mot, et le code, le temps de la recherche.
+
+    Une fois la classe tombée, le rectangle de la prise prend la place et le
+    mot s'efface. Le code reste : c'est lui qu'on recopie, que la prise ait
+    abouti ou non.
+    """
+    if not pistes:
+        return
+    if vue is None:
+        gauche, cime, large, haut = 0, 0, image.shape[1], image.shape[0]
+    else:
+        gauche, cime, large, haut = vue
+    echelle = max(0.55, large / 1600)
+    for piste in pistes:
+        connue = _classe_connue(piste, vus, quand)
+        x, y, w, h = piste["box"]
+        x1, y1 = gauche + int(x * large), cime + int(y * haut)
+        x2, y2 = gauche + int((x + w) * large), cime + int((y + h) * haut)
+        if not connue:
+            cv2.rectangle(image, (x1, y1), (x2, y2), ROUGE, 2)
+        code = piste["code"]
+        taille_code = 1.15 * echelle
+        trait = max(2, int(3 * echelle))
+        (cw, ch), _ = cv2.getTextSize(code, cv2.FONT_HERSHEY_DUPLEX, taille_code, trait)
+        cx = min(max(gauche, x1), gauche + large - cw - 4)
+        if not connue:
+            mot = RECHERCHE_MOT
+            taille_mot = 0.42 * echelle
+            trait_mot = max(1, int(2 * echelle))
+            (mw, mh), _ = cv2.getTextSize(mot, cv2.FONT_HERSHEY_SIMPLEX, taille_mot, trait_mot)
+            while mw > large * 0.92 and taille_mot > 0.28 * echelle:
+                taille_mot *= 0.9
+                (mw, mh), _ = cv2.getTextSize(mot, cv2.FONT_HERSHEY_SIMPLEX, taille_mot, trait_mot)
+            bloc = mh + 6 + ch
+            if y1 - bloc - 8 > cime:
+                y_mot = y1 - ch - 10
+                y_code = y1 - 6
+            else:
+                y_mot = min(cime + haut - 4, y2 + mh + 8)
+                y_code = min(cime + haut - 4, y_mot + ch + 6)
+            mx = min(max(gauche, x1), gauche + large - mw - 4)
+            _pose_encre(image, mot, (mx, y_mot), cv2.FONT_HERSHEY_SIMPLEX,
+                        taille_mot, trait_mot, ROUGE)
+            _pose_encre(image, code, (cx, y_code), cv2.FONT_HERSHEY_DUPLEX,
+                        taille_code, trait, BLANC)
+        else:
+            y_code = y1 - 6 if y1 - ch - 8 > cime else min(cime + haut - 4, y2 + ch + 8)
+            _pose_encre(image, code, (cx, y_code), cv2.FONT_HERSHEY_DUPLEX,
+                        taille_code, trait, BLANC)
+
+
+def _pose_encre(image: np.ndarray, texte: str, origine: tuple[int, int],
+                police: int, taille: float, trait: int,
+                couleur: tuple[int, int, int]) -> None:
+    """Le mot, puis le même mot en noir un peu plus gros derrière.
+
+    Sans le liseré, un code blanc sur la neige ou rouge sur le crépuscule
+    disparaît, et un code qu'on ne lit pas ne sert à rien.
+    """
+    cv2.putText(image, texte, origine, police, taille, (0, 0, 0),
+                trait + max(2, trait), cv2.LINE_AA)
+    cv2.putText(image, texte, origine, police, taille, couleur, trait, cv2.LINE_AA)
+
+
 # LE FLASH DE PRISE
 # -----------------
 # Un rectangle fin au bord de l'image est juste, et il se rate. Il faut déjà
@@ -818,6 +969,8 @@ def prise_a_feter(vus: list[dict], quand: float, fetes: set) -> dict | None:
     """
     for vu in vus:
         if (vu.get("type") or "") not in PRISES:
+            continue
+        if float(vu.get("confiance") or 0.0) < CONFIANCE_MOT:
             continue
         debut, fin = presence(vu)
         if not debut <= quand <= fin:
@@ -4614,6 +4767,49 @@ def pose_attrape(image: np.ndarray, age: float, nom: str = "") -> None:
                     cv2.FONT_HERSHEY_DUPLEX, petite, BLANC, fin, cv2.LINE_AA)
     force = max(0.0, 1.0 - avance ** 2)
     cv2.addWeighted(calque, force, image, 1.0 - force, 0.0, dst=image)
+    pose_confettis(image, age, ATTRAPE_S)
+
+
+# Petits rectangles, pas le rouge du direct : le rouge dit « en ce moment »,
+# les confettis disent « on a nommé ». Quarante, assez pour une averse,
+# pas assez pour cacher celui qu'on vient d'attraper.
+_CONFETTIS = (
+    VERT, CYAN, AMBRE, BLANC, (210, 180, 120), (180, 220, 160),
+)
+
+
+def pose_confettis(image: np.ndarray, age: float, duree: float) -> None:
+    """Une averse courte, la même d'une image à l'autre.
+
+    Les positions se calculent : un tirage au sort redessinerait l'averse
+    à chaque image et elle clignoterait. Chaque confetti a un retard, une
+    colonne et une vitesse, et il tombe le temps du good catch.
+    """
+    if age < 0 or age > duree or duree <= 0:
+        return
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    for i in range(42):
+        retard = (i % 7) * 0.05
+        temps = age - retard
+        if temps < 0:
+            continue
+        part = temps / duree
+        if part > 1:
+            continue
+        x = int((i * 137 + 29) % max(1, largeur))
+        vitesse = 0.75 + (i % 5) * 0.08
+        y = int(-12 * echelle + part * vitesse * (hauteur + 24 * echelle))
+        if y < -8 or y >= hauteur:
+            continue
+        teinte = _CONFETTIS[i % len(_CONFETTIS)]
+        long = max(3, int((5 + i % 4) * echelle))
+        epais = max(2, int(2 * echelle))
+        penche = -1 if i % 2 else 1
+        x2 = x + penche * long
+        y2 = y + long
+        if 0 <= x2 < largeur and 0 <= y2 < hauteur:
+            cv2.line(image, (x, y), (x2, y2), teinte, epais, cv2.LINE_AA)
 
 
 def pose_ennui(image: np.ndarray, mot: str, seconde: float) -> None:
@@ -5510,6 +5706,70 @@ def pose_date_heure(image: np.ndarray, x: int, date_y: int, heure_y: int,
                 0.95 * echelle, BLANC, 2, cv2.LINE_AA)
 
 
+def lire_score(chemin: Path) -> dict:
+    """Les deux journées, France et Los Angeles."""
+    try:
+        brut = json.loads(chemin.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"paris": {}, "los_angeles": {}}
+    if not isinstance(brut, dict):
+        return {"paris": {}, "los_angeles": {}}
+    return brut
+
+
+def _cellule_du_jour(compte: dict, camp: str, jour: str) -> tuple[int, int]:
+    cellule = (compte.get(camp) or {}).get(jour) or {}
+    if not isinstance(cellule, dict):
+        return 0, 0
+    return int(cellule.get("pris") or 0), int(cellule.get("vus") or 0)
+
+
+def pose_partie(image: np.ndarray, compte: dict, quand: float) -> None:
+    """France contre Los Angeles, à gauche, sous l'encart de la machine.
+
+    Le chiffre est les good catchs sur les mouvements. Un catch compte pour
+    les deux camps : ils ne font que commencer leur journée à des heures
+    différentes, donc les totaux divergent autour de minuit et se rejoignent
+    le reste du temps. Le plus haut taux est en vert, l'autre en blanc.
+    Égalité, les deux restent blancs : il n'y a pas de vainqueur à déclarer.
+    """
+    if not compte:
+        return
+    largeur = image.shape[1]
+    echelle = largeur / 1600
+    france = datetime.fromtimestamp(quand, PARIS).date().isoformat()
+    amerique = datetime.fromtimestamp(quand, LOS_ANGELES).date().isoformat()
+    lignes = (
+        ("FRANCE", *_cellule_du_jour(compte, "paris", france)),
+        ("LOS ANGELES", *_cellule_du_jour(compte, "los_angeles", amerique)),
+    )
+    taux = []
+    for _, pris, vus in lignes:
+        taux.append(pris / vus if vus else -1.0)
+    meilleur = max(taux)
+    marge = int(12 * echelle)
+    x = marge
+    y0 = int(ENCART_BAS * echelle) + int(16 * echelle)
+    plaque_l = int(210 * echelle)
+    pas = int(28 * echelle)
+    plaque_h = int(22 * echelle) + pas * 2
+    if y0 + plaque_h >= image.shape[0] - int(40 * echelle):
+        return
+    fond_encart(image, (x - int(6 * echelle), y0 - int(16 * echelle)),
+                (x + plaque_l, y0 + plaque_h), echelle)
+    cv2.putText(image, "PRIS/VUS", (x, y0), cv2.FONT_HERSHEY_SIMPLEX,
+                0.38 * echelle, GRIS_ENCART, 1, cv2.LINE_AA)
+    for i, (nom, pris, vus) in enumerate(lignes):
+        y = y0 + pas * (i + 1)
+        teinte = VERT if taux[i] >= 0 and taux[i] == meilleur and taux.count(meilleur) == 1 else BLANC
+        cv2.putText(image, nom, (x, y), cv2.FONT_HERSHEY_SIMPLEX,
+                    0.42 * echelle, GRIS_ENCART, 1, cv2.LINE_AA)
+        valeur = f"{pris}/{vus}"
+        (lw, _), _ = cv2.getTextSize(valeur, cv2.FONT_HERSHEY_SIMPLEX, 0.62 * echelle, 2)
+        cv2.putText(image, valeur, (x + plaque_l - lw - int(8 * echelle), y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.62 * echelle, teinte, 2, cv2.LINE_AA)
+
+
 def pose_machine(image: np.ndarray, etat: dict | None,
                  vignette: np.ndarray | None = None, ville: str = "",
                  remue: float = 0.0,
@@ -6282,6 +6542,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     cadence: float | None = None
     images = 0
     vus: list[dict] = []
+    cherches: list[dict] = []
+    tableau: dict = {"paris": {}, "los_angeles": {}}
     ruban: list[tuple[str, tuple[int, int, int]]] = []
     prog: dict = dict(PROG_VIDE)
     lieu = ligne_lieu(cfg.get("camera") or {}, altitude_camera(racine))
@@ -6472,6 +6734,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             musique.a_l_ecran(diffusees / cfg["stream_fps"])
             if quand - relu >= 2.0:
                 vus = identifications(racine / "data" / "events.json", quand - TENUE_S - 60)
+                cherches = lire_recherches(racine / "data" / "cherche.json")
+                tableau = lire_score(racine / "data" / "score.json")
                 machine = etat_machine(racine)
                 # Le soleil est calculé, pas lu : aucun service à interroger,
                 # aucune panne de réseau ne peut faire rater le lever.
@@ -6509,6 +6773,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 mot_gris = BROUILLARD_MOTS.get(temps, "")
                 prog = PROG_VIDE if muet else musique.programme()
                 relu = quand
+            pistes = pistes_visibles(cherches, quand)
             image = np.frombuffer(brut, np.uint8).reshape(source_h, source_l, 3).copy()
             # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.
             applique_teinte(image, *teinte_du_moment(quand - origine))
@@ -6535,6 +6800,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # La fête suit le rectangle, pas l'arrivée de la fiche.
             if quand - attrape > ATTRAPE_S:
                 neuve = prise_a_feter(vus, quand, fetes)
+                if neuve is not None and cherche_encore(neuve, pistes, quand):
+                    neuve = None
                 if neuve is not None:
                     fetes = {t for t in fetes if t > quand - 3600} | {neuve["t"]}
                     attrape, attrape_nom = quand, neuve["label"]
@@ -6543,7 +6810,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         musique.dis(tirage.choice(musique.felicitations))
                     log.info("Prise à l'écran : %s — %s", neuve["label"],
                              musique.voix_dit or "sans voix")
-            poses = visibles(vus, quand)
+            poses = visibles(vus, quand) or bool(pistes)
             if poses:
                 dernier_vu = quand
                 # L'horloge de l'ennui est à part, et c'est tout l'intérêt :
@@ -6771,7 +7038,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # fenêtre. Pas sur une rediffusion ni sur le relief : ce n'est
             # plus la vue, un rectangle y mentirait.
             if a_poser is None and survol is None:
-                dessine(toile, vus, quand, vue=cadrage)
+                dessine(toile, [vu for vu in vus if not cherche_encore(vu, pistes, quand)],
+                        quand, vue=cadrage)
+                pose_recherches(toile, pistes, cadrage, vus, quand)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
             #
             # Il durait exactement la voix, ce qui semblait honnête et ne
@@ -6914,6 +7183,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 ou_machine = (float(machine_ou["lat"]), float(machine_ou["lon"]))
             pose_machine(toile, machine, photo_machine, ville, remue,
                          carte=carte_californie, ou=ou_machine, quand=quand)
+            pose_partie(toile, tableau, quand)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             pose_deploiement(toile, __version__, quand - ouvert)
             # La voix part avec le mot, une fois, dans les premières secondes.
