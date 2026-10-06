@@ -39,6 +39,8 @@ import cv2
 import numpy as np
 
 from watcher import __version__, direct
+from watcher.coloriage import PORT as COLORIAGE_PORT
+from watcher.coloriage import Coloriage
 from watcher.store import floute
 
 log = logging.getLogger("ventoux.stream")
@@ -6908,6 +6910,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # secondes où leur rectangle est à l'écran. Purgé à chaque fête.
     fetes: set[float] = set()
     journal = Journal(racine / "data" / "rushs", cfg["stream_fps"])
+    coloriage = Coloriage(racine / "data" / "coloriage.jsonl")
+    if cfg.get("coloriage_jeton"):
+        try:
+            coloriage.ouvre(str(cfg["coloriage_jeton"]), COLORIAGE_PORT)
+            log.info("Coloriage sur le port %s", COLORIAGE_PORT)
+        except OSError:
+            log.warning("Coloriage injoignable", exc_info=True)
     # Importé ici et pas en tête de fichier : c'est main() qui pose la racine
     # du dépôt sur le chemin, et stream.py doit pouvoir être lancé comme un
     # script depuis n'importe où.
@@ -7489,6 +7498,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # sur les encarts. Jamais par-dessus la montagne : il s'arrête au
             # bord de la fenêtre, où il est le plus vif.
             pose_eclat(toile, cadrage, quand - attrape, attrape_nom, attrape_teinte)
+            # La touche arrive sur l'image qui part maintenant, et elle reste.
+            # La vidéo emporte le coloriage, pas le dessin fini.
+            coloriage.dessine(toile, time.time())
+            coloriage.retiens(toile, time.time())
             # Le rush est cette image-ci, pas la photographie nue : le rectangle
             # du mouvement, le nom de la classe, et GOOD CATCH sont déjà posés.
             journal.voit(toile, quand)
@@ -7556,6 +7569,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             if duree_s is not None and _maintenant() - debut >= duree_s:
                 break
     finally:
+        coloriage.ferme()
         entree.kill()
         coupe.set()
         coupe_son.set()

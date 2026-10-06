@@ -7318,3 +7318,43 @@ class JournalTests(unittest.TestCase):
         self.assertLess(source.index("pose_eclat("), voit)
         self.assertLess(voit, source.index("journal.relache("))
         self.assertLess(source.index("journal.sujet("), voit)
+        self.assertLess(source.index("pose_eclat("), source.index("coloriage.dessine("))
+        self.assertLess(source.index("coloriage.dessine("), source.index("sortie.stdin.write"))
+
+
+class ColoriageTests(unittest.TestCase):
+    """Une touche entre dans l'image à son heure, et y reste."""
+
+    def _image(self):
+        return np.zeros((90, 160, 3), np.uint8)
+
+    def test_a_touch_waits_for_its_time_then_stays(self):
+        from watcher.coloriage import Coloriage
+        coloriage = Coloriage()
+        self.assertTrue(coloriage.pose(0.25, 0.5, "cyan", 1.0))
+        self.assertTrue(coloriage.pose(0.75, 0.5, "ambre", 3.0))
+        tot = self._image()
+        coloriage.dessine(tot, 0.5)
+        self.assertEqual(int(tot.sum()), 0)
+        milieu = self._image()
+        coloriage.dessine(milieu, 1.0)
+        self.assertGreater(int(milieu[:, :80].sum()), 0)
+        self.assertEqual(int(milieu[:, 80:].sum()), 0)
+        fin = self._image()
+        coloriage.dessine(fin, 3.0)
+        self.assertGreater(int(fin[:, :80].sum()), 0)
+        self.assertGreater(int(fin[:, 80:].sum()), 0)
+
+    def test_clearing_removes_the_touches_from_the_next_frames(self):
+        from watcher.coloriage import Coloriage
+        coloriage = Coloriage()
+        coloriage.pose(0.5, 0.5, "blanc", 0.0)
+        coloriage.efface()
+        image = self._image()
+        coloriage.dessine(image, 10.0)
+        self.assertEqual(int(image.sum()), 0)
+
+    def test_red_is_not_a_paint_colour(self):
+        from watcher.coloriage import COULEURS, Coloriage
+        self.assertNotIn(stream.ROUGE, COULEURS.values())
+        self.assertFalse(Coloriage().pose(0.5, 0.5, "rouge", 0.0))

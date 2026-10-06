@@ -250,8 +250,8 @@ REVENDIQUES = {"alexander blu"}
 # Morceaux écartés à la main. Un identifiant, parce que le titre seul
 # reviendrait sous une autre graphie ; le titre aussi, au cas où le même
 # fichier reparaîtrait sous un autre numéro.
-ECARTES_ID = {19700}
-ECARTES_TITRES = {"cum on boyz"}
+ECARTES_ID = {19700, 16451}
+ECARTES_TITRES = {"cum on boyz", "accoutumance"}
 
 
 def retenu(fiche: dict, mini: float = COURT_MIN_S) -> str:
