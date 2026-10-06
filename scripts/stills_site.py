@@ -62,8 +62,6 @@ def main() -> int:
     ours = stream.charge_vignette(ROOT / "data" / "ours.png")
     preuve = cv2.imread(str(ROOT / "assets" / "ours-maison.jpg"))
     marin = stream.charge_vignette(ROOT / "assets" / "sous-marin.png")
-    machine = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
-    dogmazic = cv2.imread(str(ROOT / "assets" / "dogmazic.png"), cv2.IMREAD_UNCHANGED)
     thumbs = sorted((ROOT / "data" / "thumbs").glob("*.jpg"))
     photo = next((p for p in reversed(thumbs) if p.stat().st_size > 8000), thumbs[-1] if thumbs else None)
 
@@ -94,11 +92,6 @@ def main() -> int:
         ("elephant", lambda t, s: stream.pose_elephant(t, s, 0.4, vue=cadrage, heure=3)),
         ("batiment", lambda t, s: stream.pose_batiments(t, s, batis, vue=cadrage)),
         ("ours", lambda t, s: stream.pose_ours(t, s, ours, vue=cadrage, preuve=preuve)),
-        ("machine", lambda t, s: stream.pose_portrait_machine(
-            t, s, machine,
-            {"degres": 46.2, "charge": 0.31, "libre": 142e9, "debout": 191_000},
-            "Los Angeles", vue=cadrage)),
-        ("dogmazic", lambda t, s: stream.pose_portrait_dogmazic(t, s, dogmazic, vue=cadrage)),
     ]
     for nom, pose in actes:
         toile = apercu.compose(LARGE, False)

@@ -5319,23 +5319,16 @@ class PortraitMachineTests(unittest.TestCase):
         """Sans la photo on se tait : un cadre vide n'est pas un portrait."""
         image = np.zeros((720, 1280, 3), np.uint8)
         self.assertFalse(stream.pose_portrait_machine(
-            image, un_tour_de("machine") + 2.0, None, self.ETAT, "Los Angeles",
+            image, 0.0, None, self.ETAT, "Los Angeles",
             vue=(175, 36, 929, 522)))
         self.assertEqual(int(np.count_nonzero(image)), 0)
 
-    def test_the_portrait_stays_inside_the_window(self):
-        """Au milieu de la vue, pas à cheval sur les bandes noires."""
-        photo = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
-        image = np.zeros((720, 1280, 3), np.uint8)
-        vue = (175, 36, 929, 522)
-        self.assertTrue(stream.pose_portrait_machine(
-            image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
-            vue=vue))
-        pose = np.argwhere(image.any(axis=2))
-        self.assertGreaterEqual(int(pose[:, 1].min()), vue[0])
-        self.assertLessEqual(int(pose[:, 1].max()), vue[0] + vue[2] - 1)
-        self.assertGreaterEqual(int(pose[:, 0].min()), vue[1])
-        self.assertLessEqual(int(pose[:, 0].max()), vue[1] + vue[3] - 1)
+    def test_the_disc_is_off_the_antenna(self):
+        """La photo du Pi reste dans l'encart de gauche. Le disque du milieu non."""
+        source = inspect.getsource(stream.diffuse)
+        self.assertNotIn("pose_portrait_machine(", source)
+        self.assertIn("pose_machine(", source)
+        self.assertNotIn("machine", [nom for nom, _, _, _ in stream.PLATEAU])
 
     def test_the_portrait_is_the_photograph_not_the_dashboard_tint(self):
         """L'encart est un tableau de bord. Celui-ci est le portrait."""
@@ -5344,41 +5337,13 @@ class PortraitMachineTests(unittest.TestCase):
         self.assertIn("pose_photo_ronde(", source)
         self.assertNotIn("fond_encart(", source)
 
-    def test_the_portrait_is_a_disc(self):
-        """Un rectangle au milieu, c'est un encart de plus. Un disque, c'est la photo."""
-        photo = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
-        image = np.zeros((720, 1280, 3), np.uint8)
-        vue = (175, 36, 929, 522)
-        self.assertTrue(stream.pose_portrait_machine(
-            image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
-            vue=vue))
-        rayon = int(vue[2] * stream.MACHINE_PORTRAIT / 2)
-        peints = int(np.count_nonzero(image.any(axis=2)))
-        self.assertLess(peints, (2 * rayon) ** 2)
-
-    def test_it_leaves_when_its_turn_is_over(self):
-        """Sept secondes, puis le silence. Pas un sticker oublié."""
-        photo = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
-        image = np.zeros((720, 1280, 3), np.uint8)
-        self.assertFalse(stream.pose_portrait_machine(
-            image, un_tour_de("machine") + stream.MACHINE_TENUE_S + 1.0,
-            photo, self.ETAT, "Los Angeles", vue=(175, 36, 929, 522)))
-        self.assertEqual(int(np.count_nonzero(image)), 0)
-        self.assertLessEqual(stream.MACHINE_TENUE_S, 8.0)
-
     def test_the_portrait_does_not_thank_anyone(self):
-        """Le disque du Pi reste. Le remerciement, non."""
-        photo = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
-        image = np.zeros((720, 1280, 3), np.uint8)
-        self.assertTrue(stream.pose_portrait_machine(
-            image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
-            vue=(175, 36, 929, 522)))
-        self.assertGreater(stream.MACHINE_PERIODE_S, 1151.0)
-        self.assertGreater(stream.DOGMAZIC_PERIODE_S, stream.MACHINE_PERIODE_S)
+        """Ni disque, ni remerciement."""
         antenne = inspect.getsource(stream.diffuse)
+        self.assertNotIn("pose_portrait_machine(", antenne)
+        self.assertNotIn("pose_portrait_dogmazic(", antenne)
         self.assertNotIn("pose_merci(", antenne)
         self.assertNotIn("remerciements", antenne)
-        self.assertNotIn("Thanks", inspect.getsource(stream.pose_portrait_machine))
         self.assertNotIn("NOUS SOMMES", inspect.getsource(stream.pose_salle))
         self.assertNotIn("phrase_salle(", antenne)
 
@@ -5395,29 +5360,20 @@ class PortraitMachineTests(unittest.TestCase):
         dehors[y:y + haut, x:x + large] = 0
         self.assertEqual(int(np.count_nonzero(dehors)), 0)
 
-    def test_a_catch_stays_on_top_of_the_portrait(self):
-        """Un disque au milieu ne doit pas éteindre la veille."""
+    def test_a_catch_stays_on_top_of_the_effects(self):
+        """Un numéro au milieu ne doit pas éteindre la veille."""
         source = inspect.getsource(stream.diffuse)
-        self.assertIn("pose_portrait_machine(", source)
-        self.assertIn("pose_portrait_dogmazic(", source)
+        self.assertNotIn("pose_portrait_machine(", source)
+        self.assertNotIn("pose_portrait_dogmazic(", source)
         self.assertNotIn("pose_portrait_arduino(", source)
-        # Le portrait n'attend plus un creux : les rectangles se redessinent
-        # après lui, dans la fenêtre.
-        apres = source.split("pose_portrait_machine(")[-1]
         self.assertIn("nommes = [vu for vu in vus if not cherche_encore(vu, pistes, quand)]", source)
-        self.assertIn("dessine(toile, nommes, quand, vue=cadrage)", apres)
-        self.assertIn("pose_recherches(toile, pistes, cadrage, vus, quand)", apres)
-        self.assertLess(source.find("pose_portrait_dogmazic("),
-                        source.find("dessine(toile, nommes, quand, vue=cadrage)"))
+        self.assertIn("dessine(toile, nommes, quand, vue=cadrage)", source)
+        self.assertIn("pose_recherches(toile, pistes, cadrage, vus, quand)", source)
 
     def test_effects_never_turn_the_watch_off(self):
         """Un effet occupe l'écran, la veille continue de montrer ce qu'elle voit."""
-        photo = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
         image = np.zeros((720, 1280, 3), np.uint8)
         vue = (175, 36, 929, 522)
-        stream.pose_portrait_machine(
-            image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
-            vue=vue)
         vu = {"t": 1000.0, "box": [0.10, 0.40, 0.20, 0.18],
               "label": "Voiture", "sur": True, "type": "car"}
         poses = stream.dessine(image, [vu], 1000.5, vue=vue)
@@ -5439,34 +5395,13 @@ class PortraitDogmazicTests(unittest.TestCase):
     def test_no_logo_means_no_portrait(self):
         image = np.zeros((720, 1280, 3), np.uint8)
         self.assertFalse(stream.pose_portrait_dogmazic(
-            image, un_tour_de("dogmazic") + 2.0, None,
-            vue=(175, 36, 929, 522)))
+            image, 0.0, None, vue=(175, 36, 929, 522)))
         self.assertEqual(int(np.count_nonzero(image)), 0)
 
-    def test_the_portrait_does_not_thank_dogmazic(self):
-        photo = cv2.imread(str(ROOT / "assets" / "dogmazic.png"),
-                           cv2.IMREAD_UNCHANGED)
-        image = np.zeros((720, 1280, 3), np.uint8)
-        self.assertTrue(stream.pose_portrait_dogmazic(
-            image, un_tour_de("dogmazic") + 2.0, photo,
-            vue=(175, 36, 929, 522)))
-        self.assertNotIn("Thanks", inspect.getsource(stream.pose_portrait_dogmazic))
-
-    def test_it_leaves_when_its_turn_is_over(self):
-        photo = cv2.imread(str(ROOT / "assets" / "dogmazic.png"),
-                           cv2.IMREAD_UNCHANGED)
-        image = np.zeros((720, 1280, 3), np.uint8)
-        self.assertFalse(stream.pose_portrait_dogmazic(
-            image, un_tour_de("dogmazic") + stream.DOGMAZIC_TENUE_S + 1.0,
-            photo, vue=(175, 36, 929, 522)))
-        self.assertEqual(int(np.count_nonzero(image)), 0)
-
-    def test_the_two_thanks_never_share_the_stage(self):
-        """Un disque sur l'autre, on ne lit plus ni Raspberry ni Dogmazic."""
-        noms = [nom for nom, _, _, _ in stream.PLATEAU]
-        self.assertIn("machine", noms)
-        self.assertIn("dogmazic", noms)
-        self.assertNotEqual(stream.MACHINE_PERIODE_S, stream.DOGMAZIC_PERIODE_S)
+    def test_the_dog_disc_is_off_the_antenna(self):
+        source = inspect.getsource(stream.diffuse)
+        self.assertNotIn("pose_portrait_dogmazic(", source)
+        self.assertNotIn("dogmazic", [nom for nom, _, _, _ in stream.PLATEAU])
 
 
 class BandeauxTests(unittest.TestCase):

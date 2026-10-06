@@ -4249,16 +4249,13 @@ DOGMAZIC_PORTRAIT = MACHINE_PORTRAIT
 # Le plateau, maintenant que les numéros ont dit leur période et leur
 # durée. L'ordre départage les ex æquo : le tapis d'abord parce qu'il passe
 # au-dessus de tout et ne cache rien, l'éléphant parce qu'il occupe l'écran
-# entier, la machine ensuite — un disque au milieu cède le passage à un
-# éléphant rose, pas l'inverse.
+# entier. Les disques du Raspberry et de Dogmazic n'y sont plus.
 PLATEAU = (
     ("tapis", TAPIS_PERIODE_S, TAPIS_TRAVERSEE_S, 0.0),
     ("sous-marin", SOUS_MARIN_PERIODE_S, SOUS_MARIN_TRAVERSEE_S, 0.0),
     ("piste", PISTE_PERIODE_S, PISTE_DESCENTE_S, 0.0),
     ("elephant", ELEPHANT_PERIODE_S, ELEPHANT_TENUE_S, 0.0),
     ("batiment", BATIMENT_PERIODE_S, BATIMENT_RELEVE_S, 0.0),
-    ("machine", MACHINE_PERIODE_S, MACHINE_TENUE_S, MACHINE_RETARD_S),
-    ("dogmazic", DOGMAZIC_PERIODE_S, DOGMAZIC_TENUE_S, DOGMAZIC_RETARD_S),
     # L'ours en dernier parce qu'il écrit en travers du ciel, et qu'il vaut
     # mieux qu'il cède le passage plutôt que de crier par-dessus le tapis.
     #
@@ -7278,9 +7275,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # La photo de la machine qui fait tout ça. Lue en BGR et non en BGRA :
     # c'est une photo, elle n'a pas de transparence.
     photo_machine = cv2.imread(str(racine / "assets" / "machine.jpg"))
-    # Le chien orange, déjà un disque : on le pose comme la photo du Pi.
-    photo_dogmazic = cv2.imread(str(racine / "assets" / "dogmazic.png"),
-                               cv2.IMREAD_UNCHANGED)
     photo_butterbane = cv2.imread(str(racine / "assets" / "butterbane-logo.jpg"))
     photo_never = cv2.imread(str(racine / "assets" / "never.jpg"))
     # Le trampoline du village, côté français : le pendant du disque de
@@ -7861,19 +7855,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # Vérifié sur une vraie image de nuit avant de lever la règle.
                 ou_en_est = pose_ours(toile, quand - origine, ours, vue=cadrage,
                                       preuve=preuve_ours)
-                # Dogmazic d'abord, le Raspberry ensuite : un seul disque
-                # à la fois, le plateau les départage. Les rectangles se
-                # redessinent après, sur la toile.
-                pose_portrait_dogmazic(
-                    toile, quand - origine, photo_dogmazic,
-                    vue=cadrage, nuit=not fait_jour)
-                # La photo de la machine, en grand. Le rectangle se redessine
-                # après, sur la toile : un disque au milieu de la route ne
-                # doit pas éteindre la veille. Le disque reste, le
-                # remerciement non : ni bandeau, ni voix.
-                pose_portrait_machine(
-                    toile, quand - origine, photo_machine,
-                    machine, ville, vue=cadrage, nuit=not fait_jour)
                 if ou_en_est is not None:
                     # Une fois, pas à chaque image : il grogne en descendant,
                     # et il crie une fois arrivé sur l'îlot.
