@@ -96,11 +96,11 @@ REPLIQUES = [
     # s'assombrissait d'un coup, une image floue de surveillance apparaissait
     # au milieu, et « REPLAY » s'écrivait en rouge — la couleur qu'on garde
     # pour les alarmes. Rien de tout cela n'était voulu : on voulait seulement
-    # ne pas mentir sur la date. Une voix qui chante le mot dit la même chose
-    # et ne fait peur à personne, parce qu'une alarme ne chante pas.
-    ("rediff", CLAIRE, "Replaaaayyyyyyy"),
-    ("rediff", PLAT, "Replaaaayyyyyyy"),
-    ("rediff", CLAIRE, "Replaaaayyy, again"),
+    # ne pas mentir sur la date. Le mot se dit « replay », les deux syllabes,
+    # avec de l'entrain. L'allonger en « replaaaay » sortait « ai ai ».
+    ("rediff", CLAIRE, "Replay!"),
+    ("rediff", PLAT, "Replay!"),
+    ("rediff", CLAIRE, "Replay, again!"),
     # L'ours. Il y a une sculpture de bois debout près du chemin, un ours
     # grandeur nature, 1,73 m sur la carte de scène. Il regarde passer les
     # voitures depuis des années sans rien dire. Une fois de temps en temps son
@@ -222,7 +222,7 @@ def _nom(voix: str, texte: str) -> str:
 CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180,
             # Lentement : c'est une voyelle tenue, pas une phrase. « say » ne
             # chantera pas, mais au moins il traînera.
-            "rediff": 110,
+            "rediff": 160,
             # Un ours ne parle pas vite.
             "ours": 100, "ours_cri": 100,
             "machine": 170, "dogmazic": 170,
@@ -246,10 +246,11 @@ JEU = {
                "not loud, and over in a second.",
     "matin": "Warm and welcoming, a radio host opening the morning. Stretch "
              "the long vowel generously. Unhurried but awake.",
-    "rediff": "Sing it, actually sing — a silly little descending melody on "
-              "the stretched vowel, like a jingle announcing an old clip on a "
-              "late-night show. Light, amused, slightly ridiculous and "
-              "completely harmless. Never dramatic, never ominous.",
+    "rediff": "Bright and enthusiastic, like a radio host delighted to bring "
+              "an old clip back. Say the ordinary English word Replay, two "
+              "clear syllables, ray then play. Never stretch the vowel, never "
+              "add a syllable, never sing it. A quick cheerful lift, about one "
+              "second, completely harmless. Never dramatic, never ominous.",
     "ours_cri": "A big wooden bear bellowing through tears. Sobbing openly, "
                 "voice cracking, broken-hearted and absolutely furious about "
                 "it at the same time. Wail the words out at the top of his "
