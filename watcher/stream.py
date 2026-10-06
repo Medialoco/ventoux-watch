@@ -6590,7 +6590,8 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                  ou: tuple[float, float] | None = None,
                  remue: float = 0.0,
                  photo: np.ndarray | None = None,
-                 ratio: tuple | None = None) -> None:
+                 ratio: tuple | None = None,
+                 nuit: bool = False) -> None:
     """L'heure qui tourne, en haut à droite, avec le point rouge des chaînes.
 
     Le point clignote à la seconde : c'est ce qui fait qu'un écran fixe a l'air
@@ -6650,11 +6651,17 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     # d'une archive, il disait l'inverse de ce qu'il est — et c'est ce qui
     # faisait de la rediffusion un moment inquiétant plutôt qu'un moment
     # d'archive. Hors direct il passe à l'ambre, comme le mot qu'il accompagne.
-    # Sauf sur la maquette : le coin dit déjà DIRECT, et un second voyant
-    # orange ne fait que répéter que ce n'est pas la webcam.
+    # Sauf sur la maquette de jour : le coin dit déjà DIRECT, et un second
+    # voyant orange ne fait que répéter que ce n'est pas la webcam.
+    # La nuit, la maquette est un rendu de jour baissé. Le point ambre
+    # reste allumé tout le temps : c'est lui qui dit que cette vue est
+    # la vue de nuit, et un point qui s'éteint une seconde sur deux
+    # ne marque plus rien.
     maquette = not direct and autre == "3D MODEL"
     if direct and int(quand) % 2 == 0:
         cv2.circle(image, (x + rayon, y - rayon), rayon, ROUGE, -1)
+    elif maquette and nuit:
+        cv2.circle(image, (x + rayon, y - rayon), rayon, AMBRE, -1)
     elif not direct and not maquette:
         cv2.circle(image, (x + rayon, y - rayon), rayon, AMBRE, -1)
     if not maquette:
@@ -8022,7 +8029,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                              "REPLAY" if rediff is not None else "3D MODEL"),
                          commune=nom_secours if secours else commune,
                          carte=carte_pays, ou=ou_secours if secours else ou_camera,
-                         remue=-remue, photo=photo_trampoline, ratio=beau)
+                         remue=-remue, photo=photo_trampoline, ratio=beau,
+                         nuit=survol is not None and not survol_de_jour)
             if figee and not secours:
                 pose_mode_degrade(toile, cadrage, phrase_secours if secours else None)
             ou_machine = None

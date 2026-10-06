@@ -6026,6 +6026,13 @@ class DuplexTests(unittest.TestCase):
         toile = np.zeros((420, 1600, 3), np.uint8)
         stream.pose_horloge(toile, 1_790_000_000.0, direct=False, autre="3D MODEL")
         self.assertFalse(np.any(np.all(toile == stream.AMBRE, axis=2)))
+
+    def test_la_maquette_de_nuit_garde_le_point_ambre(self):
+        """La nuit, le point reste orange même à la seconde où le direct s'éteint."""
+        toile = np.zeros((420, 1600, 3), np.uint8)
+        stream.pose_horloge(toile, 1_790_000_001.0, direct=False, autre="3D MODEL",
+                            nuit=True)
+        self.assertTrue(np.any(np.all(toile == stream.AMBRE, axis=2)))
         replay = np.zeros((420, 1600, 3), np.uint8)
         stream.pose_horloge(replay, 1_790_000_000.0, direct=False, autre="REPLAY")
         self.assertTrue(np.any(np.all(replay == stream.AMBRE, axis=2)))
