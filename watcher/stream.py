@@ -7539,8 +7539,14 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # Et pas pendant un survol. Le relief en trois dimensions est un
             # autre sujet que la montagne en direct, et deux pantins dansant
             # dessus diraient que c'est le même plan filmé autrement.
-            if not figee and survol is None:
+            # Commun à toutes les webcams. Les danseurs n'appartiennent pas
+            # au rond-point : ils restent quand l'image est celle de Cannes.
+            if survol is None:
                 pose_danseurs(toile, quand - origine, musique.pouls(), vue=cadrage)
+            # Propres au Mont Serein : l'ours et le skieur connaissent ce lieu.
+            # Le tapis, l'éléphant, le sous-marin, les bâtiments et les
+            # portraits ne sont pas encore classés, ils restent ici.
+            if not figee and survol is None:
                 # Le tapis vole au-dessus de la crête, donc il passe quoi qu'il
                 # arrive. L'éléphant danse sur le rond-point, c'est-à-dire en
                 # plein sur l'endroit où les choses se passent : il n'y va que

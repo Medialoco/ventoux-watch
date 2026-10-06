@@ -2205,7 +2205,14 @@ class FogTests(unittest.TestCase):
         html = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
         self.assertIn("Waiting for Mont Serein.", html)
         self.assertIn('id="degrade"', html)
-        self.assertIn("Backup webcam,", inspect.getsource(stream.diffuse))
+        diffuse = inspect.getsource(stream.diffuse)
+        self.assertIn("Backup webcam,", diffuse)
+        commun, propre = diffuse.split("Commun à toutes les webcams", 1)[1].split(
+            "Propres au Mont Serein", 1)
+        self.assertIn("pose_danseurs", commun)
+        self.assertNotIn("pose_ours", commun)
+        self.assertIn("pose_ours", propre)
+        self.assertIn("pose_piste", propre)
         self.assertEqual(stream._camera_secours(
             {"stream_url": "http://mont", "collection": [
                 {"nom": "Mont Serein"},
