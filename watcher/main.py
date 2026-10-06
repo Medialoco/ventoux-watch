@@ -328,7 +328,7 @@ def main() -> None:
                     _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score)
                 for track in _a_relire(motion.tracks, prise):
                     _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score, tot=True)
-                if now - sonde_source >= 20.0 and _mont_serein_vif(cfg) != (not secours):
+                if now - sonde_source >= 60.0 and _mont_serein_vif(cfg) != (not secours):
                     log.info("La veille change de webcam")
                     break
                 _flush_clips(pending, ring, prise, drive, store)
@@ -1245,7 +1245,9 @@ def _frames(url: str, horloge: bool = False):
             "-user_agent", "Mozilla/5.0",
             "-rw_timeout", "15000000",
             "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
-            "-live_start_index", "-3",
+            # Plus près du bord que l'antenne : la minute de marge du flux
+            # est le temps qu'on a pour nommer avant que l'image ne passe.
+            "-live_start_index", str(-RECUL_VEILLE),
             "-i", url, "-an", "-vf", "fps=1",
             "-f", "image2pipe", "-vcodec", "mjpeg", "-",
         ]
@@ -1259,6 +1261,10 @@ def _frames(url: str, horloge: bool = False):
             "-f", "image2pipe", "-vcodec", "mjpeg", "-",
         ]
     vues = 0
+    retard_horloge = 0.0
+    if horloge:
+        from watcher.stream import duree_de_segment
+        retard_horloge = RECUL_VEILLE * duree_de_segment(url)
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
     assert process.stdout is not None
     buffer = b""
@@ -1296,7 +1302,7 @@ def _frames(url: str, horloge: bool = False):
                 buffer = buffer[end + 2 :]
                 frame = cv2.imdecode(np.frombuffer(payload, dtype=np.uint8), cv2.IMREAD_COLOR)
                 if frame is not None:
-                    yield frame, (time.time() if horloge else depart + vues)
+                    yield frame, (time.time() - retard_horloge if horloge else depart + vues)
                     vues += 1
     finally:
         process.kill()

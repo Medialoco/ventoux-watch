@@ -2213,7 +2213,11 @@ class FogTests(unittest.TestCase):
         self.assertNotIn("pose_ours", commun)
         self.assertIn("pose_ours", propre)
         self.assertIn("pose_piste", propre)
-        self.assertIn('"-live_start_index", "-3"', inspect.getsource(stream._entree_cadre))
+        self.assertEqual(stream.RETARD_SECOURS_S, 60.0)
+        self.assertIn('"-live_start_index", str(-recul)', inspect.getsource(stream._entree_cadre))
+        self.assertIn("_maintenant() - RETARD_SECOURS_S", diffuse)
+        self.assertIn("ventoux_vif.is_set()", diffuse)
+        self.assertEqual(stream.REGARD_VENTOUX_S, 60.0)
         self.assertIn("ou_secours if secours", diffuse)
         self.assertIn("(secours or not figee) and a_poser is None", diffuse)
         self.assertEqual(stream._camera_secours(
