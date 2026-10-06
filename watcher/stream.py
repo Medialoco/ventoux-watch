@@ -26,6 +26,7 @@ import math
 import os
 import random
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -6504,7 +6505,8 @@ HORLOGE_LIGNES = (MACHINE_LIGNES[0], MACHINE_LIGNES[1],
                   MACHINE_LIGNES[2], MACHINE_LIGNES[-1])
 
 
-def pose_mode_degrade(image: np.ndarray, vue: tuple[int, int, int, int]) -> None:
+def pose_mode_degrade(image: np.ndarray, vue: tuple[int, int, int, int],
+                      phrase: str | None = None) -> None:
     """La webcam s'est arrêtée. On garde la photo, le direct continue.
 
     Deux lignes, en bas de la fenêtre, à l'ambre. Le rouge reste au direct
@@ -6515,7 +6517,9 @@ def pose_mode_degrade(image: np.ndarray, vue: tuple[int, int, int, int]) -> None
     if gw < 40 or gh < 40:
         return
     echelle = image.shape[1] / 1600.0
-    kicker, phrase = "DEGRADED MODE", "Webcam interrupted. Last picture. Broadcast continues."
+    kicker = "DEGRADED MODE"
+    if not phrase:
+        phrase = "Webcam interrupted. Last picture. Broadcast continues."
     trait = max(1, int(round(echelle)))
     tk, tp = 0.42 * echelle, 0.34 * echelle
     (lk, hk), _ = cv2.getTextSize(kicker, cv2.FONT_HERSHEY_SIMPLEX, tk, trait)
@@ -6631,6 +6635,75 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     if ratio is not None:
         pose_jackpot(image, gauche, largeur - 1, bas,
                      int(ratio[0]), int(ratio[1]), ratio[2], quand)
+
+
+def _camera_secours(cfg: dict) -> dict | None:
+    """L'autre webcam de la collection, celle qui prend le relais."""
+    principale = cfg.get("stream_url")
+    for cam in cfg.get("collection") or []:
+        if not isinstance(cam, dict):
+            continue
+        if cam.get("youtube"):
+            return cam
+        if cam.get("url") and cam.get("url") != principale:
+            return cam
+    return None
+
+
+def adresse_youtube(video: str) -> str:
+    """Une adresse HLS que ffmpeg sait lire, demandée depuis cette machine.
+
+    Elle expire, et elle est liée à l'adresse qui la demande. On la redemande
+    ici à chaque ouverture, on ne la recopie pas d'ailleurs.
+    """
+    binaire = shutil.which("yt-dlp") or "/usr/local/bin/yt-dlp"
+    fini = subprocess.run(
+        [binaire, "-g", "-f",
+         "270/232/best[height<=1080][protocol*=m3u8]/best[height<=1080]",
+         "--no-warnings", f"https://www.youtube.com/watch?v={video}"],
+        capture_output=True, text=True, timeout=45, check=False,
+    )
+    for ligne in fini.stdout.splitlines():
+        if ligne.startswith("http"):
+            return ligne.strip()
+    raise RuntimeError("yt-dlp n'a pas donné d'adresse")
+
+
+def _entree_cadre(url: str, largeur: int, hauteur: int, fps: int) -> subprocess.Popen:
+    """Une autre webcam, ramenée à la taille et au rythme de la nôtre."""
+    commande = [
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin",
+        "-user_agent", "Mozilla/5.0",
+        "-rw_timeout", "15000000",
+        "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+        "-i", url, "-an",
+        "-vf", f"scale={largeur}:{hauteur},fps={fps}",
+        "-f", "rawvideo", "-pix_fmt", "bgr24", "-",
+    ]
+    return subprocess.Popen(commande, stdout=subprocess.PIPE, bufsize=10 ** 8)
+
+
+def _ouvre_secours(cfg: dict, largeur: int, hauteur: int, fps: int) -> subprocess.Popen | None:
+    cam = _camera_secours(cfg)
+    if not cam:
+        return None
+    nom = str(cam.get("nom") or "webcam")
+    try:
+        url = (adresse_youtube(str(cam["youtube"])) if cam.get("youtube")
+               else str(cam["url"]))
+    except Exception:
+        log.warning("Secours indisponible : %s", nom, exc_info=True)
+        return None
+    log.info("Secours ouvert : %s", nom)
+    return _entree_cadre(url, largeur, hauteur, fps)
+
+
+def _webcam_vive(url: str) -> bool:
+    """La playlist a encore des segments neufs. Un échec de lecture, non."""
+    try:
+        return not playlist_figee(_lire(playlist_media(url)), _maintenant())
+    except Exception:
+        return False
 
 
 def _entree(url: str, recul: int) -> subprocess.Popen:
@@ -7092,25 +7165,39 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         log.info("Survol du terrain : %d images", len(images3d))
     tirage = random.Random()
     figee = False
+    secours = False
     photo_figee: np.ndarray | None = None
     sonde_webcam = 0.0
+    cam_secours = _camera_secours(cfg)
+    nom_secours = str((cam_secours or {}).get("nom") or "backup")
+    phrase_secours = f"Backup webcam, {nom_secours}. Waiting for Mont Serein."
     try:
         figee = playlist_figee(_lire(media), _maintenant())
     except Exception:
         log.warning("Playlist illisible au départ", exc_info=True)
     if figee:
-        photo_figee = _derniere_image(entree, octets, source_h, source_l)
-        entree.kill()
-        if photo_figee is None:
-            figee = False
-            entree = _entree(cfg["stream_url"], recul)
-            assert entree.stdout is not None
+        # L'autre webcam de la collection, tout de suite. La dernière image
+        # du Mont Serein ne sert que si ce relais ne s'ouvre pas.
+        autre = _ouvre_secours(cfg, source_l, source_h, int(cfg["stream_fps"]))
+        if autre is not None:
+            entree.kill()
+            entree = autre
+            secours = True
+            cadence = None
+            log.info("Collection : %s remplace Mont Serein", nom_secours)
         else:
-            log.info("Webcam interrompue : dernière image tenue, le direct continue")
+            photo_figee = _derniere_image(entree, octets, source_h, source_l)
+            entree.kill()
+            if photo_figee is None:
+                figee = False
+                entree = _entree(cfg["stream_url"], recul)
+                assert entree.stdout is not None
+            else:
+                log.info("Webcam interrompue : dernière image tenue, le direct continue")
     try:
         while True:
             tenu = False
-            if figee and photo_figee is not None:
+            if figee and photo_figee is not None and not secours:
                 time.sleep(1.0 / cfg["stream_fps"])
                 if _maintenant() - sonde_webcam >= ATTENTE_PAS_S:
                     sonde_webcam = _maintenant()
@@ -7128,11 +7215,41 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                             continue
                     except Exception:
                         log.info("Webcam toujours interrompue")
+                    autre = _ouvre_secours(cfg, source_l, source_h, int(cfg["stream_fps"]))
+                    if autre is not None:
+                        entree = autre
+                        secours = True
+                        figee = True
+                        cadence = None
+                        log.info("Collection : %s remplace Mont Serein", nom_secours)
+                        continue
                 image = photo_figee.copy()
                 quand = ouvert
                 montre = _maintenant()
                 tenu = True
             else:
+                if secours and _maintenant() - sonde_webcam >= ATTENTE_PAS_S:
+                    sonde_webcam = _maintenant()
+                    if _webcam_vive(cfg["stream_url"]):
+                        try:
+                            entree.kill()
+                            _, dernier, segment = attends_la_webcam(cfg["stream_url"])
+                            entree = _entree(cfg["stream_url"], recul)
+                            assert entree.stdout is not None
+                            ouvert = dernier - (recul - 1) * segment
+                            vues = 0
+                            cadence = None
+                            secours = False
+                            figee = False
+                            log.info("La webcam a repris")
+                            continue
+                        except Exception:
+                            log.warning("Retour au Mont Serein impossible", exc_info=True)
+                            autre = _ouvre_secours(cfg, source_l, source_h,
+                                                   int(cfg["stream_fps"]))
+                            if autre is not None:
+                                entree = autre
+                            continue
                 brut = entree.stdout.read(octets)
                 if len(brut) < octets:
                     # Le raisonnement d'attends_la_webcam, appliqué en cours de
@@ -7149,6 +7266,25 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     # cette image, l'heure du direct, et on continue.
                     log.warning("Le flux s'est tari après %d images : on rouvre l'entrée", images)
                     entree.kill()
+                    if secours and not _webcam_vive(cfg["stream_url"]):
+                        autre = _ouvre_secours(cfg, source_l, source_h, int(cfg["stream_fps"]))
+                        if autre is not None:
+                            entree = autre
+                            cadence = None
+                            continue
+                        secours = False
+                        figee = True
+                        sonde_webcam = _maintenant()
+                        rediff = None
+                        survol = None
+                        if photo_figee is not None:
+                            log.warning("Secours interrompu : on tient la dernière image, "
+                                        "le direct continue")
+                            continue
+                    elif secours:
+                        secours = False
+                        figee = False
+                        photo_figee = None
                     gel = photo_figee is not None
                     if gel:
                         try:
@@ -7175,10 +7311,14 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     vues = 0
                     cadence = None
                     continue
-                quand = ouvert + vues / cfg["stream_fps"]
+                if secours:
+                    quand = _maintenant()
+                    montre = quand
+                else:
+                    quand = ouvert + vues / cfg["stream_fps"]
+                    montre = quand
                 vues += 1
                 images += 1
-                montre = quand
             # L'instant où l'image qu'on s'apprête à dessiner sera regardée.
             # Posé avant de dessiner quoi que ce soit, puisque c'est l'heure
             # que le crédit musical va lire.
@@ -7620,10 +7760,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             los, beau = ratios_du_jour(tableau, heure_antenne)
             pose_horloge(toile, heure_antenne, direct=not figee and rediff is None and survol is None,
                          autre="DEGRADED" if figee else ("REPLAY" if rediff is not None else "3D MODEL"),
-                         commune=commune, carte=carte_pays, ou=ou_camera,
+                         commune=nom_secours if secours else commune,
+                         carte=carte_pays, ou=ou_camera,
                          remue=-remue, photo=photo_trampoline, ratio=beau)
             if figee:
-                pose_mode_degrade(toile, cadrage)
+                pose_mode_degrade(toile, cadrage, phrase_secours if secours else None)
             ou_machine = None
             if machine_ou.get("lat") is not None:
                 ou_machine = (float(machine_ou["lat"]), float(machine_ou["lon"]))

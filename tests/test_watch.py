@@ -2203,8 +2203,14 @@ class FogTests(unittest.TestCase):
         page = (ROOT / "site" / "app.js").read_text(encoding="utf-8")
         self.assertIn("function playlistFigee", page)
         html = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
-        self.assertIn("The broadcast continues.", html)
+        self.assertIn("Waiting for Mont Serein.", html)
         self.assertIn('id="degrade"', html)
+        self.assertIn("Backup webcam,", inspect.getsource(stream.diffuse))
+        self.assertEqual(stream._camera_secours(
+            {"stream_url": "http://mont", "collection": [
+                {"nom": "Mont Serein"},
+                {"nom": "Cannes", "youtube": "z6BNMoj9Pyo"},
+            ]})["nom"], "Cannes")
         diffuse = inspect.getsource(stream.diffuse)
         self.assertIn("heure_antenne = _maintenant()", diffuse)
         self.assertIn("pose_horloge(toile, heure_antenne", diffuse)
