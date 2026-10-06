@@ -6040,6 +6040,44 @@ class DuplexTests(unittest.TestCase):
         source = inspect.getsource(stream.diffuse)
         self.assertIn("pose_mixte(", source)
         self.assertIn("cannes_seul", source)
+        self.assertIn("photo_splendid", source)
+        self.assertNotIn("ratio=None if cannes_seul", source)
+
+    def test_les_webcams_retrécissent_et_le_cartouche_garde_sa_largeur(self):
+        """Les boîtes restent à leur largeur. Les deux images se partagent le reste."""
+        quand = 1_790_000_000.0
+        etat = {"degres": 42.0, "charge": 0.3}
+        photo = np.full((96, 96, 3), (30, 40, 200), np.uint8)
+        lg = stream.largeur_machine(1280, etat, "Los Angeles", quand, True)
+        lb = stream.largeur_horloge(1280, quand, True, "REPLAY",
+                                     "Beaumont-du-Ventoux", True)
+        lc = stream.largeur_horloge(1280, quand, True, "REPLAY", "Cannes", True)
+        ventoux = np.full((270, 480, 3), (40, 40, 200), np.uint8)
+        cannes = np.full((180, 320, 3), (40, 180, 40), np.uint8)
+        toile, _vue_v, _vue_c, cols = stream.pose_mixte(
+            ventoux, cannes, 1280, 720, "Cannes", (lg, lb, lc))
+        self.assertEqual([c[2] for c in cols], [lg, cols[1][2], lb, cols[3][2], lc])
+        self.assertLessEqual(abs(cols[1][2] - cols[3][2]), 1)
+        _sx, _sy, sw, _sh = stream.fenetre((1080, 1920), 1280, 720)
+        self.assertLess(cols[1][2], sw)
+        self.assertLess(cols[3][2], sw)
+        self.assertLess(lc, sw)
+        stream.pose_les_boites(
+            toile, cols, etat, photo, "Los Angeles", None, None, quand,
+            (12, 20, stream.CYAN), "Beaumont-du-Ventoux", None, None, photo,
+            (30, 40, stream.CYAN), "Cannes", None, True, "REPLAY", False,
+            photo, 0.0)
+        ref = np.zeros_like(toile)
+        stream.pose_horloge(ref, quand, commune="Cannes", photo=photo,
+                            ratio=(30, 40, stream.CYAN))
+        def bas(image, colonne):
+            x, _y, w, _h = colonne
+            ys = np.where(image[:, x:x + w].any(axis=2))[0]
+            return int(ys.max()) - int(ys.min())
+        self.assertLessEqual(abs(bas(toile, cols[4]) - bas(ref, (ref.shape[1] - lc, 0, lc, 1))), 2)
+        self.assertGreater(bas(toile, cols[4]) - bas(toile, cols[2]), 40)
+        xs = np.where(toile[:, cols[4][0]:].any(axis=2))[1]
+        self.assertGreaterEqual(int(xs.max()) + cols[4][0], 1278)
 
     def test_la_maquette_ne_porte_pas_de_voyant_orange(self):
         toile = np.zeros((420, 1600, 3), np.uint8)

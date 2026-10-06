@@ -44,6 +44,16 @@ Recadré sur le V jaune et le tapis. À l'écran il est teinté comme la
 photo du Raspberry : c'est le disque français, en face du disque de
 Los Angeles.
 
+## splendid.jpg
+
+L'hôtel Le Splendid, à Cannes, photographié le 15 avril 2023 par
+Benoît Prieur. Wikimedia Commons, CC0.
+
+https://commons.wikimedia.org/wiki/File:Vue_de_l%27H%C3%B4tel_Le_Splendid_(Cannes)_en_avril_2023.JPG
+
+Le médaillon de la boîte de droite quand le lieu affiché est Cannes.
+Même teinte que le trampoline : le disque reste un disque.
+
 ## dogmazic.svg
 
 Le chien orange de Dogmazic, pris sur play.dogmazic.net — c'est leur

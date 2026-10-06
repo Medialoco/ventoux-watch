@@ -2286,24 +2286,41 @@ def zone_colonnes(largeur: int, hauteur: int) -> tuple[int, int, int, int]:
 
 def pose_mixte(ventoux: np.ndarray, cannes: np.ndarray,
                largeur: int, hauteur: int, nom_cannes: str = "Cannes",
+               largeurs: tuple[int, int, int] = (0, 0, 0),
                ) -> tuple[np.ndarray, tuple[int, int, int, int],
                           tuple[int, int, int, int], list[tuple[int, int, int, int]]]:
-    """Cinq colonnes hautes : Los Angeles, Ventoux, Beaumont, Cannes, Cannes.
+    """Cinq places : Los Angeles, Ventoux, Beaumont, Cannes, Cannes.
 
+    Les trois boîtes gardent la largeur de leur cartouche. Ce qui reste
+    se partage entre les deux webcams, qui sont donc plus étroites.
     Les photos gardent tout leur cadre. Le nom est dans le noir au-dessus
-    de la photo, pas sur elle. Les trois boîtes se collent ensuite dans
-    les colonnes laissées vides.
+    de la photo, pas sur elle.
     """
     x, y, w, h = zone_colonnes(largeur, hauteur)
     gap = max(2, int(round(4 * largeur / 1600)))
-    usable = max(1, w - 4 * gap)
-    large = max(1, usable // 5)
+    echelle = largeur / 1600
+    mini = int(ENCART_LARGE * echelle) + 2 * int(14 * echelle)
+    gauche, milieu, droite = (max(mini, int(v)) if int(v) < 8 else int(v)
+                              for v in largeurs)
+    # Le cartouche de droite ne rétrécit pas. S'il manque de la place,
+    # elle est prise au milieu, puis à gauche.
+    reste = w - gauche - milieu - droite - 4 * gap
+    if reste < 2:
+        deficit = 2 - reste
+        prise = min(max(0, milieu - mini), deficit)
+        milieu -= prise
+        deficit -= prise
+        prise = min(max(0, gauche - mini), deficit)
+        gauche -= prise
+        reste = w - gauche - milieu - droite - 4 * gap
+    part = max(1, reste // 2)
+    suite = max(1, reste - part)
+    mesures = (gauche, part, milieu, suite, droite)
     colonnes = []
     cx = x
-    for i in range(5):
-        lw = large if i < 4 else max(1, x + w - cx)
-        colonnes.append((cx, y, lw, h))
-        cx += lw + gap
+    for i, lw in enumerate(mesures):
+        colonnes.append((cx, y, max(1, lw), h))
+        cx += max(1, lw) + gap
     toile = np.zeros((hauteur, largeur, 3), np.uint8)
     vue_ventoux = _dans_la_colonne(toile, ventoux, colonnes[1])
     vue_cannes = _dans_la_colonne(toile, cannes, colonnes[3])
@@ -2315,14 +2332,6 @@ def pose_mixte(ventoux: np.ndarray, cannes: np.ndarray,
     return toile, vue_ventoux, vue_cannes, colonnes
 
 
-def _boite_visible(image: np.ndarray) -> np.ndarray | None:
-    """Le rectangle qui contient ce qui a été dessiné, fond noir compris."""
-    ys, xs = np.where(image.any(axis=2))
-    if ys.size == 0:
-        return None
-    return image[int(ys.min()):int(ys.max()) + 1, int(xs.min()):int(xs.max()) + 1].copy()
-
-
 def pose_les_boites(toile: np.ndarray, colonnes: list[tuple[int, int, int, int]],
                     etat: dict | None, vignette: np.ndarray | None, ville: str,
                     carte_machine: list | None, ou_machine: tuple[float, float] | None,
@@ -2331,33 +2340,28 @@ def pose_les_boites(toile: np.ndarray, colonnes: list[tuple[int, int, int, int]]
                     ou_camera: tuple[float, float] | None,
                     photo: np.ndarray | None, ratio_beau: tuple | None,
                     nom_cannes: str, ou_cannes: tuple[float, float] | None,
-                    direct: bool, autre: str, nuit: bool) -> None:
-    """Les trois boîtes dans leurs colonnes. Les rapports restent Los Angeles
-    et Beaumont. La boîte de Cannes n'en porte pas un troisième.
+                    direct: bool, autre: str, nuit: bool,
+                    photo_cannes: np.ndarray | None = None,
+                    remue: float = 0.0) -> None:
+    """Les trois cartouches à leur taille, dans la rangée.
+
+    Pas une réduction d'un dessin fait pour le bord : chacune est posée
+    là où sa colonne finit. Le compteur de Beaumont est sur la boîte de
+    droite, pas un troisième chiffre. Beaumont, au milieu, garde la place
+    de ce compteur pour que les deux disques s'arrêtent sur la même ligne.
     """
     if len(colonnes) < 5:
         return
-    hauteur, largeur = toile.shape[:2]
-
-    def colle(indice: int, dessin: np.ndarray) -> None:
-        boite = _boite_visible(dessin)
-        if boite is not None:
-            _dans_la_colonne(toile, boite, colonnes[indice])
-
-    brouillon = np.zeros((hauteur, largeur, 3), np.uint8)
-    pose_machine(brouillon, etat, vignette, ville, 0.0, carte_machine, ou_machine,
+    pose_machine(toile, etat, vignette, ville, remue, carte_machine, ou_machine,
                  quand, ratio_los)
-    colle(0, brouillon)
-    brouillon[:] = 0
-    pose_horloge(brouillon, quand, direct=direct, autre=autre, commune=commune,
-                 carte=carte_pays, ou=ou_camera, remue=0.0, photo=photo,
-                 ratio=ratio_beau, nuit=nuit)
-    colle(2, brouillon)
-    brouillon[:] = 0
-    pose_horloge(brouillon, quand, direct=direct, autre=autre, commune=nom_cannes,
-                 carte=carte_pays, ou=ou_cannes, remue=0.0, photo=None,
-                 ratio=None, nuit=False)
-    colle(4, brouillon)
+    pose_horloge(toile, quand, direct=direct, autre=autre, commune=commune,
+                 carte=carte_pays, ou=ou_camera, remue=-remue, photo=photo,
+                 ratio=None, nuit=nuit, garde=True,
+                 bord_droit=colonnes[2][0] + colonnes[2][2] - 1)
+    pose_horloge(toile, quand, direct=direct, autre=autre, commune=nom_cannes,
+                 carte=carte_pays, ou=ou_cannes, remue=-remue, photo=photo_cannes,
+                 ratio=ratio_beau, nuit=False,
+                 bord_droit=colonnes[4][0] + colonnes[4][2] - 1)
 
 
 def _coupe(texte: str, combien: int) -> str:
@@ -6075,6 +6079,33 @@ def note_minuit(quand: float, memoire: dict) -> str | None:
     return None
 
 
+def largeur_machine(largeur: int, etat: dict | None, ville: str,
+                    quand: float | None, a_dessin: bool) -> int:
+    """La largeur de l'encart de gauche, collé au bord de l'écran."""
+    if not etat:
+        return 0
+    echelle = largeur / 1600
+    instant = time.time() if quand is None else quand
+    jour, heure = _date_et_heure(instant, LOS_ANGELES)
+    marge = int(14 * echelle)
+    taille = LIEU_CORPS * echelle
+    lieu = (ville or "").upper()
+    large = max(
+        int(BADGE_PAS * echelle) + cv2.getTextSize(
+            "RASPBERRY PI 5", cv2.FONT_HERSHEY_SIMPLEX,
+            BADGE_TAILLE * echelle, 2)[0][0],
+        cv2.getTextSize(jour, cv2.FONT_HERSHEY_SIMPLEX, 0.48 * echelle, 1)[0][0],
+        cv2.getTextSize(heure, cv2.FONT_HERSHEY_SIMPLEX, 0.95 * echelle, 2)[0][0],
+        cv2.getTextSize(f"TEMP   {etat['degres']:.1f} C", cv2.FONT_HERSHEY_SIMPLEX,
+                        0.54 * echelle, 2)[0][0],
+        cv2.getTextSize(f"LOAD   {etat['charge'] * 100:.0f}%",
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.54 * echelle, 2)[0][0],
+        large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle),
+        int(ENCART_LARGE * echelle) if a_dessin else 0,
+    )
+    return max(large + 2 * marge, int(ENCART_LARGE * echelle) + 2 * marge)
+
+
 def pose_machine(image: np.ndarray, etat: dict | None,
                  vignette: np.ndarray | None = None, ville: str = "",
                  remue: float = 0.0,
@@ -6108,23 +6139,9 @@ def pose_machine(image: np.ndarray, etat: dict | None,
     # regarde, celui d'en face où est ce qu'elle regarde. Huit mille
     # kilomètres entre les deux, et c'est à peu près tout le projet.
     lieu = (ville or "").upper()
-    large = max(
-        int(BADGE_PAS * echelle) + cv2.getTextSize(
-            "RASPBERRY PI 5", cv2.FONT_HERSHEY_SIMPLEX,
-            BADGE_TAILLE * echelle, 2)[0][0],
-        cv2.getTextSize(jour, cv2.FONT_HERSHEY_SIMPLEX, 0.48 * echelle, 1)[0][0],
-        cv2.getTextSize(heure, cv2.FONT_HERSHEY_SIMPLEX, 0.95 * echelle, 2)[0][0],
-        cv2.getTextSize(f"TEMP   {degres:.1f} C", cv2.FONT_HERSHEY_SIMPLEX,
-                        0.54 * echelle, 2)[0][0],
-        cv2.getTextSize(f"LOAD   {etat['charge'] * 100:.0f}%",
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.54 * echelle, 2)[0][0],
-        large_du_lieu(lieu, taille * HORLOGE_LIEU, echelle),
-        int(ENCART_LARGE * echelle) if (carte and ou) or (
-            vignette is not None and vignette.size) else 0,
-    )
-    droite = max(large + 2 * marge, int(ENCART_LARGE * echelle) + 2 * marge)
-    haut_reste = sommet + int(ENCART_DESSIN * echelle)
     a_dessin = bool((carte and ou) or (vignette is not None and vignette.size))
+    droite = largeur_machine(largeur, etat, ville, instant, a_dessin)
+    haut_reste = sommet + int(ENCART_DESSIN * echelle)
     bande = int(JAUGE_BANDE * echelle)
     jack = int(JACKPOT_H * echelle) if ratio is not None else 0
     if a_dessin:
@@ -6668,6 +6685,27 @@ def pose_mode_degrade(image: np.ndarray, vue: tuple[int, int, int, int],
                 cv2.FONT_HERSHEY_SIMPLEX, tp, BLANC, trait, cv2.LINE_AA)
 
 
+def largeur_horloge(largeur: int, quand: float, direct: bool, autre: str,
+                    commune: str, dessin: bool) -> int:
+    """La largeur de l'encart de droite, collé à son bord."""
+    echelle = largeur / 1600
+    jour, heure = _date_et_heure(quand, PARIS)
+    pas = int(34 * echelle)
+    marge = int(14 * echelle)
+    taille = 0.7 * echelle
+    lieu = (commune or "").upper()
+    large = max([cv2.getTextSize(ligne, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
+                 for ligne in (jour, heure)]
+                + [large_du_lieu(lieu, LIEU_CORPS * echelle * HORLOGE_LIEU, echelle)]
+                + ([int(ENCART_LARGE * echelle)] if dessin else []))
+    badge = "LIVE" if direct else autre
+    large = max(large,
+                cv2.getTextSize(heure, cv2.FONT_HERSHEY_SIMPLEX,
+                                0.95 * echelle, 2)[0][0],
+                cv2.getTextSize(badge, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] + pas)
+    return large + 2 * marge
+
+
 def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                  autre: str = "REPLAY", commune: str = "",
                  carte: list | None = None,
@@ -6675,7 +6713,9 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                  remue: float = 0.0,
                  photo: np.ndarray | None = None,
                  ratio: tuple | None = None,
-                 nuit: bool = False) -> None:
+                 nuit: bool = False,
+                 bord_droit: int | None = None,
+                 garde: bool = False) -> None:
     """L'heure qui tourne, en haut à droite, avec le point rouge des chaînes.
 
     Le point clignote à la seconde : c'est ce qui fait qu'un écran fixe a l'air
@@ -6698,27 +6738,24 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     # le corps de Los Angeles : ce n'est plus un sous-titre, c'est le
     # pendant de l'autre côté de la planète.
     jour, heure = _date_et_heure(quand, PARIS)
-    lignes = [jour, heure]
     pas = int(34 * echelle)
     marge = int(14 * echelle)
     sommet = int(RUBAN_H * echelle) + int(remue)
     taille = 0.7 * echelle
     lieu = (commune or "").upper()
     dessin = bool((carte and ou) or (photo is not None and photo.size))
-    large = max([cv2.getTextSize(l, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0]
-                 for l in lignes]
-                + [large_du_lieu(lieu, LIEU_CORPS * echelle * HORLOGE_LIEU, echelle)]
-                + ([int(ENCART_LARGE * echelle)] if dessin else []))
     badge = "LIVE" if direct else autre
-    large = max(large,
-                cv2.getTextSize(heure, cv2.FONT_HERSHEY_SIMPLEX,
-                                0.95 * echelle, 2)[0][0],
-                cv2.getTextSize(badge, cv2.FONT_HERSHEY_SIMPLEX, taille, 2)[0][0] + pas)
-    gauche = largeur - large - 2 * marge
+    boite = largeur_horloge(largeur, quand, direct, autre, commune, dessin)
+    droite = (largeur - 1) if bord_droit is None else max(
+        0, min(largeur - 1, int(bord_droit)))
+    gauche = droite + 1 - boite
     badge_y, date_y, heure_y, ville_y = (
         sommet + int(r * echelle) for r in HORLOGE_LIGNES)
     haut_carte = sommet + int(ENCART_DESSIN * echelle)
-    jack = int(JACKPOT_H * echelle) if ratio is not None else 0
+    # `garde` réserve la vitre du compteur sans la dessiner : la boîte du
+    # milieu s'arrête à la même ligne que celle de droite, et le chiffre
+    # reste en bas à droite.
+    jack = int(JACKPOT_H * echelle) if (ratio is not None or garde) else 0
     bas_total = (int(ENCART_BAS * echelle) + int(remue) if dessin
                  else ville_y + marge + jack)
     bas = bas_total - jack
@@ -6726,7 +6763,7 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     # silhouettes et les deux disques s'arrêtent sur la même ligne, et
     # température et charge passent dessous, seulement du côté machine.
     bande = int(JAUGE_BANDE * echelle) if dessin else 0
-    fond_encart(image, (gauche, sommet), (largeur - 1, bas - 1), echelle)
+    fond_encart(image, (gauche, sommet), (droite, bas - 1), echelle)
     rayon = int(7 * echelle)
     x = gauche + marge
     y = badge_y
@@ -6752,7 +6789,7 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
         cv2.putText(image, badge, (x + pas, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
                     BLANC if direct else AMBRE, 2, cv2.LINE_AA)
     trait = y + int(round(9 * echelle))
-    cv2.line(image, (x, trait), (largeur - 1 - marge, trait),
+    cv2.line(image, (x, trait), (droite - marge, trait),
              tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
              cv2.LINE_AA)
     pose_date_heure(image, x, date_y, heure_y, jour, heure, echelle)
@@ -6760,10 +6797,10 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     if dessin:
         teinte = tamise_la_photo(photo) if photo is not None else None
         pose_carte_et_photo(
-            image, x, haut_carte, largeur - marge - x,
+            image, x, haut_carte, droite + 1 - marge - x,
             bas - haut_carte - marge - bande, carte, ou, teinte, echelle)
     if ratio is not None:
-        pose_jackpot(image, gauche, largeur - 1, bas,
+        pose_jackpot(image, gauche, droite, bas,
                      int(ratio[0]), int(ratio[1]), ratio[2], quand)
 
 
@@ -7385,6 +7422,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # Le trampoline du village, côté français : le pendant du disque de
     # gauche. Recadré une fois, teinté à chaque image comme le Raspberry.
     photo_trampoline = cv2.imread(str(racine / "assets" / "trampoline.jpg"))
+    # L'hôtel Le Splendid, à Cannes. Même traitement : le disque de la
+    # boîte de droite quand le lieu affiché est Cannes.
+    photo_splendid = cv2.imread(str(racine / "assets" / "splendid.jpg"))
     # On démarre comme si on venait de voir quelque chose : une rediffusion à
     # la première seconde du direct donnerait l'impression que rien ne marche.
     dernier_vu = origine
@@ -7883,8 +7923,28 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 if not duplex_peint:
                     duplex_peint = True
                     log.info("Cannes en rangée")
+                instant_boites = _maintenant()
+                direct_boites = (secours or not figee) and rediff is None and survol is None
+                autre_boites = ("DEGRADED" if figee and not secours else (
+                    "REPLAY" if rediff is not None else "3D MODEL"))
+                ou_boite = None
+                if machine_ou.get("lat") is not None:
+                    ou_boite = (float(machine_ou["lat"]), float(machine_ou["lon"]))
+                a_machine = bool((carte_californie and ou_boite) or (
+                    photo_machine is not None and photo_machine.size))
+                a_beau = bool((carte_pays and ou_camera) or (
+                    photo_trampoline is not None and photo_trampoline.size))
+                a_cannes = bool((carte_pays and ou_secours) or (
+                    photo_splendid is not None and photo_splendid.size))
+                largeurs_boites = (
+                    largeur_machine(largeur, machine, ville, instant_boites, a_machine),
+                    largeur_horloge(largeur, instant_boites, direct_boites, autre_boites,
+                                    commune, a_beau),
+                    largeur_horloge(largeur, instant_boites, direct_boites, autre_boites,
+                                    nom_secours, a_cannes),
+                )
                 toile, cadrage, cadre_cannes, colonnes_mixte = pose_mixte(
-                    vue, voisin, largeur, hauteur, nom_secours)
+                    vue, voisin, largeur, hauteur, nom_secours, largeurs_boites)
             elif voisin is not None:
                 if not duplex_peint:
                     duplex_peint = True
@@ -8130,17 +8190,21 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     toile, colonnes_mixte, machine, photo_machine, ville,
                     carte_californie, ou_machine, heure_antenne, los,
                     commune, carte_pays, ou_camera, photo_trampoline, beau,
-                    nom_secours, ou_secours, direct_carte, autre_carte, nuit_carte)
+                    nom_secours, ou_secours, direct_carte, autre_carte, nuit_carte,
+                    photo_splendid, remue)
             else:
                 # Cannes à la place du Ventoux : la boîte de droite devient
-                # Cannes. Le rapport de Beaumont ne s'y colle pas.
+                # Cannes et garde la symétrie. Le compteur reste en bas à
+                # droite, le médaillon est l'hôtel.
+                cannes_a_droite = secours or cannes_seul
                 pose_horloge(toile, heure_antenne, direct=direct_carte,
                              autre=autre_carte,
-                             commune=nom_secours if (secours or cannes_seul) else commune,
+                             commune=nom_secours if cannes_a_droite else commune,
                              carte=carte_pays,
-                             ou=ou_secours if (secours or cannes_seul) else ou_camera,
-                             remue=-remue, photo=None if cannes_seul else photo_trampoline,
-                             ratio=None if cannes_seul else beau, nuit=nuit_carte)
+                             ou=ou_secours if cannes_a_droite else ou_camera,
+                             remue=-remue,
+                             photo=photo_splendid if cannes_a_droite else photo_trampoline,
+                             ratio=beau, nuit=nuit_carte)
                 if figee and not secours:
                     pose_mode_degrade(toile, cadrage, phrase_secours if secours else None)
                 pose_machine(toile, machine, photo_machine, ville, remue,
