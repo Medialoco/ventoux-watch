@@ -29,7 +29,7 @@ from watcher.gtfs import GtfsIndex, load_feed
 from watcher.main import (STREAM_RETRY_MAX_S, STREAM_RETRY_S, _box_of_the_named, _crossed_sky,
                           _might_be_bus, _next_wait, _note_interruption, _paint_box, _published, _utc)
 from watcher.naming import Decision
-from watcher.motion import MotionDetector, Track, _better_view, _blob_clipped
+from watcher.motion import MotionDetector, Track, _better_view, _blob_clipped, formes_utiles
 from watcher.naming import (RIEN_A_JUGER, SIZE_DOUBT_MAX, Detection, Observation, Trip, choose_aircraft,
                             decide, in_camera_view)
 from watcher.review import apply_review, parse_review
@@ -735,6 +735,22 @@ class MotionTests(unittest.TestCase):
                       best_bbox=(800, 200, 80, 120))
         self.assertTrue(_better_view(plume, flaque, frame),
                         "une plume coupée peut encore être la plus grande")
+
+    def test_cannes_garde_les_prises_sur_le_trottoir_et_la_route(self):
+        """La mer est dessinée. Le modèle ne s'y arrête pas."""
+        zones = json.loads((ROOT / "config" / "config.json").read_text())["collection"][1]["zones"]
+        self.assertEqual(assign_zone(0.15, 0.70, zones), "sea")
+        self.assertEqual(assign_zone(0.20, 0.92, zones), "beach")
+        self.assertEqual(assign_zone(0.48, 0.90, zones), "sidewalk")
+        self.assertEqual(assign_zone(0.85, 0.85, zones), "road")
+        self.assertEqual(assign_zone(0.20, 0.10, zones), "sky")
+        mer = [{"cx": 0.15, "cy": 0.70, "area_ratio": 0.0002 + i * 0.002} for i in range(8)]
+        route = [{"cx": 0.85, "cy": 0.85, "area_ratio": 0.01}]
+        gardes = formes_utiles(mer + route, zones)
+        self.assertEqual(sum(1 for blob in gardes if blob["cx"] < 0.5), 4)
+        self.assertIn(route[0], gardes)
+        avant, _apres = inspect.getsource(main._on_track).split("yolo.detect", 1)
+        self.assertIn('track.zone in {"sea", "beach"}', avant)
 
 
 class GtfsTests(unittest.TestCase):

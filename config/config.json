@@ -2,8 +2,13 @@
   "stream_url": "https://visionenvironnement.quanteec.com/contents/encodings/live/78e0f372-db6f-420e-746c-7561-6665-64-b4d7-fc979b816efed/master.m3u8",
   "collection": [
     {"nom": "Mont Serein"},
-    {"nom": "Cannes", "youtube": "z6BNMoj9Pyo", "lat": 43.543018, "lon": 6.964063,
-     "zones": {"priority": ["road", "sky"], "polygons": {"sky": [[0.0, 0.0], [1.0, 0.0], [1.0, 0.4], [0.0, 0.4]], "road": [[0.0, 0.4], [1.0, 0.4], [1.0, 1.0], [0.0, 1.0]]}}}
+    {"nom": "Cannes", "youtube": "z6BNMoj9Pyo", "lat": 43.546859, "lon": 6.976433,
+     "zones": {"priority": ["road", "sidewalk", "beach", "sea", "sky"], "polygons": {
+       "road": [[0.604, 0.389], [0.635, 0.482], [0.656, 0.991], [0.995, 0.991], [0.990, 0.676], [0.724, 0.454]],
+       "sidewalk": [[0.594, 0.380], [0.557, 0.509], [0.302, 0.991], [0.651, 0.991], [0.630, 0.482]],
+       "beach": [[0.583, 0.389], [0.490, 0.435], [0.557, 0.463], [0.094, 0.991], [0.297, 0.991], [0.552, 0.509]],
+       "sea": [[0.000, 0.991], [0.099, 0.982], [0.552, 0.463], [0.307, 0.435], [0.573, 0.389], [0.000, 0.380]],
+       "sky": [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]}}}
   ],
   "fallback_url": "https://s1.vision-environnement.com/live/modules/timelapse/timelapse/montserein.mp4",
   "fps": 1,

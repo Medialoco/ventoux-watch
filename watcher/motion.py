@@ -217,12 +217,8 @@ class MotionDetector:
 
     def _update_tracks(self, blobs: list[dict], frame: np.ndarray, now: float) -> MotionStep:
         unused = set(range(len(self.tracks)))
-        for blob in blobs:
+        for blob in formes_utiles(blobs, self.zones):
             zone = assign_zone(blob["cx"], blob["cy"], self.zones)
-            if zone == "sky" and blob["area_ratio"] < 0.00005:
-                continue
-            if zone != "sky" and blob["area_ratio"] < 0.0004:
-                continue
             span = _bbox_span(blob["bbox"], frame.shape[1], frame.shape[0])
             match = self._match(blob["cx"], blob["cy"], zone, unused, span,
                                 frame.shape[:2])
@@ -321,6 +317,46 @@ class MotionDetector:
             best_distance = distance
             best_index = index
         return best_index
+
+
+# L'écume n'est pas une forme. En dessous, une tache sur l'eau ne devient pas
+# une piste : à chaque vague elles seraient des centaines, et le modèle n'aurait
+# plus le temps des voitures. Au-dessus, on n'en garde qu'une poignée, les
+# plus grandes — un bateau, une déferlante — pour que le dessin reste.
+SEA_MIN_AREA = 0.0012
+SEA_GARDES = 4
+BEACH_GARDES = 6
+
+
+def formes_utiles(blobs: list[dict], zones: dict) -> list[dict]:
+    """Ce qui mérite une piste.
+
+    La route et le trottoir passent tous. La mer et le sable n'en gardent que
+    les grandes taches : le reste est l'écume, et la classer ralentirait
+    l'image sans rien ajouter au dessin.
+    """
+    mer: list[dict] = []
+    plage: list[dict] = []
+    reste: list[dict] = []
+    for blob in blobs:
+        zone = assign_zone(blob["cx"], blob["cy"], zones)
+        aire = blob["area_ratio"]
+        if zone == "sea":
+            if aire >= SEA_MIN_AREA:
+                mer.append(blob)
+            continue
+        if zone == "beach":
+            if aire >= 0.0004:
+                plage.append(blob)
+            continue
+        if zone == "sky" and aire < 0.00005:
+            continue
+        if zone != "sky" and aire < 0.0004:
+            continue
+        reste.append(blob)
+    mer.sort(key=lambda blob: blob["area_ratio"], reverse=True)
+    plage.sort(key=lambda blob: blob["area_ratio"], reverse=True)
+    return reste + mer[:SEA_GARDES] + plage[:BEACH_GARDES]
 
 
 def _lighting(small, behind, bbox, scale: float) -> tuple[float, float]:

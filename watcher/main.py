@@ -350,6 +350,11 @@ def main() -> None:
 def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map=None, score=None, tot: bool = False) -> None:
     if getattr(track, "tenu", False):
         return
+    # La mer et le sable sont dessinés, pas nommés. Une vague lue « piéton »
+    # féliciterait l'écume, et le modèle n'a pas le temps : il reste aux
+    # voitures et aux passants, sur la route et le trottoir.
+    if track.zone in {"sea", "beach"}:
+        return
     frame = cv2.imdecode(np.frombuffer(track.best_jpeg, dtype=np.uint8), cv2.IMREAD_COLOR) if track.best_jpeg else None
     # L'image et la boîte doivent venir du même instant.
     #
