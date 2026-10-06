@@ -7255,3 +7255,54 @@ class RechercheTests(unittest.TestCase):
         for ligne in ("CATCHES OVER MOTIONS", "A CATCH COUNTS ON BOTH SIDES",
                       "EACH SIDE RESETS AT ITS MIDNIGHT", "THIS IS ABSURD"):
             self.assertNotIn(ligne, source)
+
+
+class JournalTests(unittest.TestCase):
+    """Quelques secondes autour des prises, un seul fichier quand elles s'enchaînent."""
+
+    def _journal(self):
+        gardes = []
+        journal = stream.Journal(Path("/tmp"), 6, ecrit=lambda *args: gardes.append(args))
+        journal._lancer = lambda *args: gardes.append(args)
+        return journal, gardes
+
+    def _passe(self, journal, debut, fin, sujets=()):
+        sujets = dict(sujets)
+        for t in range(debut, fin + 1):
+            journal.note(float(t), f"{t}".encode())
+            if t in sujets:
+                journal.sujet(float(t), sujets[t])
+            journal.relache(float(t))
+
+    def test_a_catch_keeps_a_few_seconds_around_it(self):
+        journal, gardes = self._journal()
+        self._passe(journal, 0, 20, {5: "Voiture"})
+        self.assertEqual(len(gardes), 1)
+        _dossier, images, noms, _fps, quand = gardes[0]
+        self.assertEqual(noms, ["Voiture"])
+        self.assertEqual(quand, 5.0)
+        self.assertEqual(images[0], b"2")
+        self.assertEqual(images[-1], b"9")
+
+    def test_a_following_catch_stays_in_the_same_piece(self):
+        journal, gardes = self._journal()
+        self._passe(journal, 0, 30, {5: "Voiture", 12: "Pieton"})
+        self.assertEqual(len(gardes), 1)
+        images, noms = gardes[0][1], gardes[0][2]
+        self.assertEqual(noms, ["Voiture", "Pieton"])
+        self.assertEqual(images[0], b"2")
+        self.assertEqual(images[-1], b"16")
+
+    def test_a_late_catch_starts_another_piece(self):
+        journal, gardes = self._journal()
+        self._passe(journal, 0, 60, {5: "Voiture", 40: "Bus"})
+        self.assertEqual(len(gardes), 2)
+        self.assertEqual(gardes[0][2], ["Voiture"])
+        self.assertEqual(gardes[1][2], ["Bus"])
+        self.assertEqual(gardes[1][1][0], b"37")
+        self.assertEqual(gardes[1][1][-1], b"44")
+
+    def test_the_stream_keeps_the_photograph_when_it_celebrates(self):
+        source = inspect.getsource(stream.diffuse)
+        self.assertLess(source.index("journal.voit("), source.index("journal.sujet("))
+        self.assertLess(source.index("journal.sujet("), source.index("journal.relache("))

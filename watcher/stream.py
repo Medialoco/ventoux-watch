@@ -19,6 +19,7 @@ la diffusion n'est que le spectacle.
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import json
 import logging
 import math
@@ -6619,6 +6620,142 @@ def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
     return process, ecriture
 
 
+# Quelques secondes de photographie autour d'une prise, gardées pour monter.
+# L'avant laisse voir d'où la chose arrive. L'après laisse voir qu'elle est
+# passée. Une autre prise dans le quart de minute qui suit allonge le même
+# fichier : c'est une seule dépêche, pas deux plans qu'il faudrait recoller.
+RUSH_AVANT_S = 3.0
+RUSH_APRES_S = 4.0
+RUSH_ATTENTE_S = 15.0
+RUSH_PLAFOND_S = 90.0
+RUSH_LARGE = 1280
+
+
+def _jpeg_rush(image: np.ndarray) -> bytes:
+    """La photographie, assez légère pour en garder une file sans gêner l'envoi."""
+    hauteur, largeur = image.shape[:2]
+    if largeur > RUSH_LARGE:
+        echelle = RUSH_LARGE / largeur
+        image = cv2.resize(
+            image, (RUSH_LARGE, max(2, int(hauteur * echelle))),
+            interpolation=cv2.INTER_AREA)
+    ok, code = cv2.imencode(".jpg", image, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+    return code.tobytes() if ok else b""
+
+
+def _slug_rush(noms: list[str]) -> str:
+    mots = []
+    for nom in noms:
+        mot = re.sub(r"[^0-9A-Za-z]+", "", nom).lower()[:16]
+        if mot and mot not in mots:
+            mots.append(mot)
+    return "-".join(mots[:4]) or "prise"
+
+
+def grave_rush(dossier: Path, images: list[bytes], noms: list[str],
+               fps: float, quand: float) -> None:
+    """Écrit le bout de film. Un échec ici ne doit jamais arrêter le direct."""
+    try:
+        dossier.mkdir(parents=True, exist_ok=True)
+        heure = datetime.fromtimestamp(quand, PARIS).strftime("%Y%m%d-%H%M%S")
+        chemin = dossier / f"{heure}-{_slug_rush(noms)}.mp4"
+        if chemin.exists():
+            chemin = dossier / f"{heure}-{_slug_rush(noms)}-{int(quand)}.mp4"
+        process = subprocess.Popen(
+            ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+             "-f", "image2pipe", "-framerate", str(max(1.0, fps)), "-i", "-",
+             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast",
+             str(chemin)],
+            stdin=subprocess.PIPE)
+        assert process.stdin is not None
+        for image in images:
+            process.stdin.write(image)
+        process.stdin.close()
+        process.wait(timeout=120)
+        if process.returncode == 0 and chemin.is_file():
+            log.info("Rush %s · %d images · %s", chemin.name, len(images),
+                     ", ".join(noms) or "prise")
+        else:
+            log.warning("Rush non écrit : %s", chemin.name)
+    except Exception:
+        log.warning("Rush non écrit", exc_info=True)
+
+
+class Journal:
+    """Quelques secondes de ce qui vient de passer, pour le monter ensuite.
+
+    Une prise ouvre un sujet. Une autre prise dans les quinze secondes
+    l'allonge : la file des voitures tient dans un seul fichier. Le fichier
+    part quand plus rien n'a suivi, avec trois secondes d'avant et quatre
+    d'après. Au-delà d'une minute et demie, on ferme et le suivant recommence.
+    """
+
+    def __init__(self, dossier: Path, fps: float, ecrit=grave_rush) -> None:
+        self.dossier = dossier
+        self.fps = fps
+        self.ecrit = ecrit
+        self.anneau: deque[tuple[float, bytes]] = deque()
+        self.ouvert: dict | None = None
+
+    def voit(self, image: np.ndarray, quand: float) -> None:
+        try:
+            self.note(quand, _jpeg_rush(image))
+        except Exception:
+            log.warning("Rush illisible", exc_info=True)
+
+    def note(self, quand: float, jpeg: bytes) -> None:
+        if jpeg:
+            self.anneau.append((quand, jpeg))
+        self._taille(quand)
+
+    def sujet(self, quand: float, nom: str) -> None:
+        """Une prise. Elle ouvre, ou elle rallonge ce qui est encore chaud."""
+        if self.ouvert and quand - self.ouvert["fin"] <= RUSH_ATTENTE_S:
+            self.ouvert["fin"] = quand
+            if nom and nom not in self.ouvert["noms"]:
+                self.ouvert["noms"].append(nom)
+            return
+        if self.ouvert:
+            self._ferme()
+        self.ouvert = {"debut": quand, "fin": quand, "noms": [nom] if nom else []}
+
+    def relache(self, quand: float) -> None:
+        """Ferme le sujet si plus rien ne l'a suivi, ou s'il dure trop."""
+        if not self.ouvert:
+            return
+        if quand - self.ouvert["debut"] >= RUSH_PLAFOND_S:
+            self.ouvert["fin"] = max(self.ouvert["fin"], quand)
+            self._ferme()
+        elif quand >= self.ouvert["fin"] + RUSH_ATTENTE_S:
+            self._ferme()
+
+    def _taille(self, quand: float) -> None:
+        plancher = quand - RUSH_AVANT_S - 1.0
+        if self.ouvert:
+            plancher = min(plancher, self.ouvert["debut"] - RUSH_AVANT_S - 1.0)
+        while self.anneau and self.anneau[0][0] < plancher:
+            self.anneau.popleft()
+
+    def _ferme(self) -> None:
+        ouvert = self.ouvert
+        self.ouvert = None
+        if not ouvert:
+            return
+        debut = ouvert["debut"] - RUSH_AVANT_S
+        fin = ouvert["fin"] + RUSH_APRES_S
+        images = [jpeg for t, jpeg in self.anneau if debut <= t <= fin]
+        if len(images) < 2:
+            return
+        self._lancer(self.dossier, images, list(ouvert["noms"]), self.fps,
+                     ouvert["debut"])
+
+    def _lancer(self, dossier: Path, images: list[bytes], noms: list[str],
+                fps: float, quand: float) -> None:
+        threading.Thread(
+            target=self.ecrit, args=(dossier, images, noms, fps, quand),
+            daemon=True).start()
+
+
 def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: int) -> None:
     muet = not cfg.get("stream_musique", True)
     musique = Musique(racine / "data" / "musique", racine, muet=muet)
@@ -6764,6 +6901,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # Les prises déjà fêtées, pour ne pas les fêter à chaque image des quatre
     # secondes où leur rectangle est à l'écran. Purgé à chaque fête.
     fetes: set[float] = set()
+    journal = Journal(racine / "data" / "rushs", cfg["stream_fps"])
     # Importé ici et pas en tête de fichier : c'est main() qui pose la racine
     # du dépôt sur le chemin, et stream.py doit pouvoir être lancé comme un
     # script depuis n'importe où.
@@ -6919,6 +7057,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 relu = quand
             pistes = pistes_visibles(cherches, quand)
             image = np.frombuffer(brut, np.uint8).reshape(source_h, source_l, 3).copy()
+            journal.voit(image, quand)
             # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.
             applique_teinte(image, *teinte_du_moment(quand - origine))
             # Le soleil d'enfant avant les filtres : il fait partie de l'image
@@ -6954,6 +7093,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         musique.dis(tirage.choice(musique.felicitations))
                     log.info("Prise à l'écran : %s — %s", neuve["label"],
                              musique.voix_dit or "sans voix")
+                    journal.sujet(quand, str(neuve.get("label") or ""))
+            journal.relache(quand)
             poses = visibles(vus, quand) or bool(pistes)
             if poses:
                 dernier_vu = quand
