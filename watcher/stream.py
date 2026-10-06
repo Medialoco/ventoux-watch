@@ -6685,8 +6685,7 @@ def adresse_youtube(video: str) -> str:
     binaire = shutil.which("yt-dlp") or "/usr/local/bin/yt-dlp"
     try:
         fini = subprocess.run(
-            [binaire, "-g", "-f",
-             "270/232/best[height<=1080][protocol*=m3u8]/best[height<=1080]",
+            [binaire, "-g", "-f", FORMAT_YOUTUBE,
              "--no-warnings", f"https://www.youtube.com/watch?v={video}"],
             capture_output=True, text=True, timeout=45, check=False,
         )
@@ -6702,6 +6701,16 @@ def adresse_youtube(video: str) -> str:
         log.warning("YouTube ne donne plus l'adresse, on reprend celle déjà ouverte")
         return reserve
     raise RuntimeError("yt-dlp n'a pas donné d'adresse")
+
+
+# La toile sort en 720p. Une source plus haute ne change pas l'antenne : elle
+# fait décoder un débit qu'on jette. On prend donc une définition qui tient
+# dans la toile, et le 1080p seulement s'il n'y a rien d'autre. La même
+# demande sert pour n'importe quelle webcam YouTube de la collection.
+FORMAT_YOUTUBE = (
+    "best[height<=720][protocol*=m3u8]"
+    "/270/232/best[height<=1080][protocol*=m3u8]/best[height<=1080]"
+)
 
 
 # Une minute derrière le bord. Le Raspberry est en wifi : collé au dernier
@@ -6729,17 +6738,25 @@ def duree_de_segment(url: str) -> float:
 
 def _entree_cadre(url: str, largeur: int, hauteur: int, fps: int,
                   recul: int) -> subprocess.Popen:
-    """Une autre webcam, ramenée à la taille et au rythme de la nôtre."""
+    """N'importe quelle autre webcam, au rythme et à la taille du Mont Serein.
+
+    Leur flux peut être à trente images et plusieurs mégabits. On n'en veut
+    pas : l'antenne sort toujours le même nombre d'images et le même débit,
+    quelle que soit la webcam de la collection. On jette les images avant de
+    les agrandir, et on ne décode pas celles qui ne servent de référence à
+    personne.
+    """
     commande = [
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin",
         "-user_agent", "Mozilla/5.0",
         "-rw_timeout", "15000000",
         "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+        "-skip_frame", "noref",
         # YouTube sert une heure d'enregistrement. L'index négatif part de la
         # fin : une minute, pas le début du fichier et pas le dernier segment.
         "-live_start_index", str(-recul),
         "-i", url, "-an",
-        "-vf", f"scale={largeur}:{hauteur},fps={fps}",
+        "-vf", f"fps={fps},scale={largeur}:{hauteur}",
         "-f", "rawvideo", "-pix_fmt", "bgr24", "-",
     ]
     return subprocess.Popen(commande, stdout=subprocess.PIPE, bufsize=10 ** 8)

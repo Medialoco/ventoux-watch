@@ -1250,6 +1250,9 @@ def _frames(url: str, horloge: bool = False):
             "-user_agent", "Mozilla/5.0",
             "-rw_timeout", "15000000",
             "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+            # Leur débit ne nous regarde pas. Une image par seconde, comme
+            # pour le Mont Serein, et on ne décode pas le reste.
+            "-skip_frame", "noref",
             # Plus près du bord que l'antenne : la minute de marge du flux
             # est le temps qu'on a pour nommer avant que l'image ne passe.
             "-live_start_index", str(-RECUL_VEILLE),
