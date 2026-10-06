@@ -58,13 +58,13 @@
     <div class="around">
       <aside class="box" id="pipeline" aria-labelledby="pipeline-title">
         <h2 id="pipeline-title" data-i18n="pipeline">Pipeline</h2>
-        <p data-i18n="pipelineLead">The watch sees a lot of motion. A published class counts as soon as it is named. The green cheer, a good catch, waits until the confidence reaches 0.60. Under each card, three slot digits show that day’s ratio times one hundred. Los Angeles is on the left, Beaumont-du-Ventoux on the right. A class counts on both sides. Each side returns to 000 at its own midnight, and the two midnights are not the same hour.</p>
-        <p><strong>Raspberry Pi 5</strong> <span data-i18n="watchPi">Four cores on a desk in Los Angeles, nine thousand kilometres from the pass. It reads one frame a second, keeps the archive, mixes the music, draws the overlays and the effects, and pushes the whole frame to YouTube. Temperature and load stay written on its card.</span></p>
-        <p><strong>OpenCV</strong> <span data-i18n="watchMotion">MOG2 finds the motion on the mountain.</span></p>
-        <p><strong>YOLO11s</strong> <span data-i18n="watchClass">A small network names the crop: car, walker, bike, truck.</span></p>
-        <p><strong data-i18n="watchEffectsTitle">Effects</strong> <span data-i18n="watchEffects">A further collection is drawn on the picture. Pixel, grey and wave share one draw. The flyover, the puppets, the bear, the lamp and the rest take the stage one at a time. Each one is written out below.</span></p>
-        <p><strong data-i18n="watchMusicTitle">Music</strong> <span data-i18n="watchMusic">The same machine runs the music. It chooses the track, ducks it under a voice, and draws it under the mountain: the cover just finished, the one playing, the next two, the artist, the title, the licence, and an equaliser.</span></p>
-        <p><strong>YouTube</strong> <span data-i18n="watchOut">The named frame is rebuilt and pushed live.</span></p>
+        <p data-i18n="pipelineLead">1 frame/s from the webcam. MOG2 on a frame scaled to 640 px. A compact blob held 3 frames is cropped. YOLO11s, ONNX, names the crop. The rectangle goes back on the original frame. The frame is encoded to YouTube.</p>
+        <p><strong>Raspberry Pi 5</strong> <span data-i18n="watchPi">4 cores, Los Angeles. It reads the frame, keeps the archive, mixes the music, draws the overlays, and pushes the frame. Temperature and load stay on its card.</span></p>
+        <p><strong>OpenCV</strong> <span data-i18n="watchMotion">MOG2. Frame scaled to 640 px. A change over 35% of the frame is treated as light and dropped. The red beacon on the summit is masked.</span></p>
+        <p><strong>YOLO11s</strong> <span data-i18n="watchClass">YOLO11s, ONNX, on the crop only. Car, person, bicycle, truck, bus.</span></p>
+        <p><strong data-i18n="watchEffectsTitle">Effects</strong> <span data-i18n="watchEffects">Drawn on the frame. The table below gives the period, the duration and the gate of each one.</span></p>
+        <p><strong data-i18n="watchMusicTitle">Music</strong> <span data-i18n="watchMusic">The Pi selects the track and ducks it under a voice. Under the picture: previous cover, current track, next two, artist, title, licence, equaliser.</span></p>
+        <p><strong>YouTube</strong> <span data-i18n="watchOut">The frame is encoded and sent to YouTube.</span></p>
         <p><a href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener" data-i18n="repoPrivate">Source and history of every change.</a></p>
       </aside>
 
@@ -84,7 +84,7 @@
 
       <aside class="box" id="rebuild" aria-labelledby="rebuild-title">
         <h2 id="rebuild-title" data-i18n="rebuild">Rebuilt</h2>
-        <p data-i18n="rebuildLead">ffmpeg takes the webcam at one frame a second. OpenCV MOG2 finds what moved, on a frame scaled to 640 pixels. A compact blob held for three frames is cropped. YOLO11s, in ONNX, names only that crop. The named rectangle is drawn back onto the original picture, the overlays sit in the letterbox, and the whole frame is encoded toward YouTube. The mountain is never invented. It is read, then put back together.</p>
+        <p data-i18n="rebuildLead">ffmpeg reads the webcam at 1 frame/s. MOG2 runs at 640 px. A compact blob held 3 frames is cropped. YOLO11s, ONNX, names the crop. The rectangle is drawn on the original frame. Overlays sit in the letterbox. The frame is encoded to YouTube.</p>
       </aside>
 
       <div class="box numbers" id="numbers" aria-labelledby="numbers-title">
@@ -174,6 +174,7 @@
       <span class="tag" id="version"></span>
       <a href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener" data-i18n="repoPrivate">Source and history of every change.</a>
     </p>
+    <p data-i18n="contest">Entered in the Aesthetica Art Prize. The competition is absurd.</p>
   </footer>
   <script src="app.js"></script>
   <script type="module" src="scene3d.js"></script>
