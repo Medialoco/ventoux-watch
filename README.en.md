@@ -8,7 +8,7 @@ A Raspberry Pi 5 on a desk in Los Angeles watches the webcam at the Mont Serein 
 
 The watch sees a lot of motion. A published class counts as soon as it is named. The green cheer, a good catch, waits for 0.60. Under each card, three digits show that day’s ratio times one hundred, with the raw count in small type. Los Angeles is on the left, Beaumont-du-Ventoux on the right. A class counts for both. Each side returns to 000 at its own midnight, and the two midnights are not the same hour.
 
-Watcher **v0.6.15**.
+Watcher **v0.6.16**.
 
 The live picture is on [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). The site is [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Twenty ways the picture changes are written there, each one from the code that is running.
 

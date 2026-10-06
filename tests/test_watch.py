@@ -6050,6 +6050,34 @@ class OursTests(unittest.TestCase):
         self.assertGreater(int(np.count_nonzero(coin)), 0)
 
 
+class DuplexTests(unittest.TestCase):
+    """Trois colonnes : la machine, le Ventoux plus large, puis Cannes."""
+
+    def test_le_raspberry_est_a_gauche_et_le_ventoux_plus_large(self):
+        machine = np.full((180, 320, 3), (200, 40, 40), np.uint8)
+        ventoux = np.full((270, 480, 3), (40, 40, 200), np.uint8)
+        cannes = np.full((180, 320, 3), (40, 180, 40), np.uint8)
+        toile, vue_v, vue_c = stream.pose_duplex(
+            ventoux, cannes, machine, 1280, 720, "Cannes")
+        bleu = np.where(np.all(toile == (200, 40, 40), axis=2))
+        rouge = np.where(np.all(toile == (40, 40, 200), axis=2))
+        vert = np.where(np.all(toile == (40, 180, 40), axis=2))
+        self.assertGreater(bleu[1].size, 0)
+        self.assertGreater(rouge[1].size, 0)
+        self.assertGreater(vert[1].size, 0)
+        self.assertLess(int(bleu[1].min()), int(rouge[1].min()))
+        self.assertLess(int(rouge[1].max()), int(vert[1].min()) + 8)
+        self.assertGreater(vue_v[2], vue_c[2])
+
+    def test_la_maquette_ne_porte_pas_de_voyant_orange(self):
+        toile = np.zeros((420, 1600, 3), np.uint8)
+        stream.pose_horloge(toile, 1_790_000_000.0, direct=False, autre="3D MODEL")
+        self.assertFalse(np.any(np.all(toile == stream.AMBRE, axis=2)))
+        replay = np.zeros((420, 1600, 3), np.uint8)
+        stream.pose_horloge(replay, 1_790_000_000.0, direct=False, autre="REPLAY")
+        self.assertTrue(np.any(np.all(replay == stream.AMBRE, axis=2)))
+
+
 class IncrustationDirectTests(unittest.TestCase):
     """Pendant le survol, la webcam doit rester visible quelque part."""
 

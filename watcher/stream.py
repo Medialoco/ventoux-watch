@@ -2195,6 +2195,86 @@ def cadre(cam: np.ndarray, largeur: int, hauteur: int) -> np.ndarray:
     return toile
 
 
+# Le premier duplex arrive peu après l'ouverture, sans prévenir. Les
+# suivants restent espacés : Cannes n'est décodée que pendant qu'elle
+# est à l'écran.
+DUPLEX_PREMIER_S = 75.0
+DUPLEX_TENUE_S = 90.0
+DUPLEX_PAUSE_S = 900.0
+# La colonne de gauche est la machine. Du reste, le Ventoux garde la
+# plus grande part.
+PART_MACHINE = 0.22
+PART_VENTOUX = 0.64
+
+
+def _dans_la_colonne(toile: np.ndarray, image: np.ndarray,
+                     colonne: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+    """Pose l'image dans la colonne sans l'étirer, et rend son rectangle."""
+    x, y, w, h = colonne
+    if image is None or image.size == 0 or w < 4 or h < 4:
+        return x, y, w, h
+    ih, iw = image.shape[:2]
+    echelle = min(w / iw, h / ih)
+    dw, dh = max(1, int(iw * echelle)), max(1, int(ih * echelle))
+    ox = x + (w - dw) // 2
+    oy = y + (h - dh) // 2
+    toile[oy:oy + dh, ox:ox + dw] = cv2.resize(
+        image, (dw, dh), interpolation=cv2.INTER_AREA)
+    return ox, oy, dw, dh
+
+
+def pose_cartouche(image: np.ndarray, vue: tuple[int, int, int, int],
+                   texte: str) -> None:
+    """Le nom du lieu, en haut de sa colonne."""
+    x, y, w, h = vue
+    if w < 36 or h < 24 or not texte:
+        return
+    echelle = image.shape[1] / 1600.0
+    mot = texte.upper()
+    taille = 0.38 * echelle
+    trait = max(1, int(round(echelle)))
+    (lw, lh), _ = cv2.getTextSize(mot, cv2.FONT_HERSHEY_SIMPLEX, taille, trait)
+    while lw > w - int(12 * echelle) and taille > 0.18 * echelle:
+        taille *= 0.9
+        (lw, lh), _ = cv2.getTextSize(mot, cv2.FONT_HERSHEY_SIMPLEX, taille, trait)
+    pad = max(2, int(4 * echelle))
+    x0, y0 = x + pad, y + pad
+    cv2.rectangle(image, (x0, y0), (x0 + lw + 2 * pad, y0 + lh + 2 * pad),
+                  (0, 0, 0), -1)
+    cv2.putText(image, mot, (x0 + pad, y0 + pad + lh),
+                cv2.FONT_HERSHEY_SIMPLEX, taille, CYAN, trait, cv2.LINE_AA)
+
+
+def pose_duplex(ventoux: np.ndarray, cannes: np.ndarray, machine: np.ndarray,
+                largeur: int, hauteur: int, nom_cannes: str = "Cannes",
+                ) -> tuple[np.ndarray, tuple[int, int, int, int], tuple[int, int, int, int]]:
+    """Trois colonnes : la machine, le Ventoux, Cannes.
+
+    Le Ventoux est plus large. Chacune garde ses proportions. Les effets et
+    les rectangles se posent sur la colonne du Ventoux, pas sur les trois.
+    """
+    sx, sy, sw, sh = fenetre(ventoux.shape[:2], largeur, hauteur)
+    gap = max(2, int(4 * largeur / 1600))
+    usable = max(1, sw - 2 * gap)
+    large_machine = int(usable * PART_MACHINE)
+    reste = usable - large_machine
+    large_ventoux = int(reste * PART_VENTOUX)
+    large_cannes = reste - large_ventoux
+    colonnes = []
+    x = sx
+    for large in (large_machine, large_ventoux, large_cannes):
+        colonnes.append((x, sy, max(1, large), sh))
+        x += large + gap
+    toile = np.zeros((hauteur, largeur, 3), np.uint8)
+    vue_machine = _dans_la_colonne(toile, machine, colonnes[0])
+    vue_ventoux = _dans_la_colonne(toile, ventoux, colonnes[1])
+    vue_cannes = _dans_la_colonne(toile, cannes, colonnes[2])
+    pose_cartouche(toile, vue_machine, "RASPBERRY PI")
+    pose_cartouche(toile, vue_ventoux, "MONT SEREIN")
+    pose_cartouche(toile, vue_cannes, nom_cannes or "CANNES")
+    return toile, vue_ventoux, vue_cannes
+
+
 def _coupe(texte: str, combien: int) -> str:
     return texte if len(texte) <= combien else texte[:combien - 1] + "…"
 
@@ -2549,7 +2629,7 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
     pose_pastille(image, marque, x + nw + int(10 * echelle), y_mot, echelle)
 
     _credit_piste(image, en_cours, x, y_now + int(22 * echelle), colonne,
-                  echelle, CYAN, BLANC, 0.50, 0.76,
+                  echelle, CYAN, BLANC, 0.64, 0.98,
                   infos=_ligne_infos(en_cours, reste), eclate=True)
     eq_base = y_now + maintenant - int(8 * echelle)
     eq_l = min(int(PLAY_EQ_L * echelle), colonne)
@@ -6561,10 +6641,10 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     Le point clignote à la seconde : c'est ce qui fait qu'un écran fixe a l'air
     vivant, et ici il ne ment pas, puisqu'il bat au rythme des images.
 
-    Il dit « REPLAY » pendant une rediffusion, et « 3D MODEL » pendant le
-    survol du terrain. Un badge « LIVE » au-dessus d'une image vieille de cinq
-    jours, ou au-dessus d'un décor calculé, serait la seule faute que ce flux
-    n'a pas le droit de commettre.
+    Il dit « REPLAY » pendant une rediffusion. Pendant le survol, le voyant
+    se tait : le coin de la maquette dit déjà DIRECT. Un badge « LIVE » au-dessus
+    d'une image vieille de cinq jours, ou au-dessus d'un décor calculé, serait
+    la seule faute que ce flux n'a pas le droit de commettre.
     """
     largeur = image.shape[1]
     echelle = largeur / 1600
@@ -6615,12 +6695,16 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     # d'une archive, il disait l'inverse de ce qu'il est — et c'est ce qui
     # faisait de la rediffusion un moment inquiétant plutôt qu'un moment
     # d'archive. Hors direct il passe à l'ambre, comme le mot qu'il accompagne.
+    # Sauf sur la maquette : le coin dit déjà DIRECT, et un second voyant
+    # orange ne fait que répéter que ce n'est pas la webcam.
+    maquette = not direct and autre == "3D MODEL"
     if direct and int(quand) % 2 == 0:
         cv2.circle(image, (x + rayon, y - rayon), rayon, ROUGE, -1)
-    elif not direct:
+    elif not direct and not maquette:
         cv2.circle(image, (x + rayon, y - rayon), rayon, AMBRE, -1)
-    cv2.putText(image, badge, (x + pas, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
-                BLANC if direct else AMBRE, 2, cv2.LINE_AA)
+    if not maquette:
+        cv2.putText(image, badge, (x + pas, y), cv2.FONT_HERSHEY_SIMPLEX, taille,
+                    BLANC if direct else AMBRE, 2, cv2.LINE_AA)
     trait = y + int(round(9 * echelle))
     cv2.line(image, (x, trait), (largeur - 1 - marge, trait),
              tuple(int(c * 0.55) for c in CYAN), max(1, int(round(echelle))),
@@ -6718,6 +6802,10 @@ FORMAT_YOUTUBE = (
 # ça reste du quasi-réel. La veille, elle, reste plus près du bord, donc
 # elle a cette minute d'avance pour nommer avant que l'image ne passe.
 RETARD_SECOURS_S = 60.0
+# Cannes a une heure d'enregistrement derrière elle. Trois minutes de marge
+# avalent un trou de wifi sans coller au bord, et le duplex seul les paie :
+# le décodeur ne tourne pas le reste du temps.
+MARGE_DUPLEX_S = 180.0
 # Le Mont Serein se regarde à côté, une fois par minute. Pas sur le fil
 # des images : une lecture de playlist qui traîne figerait Cannes.
 REGARD_VENTOUX_S = 60.0
@@ -6760,6 +6848,78 @@ def _entree_cadre(url: str, largeur: int, hauteur: int, fps: int,
         "-f", "rawvideo", "-pix_fmt", "bgr24", "-",
     ]
     return subprocess.Popen(commande, stdout=subprocess.PIPE, bufsize=10 ** 8)
+
+
+class Compagne:
+    """Cannes, lue à côté, et seulement pendant le duplex.
+
+    Une deuxième entrée en permanence disputerait l'encodeur. On l'ouvre
+    quand le creux commence, à la taille de sa colonne, et on la ferme
+    avec lui. Trois minutes derrière le bord : le fichier YouTube les a.
+    """
+
+    TAILLE = (640, 360)
+    FRAIS_S = 8.0
+
+    def __init__(self, cfg: dict, fps: int):
+        self.cfg = cfg
+        self.fps = fps
+        self._voulu = threading.Event()
+        self._stop = threading.Event()
+        self._lock = threading.Lock()
+        self._image: np.ndarray | None = None
+        self._vu = 0.0
+        threading.Thread(target=self._boucle, daemon=True).start()
+
+    def voulu(self, oui: bool) -> None:
+        (self._voulu.set if oui else self._voulu.clear)()
+
+    def fraiche(self) -> np.ndarray | None:
+        with self._lock:
+            if self._image is None or time.time() - self._vu > self.FRAIS_S:
+                return None
+            return self._image.copy()
+
+    def _ouvre(self) -> subprocess.Popen | None:
+        cam = _camera_secours(self.cfg)
+        if not cam:
+            return None
+        try:
+            url = (adresse_youtube(str(cam["youtube"])) if cam.get("youtube")
+                   else str(cam["url"]))
+        except Exception:
+            log.warning("Duplex : %s illisible", cam.get("nom") or "Cannes")
+            return None
+        duree = duree_de_segment(url)
+        recul = max(1, int(round(MARGE_DUPLEX_S / duree)))
+        log.info("Duplex ouvert : %s, marge %.0f s",
+                 cam.get("nom") or "Cannes", recul * duree)
+        return _entree_cadre(url, self.TAILLE[0], self.TAILLE[1], self.fps, recul)
+
+    def _boucle(self) -> None:
+        while not self._stop.is_set():
+            if not self._voulu.wait(1.0):
+                continue
+            proc = self._ouvre()
+            if proc is None or proc.stdout is None:
+                if self._stop.wait(8):
+                    return
+                continue
+            octets = self.TAILLE[0] * self.TAILLE[1] * 3
+            try:
+                while self._voulu.is_set() and not self._stop.is_set():
+                    brut = proc.stdout.read(octets)
+                    if len(brut) < octets:
+                        break
+                    image = np.frombuffer(brut, np.uint8).reshape(
+                        self.TAILLE[1], self.TAILLE[0], 3).copy()
+                    with self._lock:
+                        self._image = image
+                        self._vu = time.time()
+            finally:
+                proc.kill()
+                with self._lock:
+                    self._image = None
 
 
 def _ouvre_secours(cfg: dict, largeur: int, hauteur: int, fps: int) -> subprocess.Popen | None:
@@ -7227,6 +7387,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # « BOOOOORING » pendant trois secondes, ce qui est une drôle de carte de
     # visite pour une veille qui vient de démarrer.
     dernier_ennui = origine - 10_000.0
+    # Le premier arrive tôt, sans s'annoncer. Ensuite un quart d'heure.
+    duplex_depuis = -1.0
+    prochain_duplex = origine + DUPLEX_PREMIER_S
+    compagne = Compagne(cfg, int(cfg["stream_fps"]))
     pensee_jour, pensee_rang, pensee_etape, pensee_feu = _pensee_lue(racine)
     dijon_jour, dijon_rang = _dijon_lue(racine)
     dijon_feu = 0.0
@@ -7612,9 +7776,30 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         pose_lampadaire(dessus, *lampadaire, quand - origine,
                                         allume=True)
                     vue = dessus
-            # La webcam dans sa fenêtre, les encarts dans les bandes autour.
-            toile = cadre(vue, largeur, hauteur)
-            cadrage = fenetre(vue.shape[:2], largeur, hauteur)
+            # Trois colonnes, sans prévenir : la machine, le Ventoux, Cannes.
+            # Cannes n'est décodée que là, trois minutes en arrière. Tant que
+            # son image n'est pas arrivée, la montagne garde toute la fenêtre.
+            if (duplex_depuis < 0 and not secours and not figee and survol is None
+                    and rediff is None and a_poser is None
+                    and quand >= prochain_duplex):
+                duplex_depuis = quand
+                prochain_duplex = quand + DUPLEX_TENUE_S + DUPLEX_PAUSE_S
+                log.info("Duplex : Raspberry, Mont Serein, %s", nom_secours)
+            demande = (duplex_depuis >= 0 and quand - duplex_depuis < DUPLEX_TENUE_S
+                       and survol is None and not secours and not figee
+                       and rediff is None and a_poser is None)
+            if duplex_depuis >= 0 and not demande:
+                duplex_depuis = -1.0
+            compagne.voulu(demande)
+            voisin = compagne.fraiche() if demande else None
+            if (voisin is not None and photo_machine is not None
+                    and getattr(photo_machine, "size", 0)):
+                toile, cadrage, _cadre_cannes = pose_duplex(
+                    vue, voisin, photo_machine, largeur, hauteur, nom_secours)
+            else:
+                # La webcam dans sa fenêtre, les encarts dans les bandes autour.
+                toile = cadre(vue, largeur, hauteur)
+                cadrage = fenetre(vue.shape[:2], largeur, hauteur)
             # Les bulles d'abord, pour que tout le reste passe par-dessus :
             # les encarts, les pantins, le fil. Rien de ce qu'on vient
             # regarder ne doit se trouver derrière une bulle.
