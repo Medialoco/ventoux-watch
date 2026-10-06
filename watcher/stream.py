@@ -5397,7 +5397,8 @@ def pose_heros(image: np.ndarray, nombre: str, unite: str, x: int, ligne: int,
 
 
 def pose_direct(toile: np.ndarray, camera: np.ndarray,
-                vue: tuple[int, int, int, int], quand: float) -> None:
+                vue: tuple[int, int, int, int], quand: float
+                ) -> tuple[int, int, int, int] | None:
     """La webcam en petit, pendant que le relief tourne à sa place.
 
     Le survol est le seul moment où ce flux cesse de montrer la montagne. Deux
@@ -5415,7 +5416,7 @@ def pose_direct(toile: np.ndarray, camera: np.ndarray,
     raison : c'est lui qui distingue une image vivante d'une vignette collée.
     """
     if camera is None or camera.size == 0:
-        return
+        return None
     x, y, large, haut = vue
     echelle = toile.shape[1] / 1600
     marge = int(18 * echelle)
@@ -5424,7 +5425,7 @@ def pose_direct(toile: np.ndarray, camera: np.ndarray,
     gx = x + large - petit_l - marge
     gy = y + haut - petit_h - marge
     if gx < 0 or gy < 0 or gx + petit_l > toile.shape[1] or gy + petit_h > toile.shape[0]:
-        return
+        return None
     toile[gy:gy + petit_h, gx:gx + petit_l] = cv2.resize(
         camera, (petit_l, petit_h), interpolation=cv2.INTER_AREA)
     cadre_encart(toile, (gx - 1, gy - 1), (gx + petit_l, gy + petit_h), echelle)
@@ -5436,6 +5437,7 @@ def pose_direct(toile: np.ndarray, camera: np.ndarray,
     if int(quand) % 2 == 0:
         cv2.circle(toile, (gx + int(6 * echelle), base - int(4 * echelle)),
                    max(2, int(3.5 * echelle)), (60, 60, 235), -1, cv2.LINE_AA)
+    return gx, gy, petit_l, petit_h
 
 
 # Le fond d'échelle de la jauge de température, en degrés. Ce n'est pas un
@@ -6685,8 +6687,8 @@ class Journal:
     """Quelques secondes du direct, rectangle et good catch compris.
 
     Ce qu'on garde est l'image déjà composée : la détection du mouvement,
-    le nom de la classe, et GOOD CATCH. Une photographie nue ne dit pas
-    ce que la veille a lu.
+    le nom de la classe, et GOOD CATCH. Pendant le survol, la détection
+    est dans le coin du direct, et ce passage est gardé aussi.
 
     Une prise ouvre un sujet. Une autre prise dans les quinze secondes
     l'allonge : la file des voitures tient dans un seul fichier. Le fichier
@@ -7060,6 +7062,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 prog = PROG_VIDE if muet else musique.programme()
                 relu = quand
             pistes = pistes_visibles(cherches, quand)
+            nommes = [vu for vu in vus if not cherche_encore(vu, pistes, quand)]
             image = np.frombuffer(brut, np.uint8).reshape(source_h, source_l, 3).copy()
             # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.
             applique_teinte(image, *teinte_du_moment(quand - origine))
@@ -7206,7 +7209,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # La webcam reste visible pendant le survol : le relief a pris sa
             # place dans la fenêtre, pas sa place dans l'émission.
             if survol is not None:
-                pose_direct(toile, image, cadrage, quand)
+                # La détection ne se pose pas sur le relief : elle appartient
+                # à la webcam, et pendant le survol la webcam est dans le coin.
+                # Le rush de ce passage part de là, rectangle compris.
+                encart = pose_direct(toile, image, cadrage, quand)
+                if encart is not None and a_poser is None and (nommes or pistes):
+                    dessine(toile, nommes, quand, vue=encart)
+                    pose_recherches(toile, pistes, encart, vus, quand)
+                    nom = next((str(vu.get("label") or "") for vu in nommes
+                                if vu.get("sur") and vu.get("label")), "")
+                    journal.sujet(quand, nom or "Mouvement")
             # Les pantins sur la toile et non sur l'image de la caméra, depuis
             # qu'ils ont le droit d'aller danser dans la bande noire : posés
             # sur la vue, ils étaient enfermés dedans par construction. Ils
@@ -7327,8 +7339,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # appartiennent à la webcam, et le direct est déjà dans le coin.
             # Pas sur une rediffusion : là, ce n'est plus la vue.
             if a_poser is None and survol is None:
-                dessine(toile, [vu for vu in vus if not cherche_encore(vu, pistes, quand)],
-                        quand, vue=cadrage)
+                dessine(toile, nommes, quand, vue=cadrage)
                 pose_recherches(toile, pistes, cadrage, vus, quand)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
             #

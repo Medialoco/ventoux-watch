@@ -4301,6 +4301,13 @@ class DiffusionTests(unittest.TestCase):
         # montre le relief, le direct reste dans le coin.
         self.assertIn("if a_poser is None and survol is None:", source)
         self.assertIn("or quand - survol > tenue)", source)
+        # Pendant le survol, la détection va dans le coin du direct, et ce
+        # passage est mis de côté comme une prise.
+        coin = source.index("pose_direct(toile, image")
+        avant = source[coin:coin + 700]
+        self.assertIn("dessine(toile, nommes, quand, vue=encart)", avant)
+        self.assertIn("pose_recherches(toile, pistes, encart, vus, quand)", avant)
+        self.assertIn('journal.sujet(quand, nom or "Mouvement")', avant)
         for duree in (stream.VUE3D_TENUE_S, stream.VUE3D_NUIT_S):
             self.assertLess(duree, stream.VUE3D_PAUSE_S / 4,
                             "le survol doit rester une respiration, pas un programme")
