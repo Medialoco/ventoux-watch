@@ -5366,21 +5366,21 @@ class PortraitMachineTests(unittest.TestCase):
         self.assertEqual(int(np.count_nonzero(image)), 0)
         self.assertLessEqual(stream.MACHINE_TENUE_S, 8.0)
 
-    def test_the_portrait_thanks_the_raspberry(self):
-        """Quand le Pi prend le milieu, on le dit."""
+    def test_the_portrait_does_not_thank_anyone(self):
+        """Le disque du Pi reste. Le remerciement, non."""
         photo = cv2.imread(str(ROOT / "assets" / "machine.jpg"))
         image = np.zeros((720, 1280, 3), np.uint8)
         self.assertTrue(stream.pose_portrait_machine(
             image, un_tour_de("machine") + 2.0, photo, self.ETAT, "Los Angeles",
             vue=(175, 36, 929, 522)))
-        self.assertEqual(stream.MACHINE_MERCI, "Thanks Raspberry!")
         self.assertGreater(stream.MACHINE_PERIODE_S, 1151.0)
         self.assertGreater(stream.DOGMAZIC_PERIODE_S, stream.MACHINE_PERIODE_S)
-        self.assertEqual(stream.OPENCV_MERCI, "Thanks OpenCV!")
-        self.assertEqual(stream.YOLO_MERCI, "Thanks YOLO11!")
+        antenne = inspect.getsource(stream.diffuse)
+        self.assertNotIn("pose_merci(", antenne)
+        self.assertNotIn("remerciements", antenne)
+        self.assertNotIn("Thanks", inspect.getsource(stream.pose_portrait_machine))
         self.assertNotIn("NOUS SOMMES", inspect.getsource(stream.pose_salle))
-        self.assertNotIn("phrase_salle(", inspect.getsource(stream.diffuse))
-        self.assertIn("MACHINE_MERCI", inspect.getsource(stream.pose_portrait_machine))
+        self.assertNotIn("phrase_salle(", antenne)
 
     def test_the_bear_proof_is_a_small_replay_at_the_bottom_right(self):
         """La photo-preuve est dans la fenêtre, au coin du direct."""
@@ -5404,10 +5404,11 @@ class PortraitMachineTests(unittest.TestCase):
         # Le portrait n'attend plus un creux : les rectangles se redessinent
         # après lui, dans la fenêtre.
         apres = source.split("pose_portrait_machine(")[-1]
-        self.assertIn("dessine(toile, [vu for vu in vus if not cherche_encore(vu, pistes, quand)],", apres)
+        self.assertIn("nommes = [vu for vu in vus if not cherche_encore(vu, pistes, quand)]", source)
+        self.assertIn("dessine(toile, nommes, quand, vue=cadrage)", apres)
         self.assertIn("pose_recherches(toile, pistes, cadrage, vus, quand)", apres)
-        self.assertIn("dessine(toile, [vu for vu in vus if not cherche_encore(vu, pistes, quand)],",
-                      source.split("pose_portrait_dogmazic(")[-1])
+        self.assertLess(source.find("pose_portrait_dogmazic("),
+                        source.find("dessine(toile, nommes, quand, vue=cadrage)"))
 
     def test_effects_never_turn_the_watch_off(self):
         """Un effet occupe l'écran, la veille continue de montrer ce qu'elle voit."""
@@ -5442,16 +5443,14 @@ class PortraitDogmazicTests(unittest.TestCase):
             vue=(175, 36, 929, 522)))
         self.assertEqual(int(np.count_nonzero(image)), 0)
 
-    def test_the_portrait_thanks_dogmazic(self):
+    def test_the_portrait_does_not_thank_dogmazic(self):
         photo = cv2.imread(str(ROOT / "assets" / "dogmazic.png"),
                            cv2.IMREAD_UNCHANGED)
         image = np.zeros((720, 1280, 3), np.uint8)
         self.assertTrue(stream.pose_portrait_dogmazic(
             image, un_tour_de("dogmazic") + 2.0, photo,
             vue=(175, 36, 929, 522)))
-        self.assertEqual(stream.DOGMAZIC_MERCI, "Thanks Dogmazic!")
-        self.assertIn("DOGMAZIC_MERCI",
-                      inspect.getsource(stream.pose_portrait_dogmazic))
+        self.assertNotIn("Thanks", inspect.getsource(stream.pose_portrait_dogmazic))
 
     def test_it_leaves_when_its_turn_is_over(self):
         photo = cv2.imread(str(ROOT / "assets" / "dogmazic.png"),
@@ -6585,12 +6584,7 @@ class LeMotSeLitOuNeSertARien(unittest.TestCase):
         self.assertLess(CADENCES["ennui"], CADENCES["attrape"])
         for quand, _, _ in REPLIQUES:
             self.assertIn(quand, CADENCES)
-        machine = [texte for quand, _, texte in REPLIQUES if quand == "machine"]
-        self.assertTrue(machine)
-        self.assertTrue(all(texte == "Thanks Raspberry!" for texte in machine))
-        dogmazic = [texte for quand, _, texte in REPLIQUES if quand == "dogmazic"]
-        self.assertTrue(dogmazic)
-        self.assertTrue(all(texte == "Thanks Dogmazic!" for texte in dogmazic))
+        self.assertFalse(any(texte.startswith("Thanks") for _, _, texte in REPLIQUES))
 
 
 class LaVoixPasseAuDessusDeLaMusique(unittest.TestCase):

@@ -1301,8 +1301,6 @@ class Musique:
         self.redifferes = repliques(self.racine / "data" / "voix", "rediff")
         self.grognements = repliques(self.racine / "data" / "voix", "ours")
         self.cris_dours = repliques(self.racine / "data" / "voix", "ours_cri")
-        self.remerciements = repliques(self.racine / "data" / "voix", "machine")
-        self.remerciements_dogmazic = repliques(self.racine / "data" / "voix", "dogmazic")
         # Tenues hors du tableau du site : une pensée, puis la Normandie.
         self.pensees = repliques(self.racine / "data" / "voix", "pensee")
         self.deplois = repliques(self.racine / "data" / "voix", "deploi")
@@ -4239,27 +4237,14 @@ MACHINE_RETARD_S = 120.0
 # Largeur de la photo, en part de la fenêtre caméra. Assez pour le ventilateur
 # et les ports, pas un mur : la route reste visible autour.
 MACHINE_PORTRAIT = 0.32
-# Deux mots, rien derrière : un point ferait dire « dot » à la voix.
-MACHINE_MERCI = "Thanks Raspberry!"
 
-# Dogmazic, le même numéro : leur chien orange au milieu, et on les
-# remercie. Moins souvent que le Raspberry, un autre premier, neuf minutes
-# de retard pour ne pas tomber dessus au redémarrage.
+# Dogmazic, le même numéro : leur chien orange au milieu. Moins souvent
+# que le Raspberry, un autre premier, neuf minutes de retard pour ne pas
+# tomber dessus au redémarrage.
 DOGMAZIC_PERIODE_S = 3221.0
 DOGMAZIC_TENUE_S = MACHINE_TENUE_S
 DOGMAZIC_RETARD_S = 540.0
 DOGMAZIC_PORTRAIT = MACHINE_PORTRAIT
-DOGMAZIC_MERCI = "Thanks Dogmazic!"
-# Deux lignes, sans photo : OpenCV voit le mouvement, YOLO11 le nomme.
-# Moins souvent encore, et décalés pour ne pas parler en même temps.
-OPENCV_PERIODE_S = 2477.0
-OPENCV_TENUE_S = 5.0
-OPENCV_RETARD_S = 900.0
-OPENCV_MERCI = "Thanks OpenCV!"
-YOLO_PERIODE_S = 2741.0
-YOLO_TENUE_S = 5.0
-YOLO_RETARD_S = 1500.0
-YOLO_MERCI = "Thanks YOLO11!"
 
 # Le plateau, maintenant que les numéros ont dit leur période et leur
 # durée. L'ordre départage les ex æquo : le tapis d'abord parce qu'il passe
@@ -4274,8 +4259,6 @@ PLATEAU = (
     ("batiment", BATIMENT_PERIODE_S, BATIMENT_RELEVE_S, 0.0),
     ("machine", MACHINE_PERIODE_S, MACHINE_TENUE_S, MACHINE_RETARD_S),
     ("dogmazic", DOGMAZIC_PERIODE_S, DOGMAZIC_TENUE_S, DOGMAZIC_RETARD_S),
-    ("opencv", OPENCV_PERIODE_S, OPENCV_TENUE_S, OPENCV_RETARD_S),
-    ("yolo", YOLO_PERIODE_S, YOLO_TENUE_S, YOLO_RETARD_S),
     # L'ours en dernier parce qu'il écrit en travers du ciel, et qu'il vaut
     # mieux qu'il cède le passage plutôt que de crier par-dessus le tapis.
     #
@@ -5597,7 +5580,7 @@ def _pose_portrait(image: np.ndarray, seconde: float,
                    nuit: bool = False,
                    pied_gauche: str = "", pied_droit: str = "",
                    pied_couleur: tuple[int, int, int] | None = None) -> bool:
-    """Un disque au milieu, un remerciement au-dessus, parfois une ligne au pied."""
+    """Un disque au milieu, parfois une ligne au pied."""
     if photo is None or photo.size == 0:
         return False
     phase = en_scene(occasion, seconde, nuit)
@@ -5609,8 +5592,8 @@ def _pose_portrait(image: np.ndarray, seconde: float,
     hauteur, largeur = image.shape[:2]
     gauche, cime, large_vue, haute_vue = vue or (0, 0, largeur, hauteur)
     echelle = largeur / 1600
-    # Une ligne au-dessus pour le remerciement, une en dessous pour le lieu
-    # et la température. Le mot sous le disque se collait à la route et
+    # Une ligne au-dessus si un bandeau est demandé, une en dessous pour le
+    # lieu et la température. Le mot sous le disque se collait à la route et
     # devenait illisible dès que le trait d'un rectangle passait par là.
     pied_h = int(28 * echelle) if (pied_gauche or pied_droit) else int(8 * echelle)
     tete_h = int(36 * echelle)
@@ -5625,22 +5608,23 @@ def _pose_portrait(image: np.ndarray, seconde: float,
         return False
     calque = image.copy()
     pose_photo_ronde(calque, photo, cx, cy, rayon, echelle)
-    taille_merci = 0.70 * echelle
-    epais = max(1, int(round(2 * echelle)))
-    (mw, mh), _ = cv2.getTextSize(merci, cv2.FONT_HERSHEY_SIMPLEX,
-                                  taille_merci, epais)
-    ligne_merci = cy - rayon - int(10 * echelle)
-    ox = cx - mw // 2
-    # Un bandeau, pas un liseré : à cette taille un trait autour des
-    # lettres les dédouble, et une ombre aussi.
-    marge = max(4, int(6 * echelle))
-    cv2.rectangle(calque,
-                  (ox - marge, ligne_merci - mh - marge),
-                  (ox + mw + marge, ligne_merci + marge // 2),
-                  (10, 16, 18), -1)
-    cv2.putText(calque, merci, (ox, ligne_merci),
-                cv2.FONT_HERSHEY_SIMPLEX, taille_merci, CYAN,
-                epais, cv2.LINE_AA)
+    if merci:
+        taille_merci = 0.70 * echelle
+        epais = max(1, int(round(2 * echelle)))
+        (mw, mh), _ = cv2.getTextSize(merci, cv2.FONT_HERSHEY_SIMPLEX,
+                                      taille_merci, epais)
+        ligne_merci = cy - rayon - int(10 * echelle)
+        ox = cx - mw // 2
+        # Un bandeau, pas un liseré : à cette taille un trait autour des
+        # lettres les dédouble, et une ombre aussi.
+        marge = max(4, int(6 * echelle))
+        cv2.rectangle(calque,
+                      (ox - marge, ligne_merci - mh - marge),
+                      (ox + mw + marge, ligne_merci + marge // 2),
+                      (10, 16, 18), -1)
+        cv2.putText(calque, merci, (ox, ligne_merci),
+                    cv2.FONT_HERSHEY_SIMPLEX, taille_merci, CYAN,
+                    epais, cv2.LINE_AA)
     ligne = cy + rayon + int(20 * echelle)
     if pied_gauche:
         pose_lieu(calque, pied_gauche, cx - rayon, ligne, 0.48 * echelle, echelle)
@@ -5651,34 +5635,6 @@ def _pose_portrait(image: np.ndarray, seconde: float,
         cv2.putText(calque, pied_droit, (cx + rayon - large, ligne),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.54 * echelle, couleur, 2,
                     cv2.LINE_AA)
-    cv2.addWeighted(calque, 0.92 * force, image, 1.0 - 0.92 * force, 0.0, dst=image)
-    return True
-
-
-def pose_merci(image: np.ndarray, seconde: float, occasion: str, merci: str,
-               tenue: float, vue: tuple[int, int, int, int] | None = None,
-               nuit: bool = False) -> bool:
-    """Une ligne de remerciement, sans photo, dans le haut de la fenêtre."""
-    phase = en_scene(occasion, seconde, nuit)
-    if phase is None:
-        return False
-    force = min(phase, tenue - phase, 1.0)
-    if force < 0.02:
-        return True
-    hauteur, largeur = image.shape[:2]
-    gauche, cime, large_vue, _haute = vue or (0, 0, largeur, hauteur)
-    echelle = largeur / 1600
-    taille = 0.72 * echelle
-    epais = max(1, int(round(2 * echelle)))
-    (mw, mh), _ = cv2.getTextSize(merci, cv2.FONT_HERSHEY_SIMPLEX, taille, epais)
-    ox = gauche + (large_vue - mw) // 2
-    oy = cime + mh + int(18 * echelle)
-    calque = image.copy()
-    marge = max(4, int(6 * echelle))
-    cv2.rectangle(calque, (ox - marge, oy - mh - marge),
-                  (ox + mw + marge, oy + marge // 2), (10, 16, 18), -1)
-    cv2.putText(calque, merci, (ox, oy), cv2.FONT_HERSHEY_SIMPLEX, taille,
-                CYAN, epais, cv2.LINE_AA)
     cv2.addWeighted(calque, 0.92 * force, image, 1.0 - 0.92 * force, 0.0, dst=image)
     return True
 
@@ -5709,7 +5665,7 @@ def pose_portrait_machine(image: np.ndarray, seconde: float,
             AMBRE if etat["degres"] < CHAUD_C else ROUGE)
         pied_droit = f"{etat['degres']:.1f} C"
     return _pose_portrait(
-        image, seconde, photo, "machine", MACHINE_MERCI,
+        image, seconde, photo, "machine", "",
         MACHINE_TENUE_S, MACHINE_PORTRAIT, vue=vue, nuit=nuit,
         pied_gauche=ville.upper() if ville else "",
         pied_droit=pied_droit, pied_couleur=couleur)
@@ -5721,12 +5677,11 @@ def pose_portrait_dogmazic(image: np.ndarray, seconde: float,
                            nuit: bool = False) -> bool:
     """Le logo de Dogmazic, en grand au milieu, de temps en temps.
 
-    Même disque que le Raspberry, même bandeau, autre remerciement. C'est
-    de leur archive que vient presque toute la musique : quand le chien
-    orange prend le milieu, on le dit.
+    Même disque que le Raspberry. C'est de leur archive que vient presque
+    toute la musique : quand le chien orange prend le milieu, on le voit.
     """
     return _pose_portrait(
-        image, seconde, photo, "dogmazic", DOGMAZIC_MERCI,
+        image, seconde, photo, "dogmazic", "",
         DOGMAZIC_TENUE_S, DOGMAZIC_PORTRAIT, vue=vue, nuit=nuit,
         pied_gauche="MUSIQUE LIBRE")
 
@@ -7319,8 +7274,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     ours = charge_vignette(racine / "data" / "ours.png")
     preuve_ours = cv2.imread(str(racine / "assets" / "ours-maison.jpg"))
     ours_dit: tuple[int, int] = (-1, -1)
-    machine_dit = -1.0
-    dogmazic_dit = -1.0
     agenda, agenda_credit, agenda_lu = [], "", 0.0
     # La photo de la machine qui fait tout ça. Lue en BGR et non en BGRA :
     # c'est une photo, elle n'a pas de transparence.
@@ -7911,40 +7864,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # Dogmazic d'abord, le Raspberry ensuite : un seul disque
                 # à la fois, le plateau les départage. Les rectangles se
                 # redessinent après, sur la toile.
-                la_dogmazic = pose_portrait_dogmazic(
+                pose_portrait_dogmazic(
                     toile, quand - origine, photo_dogmazic,
                     vue=cadrage, nuit=not fait_jour)
-                if la_dogmazic:
-                    phase_dogmazic = en_scene("dogmazic", quand - origine,
-                                              not fait_jour) or 0.0
-                    debut_dogmazic = round(quand - origine - phase_dogmazic)
-                    if dogmazic_dit != debut_dogmazic:
-                        dogmazic_dit = debut_dogmazic
-                        if musique.remerciements_dogmazic:
-                            musique.dis(tirage.choice(
-                                musique.remerciements_dogmazic))
-                        log.info("Portrait de Dogmazic : %s",
-                                 musique.voix_dit or "sans voix")
                 # La photo de la machine, en grand. Le rectangle se redessine
                 # après, sur la toile : un disque au milieu de la route ne
-                # doit pas éteindre la veille.
-                la_machine = pose_portrait_machine(
+                # doit pas éteindre la veille. Le disque reste, le
+                # remerciement non : ni bandeau, ni voix.
+                pose_portrait_machine(
                     toile, quand - origine, photo_machine,
                     machine, ville, vue=cadrage, nuit=not fait_jour)
-                if la_machine:
-                    phase_machine = en_scene("machine", quand - origine,
-                                             not fait_jour) or 0.0
-                    debut_machine = round(quand - origine - phase_machine)
-                    if machine_dit != debut_machine:
-                        machine_dit = debut_machine
-                        if musique.remerciements:
-                            musique.dis(tirage.choice(musique.remerciements))
-                        log.info("Portrait de la machine : %s",
-                                 musique.voix_dit or "sans voix")
-                pose_merci(toile, quand - origine, "opencv", OPENCV_MERCI,
-                           OPENCV_TENUE_S, vue=cadrage, nuit=not fait_jour)
-                pose_merci(toile, quand - origine, "yolo", YOLO_MERCI,
-                           YOLO_TENUE_S, vue=cadrage, nuit=not fait_jour)
                 if ou_en_est is not None:
                     # Une fois, pas à chaque image : il grogne en descendant,
                     # et il crie une fois arrivé sur l'îlot.

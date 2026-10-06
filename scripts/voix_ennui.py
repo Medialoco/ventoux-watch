@@ -113,14 +113,6 @@ REPLIQUES = [
     ("ours", PLAT, "Grrrrooaaarrr"),
     ("ours_cri", PLAT, "THIS IS MY HOME!"),
     ("ours_cri", PLAT, "This is my hoooome!"),
-    # Le portrait du Pi, en grand au milieu. C'est lui qui tient le flux,
-    # depuis Los Angeles, et on ne le voyait que dans un disque de cent
-    # pixels. Quand il prend enfin la place, on le remercie.
-    ("machine", CLAIRE, "Thanks Raspberry!"),
-    ("machine", PLAT, "Thanks Raspberry!"),
-    # Dogmazic, le même numéro : le logo au milieu, et on les remercie.
-    ("dogmazic", CLAIRE, "Thanks Dogmazic!"),
-    ("dogmazic", PLAT, "Thanks Dogmazic!"),
     # Une pensée, dite une fois par jour à 7 h 15, heure de Paris.
     # Le nom est dit dans les deux sens : on ne sait pas lequel est le sien,
     # et c'est précisément ce qu'on lui dit.
@@ -225,7 +217,6 @@ CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180,
             "rediff": 160,
             # Un ours ne parle pas vite.
             "ours": 100, "ours_cri": 100,
-            "machine": 170, "dogmazic": 170,
             "pensee": 150, "normandie": 160, "normandy": 160, "deploi": 150}
 
 # La consigne de jeu, envoyée avec chaque phrase. C'est ce qu'on ne pouvait pas
@@ -261,16 +252,6 @@ JEU = {
             "furious about it at the same time. Roll the growl deep in the "
             "chest, then wail the words out like a creature who has lived on "
             "this mountain far longer than the road has.",
-    "machine": "Warm, grateful, a little giddy. You are thanking the small "
-               "computer that watches a mountain day and night. Bright and "
-               "sincere, not sarcastic. Say exactly the two words Thanks "
-               "Raspberry and then stop. No period, no exclamation, never "
-               "say the word dot. Over in a second and a half.",
-    "dogmazic": "Warm, grateful, a little giddy. You are thanking the free "
-                "music archive that fills the mountain watch. Bright and "
-                "sincere. Say Thanks Dogmazic! with a cheerful lift. The "
-                "exclamation is energy, never the word dot. Over in a "
-                "second and a half.",
     "pensee": "Warm, quiet, and sincere, like a letter read aloud to one "
               "person. Say the name twice, first David Vincent, then Vincent "
               "David, then David Vincent again, clearly, so both orders are "
