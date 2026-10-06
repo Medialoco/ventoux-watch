@@ -1,6 +1,141 @@
 {
-  "version": "0.6.12",
+  "version": "0.6.14",
   "events": [
+    {
+      "id": "2026-10-06T15-44-59Z-missed-1",
+      "t": "2026-10-06T15:44:59Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-06T15-44-59Z-missed-1.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2844,
+          "area_grow": 206.48,
+          "clipped": true,
+          "shade": 0.963,
+          "kept": 0.462,
+          "area_ratio": 0.04481,
+          "duration_s": 0.9,
+          "frames": 4,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.85,
+          "seen_as": [
+            "car 0.92 sur 0%",
+            "car 0.90 sur 12%",
+            "car 0.88 sur 49%",
+            "car 0.87 sur 4%"
+          ]
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.8187,
+          0.7528,
+          0.1812,
+          0.2472
+        ]
+      },
+      "closeup": "data/closeups/2026-10-06T15-44-59Z-missed-1.jpg"
+    },
+    {
+      "id": "2026-10-06T15-39-32Z-vehicle-21",
+      "t": "2026-10-06T15:40:20Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.906,
+      "thumb": "data/thumbs/2026-10-06T15-39-32Z-vehicle-21.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.026,
+          "kept": 0.349,
+          "area_ratio": 0.01884,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.91 sur 0%",
+            "car 0.91 sur 72%",
+            "car 0.87 sur 0%",
+            "car 0.80 sur 1%"
+          ]
+        },
+        "box": [
+          0.9045,
+          0.7457,
+          0.0955,
+          0.2086
+        ],
+        "count": 2,
+        "since": "2026-10-06T15:39:32Z"
+      },
+      "closeup": "data/closeups/2026-10-06T15-39-32Z-vehicle-21.jpg"
+    },
+    {
+      "id": "2026-10-06T15-38-28Z-motion-20",
+      "t": "2026-10-06T15:38:28Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-06T15-38-28Z-motion-20.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0292,
+          "area_grow": 0.83,
+          "clipped": false,
+          "shade": 1.368,
+          "kept": 0.0,
+          "area_ratio": 0.00055,
+          "duration_s": 139.5,
+          "frames": 10,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.004,
+          "seen_as": []
+        },
+        "box": [
+          0.5,
+          0.7,
+          0.0422,
+          0.0417
+        ]
+      },
+      "closeup": "data/closeups/2026-10-06T15-38-28Z-motion-20.jpg"
+    },
     {
       "id": "2026-10-06T15-35-57Z-vehicle-19",
       "t": "2026-10-06T15:35:57Z",
