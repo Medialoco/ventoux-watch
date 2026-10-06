@@ -7297,6 +7297,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                                                int(cfg["stream_fps"]))
                         if autre is not None:
                             entree = autre
+                            cadence = None
                         continue
                 brut = entree.stdout.read(octets)
                 if len(brut) < octets:
@@ -7359,14 +7360,18 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     vues = 0
                     cadence = None
                     continue
-                if secours:
-                    # L'image a une minute. Les rectangles sont datés pareil,
-                    # les horloges de l'antenne restent à l'heure qu'il est.
-                    quand = _maintenant() - RETARD_SECOURS_S
-                    montre = quand
-                else:
-                    quand = ouvert + vues / cfg["stream_fps"]
-                    montre = quand
+                if secours and cadence is None:
+                    # Première image de cette entrée. L'ancre est une minute
+                    # avant maintenant, puis une seconde de film par seconde
+                    # de montre : la même retenue que pour le Mont Serein.
+                    # Recalculer l'heure à chaque image annulait l'attente, la
+                    # machine avalait la marge et se collait au bord du direct.
+                    # Les rectangles suivent cette heure-là. Les horloges de
+                    # l'antenne, plus bas, restent à l'heure qu'il est.
+                    ouvert = _maintenant() - RETARD_SECOURS_S
+                    vues = 0
+                quand = ouvert + vues / cfg["stream_fps"]
+                montre = quand
                 vues += 1
                 images += 1
             # L'instant où l'image qu'on s'apprête à dessiner sera regardée.
