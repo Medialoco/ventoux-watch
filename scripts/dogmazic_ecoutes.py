@@ -16,6 +16,11 @@ revendiqué sur YouTube. Être le plus écouté n'autorise rien de plus.
 
     .venv/bin/python scripts/dogmazic_ecoutes.py --combien 10
     .venv/bin/python scripts/dogmazic_ecoutes.py --combien 10 --essai
+
+Une fois les fichiers sur le Pi, le compte et la durée se réécrivent ensemble,
+sur le site et dans les deux README :
+
+    .venv/bin/python -m scripts.bibliotheque_texte
 """
 
 from __future__ import annotations

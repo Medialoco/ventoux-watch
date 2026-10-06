@@ -31,6 +31,11 @@ et la licence du morceau en cours.
 
     .venv/bin/python -m scripts.musique_dogmazic --minutes 420
     .venv/bin/python -m scripts.musique_dogmazic --minutes 420 --essai
+
+Une fois les fichiers sur le Pi, le compte et la durée se réécrivent ensemble,
+sur le site et dans les deux README :
+
+    .venv/bin/python -m scripts.bibliotheque_texte
 """
 
 from __future__ import annotations
