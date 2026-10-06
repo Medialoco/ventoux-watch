@@ -5398,6 +5398,28 @@ def pose_heros(image: np.ndarray, nombre: str, unite: str, x: int, ligne: int,
                                    0.40 * echelle, 1)[0][0]
 
 
+def pose_osm(toile: np.ndarray, vue: tuple[int, int, int, int]) -> None:
+    """Le crédit des données, en bas à gauche de la maquette.
+
+    Routes, bâtiments et bois viennent d'OpenStreetMap, sous ODbL. Le crédit
+    se pose sur la vue qui les montre, et nulle part ailleurs : la webcam
+    n'est pas cette carte.
+    """
+    x, y, large, haut = vue
+    echelle = toile.shape[1] / 1600
+    marge = int(14 * echelle)
+    texte = "OPENSTREETMAP ODBL"
+    taille = 0.38 * echelle
+    trait = max(1, int(round(echelle)))
+    (_, th), _ = cv2.getTextSize(texte, cv2.FONT_HERSHEY_SIMPLEX, taille, trait)
+    ox = x + marge
+    oy = y + haut - marge
+    if oy - th < 0 or ox < 0:
+        return
+    _pose_encre(toile, texte, (ox, oy), cv2.FONT_HERSHEY_SIMPLEX,
+                taille, trait, BLANC)
+
+
 def pose_direct(toile: np.ndarray, camera: np.ndarray,
                 vue: tuple[int, int, int, int], quand: float
                 ) -> tuple[int, int, int, int] | None:
@@ -7218,6 +7240,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # La webcam reste visible pendant le survol : le relief a pris sa
             # place dans la fenêtre, pas sa place dans l'émission.
             if survol is not None:
+                pose_osm(toile, cadrage)
                 # La détection ne se pose pas sur le relief : elle appartient
                 # à la webcam, et pendant le survol la webcam est dans le coin.
                 # Le rush de ce passage part de là, rectangle compris.
@@ -7498,10 +7521,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # sur les encarts. Jamais par-dessus la montagne : il s'arrête au
             # bord de la fenêtre, où il est le plus vif.
             pose_eclat(toile, cadrage, quand - attrape, attrape_nom, attrape_teinte)
-            # La touche arrive sur l'image qui part maintenant, et elle reste.
-            # La vidéo emporte le coloriage, pas le dessin fini.
-            coloriage.dessine(toile, time.time())
-            coloriage.retiens(toile, time.time())
+            # Le coloriage ne part pas en direct. L'aperçu de l'iPad montre le
+            # geste, le journal le garde pour plus tard, et l'image encodée
+            # reste celle de la montagne.
+            apercu = toile.copy()
+            coloriage.dessine(apercu, time.time())
+            coloriage.retiens(apercu, time.time())
             # Le rush est cette image-ci, pas la photographie nue : le rectangle
             # du mouvement, le nom de la classe, et GOOD CATCH sont déjà posés.
             journal.voit(toile, quand)

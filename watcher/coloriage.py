@@ -1,8 +1,9 @@
-"""Le coloriage du cadre, touche après touche, dans le temps de la vidéo.
+"""Le coloriage du cadre, touche après touche, pour une diffusion plus tard.
 
-L'iPad n'écrit pas dans l'image. Il envoie une touche. Elle est dessinée sur
-l'image que le Pi est en train d'encoder, et elle reste sur les suivantes.
-La vidéo emporte donc le geste, pas une image finie posée d'un coup.
+L'iPad n'écrit pas dans le direct. Il envoie une touche. Elle est notée, avec
+son heure, et elle apparaît sur l'aperçu de la page. L'image qui part vers
+YouTube n'en reçoit aucune : le geste est gardé pour être rediffusé plus tard,
+dans le temps, et non posé d'un coup.
 
 Le rouge du direct n'est pas dans la palette : ce rouge dit « en ce moment »,
 et une touche de la même couleur le ferait mentir.
@@ -46,6 +47,7 @@ PAGE = """<!DOCTYPE html>
     font: 15px sans-serif; touch-action: none; }
   body { display: flex; flex-direction: column; }
   img { flex: 1; width: 100%; object-fit: contain; touch-action: none; }
+  .note { margin: 0; padding: 8px 10px 0; color: #aaa; font-size: 13px; }
   .barre { display: flex; gap: 8px; padding: 10px; align-items: center;
     background: #111; }
   button { min-width: 44px; min-height: 44px; border: 3px solid transparent;
@@ -56,6 +58,7 @@ PAGE = """<!DOCTYPE html>
 </head>
 <body>
 <img id="cadre" alt="">
+<p class="note">Plus tard. Pas sur le direct.</p>
 <div class="barre" id="barre"></div>
 <script>
 const jeton = new URLSearchParams(location.search).get("j") || "";
@@ -160,20 +163,24 @@ class Coloriage:
         touche = (float(quand), x, y, teinte)
         with self._verrou:
             self._touches.append(touche)
-        if self.journal is not None:
-            try:
-                self.journal.parent.mkdir(parents=True, exist_ok=True)
-                with self.journal.open("a", encoding="utf-8") as fichier:
-                    fichier.write(json.dumps({
-                        "t": touche[0], "x": x, "y": y, "couleur": nom,
-                    }) + "\n")
-            except OSError:
-                pass
+        self._note({"t": touche[0], "x": x, "y": y, "couleur": nom})
         return True
 
     def efface(self) -> None:
         with self._verrou:
             self._touches.clear()
+        self._note({"t": time.time(), "efface": True})
+
+    def _note(self, ligne: dict) -> None:
+        """Le geste, pour la diffusion plus tard. Un échec d'écriture n'arrête pas le flux."""
+        if self.journal is None:
+            return
+        try:
+            self.journal.parent.mkdir(parents=True, exist_ok=True)
+            with self.journal.open("a", encoding="utf-8") as fichier:
+                fichier.write(json.dumps(ligne) + "\n")
+        except OSError:
+            pass
 
     def dessine(self, image: np.ndarray, quand: float) -> None:
         """Pose les touches dont l'heure est déjà passée. Les autres attendent."""

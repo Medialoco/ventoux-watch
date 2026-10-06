@@ -652,6 +652,7 @@ tr.wrong .event .sub { text-decoration: none; display: block; }
 .relief .stage { position: relative; }
 
 #relief {
+  position: relative;
   width: min(100%, 620px);
   margin: 0 auto;
   aspect-ratio: 16 / 9;
@@ -660,8 +661,22 @@ tr.wrong .event .sub { text-decoration: none; display: block; }
   cursor: grab;
 }
 
+#relief .osm {
+  position: absolute;
+  z-index: 2;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(12, 18, 28, 0.55);
+  color: #f2f5f8;
+  font: 11px/1.2 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+
 #relief:active { cursor: grabbing; }
-#relief canvas { display: block; }
+#relief canvas { display: block; position: relative; z-index: 0; }
 
 .relief .stage:fullscreen {
   aspect-ratio: auto;

@@ -4308,9 +4308,18 @@ class DiffusionTests(unittest.TestCase):
         self.assertIn("dessine(toile, nommes, quand, vue=encart)", avant)
         self.assertIn("pose_recherches(toile, pistes, encart, vus, quand)", avant)
         self.assertIn('journal.sujet(quand, nom or "Mouvement")', avant)
+        # Les données du relief sont celles d'OpenStreetMap, sous ODbL.
+        self.assertIn("pose_osm(toile, cadrage)", source[coin - 400:coin + 80])
+        page = (Path(__file__).resolve().parents[1] / "site" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("https://www.openstreetmap.org/copyright", page)
+        self.assertIn("ODbL", page)
         for duree in (stream.VUE3D_TENUE_S, stream.VUE3D_NUIT_S):
             self.assertLess(duree, stream.VUE3D_PAUSE_S / 4,
                             "le survol doit rester une respiration, pas un programme")
+        toile = np.zeros((360, 640, 3), np.uint8)
+        stream.pose_osm(toile, (40, 30, 560, 300))
+        self.assertGreater(int(toile[290:330, 40:320].sum()), 0)
+        self.assertEqual(int(toile[30:80, 300:600].sum()), 0)
 
     def test_a_verdict_survives_the_watch_writing_its_counters(self):
         """Quatre-vingt-quatorze verdicts effac\u00e9s quelques secondes apr\u00e8s coup.
@@ -5631,7 +5640,7 @@ class PenseeTests(unittest.TestCase):
         self.assertNotIn("Butterbane", page)
         self.assertNotIn("butterbane", page)
         self.assertIn("8191 s", page)
-        self.assertIn("v0.6.5", page)
+        self.assertIn(f"v{stream.__version__}", page)
         self.assertIn("DEPLOYED", page)
         self.assertEqual(stream.DIJON_HEURES,
                          (23 * 3600, 23 * 3600 + 15 * 60))
@@ -7318,8 +7327,12 @@ class JournalTests(unittest.TestCase):
         self.assertLess(source.index("pose_eclat("), voit)
         self.assertLess(voit, source.index("journal.relache("))
         self.assertLess(source.index("journal.sujet("), voit)
-        self.assertLess(source.index("pose_eclat("), source.index("coloriage.dessine("))
-        self.assertLess(source.index("coloriage.dessine("), source.index("sortie.stdin.write"))
+        # Le coloriage est pour plus tard : l'aperçu le montre, le direct non.
+        self.assertIn("coloriage.dessine(apercu", source)
+        self.assertNotIn("coloriage.dessine(toile", source)
+        self.assertLess(source.index("coloriage.dessine(apercu"),
+                        source.index("sortie.stdin.write"))
+        self.assertIn("sortie.stdin.write(toile.tobytes())", source)
 
 
 class ColoriageTests(unittest.TestCase):
