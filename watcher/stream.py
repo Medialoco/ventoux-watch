@@ -6650,22 +6650,57 @@ def _camera_secours(cfg: dict) -> dict | None:
     return None
 
 
+# YouTube demande parfois de se connecter. L'adresse déjà ouverte sur cette
+# machine reste bonne quelques heures : on la reprend plutôt que de perdre
+# Cannes. On ne la recopie pas hors de la machine.
+RESERVE_URL = Path("data/secours.url")
+RESERVE_URL_S = 5 * 3600
+
+
+def _reserve_lue(chemin: Path, maintenant: float, max_age_s: float) -> str | None:
+    try:
+        if maintenant - chemin.stat().st_mtime > max_age_s:
+            return None
+        url = chemin.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return url if url.startswith("https://") else None
+
+
+def _ecrit_reserve(url: str) -> None:
+    try:
+        RESERVE_URL.parent.mkdir(parents=True, exist_ok=True)
+        RESERVE_URL.write_text(url + "\n", encoding="utf-8")
+    except OSError:
+        pass
+
+
 def adresse_youtube(video: str) -> str:
     """Une adresse HLS que ffmpeg sait lire, demandée depuis cette machine.
 
     Elle expire, et elle est liée à l'adresse qui la demande. On la redemande
-    ici à chaque ouverture, on ne la recopie pas d'ailleurs.
+    ici à chaque ouverture, on ne la recopie pas d'ailleurs. Si YouTube ne
+    répond plus, on reprend la dernière adresse ouverte ici, tant qu'elle est jeune.
     """
     binaire = shutil.which("yt-dlp") or "/usr/local/bin/yt-dlp"
-    fini = subprocess.run(
-        [binaire, "-g", "-f",
-         "270/232/best[height<=1080][protocol*=m3u8]/best[height<=1080]",
-         "--no-warnings", f"https://www.youtube.com/watch?v={video}"],
-        capture_output=True, text=True, timeout=45, check=False,
-    )
-    for ligne in fini.stdout.splitlines():
-        if ligne.startswith("http"):
-            return ligne.strip()
+    try:
+        fini = subprocess.run(
+            [binaire, "-g", "-f",
+             "270/232/best[height<=1080][protocol*=m3u8]/best[height<=1080]",
+             "--no-warnings", f"https://www.youtube.com/watch?v={video}"],
+            capture_output=True, text=True, timeout=45, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        fini = None
+    if fini is not None:
+        for ligne in fini.stdout.splitlines():
+            if ligne.startswith("http"):
+                _ecrit_reserve(ligne.strip())
+                return ligne.strip()
+    reserve = _reserve_lue(RESERVE_URL, time.time(), RESERVE_URL_S)
+    if reserve:
+        log.warning("YouTube ne donne plus l'adresse, on reprend celle déjà ouverte")
+        return reserve
     raise RuntimeError("yt-dlp n'a pas donné d'adresse")
 
 

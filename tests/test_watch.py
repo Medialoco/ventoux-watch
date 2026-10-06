@@ -752,6 +752,18 @@ class MotionTests(unittest.TestCase):
         avant, _apres = inspect.getsource(main._on_track).split("yolo.detect", 1)
         self.assertIn('track.zone in {"sea", "beach"}', avant)
 
+    def test_une_adresse_deja_ouverte_depannne_youtube(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as dossier:
+            chemin = Path(dossier) / "secours.url"
+            self.assertIsNone(stream._reserve_lue(chemin, 1000.0, 10.0))
+            chemin.write_text("https://example.test/live.m3u8\n", encoding="utf-8")
+            maintenant = chemin.stat().st_mtime
+            self.assertEqual(
+                stream._reserve_lue(chemin, maintenant + 1, stream.RESERVE_URL_S),
+                "https://example.test/live.m3u8")
+            self.assertIsNone(stream._reserve_lue(chemin, maintenant + stream.RESERVE_URL_S + 5, stream.RESERVE_URL_S))
+
 
 class GtfsTests(unittest.TestCase):
     def test_one_nearby_departure(self):
