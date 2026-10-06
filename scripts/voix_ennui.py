@@ -101,7 +101,6 @@ REPLIQUES = [
     ("rediff", CLAIRE, "Replaaaayyyyyyy"),
     ("rediff", PLAT, "Replaaaayyyyyyy"),
     ("rediff", CLAIRE, "Replaaaayyy, again"),
-    ("rediff", PLAT, "And now, a replaaaayyyyy"),
     # L'ours. Il y a une sculpture de bois debout près du chemin, un ours
     # grandeur nature, 1,73 m sur la carte de scène. Il regarde passer les
     # voitures depuis des années sans rien dire. Une fois de temps en temps son
