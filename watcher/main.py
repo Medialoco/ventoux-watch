@@ -281,7 +281,20 @@ def main() -> None:
             # montagne : elle date tout ce qui parle de l'image — la piste, le
             # relevé, l'événement — parce que c'est la seule que la diffusion
             # saura retrouver pour poser le rectangle au bon endroit.
-            for frame, prise in _frames(cfg["stream_url"]):
+            url, secours = _choisir_la_webcam(cfg)
+            if secours:
+                _repart_le_fond(motion, _zones_secours(cfg) or zones)
+                carte = SceneMap()
+                log.info("Veille sur la webcam de secours")
+            elif motion.zones is not zones:
+                _repart_le_fond(motion, zones)
+                carte = scene_map
+            else:
+                carte = scene_map
+            cherche.clear()
+            annonces.clear()
+            sonde_source = time.time()
+            for frame, prise in _frames(url, horloge=secours):
                 seen += 1
                 now = time.time()
                 # A sign of life, once a second. Nothing reads it here: it is
@@ -310,11 +323,14 @@ def main() -> None:
                 _note_cherche(cherche, annonces, motion.tracks, step.ended, frame, prise,
                               root / "data" / "cherche.json", score, root / "data" / "score.json")
                 for track in step.ended:
-                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map, score)
-                for track in _burning(motion.tracks, prise, cfg, scene_map, alerted):
-                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map, score)
+                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score)
+                for track in _burning(motion.tracks, prise, cfg, carte, alerted):
+                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score)
                 for track in _a_relire(motion.tracks, prise):
-                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map, score, tot=True)
+                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score, tot=True)
+                if now - sonde_source >= 20.0 and _mont_serein_vif(cfg) != (not secours):
+                    log.info("La veille change de webcam")
+                    break
                 _flush_clips(pending, ring, prise, drive, store)
                 due = store.urgent or now - last_publish >= cfg["publish_interval_s"]
                 if (store.dirty or view.dirty) and due:
@@ -1155,7 +1171,59 @@ def _encode_and_upload(frames: list[bytes], event_id: str, drive: DriveUploader)
 RECUL_VEILLE = 3
 
 
-def _frames(url: str):
+def _mont_serein_vif(cfg: dict) -> bool:
+    """La playlist du Mont Serein a encore des segments neufs."""
+    from watcher.stream import playlist_figee
+
+    try:
+        return not playlist_figee(direct._lire(direct.playlist_media(cfg["stream_url"])),
+                                  time.time())
+    except Exception:
+        return False
+
+
+def _choisir_la_webcam(cfg: dict) -> tuple[str, bool]:
+    """L'adresse à ouvrir, et si c'est l'autre webcam de la collection.
+
+    Le booléen dit que l'heure des images est celle de la machine : cette
+    playlist ne date pas ses segments, et le flux non plus.
+    """
+    if _mont_serein_vif(cfg):
+        return cfg["stream_url"], False
+    from watcher.stream import _camera_secours, adresse_youtube
+
+    cam = _camera_secours(cfg)
+    if not cam:
+        return cfg["stream_url"], False
+    try:
+        if cam.get("youtube"):
+            return adresse_youtube(str(cam["youtube"])), True
+        if cam.get("url"):
+            return str(cam["url"]), True
+    except Exception:
+        log.warning("Secours illisible pour la veille", exc_info=True)
+    return cfg["stream_url"], False
+
+
+def _zones_secours(cfg: dict) -> dict | None:
+    from watcher.stream import _camera_secours
+
+    cam = _camera_secours(cfg) or {}
+    zones = cam.get("zones")
+    if isinstance(zones, dict) and zones.get("polygons") and zones.get("priority"):
+        return zones
+    return None
+
+
+def _repart_le_fond(motion, zones: dict) -> None:
+    """Le fond appris sur une webcam ne vaut rien sur l'autre."""
+    motion.zones = zones
+    motion.bg = cv2.createBackgroundSubtractorMOG2(history=120, varThreshold=24, detectShadows=False)
+    motion.tracks.clear()
+    motion._seen = 0
+
+
+def _frames(url: str, horloge: bool = False):
     """Les images, et l'heure à laquelle la montagne les a vues.
 
     Pas l'heure qu'il est ici. Entre les deux il y a vingt et une secondes
@@ -1169,14 +1237,27 @@ def _frames(url: str):
     Compter les images, c'est donc compter les secondes de là-bas, et il suffit
     de savoir à quelle heure commence la première.
     """
-    depart, _ = direct.depart(direct.playlist_media(url), RECUL_VEILLE)
-    command = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
-        "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
-        "-live_start_index", str(-RECUL_VEILLE),
-        "-i", url, "-an", "-vf", "fps=1",
-        "-f", "image2pipe", "-vcodec", "mjpeg", "-",
-    ]
+    if horloge:
+        # Pas de date dans cette playlist : l'heure est celle de la réception,
+        # la même que l'horloge du flux quand il montre cette webcam.
+        command = [
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin",
+            "-user_agent", "Mozilla/5.0",
+            "-rw_timeout", "15000000",
+            "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+            "-live_start_index", "-3",
+            "-i", url, "-an", "-vf", "fps=1",
+            "-f", "image2pipe", "-vcodec", "mjpeg", "-",
+        ]
+    else:
+        depart, _ = direct.depart(direct.playlist_media(url), RECUL_VEILLE)
+        command = [
+            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+            "-live_start_index", str(-RECUL_VEILLE),
+            "-i", url, "-an", "-vf", "fps=1",
+            "-f", "image2pipe", "-vcodec", "mjpeg", "-",
+        ]
     vues = 0
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
     assert process.stdout is not None
@@ -1215,7 +1296,7 @@ def _frames(url: str):
                 buffer = buffer[end + 2 :]
                 frame = cv2.imdecode(np.frombuffer(payload, dtype=np.uint8), cv2.IMREAD_COLOR)
                 if frame is not None:
-                    yield frame, depart + vues
+                    yield frame, (time.time() if horloge else depart + vues)
                     vues += 1
     finally:
         process.kill()

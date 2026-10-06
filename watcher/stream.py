@@ -6676,6 +6676,9 @@ def _entree_cadre(url: str, largeur: int, hauteur: int, fps: int) -> subprocess.
         "-user_agent", "Mozilla/5.0",
         "-rw_timeout", "15000000",
         "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+        # YouTube sert une heure d'enregistrement. Sans cet index, ffmpeg
+        # part du début et le direct a une heure de retard.
+        "-live_start_index", "-3",
         "-i", url, "-an",
         "-vf", f"scale={largeur}:{hauteur},fps={fps}",
         "-f", "rawvideo", "-pix_fmt", "bgr24", "-",
@@ -7172,6 +7175,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     nom_secours = str((cam_secours or {}).get("nom") or "backup")
     phrase_secours = f"Backup webcam, {nom_secours}. Waiting for Mont Serein."
     try:
+        ou_secours = (float(cam_secours["lat"]), float(cam_secours["lon"]))
+    except (TypeError, KeyError, ValueError):
+        ou_secours = None
+    try:
         figee = playlist_figee(_lire(media), _maintenant())
     except Exception:
         log.warning("Playlist illisible au départ", exc_info=True)
@@ -7394,7 +7401,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             if not figee and quand - dernier_vu > TENUE_S:
                 applique_effet(image, *effet_du_moment(quand - origine), quand - origine)
             # La fête suit le rectangle, pas l'arrivée de la fiche.
-            if not figee and quand - attrape > ATTRAPE_S:
+            if (secours or not figee) and quand - attrape > ATTRAPE_S:
                 neuve = prise_a_feter(vus, quand, fetes)
                 if neuve is not None and cherche_encore(neuve, pistes, quand):
                     neuve = None
@@ -7655,7 +7662,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # fenêtre. Pas sur le relief : le rectangle et le nom d'une prise
             # appartiennent à la webcam, et le direct est déjà dans le coin.
             # Pas sur une rediffusion : là, ce n'est plus la vue.
-            if not figee and a_poser is None and survol is None:
+            if (secours or not figee) and a_poser is None and survol is None:
                 dessine(toile, nommes, quand, vue=cadrage)
                 pose_recherches(toile, pistes, cadrage, vus, quand)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
@@ -7764,12 +7771,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # qu'il est sur le direct.
             heure_antenne = _maintenant()
             los, beau = ratios_du_jour(tableau, heure_antenne)
-            pose_horloge(toile, heure_antenne, direct=not figee and rediff is None and survol is None,
-                         autre="DEGRADED" if figee else ("REPLAY" if rediff is not None else "3D MODEL"),
+            # Cannes en direct n'est pas une photo. Le mode dégradé ne dit
+            # que la dernière image du Mont Serein, quand rien d'autre ne tient.
+            pose_horloge(toile, heure_antenne,
+                         direct=(secours or not figee) and rediff is None and survol is None,
+                         autre="DEGRADED" if figee and not secours else (
+                             "REPLAY" if rediff is not None else "3D MODEL"),
                          commune=nom_secours if secours else commune,
-                         carte=carte_pays, ou=ou_camera,
+                         carte=carte_pays, ou=ou_secours if secours else ou_camera,
                          remue=-remue, photo=photo_trampoline, ratio=beau)
-            if figee:
+            if figee and not secours:
                 pose_mode_degrade(toile, cadrage, phrase_secours if secours else None)
             ou_machine = None
             if machine_ou.get("lat") is not None:

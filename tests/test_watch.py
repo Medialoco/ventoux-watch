@@ -2213,6 +2213,9 @@ class FogTests(unittest.TestCase):
         self.assertNotIn("pose_ours", commun)
         self.assertIn("pose_ours", propre)
         self.assertIn("pose_piste", propre)
+        self.assertIn('"-live_start_index", "-3"', inspect.getsource(stream._entree_cadre))
+        self.assertIn("ou_secours if secours", diffuse)
+        self.assertIn("(secours or not figee) and a_poser is None", diffuse)
         self.assertEqual(stream._camera_secours(
             {"stream_url": "http://mont", "collection": [
                 {"nom": "Mont Serein"},
