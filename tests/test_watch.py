@@ -2185,7 +2185,8 @@ class FogTests(unittest.TestCase):
 
         # L'ancre suit la nouvelle entrée, mais « origine » ne bouge pas : il
         # donne sa seconde au lecteur de musique.
-        self.assertIn("ouvert = dernier - (recul - 1) * segment", tari)
+        self.assertIn("ouvert = _ancre_montage(cfg[\"stream_url\"], recul)", tari)
+        self.assertIn("fps={int(fps)}", inspect.getsource(stream._entree))
         self.assertIn("vues = 0", tari)
         self.assertIn("cadence = None", tari)
         self.assertIn("quand = ouvert + vues / cfg[\"stream_fps\"]", source)
@@ -5728,8 +5729,12 @@ class PenseeTests(unittest.TestCase):
         self.assertIn("7:15", page)
         self.assertNotIn("BIG UP TO THE NORMANDY!", page)
         self.assertIn("The bear keeps his own pace", page)
-        self.assertIn("Thanks OpenCV!", page)
-        self.assertIn("Thanks YOLO11!", page)
+        self.assertIn("Les plages du Midi", page)
+        self.assertIn("08:49", page)
+        self.assertNotIn("Thanks OpenCV!", page)
+        self.assertNotIn("Thanks YOLO11!", page)
+        self.assertNotIn("Thanks Raspberry!", page)
+        self.assertNotIn("Thanks Dogmazic!", page)
         self.assertNotIn("Butterbane", page)
         self.assertNotIn("butterbane", page)
         self.assertIn("8191 s", page)
@@ -6051,21 +6056,17 @@ class OursTests(unittest.TestCase):
 
 
 class DuplexTests(unittest.TestCase):
-    """Trois colonnes : la machine, le Ventoux plus large, puis Cannes."""
+    """Deux colonnes : le Ventoux plus large, puis Cannes. Le Raspberry
+    reste dans son encart, à gauche de cette fenêtre."""
 
-    def test_le_raspberry_est_a_gauche_et_le_ventoux_plus_large(self):
-        machine = np.full((180, 320, 3), (200, 40, 40), np.uint8)
+    def test_le_ventoux_est_a_gauche_et_plus_large_que_cannes(self):
         ventoux = np.full((270, 480, 3), (40, 40, 200), np.uint8)
         cannes = np.full((180, 320, 3), (40, 180, 40), np.uint8)
-        toile, vue_v, vue_c = stream.pose_duplex(
-            ventoux, cannes, machine, 1280, 720, "Cannes")
-        bleu = np.where(np.all(toile == (200, 40, 40), axis=2))
+        toile, vue_v, vue_c = stream.pose_duplex(ventoux, cannes, 1280, 720, "Cannes")
         rouge = np.where(np.all(toile == (40, 40, 200), axis=2))
         vert = np.where(np.all(toile == (40, 180, 40), axis=2))
-        self.assertGreater(bleu[1].size, 0)
         self.assertGreater(rouge[1].size, 0)
         self.assertGreater(vert[1].size, 0)
-        self.assertLess(int(bleu[1].min()), int(rouge[1].min()))
         self.assertLess(int(rouge[1].max()), int(vert[1].min()) + 8)
         self.assertGreater(vue_v[2], vue_c[2])
 

@@ -6,11 +6,15 @@
 
 A Raspberry Pi 5 on a desk in Los Angeles watches the webcam at the Mont Serein pass, 1,389 m up Mont Ventoux. One frame a second. OpenCV finds what moved, YOLO names the crop, and the Pi rebuilds the picture: the photograph, the rectangle, the overlays, the music. The watch is the work. The stream is the show.
 
+On 6 October 2026 at 08:49 Paris time the Mont Serein playlist closed (`#EXT-X-ENDLIST`, last segment at 06:49:04 UTC). Since then Cannes is the backup: the municipal live on Boulevard du Midi, aimed at Les plages du Midi. The Ventoux playlist is read again every 60 s. End of list, or a last segment older than 120 s, and the picture becomes Cannes, opened 60 s behind the live edge. When Mont Serein returns, the next frame goes back without restarting the YouTube output. While it is up, the window also splits: first time 75 s after open, hold 90 s, then 900 s after it ends. Cannes is decoded only during those 90 s, at 640×360, 180 s behind. Mont Serein keeps the larger share, and each column carries its name. The Raspberry stays the card on the left.
+
+Mont Serein has a distance grid from OpenStreetMap, from node [6410397171](https://www.openstreetmap.org/node/6410397171). Cannes has no `man_made=surveillance` node: the nearest, [8268287469](https://www.openstreetmap.org/node/8268287469), is a dome 322 m inland. The pose used here sits 8 m south of [Boulevard du Midi Louise Moreau](https://www.openstreetmap.org/way/1474182243), at 43.546859, 6.976433. Direction and height still have to be measured before they are written. Cannes therefore has no grid: the frame is cut into road (a short piece, bottom right), sidewalk, beach, sea and sky. Sea and beach are not sent to YOLO. A change over 35% of the frame is dropped. Bear, carpet, submarine, piste, elephant and buildings stay on the Mont Serein picture.
+
 The watch sees a lot of motion. A published class counts as soon as it is named. The green cheer, a good catch, waits for 0.60. Under each card, three digits show that day’s ratio times one hundred, with the raw count in small type. Los Angeles is on the left, Beaumont-du-Ventoux on the right. A class counts for both. Each side returns to 000 at its own midnight, and the two midnights are not the same hour.
 
-Watcher **v0.6.16**.
+Watcher **v0.6.17**.
 
-The live picture is on [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). The site is [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Twenty ways the picture changes are written there, each one from the code that is running.
+The live picture is on [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). The site is [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). The ways the picture changes are written there, each one from the code that is running.
 
 ![Mont Serein at night: roundabout, road, slope and the summit beacon](docs/mont-serein-nuit.png)
 

@@ -22,6 +22,9 @@ const SURFACE = {
 // Drawn just clear of the ground, so the tarmac does not fight the slope it
 // lies on for the same pixels.
 const LIFT_M = 0.35;
+// The fitted eye sits two metres above the apron. The webcam stands on the
+// roof of the welcome chalet, two metres above that eye.
+const TOIT_M = 2;
 const WALL = 0x9a8975;
 const ROOF = 0x7a5f52;
 const STEEL = 0xb9bec7;
@@ -128,9 +131,10 @@ async function start(host) {
   const look = axes.forward.clone().multiplyScalar(700);
 
   function home() {
-    camera.position.set(0, 0, 0);
+    camera.position.set(0, TOIT_M, 0);
     camera.up.copy(axes.up);
     controls.target.copy(look);
+    controls.target.y += TOIT_M;
     controls.update();
   }
   home();
@@ -487,7 +491,7 @@ function here(pose, high) {
     new THREE.SphereGeometry(1.6, 14, 10),
     new THREE.MeshBasicMaterial({ color: 0xff5a5a }),
   );
-  mark.position.set(0, high(0, 0) + (pose.height_m || 4), 0);
+  mark.position.set(0, high(0, 0) + (pose.height_m || 4) + TOIT_M, 0);
   mark.name = "Webcam";
   return mark;
 }

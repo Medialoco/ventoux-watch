@@ -2201,10 +2201,9 @@ def cadre(cam: np.ndarray, largeur: int, hauteur: int) -> np.ndarray:
 DUPLEX_PREMIER_S = 75.0
 DUPLEX_TENUE_S = 90.0
 DUPLEX_PAUSE_S = 900.0
-# La colonne de gauche est la machine. Du reste, le Ventoux garde la
-# plus grande part.
-PART_MACHINE = 0.22
-PART_VENTOUX = 0.64
+# Du cadre partagé, le Ventoux garde la plus grande part. L'encart du
+# Raspberry est déjà à gauche de l'écran, hors de cette fenêtre.
+PART_VENTOUX = 0.62
 
 
 def _dans_la_colonne(toile: np.ndarray, image: np.ndarray,
@@ -2245,31 +2244,27 @@ def pose_cartouche(image: np.ndarray, vue: tuple[int, int, int, int],
                 cv2.FONT_HERSHEY_SIMPLEX, taille, CYAN, trait, cv2.LINE_AA)
 
 
-def pose_duplex(ventoux: np.ndarray, cannes: np.ndarray, machine: np.ndarray,
+def pose_duplex(ventoux: np.ndarray, cannes: np.ndarray,
                 largeur: int, hauteur: int, nom_cannes: str = "Cannes",
                 ) -> tuple[np.ndarray, tuple[int, int, int, int], tuple[int, int, int, int]]:
-    """Trois colonnes : la machine, le Ventoux, Cannes.
+    """Deux colonnes : le Ventoux, plus large, puis Cannes.
 
-    Le Ventoux est plus large. Chacune garde ses proportions. Les effets et
-    les rectangles se posent sur la colonne du Ventoux, pas sur les trois.
+    L'encart du Raspberry est déjà à gauche de l'écran. Chacune garde ses
+    proportions. Les rectangles se posent sur la colonne où ils ont été vus.
     """
     sx, sy, sw, sh = fenetre(ventoux.shape[:2], largeur, hauteur)
     gap = max(2, int(4 * largeur / 1600))
-    usable = max(1, sw - 2 * gap)
-    large_machine = int(usable * PART_MACHINE)
-    reste = usable - large_machine
-    large_ventoux = int(reste * PART_VENTOUX)
-    large_cannes = reste - large_ventoux
+    usable = max(1, sw - gap)
+    large_ventoux = int(usable * PART_VENTOUX)
+    large_cannes = usable - large_ventoux
     colonnes = []
     x = sx
-    for large in (large_machine, large_ventoux, large_cannes):
+    for large in (large_ventoux, large_cannes):
         colonnes.append((x, sy, max(1, large), sh))
         x += large + gap
     toile = np.zeros((hauteur, largeur, 3), np.uint8)
-    vue_machine = _dans_la_colonne(toile, machine, colonnes[0])
-    vue_ventoux = _dans_la_colonne(toile, ventoux, colonnes[1])
-    vue_cannes = _dans_la_colonne(toile, cannes, colonnes[2])
-    pose_cartouche(toile, vue_machine, "RASPBERRY PI")
+    vue_ventoux = _dans_la_colonne(toile, ventoux, colonnes[0])
+    vue_cannes = _dans_la_colonne(toile, cannes, colonnes[1])
     pose_cartouche(toile, vue_ventoux, "MONT SEREIN")
     pose_cartouche(toile, vue_cannes, nom_cannes or "CANNES")
     return toile, vue_ventoux, vue_cannes
@@ -6960,13 +6955,30 @@ def _regard_le_ventoux(url: str, coupe: threading.Event, vif: threading.Event) -
             return
 
 
-def _entree(url: str, recul: int) -> subprocess.Popen:
+def _ancre_montage(url: str, recul: int) -> float:
+    """La date de la première image que ffmpeg va livrer.
+
+    Appelée dans la foulée de l'ouverture : la veille ancre ses passages sur
+    la même date de segment, et le compte d'images n'a de sens que s'il part
+    de là.
+    """
+    moment, _duree = direct.depart(playlist_media(url), recul, maintenant=_maintenant)
+    return moment
+
+
+def _entree(url: str, recul: int, fps: int = 6) -> subprocess.Popen:
     commande = [
         "ffmpeg", "-hide_banner", "-loglevel", "error",
         "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
         # Le retard, pris chez le serveur plutôt qu'en mémoire.
         "-live_start_index", str(-recul),
         "-i", url, "-an",
+        # La webcam publie vingt-cinq images par seconde de montagne. Sans ce
+        # filtre, chaque image brute était comptée comme une image à six par
+        # seconde : l'horloge de l'antenne courait quatre fois plus vite que
+        # celle de la veille, et le rectangle nommé arrivait des minutes avant
+        # la voiture. Une image livrée est désormais une image de la cadence.
+        "-vf", f"fps={int(fps)}",
         "-f", "rawvideo", "-pix_fmt", "bgr24", "-",
     ]
     return subprocess.Popen(commande, stdout=subprocess.PIPE, bufsize=10 ** 8)
@@ -7195,7 +7207,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     media, dernier, segment = attends_la_webcam(cfg["stream_url"])
     log.info("Segments de %.1f s, dernier publié il y a %.1f s", segment, _maintenant() - dernier)
 
-    entree = _entree(cfg["stream_url"], recul)
+    # L'ancre est prise juste avant d'ouvrir ffmpeg, sur la date du segment
+    # qu'il va montrer. La veille fait le même calcul : les deux horloges
+    # partent de la même seconde de montagne.
+    origine = _ancre_montage(cfg["stream_url"], recul)
+    entree = _entree(cfg["stream_url"], recul, int(cfg["stream_fps"]))
     assert entree.stdout is not None
     # La toile, et donc ce que l'encodeur doit avaler chaque image.
     #
@@ -7238,9 +7254,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         threading.Thread(target=veille_salle, args=(chaine, coupe, salle),
                          daemon=True).start()
     debut = _maintenant()
-    # L'heure de la première image montrée : le bord du direct, moins ce qu'on
-    # a reculé. Tout le reste s'en déduit par le compte des images.
-    origine = dernier - (recul - 1) * segment
     # L'ancre de l'entrée en cours, et le compte d'images depuis son ouverture.
     # Séparées d'« origine », qui reste le début de l'émission : c'est lui qui
     # donne sa seconde au lecteur de musique, et il ne doit pas reculer parce
@@ -7455,8 +7468,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             entree.kill()
             if photo_figee is None:
                 figee = False
-                entree = _entree(cfg["stream_url"], recul)
+                ouvert = _ancre_montage(cfg["stream_url"], recul)
+                entree = _entree(cfg["stream_url"], recul, int(cfg["stream_fps"]))
                 assert entree.stdout is not None
+                vues = 0
+                cadence = None
             else:
                 log.info("Webcam interrompue : dernière image tenue, le direct continue")
     try:
@@ -7470,9 +7486,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         frais = playlist_media(cfg["stream_url"])
                         if not playlist_figee(_lire(frais), _maintenant()):
                             media, dernier, segment = attends_la_webcam(cfg["stream_url"])
-                            entree = _entree(cfg["stream_url"], recul)
+                            ouvert = _ancre_montage(cfg["stream_url"], recul)
+                            entree = _entree(cfg["stream_url"], recul, int(cfg["stream_fps"]))
                             assert entree.stdout is not None
-                            ouvert = dernier - (recul - 1) * segment
                             vues = 0
                             cadence = None
                             figee = False
@@ -7498,9 +7514,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     try:
                         entree.kill()
                         dernier, segment = bord_du_direct(playlist_media(cfg["stream_url"]))
-                        entree = _entree(cfg["stream_url"], recul)
+                        ouvert = _ancre_montage(cfg["stream_url"], recul)
+                        entree = _entree(cfg["stream_url"], recul, int(cfg["stream_fps"]))
                         assert entree.stdout is not None
-                        ouvert = dernier - (recul - 1) * segment
                         vues = 0
                         cadence = None
                         secours = False
@@ -7566,13 +7582,14 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                                     "le direct continue")
                         continue
                     _, dernier, segment = attends_la_webcam(cfg["stream_url"])
-                    entree = _entree(cfg["stream_url"], recul)
-                    assert entree.stdout is not None
                     # La nouvelle entrée repart au bord du direct : l'ancre et le
                     # compte d'images la suivent, et la cadence se refait sur la
                     # première image pour retrouver les mêmes quarante-deux
-                    # secondes de retard.
-                    ouvert = dernier - (recul - 1) * segment
+                    # secondes de retard. L'ancre est lue juste avant ffmpeg,
+                    # sur la date du segment, comme au démarrage.
+                    ouvert = _ancre_montage(cfg["stream_url"], recul)
+                    entree = _entree(cfg["stream_url"], recul, int(cfg["stream_fps"]))
+                    assert entree.stdout is not None
                     vues = 0
                     cadence = None
                     continue
@@ -7784,7 +7801,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     and quand >= prochain_duplex):
                 duplex_depuis = quand
                 prochain_duplex = quand + DUPLEX_TENUE_S + DUPLEX_PAUSE_S
-                log.info("Duplex : Raspberry, Mont Serein, %s", nom_secours)
+                log.info("Duplex : Mont Serein, %s", nom_secours)
             demande = (duplex_depuis >= 0 and quand - duplex_depuis < DUPLEX_TENUE_S
                        and survol is None and not secours and not figee
                        and rediff is None and a_poser is None)
@@ -7792,22 +7809,24 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 duplex_depuis = -1.0
             compagne.voulu(demande)
             voisin = compagne.fraiche() if demande else None
-            if (voisin is not None and photo_machine is not None
-                    and getattr(photo_machine, "size", 0)):
-                toile, cadrage, _cadre_cannes = pose_duplex(
-                    vue, voisin, photo_machine, largeur, hauteur, nom_secours)
+            cadre_cannes = None
+            if voisin is not None:
+                toile, cadrage, cadre_cannes = pose_duplex(
+                    vue, voisin, largeur, hauteur, nom_secours)
             else:
                 # La webcam dans sa fenêtre, les encarts dans les bandes autour.
                 toile = cadre(vue, largeur, hauteur)
                 cadrage = fenetre(vue.shape[:2], largeur, hauteur)
+            vues_live = [cadrage] if cadre_cannes is None else [cadrage, cadre_cannes]
             # Les bulles d'abord, pour que tout le reste passe par-dessus :
             # les encarts, les pantins, le fil. Rien de ce qu'on vient
             # regarder ne doit se trouver derrière une bulle.
             # Hors du Ventoux, ces dessins n'ont plus de lieu : l'ours danse
             # sur un rond-point qui n'est pas dans l'image.
-            if not figee:
-                pose_bulles(toile, quand - origine, cadrage)
-                pose_poissons(toile, quand - origine, cadrage)
+            if secours or not figee:
+                for vue_effet in vues_live:
+                    pose_bulles(toile, quand - origine, vue_effet)
+                    pose_poissons(toile, quand - origine, vue_effet)
             # La webcam reste visible pendant le survol : le relief a pris sa
             # place dans la fenêtre, pas sa place dans l'émission.
             if survol is not None:
