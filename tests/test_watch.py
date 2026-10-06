@@ -2174,6 +2174,39 @@ class FogTests(unittest.TestCase):
                          "couper le son d'une sortie remplacée ne doit pas "
                          "couper la veille du direct")
 
+    def test_une_playlist_close_est_une_photo(self):
+        """La fin de liste tient la dernière image. Un segment jeune, non."""
+        frais = (
+            "#EXTM3U\n"
+            "#EXT-X-PROGRAM-DATE-TIME:2026-10-06T12:00:00+00:00\n"
+            "#EXTINF:6.0,\n"
+            "a.m4s\n"
+        )
+        maintenant = datetime(2026, 10, 6, 12, 0, 20, tzinfo=timezone.utc).timestamp()
+        self.assertFalse(stream.playlist_figee(frais, maintenant))
+        self.assertTrue(stream.playlist_figee(frais, maintenant + 180))
+        self.assertTrue(stream.playlist_figee(frais + "#EXT-X-ENDLIST\n", maintenant))
+
+    def test_le_mode_degrade_est_une_petite_ligne(self):
+        """La photo reste lisible. Le rouge n'y entre pas."""
+        image = np.full((720, 1280, 3), 40, np.uint8)
+        vue = (100, 80, 1000, 520)
+        stream.pose_mode_degrade(image, vue)
+        source = inspect.getsource(stream.pose_mode_degrade)
+        self.assertIn("DEGRADED MODE", source)
+        self.assertIn("Broadcast continues", source)
+        self.assertNotIn("ROUGE", source)
+        touche = np.any(image != 40, axis=2)
+        self.assertLess(float(touche.mean()), 0.08)
+        gx, gy, gw, gh = vue
+        self.assertTrue(touche[gy:gy + gh, gx:gx + gw].any())
+        page = (ROOT / "site" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("function playlistFigee", page)
+        html = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("The broadcast continues.", html)
+        self.assertIn('id="degrade"', html)
+        self.assertIn('pose_horloge(toile, montre', inspect.getsource(stream.diffuse))
+
     def test_le_detecteur_recoit_la_boite_de_limage_quon_lui_donne(self):
         """L'image et le rectangle doivent venir du même instant.
 

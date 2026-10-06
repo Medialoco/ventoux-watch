@@ -1135,6 +1135,40 @@ section[id] { scroll-margin-top: 50px; }
 
 .screen .stage-frame [hidden] { display: none; }
 
+/* Au-dessus des commandes du lecteur, pour qu'un doigt sur la tablette
+   atteigne encore la barre. Le texte ne prend pas les touches. */
+.degrade {
+  position: absolute;
+  z-index: 4;
+  left: 14px;
+  bottom: 56px;
+  max-width: min(420px, calc(100% - 28px));
+  margin: 0;
+  padding: 8px 10px 9px;
+  background: rgba(12, 14, 16, 0.78);
+  border-top: 2px solid #f0b429;
+  color: #f7f4ee;
+  font-size: 13px;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.degrade span {
+  display: block;
+  margin-bottom: 2px;
+  color: #f0b429;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.live-chip.degraded {
+  color: #c9842a;
+  border-color: color-mix(in srgb, #c9842a 40%, var(--line));
+}
+
+.live-chip.degraded i { animation: none; }
+
 .around .chips {
   margin-top: 10px;
 }
@@ -1318,12 +1352,12 @@ section[id] { scroll-margin-top: 50px; }
   font-weight: 600;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1400px) {
   .around {
     display: flex;
     flex-direction: column;
   }
-  .around .stage { order: -1; }
+  .around .stage { order: -1; width: 100%; }
 }
 
 .feature .feature-line {

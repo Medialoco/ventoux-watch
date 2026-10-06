@@ -74,10 +74,14 @@
             <iframe id="direct" title="#FREETECHNORADIO" allowfullscreen
                     allow="autoplay; encrypted-media; picture-in-picture" hidden></iframe>
             <video id="player" controls autoplay muted playsinline hidden></video>
+            <p id="degrade" class="degrade" hidden>
+              <span>Degraded mode</span>
+              Webcam interrupted. Last picture. The broadcast continues.
+            </p>
           </div>
         </div>
         <p class="chips" aria-label="Raspberry Pi 5">
-          <span class="chip live-chip"><i></i> LIVE</span>
+          <span class="chip live-chip"><i></i><span id="live-mot">LIVE</span></span>
           <span class="chip pi-chip"><i></i> RASPBERRY PI 5</span>
         </p>
       </div>

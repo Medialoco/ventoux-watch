@@ -1020,6 +1020,52 @@ suisLeDirect();
 // should follow the broadcast that replaced the one it opened on.
 setInterval(suisLeDirect, 5 * 60 * 1000);
 
+// The picture can outlive the camera. A closed playlist is a photograph;
+// the broadcast on this page keeps going, and the line says so. Two minutes
+// without a new segment is the same thing. A short gap is not.
+const FIGEE_APRES_S = 120;
+const degrade = document.querySelector("#degrade");
+const liveMot = document.querySelector("#live-mot");
+const liveChip = document.querySelector(".live-chip");
+
+function playlistFigee(texte, maintenant = Date.now()) {
+  if (texte.includes("#EXT-X-ENDLIST")) return true;
+  const dates = [...texte.matchAll(/#EXT-X-PROGRAM-DATE-TIME:([^\r\n]+)/g)]
+    .map((marque) => Date.parse(marque[1]))
+    .filter((instant) => Number.isFinite(instant));
+  if (!dates.length) return false;
+  return (maintenant - dates[dates.length - 1]) / 1000 > FIGEE_APRES_S;
+}
+
+async function textePlaylist(url) {
+  const reponse = await fetch(url, { cache: "no-store" });
+  if (!reponse.ok) throw new Error(String(reponse.status));
+  const texte = await reponse.text();
+  const ligne = texte.split("\n").map((l) => l.trim()).find((l) => l && !l.startsWith("#"));
+  if (!ligne || ligne === url || !ligne.includes(".m3u8")) return texte;
+  const suite = ligne.startsWith("http") ? ligne : new URL(ligne, url).href;
+  const media = await fetch(suite, { cache: "no-store" });
+  if (!media.ok) return texte;
+  return media.text();
+}
+
+function peintDegrade(figee) {
+  if (degrade) degrade.hidden = !figee;
+  if (liveChip) liveChip.classList.toggle("degraded", figee);
+  if (liveMot) liveMot.textContent = figee ? "DEGRADED" : "LIVE";
+}
+
+async function veilleWebcam() {
+  try {
+    peintDegrade(playlistFigee(await textePlaylist(STREAM)));
+  } catch (_) {
+    /* The last reading stays. A failed fetch is not a camera. */
+  }
+}
+
+veilleWebcam();
+setInterval(veilleWebcam, 30 * 1000);
+
 const list = document.querySelector("#list");
 const empty = document.querySelector("#empty");
 let events = [];

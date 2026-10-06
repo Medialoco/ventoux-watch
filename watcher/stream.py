@@ -107,6 +107,9 @@ bord_du_direct = direct.bord_du_direct
 # vaut mieux que le service redémarre pour repartir de zéro.
 ATTENTE_WEBCAM_S = 1800.0
 ATTENTE_PAS_S = 20.0
+# Deux minutes sans segment neuf, ce n'est plus un hoquet. La playlist qui
+# porte sa propre fin l'est tout de suite : l'éditeur a fermé le fichier.
+FIGEE_APRES_S = 120.0
 
 
 def attends_la_webcam(url: str) -> tuple[str, float, float]:
@@ -141,6 +144,34 @@ def attends_la_webcam(url: str) -> tuple[str, float, float]:
             souci = erreur
             time.sleep(ATTENTE_PAS_S)
     raise RuntimeError(f"webcam muette depuis {ATTENTE_WEBCAM_S:.0f} s : {souci}")
+
+
+def playlist_figee(texte: str, maintenant: float, apres_s: float = FIGEE_APRES_S) -> bool:
+    """La liste est une archive : elle a écrit sa fin, ou plus rien ne paraît.
+
+    Un trou de quelques secondes n'est pas ça. On ne tient la dernière image
+    que lorsque l'éditeur a clos la playlist, ou que le dernier segment a
+    deux minutes. Avant, on rouvre l'entrée et le direct continue.
+    """
+    if "#EXT-X-ENDLIST" in texte:
+        return True
+    try:
+        dates, _duree = direct.dates_des_segments(texte)
+    except RuntimeError:
+        return False
+    return maintenant - dates[-1] > apres_s
+
+
+def _derniere_image(entree: subprocess.Popen, octets: int,
+                    hauteur: int, largeur: int) -> np.ndarray | None:
+    """La dernière image complète que l'entrée veut bien donner."""
+    assert entree.stdout is not None
+    derniere = None
+    while True:
+        brut = entree.stdout.read(octets)
+        if len(brut) < octets:
+            return derniere
+        derniere = np.frombuffer(brut, np.uint8).reshape(hauteur, largeur, 3).copy()
 
 
 # À quel rythme on va vérifier que la diffusion existe encore, et au bout de
@@ -6473,6 +6504,47 @@ HORLOGE_LIGNES = (MACHINE_LIGNES[0], MACHINE_LIGNES[1],
                   MACHINE_LIGNES[2], MACHINE_LIGNES[-1])
 
 
+def pose_mode_degrade(image: np.ndarray, vue: tuple[int, int, int, int]) -> None:
+    """La webcam s'est arrêtée. On garde la photo, le direct continue.
+
+    Deux lignes, en bas de la fenêtre, à l'ambre. Le rouge reste au direct
+    vivant : une pastille rouge sur une photo dirait le contraire de ce
+    qu'elle est.
+    """
+    gx, gy, gw, gh = vue
+    if gw < 40 or gh < 40:
+        return
+    echelle = image.shape[1] / 1600.0
+    kicker, phrase = "DEGRADED MODE", "Webcam interrupted. Last picture. Broadcast continues."
+    trait = max(1, int(round(echelle)))
+    tk, tp = 0.42 * echelle, 0.34 * echelle
+    (lk, hk), _ = cv2.getTextSize(kicker, cv2.FONT_HERSHEY_SIMPLEX, tk, trait)
+    (lp, hp), _ = cv2.getTextSize(phrase, cv2.FONT_HERSHEY_SIMPLEX, tp, trait)
+    marge = int(round(14 * echelle))
+    while lp > gw - 4 * marge and tp > 0.2 * echelle:
+        tp *= 0.92
+        (lp, hp), _ = cv2.getTextSize(phrase, cv2.FONT_HERSHEY_SIMPLEX, tp, trait)
+    pad = int(round(8 * echelle))
+    ecart = int(round(6 * echelle))
+    large = min(gw - 2 * marge, max(lk, lp) + 2 * pad)
+    haut_panneau = hk + hp + ecart + 2 * pad
+    x0 = gx + marge
+    y1 = gy + gh - marge
+    y0 = y1 - haut_panneau
+    x1 = x0 + large
+    if x1 <= x0 or y0 < gy:
+        return
+    panneau = image[y0:y1, x0:x1]
+    if not panneau.size:
+        return
+    panneau[:] = (panneau.astype(np.float32) * 0.38).astype(np.uint8)
+    cv2.line(image, (x0, y0), (x1 - 1, y0), AMBRE, trait, cv2.LINE_AA)
+    cv2.putText(image, kicker, (x0 + pad, y0 + pad + hk),
+                cv2.FONT_HERSHEY_SIMPLEX, tk, AMBRE, trait, cv2.LINE_AA)
+    cv2.putText(image, phrase, (x0 + pad, y0 + pad + hk + ecart + hp),
+                cv2.FONT_HERSHEY_SIMPLEX, tp, BLANC, trait, cv2.LINE_AA)
+
+
 def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                  autre: str = "REPLAY", commune: str = "",
                  carte: list | None = None,
@@ -7019,50 +7091,110 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     if images3d:
         log.info("Survol du terrain : %d images", len(images3d))
     tirage = random.Random()
+    figee = False
+    photo_figee: np.ndarray | None = None
+    sonde_webcam = 0.0
+    try:
+        figee = playlist_figee(_lire(media), _maintenant())
+    except Exception:
+        log.warning("Playlist illisible au départ", exc_info=True)
+    if figee:
+        photo_figee = _derniere_image(entree, octets, source_h, source_l)
+        entree.kill()
+        if photo_figee is None:
+            figee = False
+            entree = _entree(cfg["stream_url"], recul)
+            assert entree.stdout is not None
+        else:
+            log.info("Webcam interrompue : dernière image tenue, le direct continue")
     try:
         while True:
-            brut = entree.stdout.read(octets)
-            if len(brut) < octets:
-                # Le raisonnement d'attends_la_webcam, appliqué en cours de
-                # route. Au démarrage on a appris à patienter plutôt qu'à
-                # quitter, parce qu'un départ rouvre la connexion RTMP et
-                # qu'une arrivée qui clignote fait fermer le direct. Ici on
-                # quittait quand même : la webcam s'est tarie vingt-cinq fois
-                # dans la journée, systemd a tout rouvert chaque fois, et
-                # YouTube a fini par couper. L'entrée se rouvre seule ; la
-                # sortie ne se touche pas.
-                log.warning("Le flux s'est tari après %d images : on rouvre l'entrée", images)
-                entree.kill()
-                _, dernier, segment = attends_la_webcam(cfg["stream_url"])
-                entree = _entree(cfg["stream_url"], recul)
-                assert entree.stdout is not None
-                # La nouvelle entrée repart au bord du direct : l'ancre et le
-                # compte d'images la suivent, et la cadence se refait sur la
-                # première image pour retrouver les mêmes quarante-deux
-                # secondes de retard.
-                ouvert = dernier - (recul - 1) * segment
-                vues = 0
-                cadence = None
-                continue
-            quand = ouvert + vues / cfg["stream_fps"]
-            vues += 1
-            images += 1
+            tenu = False
+            if figee and photo_figee is not None:
+                time.sleep(1.0 / cfg["stream_fps"])
+                if _maintenant() - sonde_webcam >= ATTENTE_PAS_S:
+                    sonde_webcam = _maintenant()
+                    try:
+                        frais = playlist_media(cfg["stream_url"])
+                        if not playlist_figee(_lire(frais), _maintenant()):
+                            media, dernier, segment = attends_la_webcam(cfg["stream_url"])
+                            entree = _entree(cfg["stream_url"], recul)
+                            assert entree.stdout is not None
+                            ouvert = dernier - (recul - 1) * segment
+                            vues = 0
+                            cadence = None
+                            figee = False
+                            log.info("La webcam a repris")
+                            continue
+                    except Exception:
+                        log.info("Webcam toujours interrompue")
+                image = photo_figee.copy()
+                quand = ouvert
+                montre = _maintenant()
+                tenu = True
+            else:
+                brut = entree.stdout.read(octets)
+                if len(brut) < octets:
+                    # Le raisonnement d'attends_la_webcam, appliqué en cours de
+                    # route. Au démarrage on a appris à patienter plutôt qu'à
+                    # quitter, parce qu'un départ rouvre la connexion RTMP et
+                    # qu'une arrivée qui clignote fait fermer le direct. Ici on
+                    # quittait quand même : la webcam s'est tarie vingt-cinq fois
+                    # dans la journée, systemd a tout rouvert chaque fois, et
+                    # YouTube a fini par couper. L'entrée se rouvre seule ; la
+                    # sortie ne se touche pas.
+                    #
+                    # Sauf quand la playlist est close : là, rouvrir rejoue la
+                    # dernière minute en boucle et l'horloge ment. On garde
+                    # cette image, l'heure du direct, et on continue.
+                    log.warning("Le flux s'est tari après %d images : on rouvre l'entrée", images)
+                    entree.kill()
+                    gel = photo_figee is not None
+                    if gel:
+                        try:
+                            gel = playlist_figee(_lire(playlist_media(cfg["stream_url"])),
+                                                 _maintenant())
+                        except Exception:
+                            gel = False
+                    if gel:
+                        figee = True
+                        sonde_webcam = _maintenant()
+                        rediff = None
+                        survol = None
+                        log.warning("Webcam interrompue : on tient la dernière image, "
+                                    "le direct continue")
+                        continue
+                    _, dernier, segment = attends_la_webcam(cfg["stream_url"])
+                    entree = _entree(cfg["stream_url"], recul)
+                    assert entree.stdout is not None
+                    # La nouvelle entrée repart au bord du direct : l'ancre et le
+                    # compte d'images la suivent, et la cadence se refait sur la
+                    # première image pour retrouver les mêmes quarante-deux
+                    # secondes de retard.
+                    ouvert = dernier - (recul - 1) * segment
+                    vues = 0
+                    cadence = None
+                    continue
+                quand = ouvert + vues / cfg["stream_fps"]
+                vues += 1
+                images += 1
+                montre = quand
             # L'instant où l'image qu'on s'apprête à dessiner sera regardée.
             # Posé avant de dessiner quoi que ce soit, puisque c'est l'heure
             # que le crédit musical va lire.
             musique.a_l_ecran(diffusees / cfg["stream_fps"])
-            if quand - relu >= 2.0:
+            if montre - relu >= 2.0:
                 vus = identifications(racine / "data" / "events.json", quand - TENUE_S - 60)
                 cherches = lire_recherches(racine / "data" / "cherche.json")
                 tableau = lire_score(racine / "data" / "score.json")
                 machine = etat_machine(racine)
                 # Le soleil est calculé, pas lu : aucun service à interroger,
                 # aucune panne de réseau ne peut faire rater le lever.
-                haut = solar_elevation(datetime.fromtimestamp(quand, timezone.utc),
+                haut = solar_elevation(datetime.fromtimestamp(montre, timezone.utc),
                                        cfg["camera"]["lat"], cfg["camera"]["lon"])
                 if (hauteur_soleil is not None and hauteur_soleil < HORIZON <= haut
-                        and quand - bonjour > 12 * 3600):
-                    bonjour = quand
+                        and montre - bonjour > 12 * 3600):
+                    bonjour = montre
                     if musique.matins:
                         musique.dis(tirage.choice(musique.matins))
                     log.info("Lever du soleil : bonjour %s", nom_du_lieu)
@@ -7071,35 +7203,39 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # Les heures du soleil ne bougent pas dans la journée : on les
                 # cherche au premier tour et au passage de minuit, pas toutes
                 # les deux secondes.
-                aujourdhui = datetime.fromtimestamp(quand, PARIS).date()
+                aujourdhui = datetime.fromtimestamp(montre, PARIS).date()
                 if aujourdhui != jour_calcule:
                     jour_calcule = aujourdhui
                     try:
-                        almanach = heures_du_soleil(relief, cfg["camera"], quand)
+                        almanach = heures_du_soleil(relief, cfg["camera"], montre)
                         demain = heures_du_soleil(relief, cfg["camera"],
-                                                  quand + 86400)
+                                                  montre + 86400)
                     except Exception:
                         log.warning("Heures du soleil illisibles", exc_info=True)
                         almanach = demain = {}
                 ruban = morceaux_ruban(lieu, ciel,
-                                       morceaux_soleil(almanach, quand, demain))
+                                       morceaux_soleil(almanach, montre, demain))
                 # Ce que la veille lit sur l'image passe avant ce que dit le
                 # service : il arrive qu'il annonce « couvert » sur une vallée
                 # pendant qu'il fait grand soleil à mille quatre cents mètres.
                 temps = str(ciel.get("webcam") or ciel.get("api") or "")
-                soleil = (ou_est_le_soleil(cfg["camera"], quand, hauteur / largeur)
-                          if soleil_absent(relief, cfg["camera"], quand, temps) else None)
+                soleil = (ou_est_le_soleil(cfg["camera"], montre, hauteur / largeur)
+                          if soleil_absent(relief, cfg["camera"], montre, temps) else None)
                 mot_gris = BROUILLARD_MOTS.get(temps, "")
                 prog = PROG_VIDE if muet else musique.programme()
-                relu = quand
+                relu = montre
             pistes = pistes_visibles(cherches, quand)
             nommes = [vu for vu in vus if not cherche_encore(vu, pistes, quand)]
-            image = np.frombuffer(brut, np.uint8).reshape(source_h, source_l, 3).copy()
+            if not tenu:
+                image = np.frombuffer(brut, np.uint8).reshape(source_h, source_l, 3).copy()
+                photo_figee = image.copy()
             # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.
-            applique_teinte(image, *teinte_du_moment(quand - origine))
+            # Pas sur la photo tenue : c'est une photographie, plus un traitement.
+            if not figee:
+                applique_teinte(image, *teinte_du_moment(quand - origine))
             # Le soleil d'enfant avant les filtres : il fait partie de l'image
             # du ciel, donc il se pixellise et il ondule avec elle.
-            if soleil is not None:
+            if not figee and soleil is not None:
                 pose_soleil_dessine(image, soleil, quand - origine)
             # Le lampadaire au même endroit du traitement, et pour la même
             # raison : il n'est pas posé sur la vitre, il remplace un objet du
@@ -7110,15 +7246,15 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # allumée. De jour, un lampadaire de livre d'images planté au
             # milieu d'une photo en plein soleil ne serait plus un dessin posé
             # sur un objet, ce serait un objet en moins.
-            if lampadaire is not None and (hauteur_soleil or -90.0) <= HORIZON:
+            if not figee and lampadaire is not None and (hauteur_soleil or -90.0) <= HORIZON:
                 pose_lampadaire(image, *lampadaire, quand - origine)
             # Le grain ne tombe jamais sur une prise. Tout l'intérêt d'un
             # rectangle rouge est qu'on puisse regarder ce qu'il entoure, et
             # une voiture en gros carrés n'est plus une voiture.
-            if quand - dernier_vu > TENUE_S:
+            if not figee and quand - dernier_vu > TENUE_S:
                 applique_effet(image, *effet_du_moment(quand - origine), quand - origine)
             # La fête suit le rectangle, pas l'arrivée de la fiche.
-            if quand - attrape > ATTRAPE_S:
+            if not figee and quand - attrape > ATTRAPE_S:
                 neuve = prise_a_feter(vus, quand, fetes)
                 if neuve is not None and cherche_encore(neuve, pistes, quand):
                     neuve = None
@@ -7141,7 +7277,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # quelque chose à l'écran. Seule une vraie détection compte.
                 dernier_mouvement = quand
                 rediff = None
-            elif quand - dernier_vu > CREUX_S:
+            elif not figee and quand - dernier_vu > CREUX_S:
                 # Rien depuis deux minutes : on va chercher dans ce qu'on a
                 # déjà attrapé. Sans remise, pour ne pas remontrer le même
                 # camion toute la nuit.
@@ -7177,13 +7313,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 pose_attrape(image, quand - attrape, attrape_nom)
             # Le brouillard se dit entre deux prises et jamais par-dessus : une
             # voiture qui passe est plus intéressante que le temps qu'il fait.
-            if (mot_gris and quand - gris_depuis > BROUILLARD_PAUSE_S
+            if (not figee and mot_gris and quand - gris_depuis > BROUILLARD_PAUSE_S
                     and quand - attrape > ATTRAPE_S and not musique.parle()):
                 gris_depuis = quand
                 if musique.brouillards:
                     musique.dis(tirage.choice(musique.brouillards))
                 log.info("Le flux dit « %s »", mot_gris)
-            if (musique.repliques and quand - dernier_mouvement > ENNUI_S
+            if (not figee and musique.repliques and quand - dernier_mouvement > ENNUI_S
                     and quand - dernier_ennui > ENNUI_S):
                 musique.dis(tirage.choice(musique.repliques))
                 dernier_ennui = quand
@@ -7210,7 +7346,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             if survol is not None and (fait_jour != survol_de_jour
                                        or quand - survol > tenue):
                 fin_survol, survol = quand, None
-            elif (survol is None and images3d and rediff is None and a_poser is None
+            elif (not figee and survol is None and images3d and rediff is None and a_poser is None
                   and quand - dernier_vu > CREUX_S
                   and quand - fin_survol > VUE3D_PAUSE_S):
                 survol, survol_de_jour = quand, fait_jour
@@ -7370,7 +7506,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # fenêtre. Pas sur le relief : le rectangle et le nom d'une prise
             # appartiennent à la webcam, et le direct est déjà dans le coin.
             # Pas sur une rediffusion : là, ce n'est plus la vue.
-            if a_poser is None and survol is None:
+            if not figee and a_poser is None and survol is None:
                 dessine(toile, nommes, quand, vue=cadrage)
                 pose_recherches(toile, pistes, cadrage, vus, quand)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
@@ -7470,15 +7606,17 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             pose_salle(toile, cadrage, salle_abonnes, salle_direct,
                        time.time() - salle_feu if salle_feu else -1.0,
                        salle_tenue)
-            pose_ruban(toile, ruban, quand - origine)
+            pose_ruban(toile, ruban, montre - origine)
             # Flottement lent des deux encarts, en opposition : un mouvement
             # continu, pas un sursaut sur le beat.
-            remue = flottement(quand - origine, largeur / 1600)
-            los, beau = ratios_du_jour(tableau, quand)
-            pose_horloge(toile, quand, direct=rediff is None and survol is None,
-                         autre="REPLAY" if rediff is not None else "3D MODEL",
+            remue = flottement(montre - origine, largeur / 1600)
+            los, beau = ratios_du_jour(tableau, montre)
+            pose_horloge(toile, montre, direct=not figee and rediff is None and survol is None,
+                         autre="DEGRADED" if figee else ("REPLAY" if rediff is not None else "3D MODEL"),
                          commune=commune, carte=carte_pays, ou=ou_camera,
                          remue=-remue, photo=photo_trampoline, ratio=beau)
+            if figee:
+                pose_mode_degrade(toile, cadrage)
             ou_machine = None
             if machine_ou.get("lat") is not None:
                 ou_machine = (float(machine_ou["lat"]), float(machine_ou["lon"]))
