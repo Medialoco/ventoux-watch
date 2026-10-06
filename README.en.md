@@ -16,7 +16,7 @@ The live picture is on [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). T
 
 *24 September 2026, 23:41 Paris time. The photograph was taken at 14:41 in Los Angeles.*
 
-The music is free, around the clock, with the licence on screen for every track. It comes from [Dogmazic](https://play.dogmazic.net/), and the stream’s playlist is [public](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803). Fourteen hours, one hundred and fifty-three tracks. Four of those hours are the album [Mont Serein 002](https://play.dogmazic.net/albums.php?action=show&album=11242), written for this project by [thepriben](https://play.dogmazic.net/artists.php?action=show&artist=7208).
+The music is free, around the clock, with the licence on screen for every track. It comes from [Dogmazic](https://play.dogmazic.net/), and the stream’s playlist is [public](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803). Fourteen hours, one hundred and fifty-eight tracks. Four of those hours are the album [Mont Serein 002](https://play.dogmazic.net/albums.php?action=show&album=11242), written for this project by [thepriben](https://play.dogmazic.net/artists.php?action=show&artist=7208).
 
 Sizes are read in metres, from the camera’s pose and a terrain model. Above 5.5 m it is not a car, whatever the network says. Below two metres it is not a bus. When the measurement cannot be trusted, it is thrown away. Zero means we do not know.
 

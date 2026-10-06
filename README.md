@@ -16,7 +16,7 @@ Le direct est sur [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). Le sit
 
 *24 septembre 2026, 23 h 41, heure de Paris. La photo a été prise à 14 h 41 à Los Angeles.*
 
-La musique est libre, jour et nuit, avec la licence à l’écran pour chaque morceau. Elle vient de [Dogmazic](https://play.dogmazic.net/), et la playlist du flux est [publique](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803). Quatorze heures, cent cinquante-trois morceaux. Quatre de ces heures sont l’album [Mont Serein 002](https://play.dogmazic.net/albums.php?action=show&album=11242), écrit pour ce projet par [thepriben](https://play.dogmazic.net/artists.php?action=show&artist=7208).
+La musique est libre, jour et nuit, avec la licence à l’écran pour chaque morceau. Elle vient de [Dogmazic](https://play.dogmazic.net/), et la playlist du flux est [publique](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803). Quatorze heures, cent cinquante-huit morceaux. Quatre de ces heures sont l’album [Mont Serein 002](https://play.dogmazic.net/albums.php?action=show&album=11242), écrit pour ce projet par [thepriben](https://play.dogmazic.net/artists.php?action=show&artist=7208).
 
 Les tailles se lisent en mètres, à partir de la pose de la caméra et d’un modèle de terrain. Au-dessus de 5,5 m ce n’est pas une voiture, quoi qu’en dise le réseau. En dessous de deux mètres ce n’est pas un bus. Quand la mesure ne tient pas, elle est jetée. Zéro veut dire qu’on ne sait pas.
 
