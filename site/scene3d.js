@@ -4,11 +4,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 // What grows on the ground, in the order the map codes it. The first is what
 // the map has not said: up here that is the ski area in summer, pasture worn
 // thin by the pistes, so it is given the colour of grass rather than of sand.
-const COVER = [0x8c9a6c, 0x47713b, 0x85a95f, 0xaaa195];
+const COVER = [0x8c9a6c, 0x47713b, 0x85a95f, 0xaaa195, 0xd2c09a, 0x2a628f];
 
 // Tarmac, gravel and beaten earth. A road is drawn at the width the map gives
 // it, so the difference between a lane and a footpath is a real difference.
 const SURFACE = {
+  primary: 0x5c5c62, trunk: 0x5c5c62,
   secondary: 0x5c5c62, tertiary: 0x5c5c62, unclassified: 0x606067,
   residential: 0x606067, living_street: 0x606067, service: 0x66666d,
   track: 0x8a7b5e, path: 0xa18a68, footway: 0xa18a68, steps: 0xa18a68,
@@ -18,6 +19,10 @@ const SURFACE = {
   island: 0xa19e6e,
   playground: 0xb8a24a,
   pool: 0x2f6f9e,
+  beach: 0xd2c09a,
+  water: 0x2f6f9e,
+  groyne: 0x8a8178,
+  railway: 0x5c5348,
 };
 // Drawn just clear of the ground, so the tarmac does not fight the slope it
 // lies on for the same pixels.
@@ -59,11 +64,40 @@ const DUSK_LOW = -7;
 const DUSK_HIGH = 7;
 
 const host = document.getElementById("relief");
-if (host) start(host).catch(() => host.closest(".block")?.setAttribute("hidden", ""));
+const PLACES = { serein: "data/relief.json", cannes: "data/cannes-relief.json" };
+let session = null;
+let ticket = 0;
+if (host) {
+  document.querySelectorAll("[data-place]").forEach((button) => {
+    button.addEventListener("click", () => choose(button.dataset.place));
+  });
+  choose("serein");
+}
 
-async function start(host) {
-  const relief = await fetch("data/relief.json", { cache: "no-store" }).then((answer) => answer.json());
+function choose(place) {
+  document.querySelectorAll("[data-place]").forEach((button) => {
+    button.classList.toggle("on", button.dataset.place === place);
+  });
+  const note = document.getElementById("relief-note");
+  if (note) note.hidden = place !== "cannes";
+  start(host, PLACES[place] || PLACES.serein).catch(() => {
+    if (place !== "serein") choose("serein");
+    else if (!host.querySelector("canvas")) host.closest(".block")?.setAttribute("hidden", "");
+  });
+}
+
+async function start(host, url) {
+  const mine = ++ticket;
+  if (session) session();
+  session = null;
+  const relief = await fetch(url, { cache: "no-store" }).then((answer) => answer.json());
+  if (mine !== ticket) return;
   const pose = relief.pose;
+  // Mont Serein stands on the chalet roof. Cannes names its own eye: the
+  // pole height is not on the map, so the opening view is a viewpoint.
+  const roof = Number.isFinite(pose.roof_m) ? pose.roof_m : TOIT_M;
+  const stand = Number.isFinite(pose.stand_m) ? pose.stand_m : roof;
+  const lookDist = Number.isFinite(pose.look_m) ? pose.look_m : 700;
   const aspect = pose.aspect || 16 / 9;
   const axes = frame(pose);
 
@@ -78,8 +112,9 @@ async function start(host) {
   const world = new THREE.Scene();
   world.add(ground(relief));
   for (const road of relief.roads) world.add(ribbon(road.p, road.w, SURFACE[road.k] ?? SURFACE.track, high));
-  for (const area of relief.ribbons) {
-    world.add(slab(area.p, SURFACE[area.k] ?? SURFACE.parking, high));
+  for (const area of relief.ribbons || []) {
+    const laid = slab(area.p, SURFACE[area.k] ?? SURFACE.parking, high);
+    if (laid) world.add(laid);
     if (area.h) world.add(standing(area, SURFACE[area.k] ?? SURFACE.parking, high));
   }
   for (const house of relief.buildings) world.add(block(house, high));
@@ -91,7 +126,7 @@ async function start(host) {
   for (const lamp of lamps) world.add(lamp.post);
   const beacons = (relief.beacons || []).map((mark) => obstacle(mark, high));
   for (const mark of beacons) world.add(mark.bulb);
-  const eye = here(pose, high);
+  const eye = here(pose, high, roof);
   named.push(eye);
   world.add(eye);
 
@@ -101,9 +136,12 @@ async function start(host) {
   world.add(fill, beam, star);
   const daylight = () => paintHour(world, pose, { fill, beam, star, lamps, beacons });
   daylight();
-  setInterval(daylight, 60000);
+  const clock = setInterval(daylight, 60000);
 
-  const camera = new THREE.PerspectiveCamera(vertical(pose.hfov, aspect), aspect, 1, 20000);
+  // A missing field of view is the page's lens. Cannes has not been fitted,
+  // and borrowing the Ventoux lens would pretend the two cameras are one.
+  const lens = Number.isFinite(pose.hfov) ? vertical(pose.hfov, aspect) : 42;
+  const camera = new THREE.PerspectiveCamera(lens, aspect, 0.4, 20000);
   const controls = new OrbitControls(camera, renderer.domElement);
   /* Asleep until asked. A view this size sits right where the thumb wants to
      scroll past it, and a canvas that swallows the wheel traps the reader
@@ -117,41 +155,46 @@ async function start(host) {
     if (wake) wake.hidden = awake;
     box?.classList.toggle("awake", awake);
   };
-  renderer.domElement.addEventListener("pointerdown", () => rouse(true));
-  wake?.addEventListener("click", () => rouse(true));
-  document.addEventListener("pointerdown", (hit) => {
-    if (!box?.contains(hit.target)) rouse(false);
-  });
-  addEventListener("keydown", (hit) => { if (hit.key === "Escape") rouse(false); });
+  const onWake = () => rouse(true);
+  const onDoc = (hit) => { if (!box?.contains(hit.target)) rouse(false); };
+  const onKey = (hit) => { if (hit.key === "Escape") rouse(false); };
+  renderer.domElement.addEventListener("pointerdown", onWake);
+  wake?.addEventListener("click", onWake);
+  document.addEventListener("pointerdown", onDoc);
+  addEventListener("keydown", onKey);
   rouse(false);
   controls.enableDamping = true;
   controls.maxDistance = 7000;
   // The far slope, straight ahead: near enough that turning feels like walking
   // round the bowl rather than round a marble held at arm's length.
-  const look = axes.forward.clone().multiplyScalar(700);
+  const look = axes.forward.clone().multiplyScalar(lookDist);
 
   function home() {
-    camera.position.set(0, TOIT_M, 0);
+    camera.position.set(0, stand, 0);
     camera.up.copy(axes.up);
     controls.target.copy(look);
-    controls.target.y += TOIT_M;
+    if (Number.isFinite(pose.stand_m)) controls.target.y = high(look.x, -look.z);
+    else controls.target.y += roof;
     controls.update();
   }
   home();
-  document.getElementById("relief-back")?.addEventListener("click", home);
+  const back = document.getElementById("relief-back");
+  back?.addEventListener("click", home);
   // The stage goes full screen, not the canvas: the buttons live inside it, and
   // a full screen that swallowed the one that puts the camera back would strand
   // anyone who had turned the scene around.
   const stage = document.getElementById("relief-stage") || host;
-  document.getElementById("relief-wide")?.addEventListener("click", () => {
+  const wideButton = document.getElementById("relief-wide");
+  const onWide = () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else stage.requestFullscreen?.();
-  });
-  document.addEventListener("fullscreenchange", () => {
-    const wide = document.getElementById("relief-wide");
-    if (wide) wide.textContent = document.fullscreenElement === stage ? "⤡" : "⤢";
+  };
+  const onFull = () => {
+    if (wideButton) wideButton.textContent = document.fullscreenElement === stage ? "⤡" : "⤢";
     fit();
-  });
+  };
+  wideButton?.addEventListener("click", onWide);
+  document.addEventListener("fullscreenchange", onFull);
 
   const caption = document.getElementById("relief-name");
   const finder = new THREE.Raycaster();
@@ -185,6 +228,19 @@ async function start(host) {
     controls.update();
     renderer.render(world, camera);
   });
+  session = () => {
+    renderer.setAnimationLoop(null);
+    clearInterval(clock);
+    renderer.dispose();
+    renderer.domElement.remove();
+    window.removeEventListener("resize", fit);
+    document.removeEventListener("pointerdown", onDoc);
+    removeEventListener("keydown", onKey);
+    document.removeEventListener("fullscreenchange", onFull);
+    wake?.removeEventListener("click", onWake);
+    wideButton?.removeEventListener("click", onWide);
+    back?.removeEventListener("click", home);
+  };
 }
 
 function spot(east, north, up) {
@@ -322,12 +378,14 @@ function slab(ring, colour, high) {
   const corners = shut ? ring.slice(0, -1) : ring;
   const flat = corners.map(([east, north]) => new THREE.Vector2(east, north));
   const place = [];
+  if (corners.length < 3) return null;
   for (const triangle of THREE.ShapeUtils.triangulateShape(flat, [])) {
     for (const corner of triangle) {
       const [east, north] = corners[corner];
       place.push(east, high(east, north) + LIFT_M / 2, -north);
     }
   }
+  if (place.length < 9) return null;
   const shape = new THREE.BufferGeometry();
   shape.setAttribute("position", new THREE.Float32BufferAttribute(place, 3));
   shape.computeVertexNormals();
@@ -482,16 +540,17 @@ function carving(figure, high) {
   return piece;
 }
 
-function here(pose, high) {
-  /* Where the webcam stands: on the roof of the welcome chalet, not on the
-     ground. Two metres of difference on a thirteen-hundred-metre hillside is
-     nothing to look at and everything to the geometry, because every angle in
-     this scene is measured from this point. */
+function here(pose, high, roof) {
+  /* Where the webcam stands. On the Ventoux that is the chalet roof, two
+     metres above the fitted eye. A place whose height is not on the map
+     keeps the mark on the ground instead of inventing a pole. */
+  const bolt = Number.isFinite(pose.height_m) ? pose.height_m : 4;
+  const lift = bolt + roof;
   const mark = new THREE.Mesh(
     new THREE.SphereGeometry(1.6, 14, 10),
     new THREE.MeshBasicMaterial({ color: 0xff5a5a }),
   );
-  mark.position.set(0, high(0, 0) + (pose.height_m || 4) + TOIT_M, 0);
+  mark.position.set(0, high(0, 0) + lift + (lift === 0 ? 1.6 : 0), 0);
   mark.name = "Webcam";
   return mark;
 }

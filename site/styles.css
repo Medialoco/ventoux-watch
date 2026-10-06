@@ -717,7 +717,7 @@ tr.wrong .event .sub { text-decoration: none; display: block; }
   gap: 6px;
 }
 
-#relief-back, #relief-wide {
+#relief-serein, #relief-cannes, #relief-back, #relief-wide {
   padding: 3px 9px;
   border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 999px;
@@ -728,6 +728,13 @@ tr.wrong .event .sub { text-decoration: none; display: block; }
   cursor: pointer;
 }
 
+#relief-serein.on, #relief-cannes.on { background: rgba(255, 255, 255, 0.28); }
+.relief .note {
+  margin: 8px 0 0;
+  color: var(--ink-dim, #5c6570);
+  font-size: 13px;
+  line-height: 1.45;
+}
 .relief .cap em { font-style: normal; font-weight: 600; }
 
 .foot {

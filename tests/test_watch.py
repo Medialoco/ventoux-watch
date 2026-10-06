@@ -6004,6 +6004,24 @@ class DuplexTests(unittest.TestCase):
         self.assertLess(int(rouge[1].max()), int(vert[1].min()) + 8)
         self.assertGreater(vue_v[2], vue_c[2])
 
+    def test_le_cadre_entier_reste_et_le_nom_est_au_dessus(self):
+        """Pas de recadrage : les deux coins de la photo sont dans la colonne,
+        et le nom est dans la marge, pas sur l'image."""
+        ventoux = np.full((270, 480, 3), (40, 40, 200), np.uint8)
+        ventoux[:40, :40] = (0, 0, 255)
+        ventoux[-40:, -40:] = (0, 255, 255)
+        cannes = np.full((180, 320, 3), (40, 180, 40), np.uint8)
+        toile, vue_v, _vue_c = stream.pose_duplex(ventoux, cannes, 1280, 720, "Cannes")
+        self.assertTrue(np.any(np.all(toile == (0, 0, 255), axis=2)))
+        self.assertTrue(np.any(np.all(toile == (0, 255, 255), axis=2)))
+        # Le glyphe est antialiasé : on cherche la teinte, pas le pixel exact.
+        marge = toile[:vue_v[1]]
+        proche = np.abs(marge.astype(np.int16) - np.array(stream.CYAN, dtype=np.int16)).max(axis=2) < 50
+        self.assertGreater(int(np.count_nonzero(proche)), 12)
+        photo = toile[vue_v[1]:vue_v[1] + vue_v[3], vue_v[0]:vue_v[0] + vue_v[2]]
+        sur = np.abs(photo.astype(np.int16) - np.array(stream.CYAN, dtype=np.int16)).max(axis=2) < 50
+        self.assertEqual(int(np.count_nonzero(sur)), 0)
+
     def test_la_maquette_ne_porte_pas_de_voyant_orange(self):
         toile = np.zeros((420, 1600, 3), np.uint8)
         stream.pose_horloge(toile, 1_790_000_000.0, direct=False, autre="3D MODEL")

@@ -53,6 +53,7 @@ jobs:
           cp -R site/. _site/
           cp data/events.json _site/data/events.json
           cp config/relief.json _site/data/relief.json
+          if [ -f config/cannes-relief.json ]; then cp config/cannes-relief.json _site/data/cannes-relief.json; fi
           # Le calage de la caméra : la carte y lit le cap et le champ réels
           # plutôt que de les porter en dur.
           cp config/scene.json _site/data/scene.json

@@ -2199,6 +2199,9 @@ def cadre(cam: np.ndarray, largeur: int, hauteur: int) -> np.ndarray:
 DUPLEX_PREMIER_S = 75.0
 DUPLEX_TENUE_S = 90.0
 DUPLEX_PAUSE_S = 900.0
+# Le décodeur de Cannes est lancé avant le créneau : la première image
+# met une dizaine de secondes à arriver.
+AMORCE_DUPLEX_S = 25.0
 # Du cadre partagé, le Ventoux garde la plus grande part. L'encart du
 # Raspberry est déjà à gauche de l'écran, hors de cette fenêtre.
 PART_VENTOUX = 0.62
@@ -2263,8 +2266,13 @@ def pose_duplex(ventoux: np.ndarray, cannes: np.ndarray,
     toile = np.zeros((hauteur, largeur, 3), np.uint8)
     vue_ventoux = _dans_la_colonne(toile, ventoux, colonnes[0])
     vue_cannes = _dans_la_colonne(toile, cannes, colonnes[1])
-    pose_cartouche(toile, vue_ventoux, "MONT SEREIN")
-    pose_cartouche(toile, vue_cannes, nom_cannes or "CANNES")
+    # Le nom est dans la marge noire, au-dessus de la photo. Posé sur
+    # l'image, il mange le ciel. La photo garde tout son cadre : un
+    # recadrage déplacerait les rectangles par rapport aux voitures.
+    pose_cartouche(toile, colonnes[0], "MONT SEREIN")
+    pose_cartouche(toile, colonnes[1], nom_cannes or "CANNES")
+    joint = colonnes[0][0] + colonnes[0][2] + max(0, gap // 2)
+    cv2.line(toile, (joint, sy), (joint, sy + sh - 1), (232, 232, 232), 1, cv2.LINE_8)
     return toile, vue_ventoux, vue_cannes
 
 
@@ -6806,7 +6814,10 @@ class Compagne:
     """
 
     TAILLE = (640, 360)
-    FRAIS_S = 8.0
+    # Une image reste pour tout le créneau. Le tuyau YouTube lâche souvent
+    # au bout de quelques secondes : sans ça, la colonne n'a pas le temps
+    # d'être vue.
+    FRAIS_S = DUPLEX_TENUE_S
 
     def __init__(self, cfg: dict, fps: int):
         self.cfg = cfg
@@ -6846,6 +6857,8 @@ class Compagne:
     def _boucle(self) -> None:
         while not self._stop.is_set():
             if not self._voulu.wait(1.0):
+                with self._lock:
+                    self._image = None
                 continue
             proc = self._ouvre()
             if proc is None or proc.stdout is None:
@@ -6866,7 +6879,8 @@ class Compagne:
             finally:
                 proc.kill()
                 with self._lock:
-                    self._image = None
+                    if not self._voulu.is_set():
+                        self._image = None
 
 
 def _ouvre_secours(cfg: dict, largeur: int, hauteur: int, fps: int) -> subprocess.Popen | None:
@@ -7349,6 +7363,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     dernier_ennui = origine - 10_000.0
     # Le premier arrive tôt, sans s'annoncer. Ensuite un quart d'heure.
     duplex_depuis = -1.0
+    duplex_peint = False
     prochain_duplex = origine + DUPLEX_PREMIER_S
     compagne = Compagne(cfg, int(cfg["stream_fps"]))
     pensee_jour, pensee_rang, pensee_etape, pensee_feu = _pensee_lue(racine)
@@ -7740,24 +7755,38 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         pose_lampadaire(dessus, *lampadaire, quand - origine,
                                         allume=True)
                     vue = dessus
-            # Trois colonnes, sans prévenir : la machine, le Ventoux, Cannes.
-            # Cannes n'est décodée que là, trois minutes en arrière. Tant que
-            # son image n'est pas arrivée, la montagne garde toute la fenêtre.
+            # Deux colonnes, sans prévenir : le Ventoux, puis Cannes.
+            # Cannes est ouverte un peu avant le créneau, trois minutes en
+            # arrière. Tant que son image n'est pas arrivée, la montagne
+            # garde toute la fenêtre.
             if (duplex_depuis < 0 and not secours and not figee and survol is None
                     and rediff is None and a_poser is None
                     and quand >= prochain_duplex):
                 duplex_depuis = quand
                 prochain_duplex = quand + DUPLEX_TENUE_S + DUPLEX_PAUSE_S
+                duplex_peint = False
                 log.info("Duplex : Mont Serein, %s", nom_secours)
             demande = (duplex_depuis >= 0 and quand - duplex_depuis < DUPLEX_TENUE_S
-                       and survol is None and not secours and not figee
+                       and not secours and not figee
                        and rediff is None and a_poser is None)
             if duplex_depuis >= 0 and not demande:
+                if not duplex_peint:
+                    log.warning("Duplex sans image")
                 duplex_depuis = -1.0
-            compagne.voulu(demande)
+                duplex_peint = False
+            # Le décodeur part avant l'image, pour que la colonne soit pleine
+            # dès la première seconde du créneau.
+            amorce = (not secours and not figee and survol is None
+                      and rediff is None and a_poser is None
+                      and duplex_depuis < 0
+                      and 0 <= prochain_duplex - quand <= AMORCE_DUPLEX_S)
+            compagne.voulu(demande or amorce)
             voisin = compagne.fraiche() if demande else None
             cadre_cannes = None
             if voisin is not None:
+                if not duplex_peint:
+                    duplex_peint = True
+                    log.info("Duplex à l'écran")
                 toile, cadrage, cadre_cannes = pose_duplex(
                     vue, voisin, largeur, hauteur, nom_secours)
             else:
