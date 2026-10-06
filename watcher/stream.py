@@ -6682,7 +6682,11 @@ def grave_rush(dossier: Path, images: list[bytes], noms: list[str],
 
 
 class Journal:
-    """Quelques secondes de ce qui vient de passer, pour le monter ensuite.
+    """Quelques secondes du direct, rectangle et good catch compris.
+
+    Ce qu'on garde est l'image déjà composée : la détection du mouvement,
+    le nom de la classe, et GOOD CATCH. Une photographie nue ne dit pas
+    ce que la veille a lu.
 
     Une prise ouvre un sujet. Une autre prise dans les quinze secondes
     l'allonge : la file des voitures tient dans un seul fichier. Le fichier
@@ -7057,7 +7061,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 relu = quand
             pistes = pistes_visibles(cherches, quand)
             image = np.frombuffer(brut, np.uint8).reshape(source_h, source_l, 3).copy()
-            journal.voit(image, quand)
             # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.
             applique_teinte(image, *teinte_du_moment(quand - origine))
             # Le soleil d'enfant avant les filtres : il fait partie de l'image
@@ -7094,7 +7097,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     log.info("Prise à l'écran : %s — %s", neuve["label"],
                              musique.voix_dit or "sans voix")
                     journal.sujet(quand, str(neuve.get("label") or ""))
-            journal.relache(quand)
             poses = visibles(vus, quand) or bool(pistes)
             if poses:
                 dernier_vu = quand
@@ -7476,6 +7478,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # sur les encarts. Jamais par-dessus la montagne : il s'arrête au
             # bord de la fenêtre, où il est le plus vif.
             pose_eclat(toile, cadrage, quand - attrape, attrape_nom, attrape_teinte)
+            # Le rush est cette image-ci, pas la photographie nue : le rectangle
+            # du mouvement, le nom de la classe, et GOOD CATCH sont déjà posés.
+            journal.voit(toile, quand)
+            journal.relache(quand)
             if sortie is None:
                 sortie, son = _sortie(cible, largeur, hauteur, cfg["stream_fps"],
                                       cfg["stream_bitrate"], cfg["stream_out_fps"],

@@ -7302,7 +7302,12 @@ class JournalTests(unittest.TestCase):
         self.assertEqual(gardes[1][1][0], b"37")
         self.assertEqual(gardes[1][1][-1], b"44")
 
-    def test_the_stream_keeps_the_photograph_when_it_celebrates(self):
+    def test_the_rush_is_the_frame_with_the_box_and_the_catch(self):
+        """Le fichier part après le rectangle et après GOOD CATCH."""
         source = inspect.getsource(stream.diffuse)
-        self.assertLess(source.index("journal.voit("), source.index("journal.sujet("))
-        self.assertLess(source.index("journal.sujet("), source.index("journal.relache("))
+        voit = source.index("journal.voit(")
+        self.assertLess(source.index("dessine("), voit)
+        self.assertLess(source.index("pose_recherches("), voit)
+        self.assertLess(source.index("pose_eclat("), voit)
+        self.assertLess(voit, source.index("journal.relache("))
+        self.assertLess(source.index("journal.sujet("), voit)
