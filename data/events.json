@@ -1,6 +1,152 @@
 {
-  "version": "0.6.5",
+  "version": "0.6.6",
   "events": [
+    {
+      "id": "2026-10-06T05-03-12Z-person-2",
+      "t": "2026-10-06T05:03:12Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "other",
+      "confidence": 0.647,
+      "thumb": "data/thumbs/2026-10-06T05-03-12Z-person-2.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.1787,
+          "area_grow": 1.02,
+          "clipped": false,
+          "shade": 0.961,
+          "kept": 0.321,
+          "area_ratio": 0.00219,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 0.9,
+          "height_m": 1.4,
+          "width_named_m": 0.7,
+          "height_named_m": 1.4,
+          "rise_ms": 0.0,
+          "drift_rate": 1.74,
+          "seen_as": [
+            "person 0.65 sur 71%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4545,
+          0.8153,
+          0.03,
+          0.1055
+        ],
+        "trace": [
+          [
+            1791262989.69,
+            0.4125,
+            0.8083,
+            0.0266,
+            0.0806
+          ],
+          [
+            1791262990.69,
+            0.4562,
+            0.8389,
+            0.0297,
+            0.0778
+          ],
+          [
+            1791262991.69,
+            0.5109,
+            0.8639,
+            0.0281,
+            0.0806
+          ],
+          [
+            1791262992.69,
+            0.575,
+            0.8778,
+            0.0219,
+            0.1
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-06T05-03-12Z-person-2.jpg"
+    },
+    {
+      "id": "2026-10-06T05-03-03Z-person-1",
+      "t": "2026-10-06T05:03:03Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "road",
+      "confidence": 0.763,
+      "thumb": "data/thumbs/2026-10-06T05-03-03Z-person-1.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0863,
+          "area_grow": 1.25,
+          "clipped": false,
+          "shade": 1.018,
+          "kept": 0.556,
+          "area_ratio": 0.00078,
+          "duration_s": 4.0,
+          "frames": 4,
+          "width_m": 3.5,
+          "height_m": 3.5,
+          "width_named_m": 1.5,
+          "height_named_m": 3.6,
+          "rise_ms": 0.0,
+          "drift_rate": 0.765,
+          "seen_as": [
+            "person 0.76 sur 39%",
+            "car 0.26 sur 0%"
+          ]
+        },
+        "box": [
+          0.1606,
+          0.6764,
+          0.0127,
+          0.0545
+        ],
+        "trace": [
+          [
+            1791262979.69,
+            0.1437,
+            0.6778,
+            0.0187,
+            0.0333
+          ],
+          [
+            1791262980.69,
+            0.15,
+            0.6861,
+            0.0234,
+            0.0417
+          ],
+          [
+            1791262982.69,
+            0.1906,
+            0.7083,
+            0.0172,
+            0.0417
+          ],
+          [
+            1791262983.69,
+            0.2156,
+            0.7194,
+            0.0156,
+            0.05
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-06T05-03-03Z-person-1.jpg"
+    },
     {
       "id": "2026-10-06T04-06-31Z-missed-2",
       "t": "2026-10-06T04:06:31Z",
