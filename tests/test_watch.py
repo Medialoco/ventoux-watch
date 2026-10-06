@@ -6022,6 +6022,25 @@ class DuplexTests(unittest.TestCase):
         sur = np.abs(photo.astype(np.int16) - np.array(stream.CYAN, dtype=np.int16)).max(axis=2) < 50
         self.assertEqual(int(np.count_nonzero(sur)), 0)
 
+    def test_la_rangee_mixte_est_haute_et_garde_le_cadre(self):
+        """Cinq colonnes, plus hautes que la photo, cadre entier conservé."""
+        ventoux = np.full((270, 480, 3), (40, 40, 200), np.uint8)
+        ventoux[:40, :40] = (0, 0, 255)
+        ventoux[-40:, -40:] = (0, 255, 255)
+        cannes = np.full((180, 320, 3), (40, 180, 40), np.uint8)
+        toile, vue_v, vue_c, cols = stream.pose_mixte(ventoux, cannes, 1280, 720, "Cannes")
+        self.assertEqual(len(cols), 5)
+        for gauche, droite in zip(cols, cols[1:]):
+            self.assertLess(gauche[0], droite[0])
+        self.assertGreater(cols[1][3], vue_v[3])
+        self.assertGreater(cols[3][3], vue_c[3])
+        self.assertLess(vue_v[0], vue_c[0])
+        self.assertTrue(np.any(np.all(toile == (0, 0, 255), axis=2)))
+        self.assertTrue(np.any(np.all(toile == (0, 255, 255), axis=2)))
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("pose_mixte(", source)
+        self.assertIn("cannes_seul", source)
+
     def test_la_maquette_ne_porte_pas_de_voyant_orange(self):
         toile = np.zeros((420, 1600, 3), np.uint8)
         stream.pose_horloge(toile, 1_790_000_000.0, direct=False, autre="3D MODEL")

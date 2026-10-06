@@ -2276,6 +2276,90 @@ def pose_duplex(ventoux: np.ndarray, cannes: np.ndarray,
     return toile, vue_ventoux, vue_cannes
 
 
+def zone_colonnes(largeur: int, hauteur: int) -> tuple[int, int, int, int]:
+    """La bande entre le ruban et la musique : haute, pas une fenêtre 16:9."""
+    echelle = largeur / 1600
+    y = int(round(RUBAN_H * echelle))
+    bas = hauteur - int(round(BORD_BAS * echelle))
+    return 0, y, largeur, max(1, bas - y)
+
+
+def pose_mixte(ventoux: np.ndarray, cannes: np.ndarray,
+               largeur: int, hauteur: int, nom_cannes: str = "Cannes",
+               ) -> tuple[np.ndarray, tuple[int, int, int, int],
+                          tuple[int, int, int, int], list[tuple[int, int, int, int]]]:
+    """Cinq colonnes hautes : Los Angeles, Ventoux, Beaumont, Cannes, Cannes.
+
+    Les photos gardent tout leur cadre. Le nom est dans le noir au-dessus
+    de la photo, pas sur elle. Les trois boîtes se collent ensuite dans
+    les colonnes laissées vides.
+    """
+    x, y, w, h = zone_colonnes(largeur, hauteur)
+    gap = max(2, int(round(4 * largeur / 1600)))
+    usable = max(1, w - 4 * gap)
+    large = max(1, usable // 5)
+    colonnes = []
+    cx = x
+    for i in range(5):
+        lw = large if i < 4 else max(1, x + w - cx)
+        colonnes.append((cx, y, lw, h))
+        cx += lw + gap
+    toile = np.zeros((hauteur, largeur, 3), np.uint8)
+    vue_ventoux = _dans_la_colonne(toile, ventoux, colonnes[1])
+    vue_cannes = _dans_la_colonne(toile, cannes, colonnes[3])
+    pose_cartouche(toile, colonnes[1], "MONT SEREIN")
+    pose_cartouche(toile, colonnes[3], nom_cannes or "CANNES")
+    for i in range(4):
+        joint = colonnes[i][0] + colonnes[i][2] + max(0, gap // 2)
+        cv2.line(toile, (joint, y), (joint, y + h - 1), (232, 232, 232), 1, cv2.LINE_8)
+    return toile, vue_ventoux, vue_cannes, colonnes
+
+
+def _boite_visible(image: np.ndarray) -> np.ndarray | None:
+    """Le rectangle qui contient ce qui a été dessiné, fond noir compris."""
+    ys, xs = np.where(image.any(axis=2))
+    if ys.size == 0:
+        return None
+    return image[int(ys.min()):int(ys.max()) + 1, int(xs.min()):int(xs.max()) + 1].copy()
+
+
+def pose_les_boites(toile: np.ndarray, colonnes: list[tuple[int, int, int, int]],
+                    etat: dict | None, vignette: np.ndarray | None, ville: str,
+                    carte_machine: list | None, ou_machine: tuple[float, float] | None,
+                    quand: float, ratio_los: tuple | None,
+                    commune: str, carte_pays: list | None,
+                    ou_camera: tuple[float, float] | None,
+                    photo: np.ndarray | None, ratio_beau: tuple | None,
+                    nom_cannes: str, ou_cannes: tuple[float, float] | None,
+                    direct: bool, autre: str, nuit: bool) -> None:
+    """Les trois boîtes dans leurs colonnes. Les rapports restent Los Angeles
+    et Beaumont. La boîte de Cannes n'en porte pas un troisième.
+    """
+    if len(colonnes) < 5:
+        return
+    hauteur, largeur = toile.shape[:2]
+
+    def colle(indice: int, dessin: np.ndarray) -> None:
+        boite = _boite_visible(dessin)
+        if boite is not None:
+            _dans_la_colonne(toile, boite, colonnes[indice])
+
+    brouillon = np.zeros((hauteur, largeur, 3), np.uint8)
+    pose_machine(brouillon, etat, vignette, ville, 0.0, carte_machine, ou_machine,
+                 quand, ratio_los)
+    colle(0, brouillon)
+    brouillon[:] = 0
+    pose_horloge(brouillon, quand, direct=direct, autre=autre, commune=commune,
+                 carte=carte_pays, ou=ou_camera, remue=0.0, photo=photo,
+                 ratio=ratio_beau, nuit=nuit)
+    colle(2, brouillon)
+    brouillon[:] = 0
+    pose_horloge(brouillon, quand, direct=direct, autre=autre, commune=nom_cannes,
+                 carte=carte_pays, ou=ou_cannes, remue=0.0, photo=None,
+                 ratio=None, nuit=False)
+    colle(4, brouillon)
+
+
 def _coupe(texte: str, combien: int) -> str:
     return texte if len(texte) <= combien else texte[:combien - 1] + "…"
 
@@ -7371,6 +7455,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # Le premier arrive tôt, sans s'annoncer. Ensuite un quart d'heure.
     duplex_depuis = -1.0
     duplex_peint = False
+    duplex_mode = ""
     prochain_duplex = origine + DUPLEX_PREMIER_S
     compagne = Compagne(cfg, int(cfg["stream_fps"]))
     pensee_jour, pensee_rang, pensee_etape, pensee_feu = _pensee_lue(racine)
@@ -7772,7 +7857,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 duplex_depuis = quand
                 prochain_duplex = quand + DUPLEX_TENUE_S + DUPLEX_PAUSE_S
                 duplex_peint = False
-                log.info("Duplex : Mont Serein, %s", nom_secours)
+                duplex_mode = "mixte" if duplex_mode == "cannes" else "cannes"
+                log.info("Cannes : %s", "à la place du Ventoux" if duplex_mode == "cannes"
+                         else "rangée mixte")
             demande = (duplex_depuis >= 0 and quand - duplex_depuis < DUPLEX_TENUE_S
                        and not secours and not figee
                        and rediff is None and a_poser is None)
@@ -7790,12 +7877,21 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             compagne.voulu(demande or amorce)
             voisin = compagne.fraiche() if demande else None
             cadre_cannes = None
-            if voisin is not None:
+            colonnes_mixte = None
+            cannes_seul = False
+            if voisin is not None and duplex_mode == "mixte":
                 if not duplex_peint:
                     duplex_peint = True
-                    log.info("Duplex à l'écran")
-                toile, cadrage, cadre_cannes = pose_duplex(
+                    log.info("Cannes en rangée")
+                toile, cadrage, cadre_cannes, colonnes_mixte = pose_mixte(
                     vue, voisin, largeur, hauteur, nom_secours)
+            elif voisin is not None:
+                if not duplex_peint:
+                    duplex_peint = True
+                    log.info("Cannes à la place du Ventoux")
+                toile = cadre(voisin, largeur, hauteur)
+                cadrage = fenetre(voisin.shape[:2], largeur, hauteur)
+                cannes_seul = True
             else:
                 # La webcam dans sa fenêtre, les encarts dans les bandes autour.
                 toile = cadre(vue, largeur, hauteur)
@@ -7840,7 +7936,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # Propres au Mont Serein : l'ours et le skieur connaissent ce lieu.
             # Le tapis, l'éléphant, le sous-marin, les bâtiments et les
             # portraits ne sont pas encore classés, ils restent ici.
-            if not figee and survol is None:
+            if not figee and survol is None and not cannes_seul:
                 # Le tapis vole au-dessus de la crête, donc il passe quoi qu'il
                 # arrive. L'éléphant danse sur le rond-point, c'est-à-dire en
                 # plein sur l'endroit où les choses se passent : il n'y va que
@@ -7912,7 +8008,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # fenêtre. Pas sur le relief : le rectangle et le nom d'une prise
             # appartiennent à la webcam, et le direct est déjà dans le coin.
             # Pas sur une rediffusion : là, ce n'est plus la vue.
-            if (secours or not figee) and a_poser is None and survol is None:
+            if ((secours or not figee) and a_poser is None and survol is None
+                    and not cannes_seul):
                 dessine(toile, nommes, quand, vue=cadrage)
                 pose_recherches(toile, pistes, cadrage, vus, quand)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
@@ -8021,24 +8118,34 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # qu'il est sur le direct.
             heure_antenne = _maintenant()
             los, beau = ratios_du_jour(tableau, heure_antenne)
-            # Cannes en direct n'est pas une photo. Le mode dégradé ne dit
-            # que la dernière image du Mont Serein, quand rien d'autre ne tient.
-            pose_horloge(toile, heure_antenne,
-                         direct=(secours or not figee) and rediff is None and survol is None,
-                         autre="DEGRADED" if figee and not secours else (
-                             "REPLAY" if rediff is not None else "3D MODEL"),
-                         commune=nom_secours if secours else commune,
-                         carte=carte_pays, ou=ou_secours if secours else ou_camera,
-                         remue=-remue, photo=photo_trampoline, ratio=beau,
-                         nuit=survol is not None and not survol_de_jour)
-            if figee and not secours:
-                pose_mode_degrade(toile, cadrage, phrase_secours if secours else None)
+            direct_carte = (secours or not figee) and rediff is None and survol is None
+            autre_carte = ("DEGRADED" if figee and not secours else (
+                "REPLAY" if rediff is not None else "3D MODEL"))
+            nuit_carte = survol is not None and not survol_de_jour
             ou_machine = None
             if machine_ou.get("lat") is not None:
                 ou_machine = (float(machine_ou["lat"]), float(machine_ou["lon"]))
-            pose_machine(toile, machine, photo_machine, ville, remue,
-                         carte=carte_californie, ou=ou_machine, quand=heure_antenne,
-                         ratio=los)
+            if colonnes_mixte is not None:
+                pose_les_boites(
+                    toile, colonnes_mixte, machine, photo_machine, ville,
+                    carte_californie, ou_machine, heure_antenne, los,
+                    commune, carte_pays, ou_camera, photo_trampoline, beau,
+                    nom_secours, ou_secours, direct_carte, autre_carte, nuit_carte)
+            else:
+                # Cannes à la place du Ventoux : la boîte de droite devient
+                # Cannes. Le rapport de Beaumont ne s'y colle pas.
+                pose_horloge(toile, heure_antenne, direct=direct_carte,
+                             autre=autre_carte,
+                             commune=nom_secours if (secours or cannes_seul) else commune,
+                             carte=carte_pays,
+                             ou=ou_secours if (secours or cannes_seul) else ou_camera,
+                             remue=-remue, photo=None if cannes_seul else photo_trampoline,
+                             ratio=None if cannes_seul else beau, nuit=nuit_carte)
+                if figee and not secours:
+                    pose_mode_degrade(toile, cadrage, phrase_secours if secours else None)
+                pose_machine(toile, machine, photo_machine, ville, remue,
+                             carte=carte_californie, ou=ou_machine, quand=heure_antenne,
+                             ratio=los)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             pose_deploiement(toile, __version__, quand - ouvert)
             # La voix part avec le mot, une fois, dans les premières secondes.
