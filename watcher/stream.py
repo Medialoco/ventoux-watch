@@ -7371,8 +7371,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # Les bulles d'abord, pour que tout le reste passe par-dessus :
             # les encarts, les pantins, le fil. Rien de ce qu'on vient
             # regarder ne doit se trouver derrière une bulle.
-            pose_bulles(toile, quand - origine, cadrage)
-            pose_poissons(toile, quand - origine, cadrage)
+            # Hors du Ventoux, ces dessins n'ont plus de lieu : l'ours danse
+            # sur un rond-point qui n'est pas dans l'image.
+            if not figee:
+                pose_bulles(toile, quand - origine, cadrage)
+                pose_poissons(toile, quand - origine, cadrage)
             # La webcam reste visible pendant le survol : le relief a pris sa
             # place dans la fenêtre, pas sa place dans l'émission.
             if survol is not None:
@@ -7396,7 +7399,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # Et pas pendant un survol. Le relief en trois dimensions est un
             # autre sujet que la montagne en direct, et deux pantins dansant
             # dessus diraient que c'est le même plan filmé autrement.
-            if survol is None:
+            if not figee and survol is None:
                 pose_danseurs(toile, quand - origine, musique.pouls(), vue=cadrage)
                 # Le tapis vole au-dessus de la crête, donc il passe quoi qu'il
                 # arrive. L'éléphant danse sur le rond-point, c'est-à-dire en
@@ -7610,8 +7613,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # Flottement lent des deux encarts, en opposition : un mouvement
             # continu, pas un sursaut sur le beat.
             remue = flottement(montre - origine, largeur / 1600)
-            los, beau = ratios_du_jour(tableau, montre)
-            pose_horloge(toile, montre, direct=not figee and rediff is None and survol is None,
+            # L'antenne donne l'heure, des deux côtés. L'image peut être celle
+            # de 8 h 49 : Beaumont et Los Angeles disent quand même l'heure
+            # qu'il est sur le direct.
+            heure_antenne = _maintenant()
+            los, beau = ratios_du_jour(tableau, heure_antenne)
+            pose_horloge(toile, heure_antenne, direct=not figee and rediff is None and survol is None,
                          autre="DEGRADED" if figee else ("REPLAY" if rediff is not None else "3D MODEL"),
                          commune=commune, carte=carte_pays, ou=ou_camera,
                          remue=-remue, photo=photo_trampoline, ratio=beau)
@@ -7621,7 +7628,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             if machine_ou.get("lat") is not None:
                 ou_machine = (float(machine_ou["lat"]), float(machine_ou["lon"]))
             pose_machine(toile, machine, photo_machine, ville, remue,
-                         carte=carte_californie, ou=ou_machine, quand=quand,
+                         carte=carte_californie, ou=ou_machine, quand=heure_antenne,
                          ratio=los)
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             pose_deploiement(toile, __version__, quand - ouvert)

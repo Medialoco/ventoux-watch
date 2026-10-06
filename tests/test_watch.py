@@ -2205,7 +2205,10 @@ class FogTests(unittest.TestCase):
         html = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
         self.assertIn("The broadcast continues.", html)
         self.assertIn('id="degrade"', html)
-        self.assertIn('pose_horloge(toile, montre', inspect.getsource(stream.diffuse))
+        diffuse = inspect.getsource(stream.diffuse)
+        self.assertIn("heure_antenne = _maintenant()", diffuse)
+        self.assertIn("pose_horloge(toile, heure_antenne", diffuse)
+        self.assertIn("quand=heure_antenne", diffuse)
 
     def test_le_detecteur_recoit_la_boite_de_limage_quon_lui_donne(self):
         """L'image et le rectangle doivent venir du même instant.
