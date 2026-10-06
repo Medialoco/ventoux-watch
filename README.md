@@ -6,9 +6,9 @@
 
 Un Raspberry Pi 5, sur un bureau à Los Angeles, regarde la webcam du col du Mont Serein, à 1 389 m sur le mont Ventoux. Une image par seconde. OpenCV trouve ce qui a bougé, YOLO nomme la découpe, et le Pi reconstruit le cadre : la photographie, le rectangle, les encarts, la musique. La veille est le travail. Le flux est le spectacle.
 
-La veille voit beaucoup de mouvement. Une classe n’est publiée, un good catch, que lorsqu’elle est assez sûre. Sous chaque encart, une vitre affiche le rapport du jour, prises sur mouvements, 0/0 tant que la journée n’a rien vu. Los Angeles est à gauche, Beaumont-du-Ventoux à droite. Une prise compte des deux côtés. Chaque côté se remet à zéro à son minuit, et les deux minuits ne tombent pas à la même heure.
+La veille voit beaucoup de mouvement. Une classe publiée compte dès qu’elle est nommée. L’acclamation verte, un good catch, attend 0,60. Sous chaque encart, trois digits montrent le rapport du jour fois cent, et le compte brut en petit. Los Angeles est à gauche, Beaumont-du-Ventoux à droite. Une classe compte des deux côtés. Chaque côté revient à 000 à son minuit, et les deux minuits ne tombent pas à la même heure.
 
-Veilleur **v0.6.4**.
+Veilleur **v0.6.5**.
 
 Le direct est sur [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). Le site est [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Vingt façons dont l’image change y sont écrites, chacune d’après le code qui tourne.
 

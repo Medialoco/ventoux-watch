@@ -1270,8 +1270,6 @@ class Musique:
         self.remerciements_dogmazic = repliques(self.racine / "data" / "voix", "dogmazic")
         # Tenues hors du tableau du site : une pensée, puis la Normandie.
         self.pensees = repliques(self.racine / "data" / "voix", "pensee")
-        self.normandies = repliques(self.racine / "data" / "voix", "normandie")
-        self.normandys = repliques(self.racine / "data" / "voix", "normandy")
         self.deplois = repliques(self.racine / "data" / "voix", "deploi")
         self.dijons = repliques(self.racine / "data" / "voix", "dijon")
         self.dijon23 = repliques(self.racine / "data" / "voix", "dijon23")
@@ -2745,32 +2743,19 @@ def ordre_de_rediffusion(gardees: list[dict], tirage: random.Random,
 # fois par an ; mais personne ne regarde une webcam du Ventoux en UTC.
 PARIS = ZoneInfo("Europe/Paris")
 
-# Deux pensées par jour, à l'heure de la montagne. Les deux secondes sont
-# tirées sur la date, entre 8 h et 23 h, à trois heures d'écart au moins :
-# la journée où l'on est éveillé en France, et un redémarrage ne les déplace
-# pas. Le nom reste écrit dix-sept secondes, puis la voix dit
-# « Big up to the Normandy! ».
-PENSEE_DEBUT_S = 8 * 3600
-PENSEE_FIN_S = 23 * 3600
-PENSEE_ECART_S = 3 * 3600
+# Une pensée par jour, à 7 h 15, heure de Paris. Le nom reste écrit
+# dix-sept secondes. Un redémarrage dans la fenêtre ne la redit pas :
+# le fichier du jour s'en souvient.
+PENSEE_HEURE_S = 7 * 3600 + 15 * 60
 PENSEE_APRES_S = 17.0
 PENSEE_GRACE_S = 240
 
 
-def secondes_pensee(jour: date) -> tuple[int, int]:
-    """Deux secondes du jour, stables, dans la journée française."""
-    tirage = random.Random(jour.toordinal())
-    premiere = tirage.randrange(PENSEE_DEBUT_S, PENSEE_FIN_S - PENSEE_ECART_S)
-    seconde = tirage.randrange(premiere + PENSEE_ECART_S, PENSEE_FIN_S)
-    return premiere, seconde
-
-
 def _pensee_lue(racine: Path) -> tuple[date | None, int, int, float]:
-    """Date, rang (0 ou 1, 2 si la journée est close), étape, instant du feu.
+    """Date, rang, étape, instant du feu.
 
-    L'ancien fichier n'avait qu'un passage : « date étape feu ». Une étape 2
-    ferme la journée, pour ne pas en dire une seconde le soir où le format
-    a changé.
+    Une étape 2 ferme la journée : la pensée de 7 h 15 a été dite, ou
+    l'heure est passée. L'ancien fichier à trois champs se lit encore.
     """
     try:
         morceaux = (racine / "data" / "voix" / "pensee.jour").read_text().split()
@@ -6829,7 +6814,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # visite pour une veille qui vient de démarrer.
     dernier_ennui = origine - 10_000.0
     pensee_jour, pensee_rang, pensee_etape, pensee_feu = _pensee_lue(racine)
-    pensee_suite = pensee_feu + PENSEE_APRES_S if pensee_etape == 1 else 0.0
     dijon_jour, dijon_rang = _dijon_lue(racine)
     dijon_feu = 0.0
     dijon_heure = "23:00"
@@ -7196,10 +7180,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # de la caméra ils disparaissaient sous l'éléphant ou sous le
             # Raspberry : on croyait la veille éteinte dès qu'un effet
             # occupait le milieu. Ils restent donc par-dessus, dans la
-            # fenêtre. Sur le relief aussi : il est au point de vue de la
-            # caméra et il ne bouge pas, donc le rectangle dit le même
-            # endroit. Pas sur une rediffusion : là, ce n'est plus la vue.
-            if a_poser is None:
+            # fenêtre. Pas sur le relief : le rectangle et le nom d'une prise
+            # appartiennent à la webcam, et le direct est déjà dans le coin.
+            # Pas sur une rediffusion : là, ce n'est plus la vue.
+            if a_poser is None and survol is None:
                 dessine(toile, [vu for vu in vus if not cherche_encore(vu, pistes, quand)],
                         quand, vue=cadrage)
                 pose_recherches(toile, pistes, cadrage, vus, quand)
@@ -7217,47 +7201,24 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # conditions ensemble, donc. Tenir un sous-titre plus longtemps que
             # la parole n'est pas mentir, c'est sous-titrer ; le retirer avant
             # la fin de la phrase, si.
-            # La pensée, à l'heure de la montagne et non à celle de la webcam.
-            # Deux fois dans la journée française. Le nom reste écrit dix-sept
-            # secondes, puis la voix dit « Big up to the Normandy! ».
+            # La pensée, à 7 h 15, heure de Paris, une fois. Le nom reste
+            # écrit dix-sept secondes.
             ici = datetime.now(PARIS)
             if pensee_jour != ici.date():
                 pensee_jour, pensee_rang, pensee_etape = ici.date(), 0, 0
-                pensee_suite = 0.0
             seconde_jour = ici.hour * 3600 + ici.minute * 60 + ici.second
-            heures = secondes_pensee(ici.date())
-            if pensee_rang < 2 and pensee_etape < 2:
-                vise = heures[pensee_rang]
-                if (pensee_etape == 0 and seconde_jour >= vise + PENSEE_GRACE_S):
-                    pensee_rang += 1
-                    if pensee_rang >= 2:
-                        pensee_etape = 2
-                    _pensee_ecrite(racine, ici.date(), pensee_rang, pensee_etape,
-                                   pensee_feu)
-                elif (pensee_etape == 0 and musique.pensees
-                        and vise <= seconde_jour < vise + PENSEE_GRACE_S
+            if pensee_etape < 2:
+                if seconde_jour >= PENSEE_HEURE_S + PENSEE_GRACE_S:
+                    pensee_etape = 2
+                    _pensee_ecrite(racine, ici.date(), 1, 2, pensee_feu)
+                elif (musique.pensees
+                        and PENSEE_HEURE_S <= seconde_jour < PENSEE_HEURE_S + PENSEE_GRACE_S
                         and not musique.parle()):
                     if musique.dis(musique.pensees[0]):
                         pensee_feu = time.time()
-                        pensee_suite = pensee_feu + PENSEE_APRES_S
-                        pensee_etape = 1
-                        _pensee_ecrite(racine, ici.date(), pensee_rang, 1,
-                                       pensee_feu)
+                        pensee_etape = 2
+                        _pensee_ecrite(racine, ici.date(), 1, 2, pensee_feu)
                         log.info("Pensée dite à %s", ici.strftime("%H:%M:%S"))
-                elif (pensee_etape == 1 and musique.normandys
-                        and pensee_suite and time.time() >= pensee_suite
-                        and not musique.parle()):
-                    if time.time() > pensee_suite + PENSEE_GRACE_S:
-                        pensee_rang += 1
-                        pensee_etape = 2 if pensee_rang >= 2 else 0
-                        _pensee_ecrite(racine, ici.date(), pensee_rang,
-                                       pensee_etape, pensee_feu)
-                    elif musique.dis(musique.normandys[0]):
-                        pensee_rang += 1
-                        pensee_etape = 2 if pensee_rang >= 2 else 0
-                        _pensee_ecrite(racine, ici.date(), pensee_rang,
-                                       pensee_etape, pensee_feu)
-                        log.info("Normandy dite à %s", ici.strftime("%H:%M:%S"))
             if dijon_jour != ici.date():
                 dijon_jour, dijon_rang = ici.date(), 0
             if dijon_rang < len(DIJON_HEURES):
@@ -7320,8 +7281,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             elif (pensee_feu and time.time() - pensee_feu < PENSEE_APRES_S
                     and pensee_etape >= 1):
                 pose_annonce(toile, cadrage, ("DAVID VINCENT OR VINCENT DAVID",))
-            elif dit == "normandy":
-                pose_annonce(toile, cadrage, ("BIG UP TO THE NORMANDY!",))
             pose_salle(toile, cadrage, salle_abonnes, salle_direct,
                        time.time() - salle_feu if salle_feu else -1.0,
                        salle_tenue)

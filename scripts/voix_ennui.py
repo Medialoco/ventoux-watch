@@ -122,13 +122,11 @@ REPLIQUES = [
     # Dogmazic, le même numéro : le logo au milieu, et on les remercie.
     ("dogmazic", CLAIRE, "Thanks Dogmazic!"),
     ("dogmazic", PLAT, "Thanks Dogmazic!"),
-    # Une pensée, dite une fois par jour et tenue hors du tableau du site.
+    # Une pensée, dite une fois par jour à 7 h 15, heure de Paris.
     # Le nom est dit dans les deux sens : on ne sait pas lequel est le sien,
     # et c'est précisément ce qu'on lui dit.
     ("pensee", PLAT,
      "To my very good friend David Vincent or Vincent David or David Vincent, Je pense à toi."),
-    ("normandie", CLAIRE, "Big-UP à la Normandie !!!!"),
-    ("normandy", CLAIRE, "Big up to the Normandy!"),
     # Le mot du redémarrage. La porteuse est ajoutée après, dans le fichier :
     # le modèle dit le mot clairement, le traitement le rend un peu électronique.
     ("deploi", PLAT, "Deployed"),

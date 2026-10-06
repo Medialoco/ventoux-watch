@@ -4297,8 +4297,9 @@ class DiffusionTests(unittest.TestCase):
         # rebours : s\u00e9par\u00e9es, l'une pourrait un jour \u00eatre d\u00e9plac\u00e9e sans l'autre.
         self.assertNotIn("if survol is not None and (poses or", source)
         self.assertIn("vue3d_poste", source)
-        self.assertIn("if a_poser is None:", source)
-        self.assertNotIn("if a_poser is None and survol is None:", source)
+        # Le rectangle et le nom d'une prise restent sur la webcam. La maquette
+        # montre le relief, le direct reste dans le coin.
+        self.assertIn("if a_poser is None and survol is None:", source)
         self.assertIn("or quand - survol > tenue)", source)
         for duree in (stream.VUE3D_TENUE_S, stream.VUE3D_NUIT_S):
             self.assertLess(duree, stream.VUE3D_PAUSE_S / 4,
@@ -5591,16 +5592,13 @@ class LecteurTests(unittest.TestCase):
 
 
 class PenseeTests(unittest.TestCase):
-    """Deux pensées par jour, dans la journée française, au tableau."""
+    """Une pensée par jour, à 7 h 15, heure de Paris."""
 
-    def test_two_hours_stay_inside_the_french_day(self):
-        from datetime import date
-        for jour in (date(2026, 10, 5), date(2026, 12, 21), date(2027, 6, 1)):
-            premiere, seconde = stream.secondes_pensee(jour)
-            self.assertEqual((premiere, seconde), stream.secondes_pensee(jour))
-            self.assertGreaterEqual(premiere, 8 * 3600)
-            self.assertLess(seconde, 23 * 3600)
-            self.assertGreaterEqual(seconde - premiere, 3 * 3600)
+    def test_the_thought_is_at_a_quarter_past_seven(self):
+        self.assertEqual(stream.PENSEE_HEURE_S, 7 * 3600 + 15 * 60)
+        source = inspect.getsource(stream.diffuse)
+        self.assertNotIn("BIG UP TO THE NORMANDY!", source)
+        self.assertNotIn("normandys", source)
 
     def test_a_finished_day_stays_finished(self):
         from datetime import date
@@ -5618,8 +5616,11 @@ class PenseeTests(unittest.TestCase):
     def test_the_dedication_is_on_the_table(self):
         page = (Path(__file__).resolve().parents[1] / "site" / "index.html").read_text()
         self.assertIn("David Vincent", page)
-        self.assertIn("BIG UP TO THE NORMANDY!", page)
-        self.assertIn("Twenty-one ways", page)
+        self.assertIn("7:15", page)
+        self.assertNotIn("BIG UP TO THE NORMANDY!", page)
+        self.assertIn("The bear keeps his own pace", page)
+        self.assertIn("Thanks OpenCV!", page)
+        self.assertIn("Thanks YOLO11!", page)
         self.assertIn("Butterbane", page)
         self.assertEqual(stream.DIJON_HEURES,
                          (23 * 3600, 23 * 3600 + 15 * 60))
