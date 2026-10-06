@@ -5621,10 +5621,15 @@ class PenseeTests(unittest.TestCase):
         self.assertIn("The bear keeps his own pace", page)
         self.assertIn("Thanks OpenCV!", page)
         self.assertIn("Thanks YOLO11!", page)
-        self.assertIn("Butterbane", page)
+        self.assertNotIn("Butterbane", page)
+        self.assertNotIn("butterbane", page)
+        self.assertIn("8191 s", page)
+        self.assertIn("v0.6.5", page)
+        self.assertIn("DEPLOYED", page)
         self.assertEqual(stream.DIJON_HEURES,
                          (23 * 3600, 23 * 3600 + 15 * 60))
         self.assertIn("UNE COLLAB", page)
+        self.assertIn("collaboration", page)
 
 
 class SalleTests(unittest.TestCase):
