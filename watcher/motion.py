@@ -387,6 +387,7 @@ class Afficheur:
         self.bg = cv2.createBackgroundSubtractorMOG2(
             history=60, varThreshold=16, detectShadows=False)
         self._seen = 0
+        self._numero = 1
         self._pistes: list[dict] = []
 
     def oublie(self) -> None:
@@ -405,6 +406,9 @@ class Afficheur:
             return []
         mask = self.bg.apply(small, learningRate=0)
         mask = _prepare_mask(mask, self.zones, small.shape[1], small.shape[0])
+        # La mer avant les contours. Chaque vague serait une tache, et Cannes
+        # passerait son temps à les compter.
+        _eteint(mask, self.zones, ("sea",))
         ratio = float(cv2.countNonZero(mask)) / float(mask.size)
         if ratio > self.max_foreground_ratio:
             self._vieillit()
@@ -458,8 +462,24 @@ class Afficheur:
                 "box": _boite_affiche(blob, largeur, hauteur),
                 "trace": [(blob["cx"], blob["cy"])],
                 "misses": 0,
+                "code": signe(self._numero),
             })
+            self._numero += 1
         self._pistes = [piste for piste in self._pistes if piste["misses"] <= AFFICHE_TROUS]
+
+
+def _eteint(mask: np.ndarray, zones: dict, noms: tuple[str, ...]) -> None:
+    """Met à zéro ces zones. Les contours ne les voient plus."""
+    height, width = mask.shape[:2]
+    polygones = zones.get("polygons") or {}
+    for nom in noms:
+        poly = polygones.get(nom)
+        if not poly or len(poly) < 3:
+            continue
+        points = np.array(
+            [[int(x * (width - 1)), int(y * (height - 1))] for x, y in poly],
+            np.int32)
+        cv2.fillPoly(mask, [points], 0)
 
 
 def _boite_affiche(blob: dict, largeur: int, hauteur: int) -> tuple[float, float, float, float]:

@@ -904,6 +904,17 @@ def pose_affiche(image: np.ndarray, suivis: list[dict],
         x2 = gauche + int((x + w) * large)
         y2 = cime + int((y + h) * haut)
         cv2.rectangle(image, (x1, y1), (x2, y2), ROUGE, 2)
+        code = str(suivi.get("code") or "")
+        if len(code) != 3:
+            continue
+        echelle = max(0.5, large / 1600)
+        taille = 0.95 * echelle
+        trait = max(2, int(2 * echelle))
+        (cw, ch), _ = cv2.getTextSize(code, cv2.FONT_HERSHEY_DUPLEX, taille, trait)
+        cx = min(max(gauche, x1), gauche + large - cw - 4)
+        y_code = y1 - 6 if y1 - ch - 8 > cime else min(cime + haut - 4, y2 + ch + 8)
+        _pose_encre(image, code, (cx, y_code), cv2.FONT_HERSHEY_DUPLEX,
+                    taille, trait, BLANC)
 
 
 def _pose_encre(image: np.ndarray, texte: str, origine: tuple[int, int],
