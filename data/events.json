@@ -2,6 +2,173 @@
   "version": "0.6.36",
   "events": [
     {
+      "id": "2026-10-07T19-29-31Z-motion-4",
+      "t": "2026-10-07T19:29:31Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T19-29-31Z-motion-4.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1347,
+          "area_grow": 0.55,
+          "clipped": false,
+          "shade": 1.093,
+          "kept": 0.25,
+          "area_ratio": 0.00046,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 1.3,
+          "height_m": 1.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 3.78,
+          "drift_rate": 0.162,
+          "seen_as": []
+        },
+        "box": [
+          0.625,
+          0.7306,
+          0.025,
+          0.0333
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T19-29-31Z-motion-4.jpg"
+    },
+    {
+      "id": "2026-10-07T19-29-31Z-missed-5",
+      "t": "2026-10-07T19:29:31Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T19-29-31Z-missed-5.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0323,
+          "area_grow": 0.4,
+          "clipped": false,
+          "shade": 1.125,
+          "kept": 0.679,
+          "area_ratio": 0.00083,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 3.5,
+          "height_m": 1.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.71,
+          "drift_rate": 0.602,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.6531,
+          0.6806,
+          0.0469,
+          0.0444
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T19-29-31Z-missed-5.jpg"
+    },
+    {
+      "id": "2026-10-07T19-29-30Z-missed-2",
+      "t": "2026-10-07T19:29:30Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T19-29-30Z-missed-2.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 42 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.834,
+          "kept": 0.25,
+          "area_ratio": 0.00043,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 0.5,
+          "height_m": 0.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "tarmac",
+        "box": [
+          0.3172,
+          0.9361,
+          0.0172,
+          0.025
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T19-29-30Z-missed-2.jpg"
+    },
+    {
+      "id": "2026-10-07T19-29-30Z-missed-3",
+      "t": "2026-10-07T19:29:30Z",
+      "type": "missed",
+      "label": "Décor de l'îlot",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T19-29-30Z-missed-3.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur l'îlot central du rond-point, et ça n'a pas bougé. Les pierres et les figures y sont plantées.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.95,
+          "kept": 0.0,
+          "area_ratio": 0.00046,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 0.8,
+          "height_m": 0.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "island",
+        "box": [
+          0.2172,
+          0.8833,
+          0.0234,
+          0.0194
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T19-29-30Z-missed-3.jpg"
+    },
+    {
       "id": "2026-10-07T18-57-42Z-missed-1",
       "t": "2026-10-07T18:57:42Z",
       "type": "missed",
