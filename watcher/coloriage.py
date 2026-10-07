@@ -29,6 +29,8 @@ SILENCE_SEQUENCE_S = 45.0
 REPRISE_SEQUENCE_S = 2 * 3600.0
 # Le temps qu'une séquence a le droit de durer sans qu'on change de mode.
 SEQUENCE_TENUE_S = 120.0
+# Une fois lancée, la séquence reste en place au moins un quart d'heure.
+PRESENCE_SEQUENCE_S = 15 * 60.0
 PORT = 8766
 
 # BGR, les mêmes teintes que le flux, sauf le rouge du badge.
@@ -408,7 +410,8 @@ class Coloriage:
 
         Avec un mode, seules les séquences commencées dans ce mode sont posées.
         La première séquence, une fois le crayon tu, ne reste pas : elle
-        revient toutes les deux heures, redessinée au même rythme.
+        revient toutes les deux heures, redessinée au même rythme, puis
+        elle demeure en place au moins un quart d'heure.
         """
         with self._verrou:
             self._cloture(quand)
@@ -446,7 +449,7 @@ class Coloriage:
             return []
         mode_seq = self._sequence[0][5]
         debut = self._sequence[0][0]
-        duree = max(2.0, self._sequence[-1][0] - debut)
+        duree = self._duree_rejeu()
         if self._rejoue_depuis:
             ecoule = quand - self._rejoue_depuis
             if ecoule > duree:
@@ -460,15 +463,15 @@ class Coloriage:
         return []
 
     def tient(self, quand: float) -> bool:
-        """Vrai tant qu'une séquence est en cours, au plus deux minutes.
+        """Vrai tant qu'une séquence est en cours, ou tant qu'elle est relancée.
 
         Le mode affiché ne doit pas changer pendant ce temps : le trait
-        a commencé quelque part, et il finit au même endroit.
+        a commencé quelque part, et il finit au même endroit. Le crayon
+        tient deux minutes. La reprise, une fois lancée, tient le quart d'heure.
         """
         with self._verrou:
             if self._rejoue_depuis and self._sequence:
-                duree = max(2.0, self._sequence[-1][0] - self._sequence[0][0])
-                if quand - self._rejoue_depuis <= min(duree, SEQUENCE_TENUE_S):
+                if quand - self._rejoue_depuis <= self._duree_rejeu():
                     return True
             if self._sequence is None and self._touches:
                 debut = self._touches[0][0]
@@ -476,6 +479,12 @@ class Coloriage:
                         and quand - self._derniere < SILENCE_SEQUENCE_S):
                     return True
         return False
+
+    def _duree_rejeu(self) -> float:
+        if not self._sequence:
+            return 0.0
+        trace = self._sequence[-1][0] - self._sequence[0][0]
+        return max(PRESENCE_SEQUENCE_S, trace)
 
     def retiens(self, image: np.ndarray, quand: float, periode: float = 0.25) -> None:
         """Garde un aperçu pour l'iPad, pas à chaque image."""

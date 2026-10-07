@@ -12,7 +12,7 @@ Le Mont Serein a une grille de distances tirée d’OpenStreetMap, depuis le nœ
 
 La veille voit beaucoup de mouvement. Le réseau n’est appelé que de temps en temps, et pas du tout la nuit quand la crête a disparu : le rectangle de mouvement reste, le nom serait brouillard. Une classe publiée compte dès qu’elle est nommée. L’acclamation verte, un good catch, attend 0,60. Sous chaque encart, trois digits montrent le rapport du jour fois cent, et le compte brut en petit. Los Angeles est à gauche, Beaumont-du-Ventoux à droite. Une classe compte des deux côtés. Chaque côté revient à 000 à son minuit, et les deux minuits ne tombent pas à la même heure.
 
-Veilleur **v0.6.39**.
+Veilleur **v0.6.40**.
 
 Le direct est sur [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). Le site est [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Les façons dont l’image change y sont écrites, chacune d’après le code qui tourne.
 

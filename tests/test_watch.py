@@ -7659,7 +7659,7 @@ class ColoriageTests(unittest.TestCase):
         self.assertGreater(int(reste[:, 80:].sum()), 0)
 
     def test_the_next_sequence_is_replayed_every_two_hours(self):
-        from watcher.coloriage import REPRISE_SEQUENCE_S, Coloriage
+        from watcher.coloriage import PRESENCE_SEQUENCE_S, REPRISE_SEQUENCE_S, Coloriage
         coloriage = Coloriage()
         coloriage.pose(0.2, 0.5, "blanc", 100.0, mode="cannes")
         coloriage.pose(0.8, 0.5, "blanc", 110.0, suite=True)
@@ -7680,9 +7680,14 @@ class ColoriageTests(unittest.TestCase):
         entier = self._image()
         coloriage.dessine(entier, debut + 10.0, "cannes")
         self.assertGreater(int(entier[:, 80:].sum()), 0)
+        tient = self._image()
+        coloriage.dessine(tient, debut + 11.0, "cannes")
+        self.assertGreater(int(tient.sum()), 0)
+        self.assertTrue(coloriage.tient(debut + PRESENCE_SEQUENCE_S - 1))
         fini = self._image()
-        coloriage.dessine(fini, debut + 11.0, "cannes")
+        coloriage.dessine(fini, debut + PRESENCE_SEQUENCE_S + 1.0, "cannes")
         self.assertEqual(int(fini.sum()), 0)
+        self.assertFalse(coloriage.tient(debut + PRESENCE_SEQUENCE_S + 1.0))
         self.assertEqual(coloriage._rejoue_a, debut + REPRISE_SEQUENCE_S)
 
     def test_the_chosen_colour_is_the_one_that_is_sent(self):
