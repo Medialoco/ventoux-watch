@@ -7534,3 +7534,28 @@ class ColoriageTests(unittest.TestCase):
         from watcher.coloriage import COULEURS, Coloriage
         self.assertNotIn(stream.ROUGE, COULEURS.values())
         self.assertFalse(Coloriage().pose(0.5, 0.5, "rouge", 0.0))
+
+    def test_a_stroke_is_a_thin_line_and_a_new_gesture_does_not_join(self):
+        from watcher.coloriage import PAGE, TRAIT, Coloriage
+        self.assertEqual(TRAIT, 4)
+        self.assertIn("const TRAIT = 4", PAGE)
+        self.assertIn("setPointerCapture", PAGE)
+        coloriage = Coloriage()
+        coloriage.pose(0.2, 0.5, "blanc", 0.0)
+        coloriage.pose(0.8, 0.5, "blanc", 0.0, suite=True)
+        joint = np.zeros((90, 160, 3), np.uint8)
+        coloriage.dessine(joint, 1.0)
+        self.assertGreater(int(joint[:, 80].sum()), 0)
+        separes = Coloriage()
+        separes.pose(0.2, 0.5, "blanc", 0.0)
+        separes.pose(0.8, 0.5, "blanc", 0.0)
+        trou = np.zeros((90, 160, 3), np.uint8)
+        separes.dessine(trou, 1.0)
+        self.assertEqual(int(trou[:, 70:90].sum()), 0)
+        fin = Coloriage()
+        fin.pose(0.5, 0.5, "blanc", 0.0)
+        cadre = np.zeros((720, 1280, 3), np.uint8)
+        fin.dessine(cadre, 1.0)
+        ys, xs = np.nonzero(cadre.any(axis=2))
+        self.assertLessEqual(int(xs.max() - xs.min()), 8)
+        self.assertLessEqual(int(ys.max() - ys.min()), 8)

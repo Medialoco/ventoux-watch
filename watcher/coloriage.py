@@ -21,9 +21,9 @@ from urllib.parse import parse_qs, urlparse
 import cv2
 import numpy as np
 
-# À la largeur de référence. Assez petit pour une touche, assez grand pour
-# qu'on la voie encore une fois le cadre encodé.
-RAYON = 11
+# Épaisseur du trait, à la largeur de référence. Fin : un stylet, ou la souris
+# bouton enfoncé. Encore lisible une fois le cadre encodé.
+TRAIT = 4
 PORT = 8766
 
 # BGR, les mêmes teintes que le flux, sauf le rouge du badge.
@@ -46,7 +46,10 @@ PAGE = """<!DOCTYPE html>
   html, body { margin: 0; height: 100%; background: #000; color: #eee;
     font: 15px sans-serif; touch-action: none; }
   body { display: flex; flex-direction: column; }
-  img { flex: 1; width: 100%; object-fit: contain; touch-action: none; }
+  #scene { position: relative; flex: 1; min-height: 0; touch-action: none; }
+  #scene img, #scene canvas { position: absolute; inset: 0; width: 100%; height: 100%;
+    touch-action: none; }
+  #scene img { object-fit: contain; }
   .note { margin: 0; padding: 8px 10px 0; color: #aaa; font-size: 13px; }
   .barre { display: flex; gap: 8px; padding: 10px; align-items: center;
     background: #111; }
@@ -57,25 +60,34 @@ PAGE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<img id="cadre" alt="">
+<div id="scene">
+  <img id="cadre" alt="">
+  <canvas id="encre"></canvas>
+</div>
 <p class="note">Plus tard. Pas sur le direct.</p>
 <div class="barre" id="barre"></div>
 <script>
 const jeton = new URLSearchParams(location.search).get("j") || "";
 const couleurs = COULEURS_JSON;
+const TRAIT = TRAIT_JSON;
 let couleur = couleurs[0][0];
+let css = couleurs[0][1];
 let dernier = null;
+let actif = null;
+let file = [];
 const img = document.getElementById("cadre");
+const toile = document.getElementById("encre");
 const barre = document.getElementById("barre");
-couleurs.forEach(([nom, css]) => {
+couleurs.forEach(([nom, teinte]) => {
   const b = document.createElement("button");
-  b.style.background = css;
+  b.style.background = teinte;
   b.title = nom;
   b.className = nom === couleur ? "on" : "";
   b.addEventListener("pointerdown", (ev) => {
     ev.preventDefault();
     ev.stopPropagation();
     couleur = nom;
+    css = teinte;
     barre.querySelectorAll("button").forEach((x) => x.classList.remove("on"));
     b.classList.add("on");
   });
@@ -88,9 +100,14 @@ efface.addEventListener("pointerdown", (ev) => {
   ev.preventDefault();
   ev.stopPropagation();
   fetch("/efface?j=" + encodeURIComponent(jeton), {method: "POST"});
+  file = [];
+  dernier = null;
+  const dpr = window.devicePixelRatio || 1;
+  toile.width = Math.max(1, Math.round(toile.getBoundingClientRect().width * dpr));
+  toile.height = Math.max(1, Math.round(toile.getBoundingClientRect().height * dpr));
 });
 barre.appendChild(efface);
-function point(ev) {
+function boite() {
   const r = img.getBoundingClientRect();
   const iw = img.naturalWidth || r.width;
   const ih = img.naturalHeight || r.height;
@@ -98,24 +115,94 @@ function point(ev) {
   const dw = iw * echelle, dh = ih * echelle;
   const ox = r.left + (r.width - dw) / 2;
   const oy = r.top + (r.height - dh) / 2;
-  const x = (ev.clientX - ox) / dw;
-  const y = (ev.clientY - oy) / dh;
+  return {r, iw, dw, dh, ox, oy};
+}
+function point(ev) {
+  const b = boite();
+  if (!b.dw || !b.dh) return null;
+  const x = (ev.clientX - b.ox) / b.dw;
+  const y = (ev.clientY - b.oy) / b.dh;
   if (x < 0 || y < 0 || x > 1 || y > 1) return null;
   return {x, y};
 }
-function envoie(ev) {
+function prepare() {
+  const dpr = window.devicePixelRatio || 1;
+  const r = toile.getBoundingClientRect();
+  const w = Math.max(1, Math.round(r.width * dpr));
+  const h = Math.max(1, Math.round(r.height * dpr));
+  if (toile.width !== w || toile.height !== h) {
+    toile.width = w;
+    toile.height = h;
+  }
+  return dpr;
+}
+function encre(de, vers) {
+  const b = boite();
+  if (!b.dw || !b.dh) return;
+  const dpr = prepare();
+  const ctx = toile.getContext("2d");
+  const ep = Math.max(1, Math.round(TRAIT * b.iw / 1600)) * (b.dw / b.iw) * dpr;
+  const X = (p) => (b.ox - b.r.left + p.x * b.dw) * dpr;
+  const Y = (p) => (b.oy - b.r.top + p.y * b.dh) * dpr;
+  ctx.fillStyle = css;
+  ctx.strokeStyle = css;
+  ctx.lineWidth = ep;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  if (!de) {
+    ctx.beginPath();
+    ctx.arc(X(vers), Y(vers), ep / 2, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  ctx.beginPath();
+  ctx.moveTo(X(de), Y(de));
+  ctx.lineTo(X(vers), Y(vers));
+  ctx.stroke();
+}
+function envoie(ev, suite) {
   const p = point(ev);
   if (!p) return;
-  if (dernier && Math.hypot(p.x - dernier.x, p.y - dernier.y) < 0.012) return;
+  if (suite && dernier && Math.hypot(p.x - dernier.x, p.y - dernier.y) < 0.003) return;
+  encre(suite ? dernier : null, p);
   dernier = p;
+  file.push({x: p.x, y: p.y, suite: !!suite});
+}
+function vide() {
+  if (!file.length) return;
+  const points = file;
+  file = [];
   fetch("/touche?j=" + encodeURIComponent(jeton), {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({x: p.x, y: p.y, couleur}),
+    body: JSON.stringify({couleur, points}),
   });
 }
-img.addEventListener("pointerdown", (ev) => { ev.preventDefault(); dernier = null; envoie(ev); });
-img.addEventListener("pointermove", (ev) => { if (ev.buttons || ev.pointerType === "touch") envoie(ev); });
+function trace(ev, suite) {
+  const lot = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
+  lot.forEach((un, i) => envoie(un, suite || i > 0));
+}
+toile.addEventListener("pointerdown", (ev) => {
+  if (ev.pointerType === "mouse" && ev.button !== 0) return;
+  ev.preventDefault();
+  toile.setPointerCapture(ev.pointerId);
+  actif = ev.pointerId;
+  dernier = null;
+  trace(ev, false);
+}, {passive: false});
+toile.addEventListener("pointermove", (ev) => {
+  if (ev.pointerId !== actif) return;
+  ev.preventDefault();
+  trace(ev, true);
+}, {passive: false});
+function leve(ev) {
+  if (ev.pointerId !== actif) return;
+  actif = null;
+  vide();
+}
+toile.addEventListener("pointerup", leve);
+toile.addEventListener("pointercancel", leve);
+setInterval(vide, 40);
 function rafraichit() {
   img.src = "/cadre.jpg?j=" + encodeURIComponent(jeton) + "&t=" + Date.now();
 }
@@ -135,7 +222,7 @@ def _css(bgr: tuple[int, int, int]) -> str:
 PAGE = PAGE.replace(
     "COULEURS_JSON",
     json.dumps([[nom, _css(teinte)] for nom, teinte in COULEURS.items()]),
-)
+).replace("TRAIT_JSON", str(TRAIT))
 
 
 class Coloriage:
@@ -143,7 +230,8 @@ class Coloriage:
 
     def __init__(self, journal: Path | None = None) -> None:
         self.journal = journal
-        self._touches: list[tuple[float, float, float, tuple[int, int, int]]] = []
+        self._touches: list[tuple[float, float, float, tuple[int, int, int], int]] = []
+        self._trait = 0
         self._verrou = threading.Lock()
         self._jpeg = b""
         self._apercu = 0.0
@@ -151,7 +239,7 @@ class Coloriage:
         self._serveur: ThreadingHTTPServer | None = None
         self._fil: threading.Thread | None = None
 
-    def pose(self, x: float, y: float, nom: str, quand: float) -> bool:
+    def pose(self, x: float, y: float, nom: str, quand: float, suite: bool = False) -> bool:
         teinte = COULEURS.get(nom)
         if teinte is None:
             return False
@@ -160,10 +248,13 @@ class Coloriage:
             y = min(1.0, max(0.0, float(y)))
         except (TypeError, ValueError):
             return False
-        touche = (float(quand), x, y, teinte)
         with self._verrou:
+            if not suite or self._trait == 0:
+                self._trait += 1
+            trait = self._trait
+            touche = (float(quand), x, y, teinte, trait)
             self._touches.append(touche)
-        self._note({"t": touche[0], "x": x, "y": y, "couleur": nom})
+        self._note({"t": touche[0], "x": x, "y": y, "couleur": nom, "trait": trait})
         return True
 
     def efface(self) -> None:
@@ -189,10 +280,17 @@ class Coloriage:
         if not lot:
             return
         hauteur, largeur = image.shape[:2]
-        rayon = max(2, int(round(RAYON * largeur / 1600)))
-        for _quand, x, y, teinte in lot:
-            cv2.circle(image, (int(x * (largeur - 1)), int(y * (hauteur - 1))),
-                       rayon, teinte, -1, cv2.LINE_AA)
+        epaisseur = max(1, int(round(TRAIT * largeur / 1600)))
+        rayon = max(1, epaisseur // 2)
+        precedent = None
+        for _quand, x, y, teinte, trait in lot:
+            px = int(x * (largeur - 1))
+            py = int(y * (hauteur - 1))
+            if precedent is not None and precedent[0] == trait:
+                cv2.line(image, (precedent[1], precedent[2]), (px, py),
+                         teinte, epaisseur, cv2.LINE_AA)
+            cv2.circle(image, (px, py), rayon, teinte, -1, cv2.LINE_AA)
+            precedent = (trait, px, py)
 
     def retiens(self, image: np.ndarray, quand: float, periode: float = 0.25) -> None:
         """Garde un aperçu pour l'iPad, pas à chaque image."""
@@ -244,6 +342,7 @@ class Coloriage:
                 corps = PAGE.encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
                 self.send_header("Content-Length", str(len(corps)))
                 self.end_headers()
                 self.wfile.write(corps)
@@ -257,12 +356,26 @@ class Coloriage:
                     coloriage.efface()
                 elif chemin == "/touche":
                     taille = int(self.headers.get("Content-Length") or 0)
+                    if taille > 65536:
+                        self.send_response(413)
+                        self.end_headers()
+                        return
                     try:
                         recu = json.loads(self.rfile.read(taille) or b"{}")
                     except (ValueError, UnicodeError):
                         recu = {}
-                    coloriage.pose(recu.get("x", -1), recu.get("y", -1),
-                                   str(recu.get("couleur") or ""), time.time())
+                    if not isinstance(recu, dict):
+                        recu = {}
+                    quand = time.time()
+                    nom = str(recu.get("couleur") or "")
+                    points = recu.get("points")
+                    if isinstance(points, list):
+                        for point in points[:400]:
+                            if isinstance(point, dict):
+                                coloriage.pose(point.get("x", -1), point.get("y", -1),
+                                               nom, quand, suite=bool(point.get("suite")))
+                    else:
+                        coloriage.pose(recu.get("x", -1), recu.get("y", -1), nom, quand)
                 self.send_response(204)
                 self.end_headers()
 
