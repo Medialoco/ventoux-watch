@@ -405,15 +405,19 @@ class Afficheur:
     def voit(self, image: np.ndarray) -> list[dict]:
         """Des boîtes et leur traînée, en parts d'image. Rien d'autre."""
         small, scale = _resize_width(image, self.motion_width)
+        # La mer est peinte fixe avant le modèle. Une vague qui entre dans
+        # le fond le fait travailler à chaque image, et Cannes sature.
+        voile = _voile_muet(small.shape, self.zones, self.muettes)
+        if voile is not None:
+            small = small.copy()
+            small[voile > 0] = 0
         self._seen += 1
         if self._seen <= self.warmup_frames:
             self.bg.apply(small, learningRate=-1)
             return []
         mask = self.bg.apply(small, learningRate=0)
         mask = _prepare_mask(mask, self.zones, small.shape[1], small.shape[0])
-        # La mer avant les contours. Chaque vague serait une tache, et Cannes
-        # passerait son temps à les compter.
-        _eteint(mask, self.zones, self.muettes)
+        _eteint(mask, self.zones, self.muettes, marge=max(6, small.shape[1] // 16))
         ratio = float(cv2.countNonZero(mask)) / float(mask.size)
         if ratio > self.max_foreground_ratio:
             self._vieillit()
@@ -476,9 +480,20 @@ class Afficheur:
         self._pistes = [piste for piste in self._pistes if piste["misses"] <= AFFICHE_TROUS]
 
 
-def _eteint(mask: np.ndarray, zones: dict, noms: tuple[str, ...]) -> None:
+def _eteint(mask: np.ndarray, zones: dict, noms: tuple[str, ...], marge: int = 0) -> None:
     """Met à zéro ces zones. Les contours ne les voient plus."""
-    height, width = mask.shape[:2]
+    voile = _voile_muet(mask.shape, zones, noms, marge)
+    if voile is not None:
+        mask[voile > 0] = 0
+
+
+def _voile_muet(forme: tuple[int, ...], zones: dict, noms: tuple[str, ...],
+                marge: int = 0) -> np.ndarray | None:
+    """Le dessin des zones qu'on ne veut pas voir bouger, élargi du rivage."""
+    height, width = forme[:2]
+    if height < 2 or width < 2:
+        return None
+    voile = np.zeros((height, width), np.uint8)
     polygones = zones.get("polygons") or {}
     for nom in noms:
         poly = polygones.get(nom)
@@ -487,7 +502,14 @@ def _eteint(mask: np.ndarray, zones: dict, noms: tuple[str, ...]) -> None:
         points = np.array(
             [[int(x * (width - 1)), int(y * (height - 1))] for x, y in poly],
             np.int32)
-        cv2.fillPoly(mask, [points], 0)
+        cv2.fillPoly(voile, [points], 255)
+    if not voile.any():
+        return None
+    if marge > 0:
+        taille = marge * 2 + 1
+        noyau = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (taille, taille))
+        voile = cv2.dilate(voile, noyau)
+    return voile
 
 
 def _boite_affiche(blob: dict, largeur: int, hauteur: int) -> tuple[float, float, float, float]:

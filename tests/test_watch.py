@@ -7688,7 +7688,10 @@ class ColoriageTests(unittest.TestCase):
     def test_the_chosen_colour_is_the_one_that_is_sent(self):
         texte = (ROOT / "watcher" / "coloriage.py").read_text(encoding="utf-8")
         self.assertIn("couleur: courant.nom", texte)
+        self.assertIn("if (dessin) return;", texte)
         self.assertIn('point.get("couleur")', texte)
+        self.assertLess(texte.index("const corps = JSON.stringify({points})"),
+                        texte.index("pompe = pompe.then"))
         from watcher.coloriage import Coloriage
         coloriage = Coloriage()
         self.assertTrue(coloriage.pose(0.4, 0.4, "jaune", 10.0))

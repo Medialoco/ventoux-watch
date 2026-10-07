@@ -95,6 +95,7 @@ couleurs.forEach(([nom, teinte]) => {
   b.addEventListener("pointerdown", (ev) => {
     ev.preventDefault();
     ev.stopPropagation();
+    if (dessin) return;
     couleur = nom;
     css = teinte;
     barre.querySelectorAll("button").forEach((x) => x.classList.remove("on"));
@@ -222,10 +223,11 @@ function vide() {
   if (!file.length) return;
   const points = file;
   file = [];
+  const corps = JSON.stringify({points});
   pompe = pompe.then(() => fetch("/touche?j=" + encodeURIComponent(jeton), {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({couleur, points}),
+    body: corps,
   })).catch(() => {});
 }
 calque.addEventListener("pointerdown", (ev) => {
