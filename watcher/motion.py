@@ -359,6 +359,114 @@ def formes_utiles(blobs: list[dict], zones: dict) -> list[dict]:
     return reste + mer[:SEA_GARDES] + plage[:BEACH_GARDES]
 
 
+# Ce qu'on dessine souvent, et qu'on ne donne pas au modèle. Plus petit que
+# le plancher d'une piste : une voiture loin sur la route reste un rectangle,
+# elle ne devient pas une prise.
+AFFICHE_AIRE = 0.00012
+AFFICHE_PLAGE = 0.0008
+AFFICHE_PORTEE = 0.12
+AFFICHE_TRACE = 8
+AFFICHE_TROUS = 2
+AFFICHE_MAX = 8
+
+
+class Afficheur:
+    """Le déplacement à l'écran. Aucune de ces boîtes n'est une piste.
+
+    La veille, elle, continue de ne classer que ce qui a déjà passé son
+    plancher. Ici on suit plus souvent, et plus petit, pour que le trait
+    bouge. La mer et le ciel restent dehors : l'écume et les nuages
+    rempliraient l'image sans rien qui se déplace.
+    """
+
+    def __init__(self, zones: dict, motion_width: int = 640, warmup_frames: int = 5):
+        self.zones = zones or {"priority": [], "polygons": {}}
+        self.motion_width = motion_width
+        self.warmup_frames = warmup_frames
+        self.max_foreground_ratio = 0.35
+        self.bg = cv2.createBackgroundSubtractorMOG2(
+            history=60, varThreshold=16, detectShadows=False)
+        self._seen = 0
+        self._pistes: list[dict] = []
+
+    def oublie(self) -> None:
+        """Le fond d'une webcam ne vaut rien sur l'autre."""
+        self.bg = cv2.createBackgroundSubtractorMOG2(
+            history=60, varThreshold=16, detectShadows=False)
+        self._seen = 0
+        self._pistes = []
+
+    def voit(self, image: np.ndarray) -> list[dict]:
+        """Des boîtes et leur traînée, en parts d'image. Rien d'autre."""
+        small, scale = _resize_width(image, self.motion_width)
+        self._seen += 1
+        if self._seen <= self.warmup_frames:
+            self.bg.apply(small, learningRate=-1)
+            return []
+        mask = self.bg.apply(small, learningRate=0)
+        mask = _prepare_mask(mask, self.zones, small.shape[1], small.shape[0])
+        ratio = float(cv2.countNonZero(mask)) / float(mask.size)
+        if ratio > self.max_foreground_ratio:
+            self._vieillit()
+            return []
+        self.bg.apply(small, learningRate=-1)
+        hauteur, largeur = image.shape[:2]
+        utiles = []
+        for blob in _blobs(mask, scale):
+            zone = assign_zone(blob["cx"], blob["cy"], self.zones)
+            aire = blob["area_ratio"]
+            if zone in {"sea", "sky"}:
+                continue
+            if zone == "beach" and aire < AFFICHE_PLAGE:
+                continue
+            if zone != "beach" and aire < AFFICHE_AIRE:
+                continue
+            utiles.append(blob)
+        self._rattache(utiles, largeur, hauteur)
+        return [piste for piste in self._pistes if piste["misses"] == 0]
+
+    def _vieillit(self) -> None:
+        for piste in self._pistes:
+            piste["misses"] += 1
+        self._pistes = [piste for piste in self._pistes if piste["misses"] <= AFFICHE_TROUS]
+
+    def _rattache(self, blobs: list[dict], largeur: int, hauteur: int) -> None:
+        pris: set[int] = set()
+        for piste in self._pistes:
+            cx, cy = piste["trace"][-1]
+            meilleur = None
+            distance = AFFICHE_PORTEE
+            for index, blob in enumerate(blobs):
+                if index in pris:
+                    continue
+                ecart = ((blob["cx"] - cx) ** 2 + (blob["cy"] - cy) ** 2) ** 0.5
+                if ecart < distance:
+                    meilleur, distance = index, ecart
+            if meilleur is None:
+                piste["misses"] += 1
+                continue
+            pris.add(meilleur)
+            blob = blobs[meilleur]
+            piste["misses"] = 0
+            piste["box"] = _boite_affiche(blob, largeur, hauteur)
+            piste["trace"].append((blob["cx"], blob["cy"]))
+            del piste["trace"][:-AFFICHE_TRACE]
+        for index, blob in enumerate(blobs):
+            if index in pris or len(self._pistes) >= AFFICHE_MAX:
+                continue
+            self._pistes.append({
+                "box": _boite_affiche(blob, largeur, hauteur),
+                "trace": [(blob["cx"], blob["cy"])],
+                "misses": 0,
+            })
+        self._pistes = [piste for piste in self._pistes if piste["misses"] <= AFFICHE_TROUS]
+
+
+def _boite_affiche(blob: dict, largeur: int, hauteur: int) -> tuple[float, float, float, float]:
+    x, y, w, h = blob["bbox"]
+    return (x / largeur, y / hauteur, max(w, 1) / largeur, max(h, 1) / hauteur)
+
+
 def _lighting(small, behind, bbox, scale: float) -> tuple[float, float]:
     """Combien la tache a changé de clarté, et combien son dessin a survécu.
 

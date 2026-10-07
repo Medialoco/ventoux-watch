@@ -752,6 +752,37 @@ class MotionTests(unittest.TestCase):
         avant, _apres = inspect.getsource(main._on_track).split("yolo.detect", 1)
         self.assertIn('track.zone in {"sea", "beach"}', avant)
 
+    def test_l_affichage_suit_la_route_et_laisse_la_mer(self):
+        """Un rectangle fréquent, trop petit pour une prise, et rien sur l'eau."""
+        from watcher.motion import AFFICHE_AIRE, Afficheur
+        zones = json.loads((ROOT / "config" / "config.json").read_text())["collection"][1]["zones"]
+        self.assertLess(AFFICHE_AIRE, 0.0004)
+        route = Afficheur(zones, motion_width=160, warmup_frames=3)
+        mer = Afficheur(zones, motion_width=160, warmup_frames=3)
+        base = np.full((90, 160, 3), 40, dtype=np.uint8)
+        for index in range(3):
+            route.voit(base)
+            mer.voit(base)
+        vues = []
+        for index in range(5):
+            cadre = base.copy()
+            x = 120 + index * 4
+            cadre[70:86, x:x + 12] = 255
+            vues = route.voit(cadre)
+            eau = base.copy()
+            eau[55:75, 16 + index * 3:32 + index * 3] = 255
+            self.assertEqual(mer.voit(eau), [])
+        self.assertGreaterEqual(len(vues), 1)
+        self.assertGreater(len(vues[0]["trace"]), 1)
+        self.assertGreater(vues[0]["trace"][-1][0], vues[0]["trace"][0][0])
+        toile = np.zeros((80, 200, 3), np.uint8)
+        stream.pose_affiche(toile, vues, (20, 10, 100, 40))
+        self.assertGreater(int(toile[10:50, 20:120].sum()), 0)
+        self.assertEqual(int(toile[:10].sum()), 0)
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("affiche_cannes.voit(voisin)", source)
+        self.assertIn("cadrage if cannes_seul else cadre_cannes", source)
+
     def test_une_adresse_deja_ouverte_depannne_youtube(self):
         import tempfile
         with tempfile.TemporaryDirectory() as dossier:

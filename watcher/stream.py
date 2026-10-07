@@ -42,6 +42,7 @@ import numpy as np
 from watcher import __version__, direct
 from watcher.coloriage import PORT as COLORIAGE_PORT
 from watcher.coloriage import Coloriage
+from watcher.motion import Afficheur
 from watcher.store import floute
 
 log = logging.getLogger("ventoux.stream")
@@ -875,6 +876,34 @@ def pose_recherches(image: np.ndarray, pistes: list[dict],
             y_code = y1 - 6 if y1 - ch - 8 > cime else min(cime + haut - 4, y2 + ch + 8)
             _pose_encre(image, code, (cx, y_code), cv2.FONT_HERSHEY_DUPLEX,
                         taille_code, trait, BLANC)
+
+
+def pose_affiche(image: np.ndarray, suivis: list[dict],
+                 vue: tuple[int, int, int, int] | None = None) -> None:
+    """La traînée et le rectangle d'un déplacement qu'on ne classe pas.
+
+    Le trait suit le centre d'une image à l'autre : c'est le mouvement,
+    pas un nom. La prise, elle, continue de venir de la veille.
+    """
+    if not suivis:
+        return
+    if vue is None:
+        gauche, cime, large, haut = 0, 0, image.shape[1], image.shape[0]
+    else:
+        gauche, cime, large, haut = vue
+    for suivi in suivis:
+        trace = suivi.get("trace") or []
+        points = [(gauche + int(cx * max(large - 1, 1)), cime + int(cy * max(haut - 1, 1)))
+                  for cx, cy in trace]
+        for index in range(1, len(points)):
+            part = index / len(points)
+            teinte = tuple(int(40 + (canal - 40) * part) for canal in ROUGE)
+            cv2.line(image, points[index - 1], points[index], teinte, 2, cv2.LINE_AA)
+        x, y, w, h = suivi["box"]
+        x1, y1 = gauche + int(x * large), cime + int(y * haut)
+        x2 = gauche + int((x + w) * large)
+        y2 = cime + int((y + h) * haut)
+        cv2.rectangle(image, (x1, y1), (x2, y2), ROUGE, 2)
 
 
 def _pose_encre(image: np.ndarray, texte: str, origine: tuple[int, int],
@@ -7395,11 +7424,23 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # Lus une fois, et pardonnés s'ils manquent — une caméra sans carte garde
     # sa diffusion, elle perd seulement ses fantaisies.
     contours = {}
+    zones_ventoux = {"priority": [], "polygons": {}}
     try:
-        contours = json.loads(
-            (racine / cfg["zones"]).read_text(encoding="utf-8")).get("polygons") or {}
+        zones_ventoux = json.loads((racine / cfg["zones"]).read_text(encoding="utf-8"))
+        contours = zones_ventoux.get("polygons") or {}
     except (OSError, ValueError, KeyError):
         log.info("Pas de contour du ciel : ni tapis ni sous-marin")
+    zones_cannes = {"priority": [], "polygons": {}}
+    for cam in cfg.get("collection") or []:
+        if isinstance(cam, dict) and cam.get("zones"):
+            zones_cannes = cam["zones"]
+            break
+    # Deux fonds. Aucun des deux n'écrit une piste : la veille classe
+    # toujours de son côté, une image par seconde, avec son plancher.
+    affiche_ventoux = Afficheur(zones_ventoux)
+    affiche_cannes = Afficheur(zones_cannes)
+    affiche_demande = False
+    affiche_sur_secours = False
     contour_ciel = contours.get("sky")
     # Le lampadaire du rond-point, s'il a été mesuré. Il faut les trois points :
     # la lanterne, que la carte donne, et les deux bouts du poteau, qu'on a
@@ -7937,6 +7978,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # Vingt-cinq secondes avant le créneau occupaient un cœur pour
             # une colonne encore noire.
             compagne.voulu(demande)
+            if demande and not affiche_demande:
+                affiche_cannes.oublie()
+            affiche_demande = demande
+            if secours != affiche_sur_secours:
+                affiche_sur_secours = secours
+                (affiche_cannes if secours else affiche_ventoux).oublie()
             voisin = compagne.fraiche() if demande else None
             cadre_cannes = None
             colonnes_mixte = None
@@ -7988,6 +8035,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     pose_poissons(toile, quand - origine, vue_effet)
             # La webcam reste visible pendant le survol : le relief a pris sa
             # place dans la fenêtre, pas sa place dans l'émission.
+            encart = None
             if survol is not None:
                 pose_osm(toile, cadrage)
                 # La détection ne se pose pas sur le relief : elle appartient
@@ -8092,6 +8140,23 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     and not cannes_seul):
                 dessine(toile, nommes, quand, vue=cadrage)
                 pose_recherches(toile, pistes, cadrage, vus, quand)
+            # Plus souvent que la veille, et sur les deux images. Ces
+            # rectangles ne deviennent pas une prise : ils font bouger l'écran.
+            if a_poser is None and (secours or not figee):
+                if secours:
+                    vue_suivi = encart if survol is not None else cadrage
+                    if vue_suivi is not None:
+                        pose_affiche(toile, affiche_cannes.voit(image), vue_suivi)
+                else:
+                    suivis_ventoux = affiche_ventoux.voit(image)
+                    if not cannes_seul and survol is not None and encart is not None:
+                        pose_affiche(toile, suivis_ventoux, encart)
+                    elif not cannes_seul and survol is None:
+                        pose_affiche(toile, suivis_ventoux, cadrage)
+                    if voisin is not None:
+                        vue_cannes = cadrage if cannes_seul else cadre_cannes
+                        if vue_cannes is not None:
+                            pose_affiche(toile, affiche_cannes.voit(voisin), vue_cannes)
             # Le mot tient au moins trois secondes, et tant que la voix parle.
             #
             # Il durait exactement la voix, ce qui semblait honnête et ne
