@@ -6077,6 +6077,9 @@ class DuplexTests(unittest.TestCase):
         self.assertLessEqual(abs(bas(toile, cols[4]) - bas(ref, (ref.shape[1] - lc, 0, lc, 1))), 2)
         self.assertLessEqual(abs(bas(toile, cols[4]) - bas(toile, cols[2])), 4)
         self.assertIn("tamise_la_photo", inspect.getsource(stream.pose_horloge))
+        diffuse = inspect.getsource(stream.diffuse)
+        avant_tapis = diffuse.split("pose_tapis(", 1)[0].rsplit("if ", 1)[-1]
+        self.assertNotIn("cannes_seul", avant_tapis)
         xs = np.where(toile[:, cols[4][0]:].any(axis=2))[1]
         self.assertGreaterEqual(int(xs.max()) + cols[4][0], 1278)
 

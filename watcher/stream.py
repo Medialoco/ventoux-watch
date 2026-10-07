@@ -7964,8 +7964,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # Les bulles d'abord, pour que tout le reste passe par-dessus :
             # les encarts, les pantins, le fil. Rien de ce qu'on vient
             # regarder ne doit se trouver derrière une bulle.
-            # Hors du Ventoux, ces dessins n'ont plus de lieu : l'ours danse
-            # sur un rond-point qui n'est pas dans l'image.
             if secours or not figee:
                 for vue_effet in vues_live:
                     pose_bulles(toile, quand - origine, vue_effet)
@@ -7997,10 +7995,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # au rond-point : ils restent quand l'image est celle de Cannes.
             if survol is None:
                 pose_danseurs(toile, quand - origine, musique.pouls(), vue=cadrage)
-            # Propres au Mont Serein : l'ours et le skieur connaissent ce lieu.
-            # Le tapis, l'éléphant, le sous-marin, les bâtiments et les
-            # portraits ne sont pas encore classés, ils restent ici.
-            if not figee and survol is None and not cannes_seul:
+            # Ils connaissent le rond-point et la crête, et ils jouent
+            # aussi quand Cannes occupe le cadre : la fenêtre est la leur
+            # pour ces quatre-vingt-dix secondes.
+            if not figee and survol is None:
                 # Le tapis vole au-dessus de la crête, donc il passe quoi qu'il
                 # arrive. L'éléphant danse sur le rond-point, c'est-à-dire en
                 # plein sur l'endroit où les choses se passent : il n'y va que
