@@ -2,6 +2,147 @@
   "version": "0.6.32",
   "events": [
     {
+      "id": "2026-10-07T11-39-17Z-motion-151",
+      "t": "2026-10-07T11:39:17Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T11-39-17Z-motion-151.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0159,
+          "area_grow": 1.64,
+          "clipped": false,
+          "shade": 1.374,
+          "kept": 0.5,
+          "area_ratio": 0.00734,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 2.9,
+          "height_m": 1.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.025,
+          "seen_as": []
+        },
+        "box": [
+          0.7594,
+          0.9139,
+          0.1031,
+          0.0722
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T11-39-17Z-motion-151.jpg"
+    },
+    {
+      "id": "2026-10-07T11-39-17Z-cycle-152",
+      "t": "2026-10-07T11:39:17Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-07T11-39-17Z-cycle-152.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 0.6,
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0901,
+          "area_grow": 1.38,
+          "clipped": false,
+          "shade": 1.606,
+          "kept": 0.875,
+          "area_ratio": 0.00063,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 0.6,
+          "height_m": 1.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 1.722,
+          "seen_as": []
+        },
+        "surface": "building",
+        "box": [
+          0.875,
+          0.8417,
+          0.0141,
+          0.0444
+        ],
+        "trace": [
+          [
+            1791373156.06,
+            0.8984,
+            0.7667,
+            0.0203,
+            0.0222
+          ],
+          [
+            1791373157.06,
+            0.875,
+            0.8417,
+            0.0141,
+            0.0444
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T11-39-17Z-cycle-152.jpg"
+    },
+    {
+      "id": "2026-10-07T11-39-16Z-missed-150",
+      "t": "2026-10-07T11:39:16Z",
+      "type": "missed",
+      "label": "Décor de l'îlot",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T11-39-16Z-missed-150.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur l'îlot central du rond-point, et ça n'a pas bougé. Les pierres et les figures y sont plantées.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.179,
+          "kept": 0.7,
+          "area_ratio": 0.00105,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 1.2,
+          "height_m": 0.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "island",
+        "box": [
+          0.2891,
+          0.8611,
+          0.0344,
+          0.0306
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T11-39-16Z-missed-150.jpg"
+    },
+    {
       "id": "2026-10-07T11-26-53Z-missed-149",
       "t": "2026-10-07T11:26:53Z",
       "type": "missed",
