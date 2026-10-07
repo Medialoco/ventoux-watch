@@ -182,9 +182,9 @@ function vide() {
   })).catch(() => {});
 }
 function trace(ev, suite) {
-  const lot = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
-  const utiles = lot.filter((un) => un.clientX || un.clientY);
-  (utiles.length ? utiles : [ev]).forEach((un, i) => envoie(un, suite || i > 0));
+  // Les échantillons groupés de cette machine gardent la hauteur du clic
+  // et ne font varier que la largeur : le crayon part en segments horizontaux.
+  envoie(ev, suite);
 }
 toile.addEventListener("pointerdown", (ev) => {
   if (ev.button !== 0) return;
