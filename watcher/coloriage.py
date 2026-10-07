@@ -27,6 +27,8 @@ TRAIT = 4
 # La prochaine séquence se ferme quand le crayon se tait, puis elle revient.
 SILENCE_SEQUENCE_S = 45.0
 REPRISE_SEQUENCE_S = 2 * 3600.0
+# Le temps qu'une séquence a le droit de durer sans qu'on change de mode.
+SEQUENCE_TENUE_S = 120.0
 PORT = 8766
 
 # BGR, les mêmes teintes que le flux, sauf le rouge du badge.
@@ -212,7 +214,7 @@ function pose(ev) {
   }
   coupure = false;
   courant.points.push(p);
-  file.push({x: p.x, y: p.y, suite: !!relie, mode: courant.mode});
+  file.push({x: p.x, y: p.y, suite: !!relie, mode: courant.mode, couleur: courant.nom});
   segment(relie ? avant : null, p, courant.css);
 }
 let pompe = Promise.resolve();
@@ -231,7 +233,7 @@ calque.addEventListener("pointerdown", (ev) => {
   ev.preventDefault();
   dessin = true;
   coupure = true;
-  courant = {css, points: [], mode: modeVu};
+  courant = {css, nom: couleur, points: [], mode: modeVu};
   traits.push(courant);
   pose(ev);
 }, {passive: false});
@@ -455,6 +457,24 @@ class Coloriage:
             return [touche for touche in self._sequence if touche[0] <= debut]
         return []
 
+    def tient(self, quand: float) -> bool:
+        """Vrai tant qu'une séquence est en cours, au plus deux minutes.
+
+        Le mode affiché ne doit pas changer pendant ce temps : le trait
+        a commencé quelque part, et il finit au même endroit.
+        """
+        with self._verrou:
+            if self._rejoue_depuis and self._sequence:
+                duree = max(2.0, self._sequence[-1][0] - self._sequence[0][0])
+                if quand - self._rejoue_depuis <= min(duree, SEQUENCE_TENUE_S):
+                    return True
+            if self._sequence is None and self._touches:
+                debut = self._touches[0][0]
+                if (quand - debut < SEQUENCE_TENUE_S
+                        and quand - self._derniere < SILENCE_SEQUENCE_S):
+                    return True
+        return False
+
     def retiens(self, image: np.ndarray, quand: float, periode: float = 0.25) -> None:
         """Garde un aperçu pour l'iPad, pas à chaque image."""
         if quand - self._apercu < periode:
@@ -538,8 +558,11 @@ class Coloriage:
                     if isinstance(points, list):
                         for point in points[:400]:
                             if isinstance(point, dict):
+                                # La couleur du point, pas celle du lot : le
+                                # crayon change pendant que le paquet part.
+                                teinte = str(point.get("couleur") or nom)
                                 coloriage.pose(point.get("x", -1), point.get("y", -1),
-                                               nom, quand, suite=bool(point.get("suite")),
+                                               teinte, quand, suite=bool(point.get("suite")),
                                                mode=str(point.get("mode") or "") or None)
                     else:
                         coloriage.pose(recu.get("x", -1), recu.get("y", -1), nom, quand)

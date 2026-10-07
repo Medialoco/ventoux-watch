@@ -7450,7 +7450,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # toujours de son côté, une image par seconde, avec son plancher.
     # Moitié de la largeur de la veille : ces boîtes ne servent pas à nommer.
     affiche_ventoux = Afficheur(zones_ventoux, motion_width=320)
-    affiche_cannes = Afficheur(zones_cannes, motion_width=320)
+    # Encore plus petit que le Ventoux : la mer et le sable ne sont pas
+    # comptés, et deux boîtes suffisent. Cannes ne doit pas saturer le Pi.
+    affiche_cannes = Afficheur(zones_cannes, motion_width=160, maximum=2,
+                               muettes=("sea", "beach"))
     affiche_demande = False
     affiche_sur_secours = False
     affiche_hors_ventoux = False
@@ -7878,7 +7881,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # quelque chose à l'écran. Seule une vraie détection compte.
                 dernier_mouvement = quand
                 rediff = None
-            elif not figee and quand - dernier_vu > CREUX_S:
+            elif (not figee and quand - dernier_vu > CREUX_S
+                    and not coloriage.tient(quand)):
                 # Rien depuis deux minutes : on va chercher dans ce qu'on a
                 # déjà attrapé. Sans remise, pour ne pas remontrer le même
                 # camion toute la nuit.
@@ -7928,7 +7932,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                          (quand - dernier_mouvement) / 60, musique.voix_dit)
             a_poser = None
             if rediff is not None:
-                if quand - rediff[1] <= REDIFF_TENUE_S:
+                if quand - rediff[1] <= REDIFF_TENUE_S or coloriage.tient(quand):
                     a_poser = rediff[0]
                 else:
                     rediff, fin_rediff, dernier_vu = None, quand, quand
@@ -7944,12 +7948,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # c'est elle qui décide lequel des deux on pose, pas une heure.
             fait_jour = (hauteur_soleil or -90.0) > HORIZON
             tenue = VUE3D_TENUE_S if survol_de_jour else VUE3D_NUIT_S
-            if survol is not None and (fait_jour != survol_de_jour
-                                       or quand - survol > tenue):
+            if (survol is not None and not coloriage.tient(quand)
+                    and (fait_jour != survol_de_jour or quand - survol > tenue)):
                 fin_survol, survol = quand, None
             elif (not figee and survol is None and images3d and rediff is None and a_poser is None
                   and quand - dernier_vu > CREUX_S
-                  and quand - fin_survol > VUE3D_PAUSE_S):
+                  and quand - fin_survol > VUE3D_PAUSE_S
+                  and not coloriage.tient(quand)):
                 survol, survol_de_jour = quand, fait_jour
                 log.info("Relief fixe (%s) pendant %.0f s",
                          "jour" if fait_jour else "nuit",
@@ -7972,6 +7977,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # garde toute la fenêtre.
             if (duplex_depuis < 0 and not secours and not figee and survol is None
                     and rediff is None and a_poser is None
+                    and not coloriage.tient(quand)
                     and quand >= prochain_duplex):
                 duplex_depuis = quand
                 prochain_duplex = quand + DUPLEX_TENUE_S + DUPLEX_PAUSE_S
@@ -7979,9 +7985,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 duplex_mode = "mixte" if duplex_mode == "cannes" else "cannes"
                 log.info("Cannes : %s", "à la place du Ventoux" if duplex_mode == "cannes"
                          else "rangée mixte")
-            demande = (duplex_depuis >= 0 and quand - duplex_depuis < DUPLEX_TENUE_S
-                       and not secours and not figee
-                       and rediff is None and a_poser is None)
+            demande = (duplex_depuis >= 0 and not secours and not figee
+                       and rediff is None and a_poser is None
+                       and (quand - duplex_depuis < DUPLEX_TENUE_S
+                            or coloriage.tient(quand)))
             if duplex_depuis >= 0 and not demande:
                 if not duplex_peint:
                     log.warning("Duplex sans image")

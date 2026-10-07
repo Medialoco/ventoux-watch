@@ -381,10 +381,13 @@ class Afficheur:
     rempliraient l'image sans rien qui se déplace.
     """
 
-    def __init__(self, zones: dict, motion_width: int = 640, warmup_frames: int = 5):
+    def __init__(self, zones: dict, motion_width: int = 640, warmup_frames: int = 5,
+                 maximum: int = AFFICHE_MAX, muettes: tuple[str, ...] = ("sea",)):
         self.zones = zones or {"priority": [], "polygons": {}}
         self.motion_width = motion_width
         self.warmup_frames = warmup_frames
+        self.maximum = maximum
+        self.muettes = muettes
         self.max_foreground_ratio = 0.35
         self.bg = cv2.createBackgroundSubtractorMOG2(
             history=60, varThreshold=16, detectShadows=False)
@@ -410,7 +413,7 @@ class Afficheur:
         mask = _prepare_mask(mask, self.zones, small.shape[1], small.shape[0])
         # La mer avant les contours. Chaque vague serait une tache, et Cannes
         # passerait son temps à les compter.
-        _eteint(mask, self.zones, ("sea",))
+        _eteint(mask, self.zones, self.muettes)
         ratio = float(cv2.countNonZero(mask)) / float(mask.size)
         if ratio > self.max_foreground_ratio:
             self._vieillit()
@@ -428,9 +431,9 @@ class Afficheur:
             if zone != "beach" and aire < AFFICHE_AIRE:
                 continue
             utiles.append(blob)
-        if len(utiles) > AFFICHE_MAX:
+        if len(utiles) > self.maximum:
             utiles.sort(key=lambda blob: blob["area_ratio"], reverse=True)
-            del utiles[AFFICHE_MAX:]
+            del utiles[self.maximum:]
         self._rattache(utiles, largeur, hauteur)
         return [piste for piste in self._pistes if piste["misses"] == 0]
 
@@ -461,7 +464,7 @@ class Afficheur:
             piste["trace"].append((blob["cx"], blob["cy"]))
             del piste["trace"][:-AFFICHE_TRACE]
         for index, blob in enumerate(blobs):
-            if index in pris or len(self._pistes) >= AFFICHE_MAX:
+            if index in pris or len(self._pistes) >= self.maximum:
                 continue
             self._pistes.append({
                 "box": _boite_affiche(blob, largeur, hauteur),

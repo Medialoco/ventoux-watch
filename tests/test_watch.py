@@ -7684,3 +7684,28 @@ class ColoriageTests(unittest.TestCase):
         coloriage.dessine(fini, debut + 11.0, "cannes")
         self.assertEqual(int(fini.sum()), 0)
         self.assertEqual(coloriage._rejoue_a, debut + REPRISE_SEQUENCE_S)
+
+    def test_the_chosen_colour_is_the_one_that_is_sent(self):
+        texte = (ROOT / "watcher" / "coloriage.py").read_text(encoding="utf-8")
+        self.assertIn("couleur: courant.nom", texte)
+        self.assertIn('point.get("couleur")', texte)
+        from watcher.coloriage import Coloriage
+        coloriage = Coloriage()
+        self.assertTrue(coloriage.pose(0.4, 0.4, "jaune", 10.0))
+        image = self._image()
+        coloriage.dessine(image, 10.0)
+        peint = image[np.any(image > 0, axis=2)]
+        self.assertGreater(len(peint), 0)
+        self.assertGreater(int(peint[:, 1].max()), int(peint[:, 0].max()))
+
+    def test_a_sequence_holds_its_mode_for_two_minutes(self):
+        from watcher.coloriage import SEQUENCE_TENUE_S, Coloriage
+        coloriage = Coloriage()
+        self.assertFalse(coloriage.tient(100.0))
+        coloriage.pose(0.5, 0.5, "vert", 100.0, mode="serein")
+        coloriage.pose(0.55, 0.5, "vert", 100.0 + SEQUENCE_TENUE_S - 10, suite=True)
+        self.assertTrue(coloriage.tient(100.0 + SEQUENCE_TENUE_S - 1))
+        self.assertFalse(coloriage.tient(100.0 + SEQUENCE_TENUE_S))
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("coloriage.tient(quand)", source)
+        self.assertIn("motion_width=160", source)
