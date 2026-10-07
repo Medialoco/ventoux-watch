@@ -8270,12 +8270,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # sur les encarts. Jamais par-dessus la montagne : il s'arrête au
             # bord de la fenêtre, où il est le plus vif.
             pose_eclat(toile, cadrage, quand - attrape, attrape_nom, attrape_teinte)
-            # Le coloriage ne part pas en direct. L'aperçu de l'iPad montre le
-            # geste, le journal le garde pour plus tard, et l'image encodée
-            # reste celle de la montagne.
-            apercu = toile.copy()
-            coloriage.dessine(apercu, time.time())
-            coloriage.retiens(apercu, time.time())
+            # Le coloriage ne part pas en direct, et il ne rentre pas dans
+            # l'image non plus. Le calque de la page porte le trait : le
+            # recopier ici le montrait en segments à chaque JPEG.
+            coloriage.retiens(toile, time.time())
             # Le rush est cette image-ci, pas la photographie nue : le rectangle
             # du mouvement, le nom de la classe, et GOOD CATCH sont déjà posés.
             journal.voit(toile, quand)

@@ -7490,10 +7490,10 @@ class JournalTests(unittest.TestCase):
         self.assertLess(source.index("pose_eclat("), voit)
         self.assertLess(voit, source.index("journal.relache("))
         self.assertLess(source.index("journal.sujet("), voit)
-        # Le coloriage est pour plus tard : l'aperçu le montre, le direct non.
-        self.assertIn("coloriage.dessine(apercu", source)
-        self.assertNotIn("coloriage.dessine(toile", source)
-        self.assertLess(source.index("coloriage.dessine(apercu"),
+        # Le trait est sur le calque. L'image rechargée et le direct restent nus.
+        self.assertIn("coloriage.retiens(toile", source)
+        self.assertNotIn("coloriage.dessine(", source)
+        self.assertLess(source.index("coloriage.retiens(toile"),
                         source.index("sortie.stdin.write"))
         self.assertIn("sortie.stdin.write(toile.tobytes())", source)
 
@@ -7539,6 +7539,7 @@ class ColoriageTests(unittest.TestCase):
         from watcher.coloriage import PAGE, TRAIT, Coloriage
         self.assertEqual(TRAIT, 4)
         self.assertIn("const TRAIT = 4", PAGE)
+        self.assertIn('id="calque"', PAGE)
         self.assertIn('window.addEventListener("pointermove"', PAGE)
         self.assertNotIn("setPointerCapture", PAGE)
         self.assertNotIn("getCoalescedEvents", PAGE)

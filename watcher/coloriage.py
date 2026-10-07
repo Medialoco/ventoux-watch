@@ -1,9 +1,10 @@
-"""Le coloriage du cadre, touche après touche, pour une diffusion plus tard.
+"""Le coloriage du cadre, sur un calque, pour une diffusion plus tard.
 
-L'iPad n'écrit pas dans le direct. Il envoie une touche. Elle est notée, avec
-son heure, et elle apparaît sur l'aperçu de la page. L'image qui part vers
-YouTube n'en reçoit aucune : le geste est gardé pour être rediffusé plus tard,
-dans le temps, et non posé d'un coup.
+La page montre le cadre, et le crayon vit sur un calque posé dessus. Le trait
+suit la souris tant que le bouton est enfoncé, comme dans Paint. Il n'est pas
+recopié dans l'image : la recopier le cassait en segments à chaque
+rafraîchissement. YouTube n'en reçoit aucune. Le geste est noté pour être
+rediffusé plus tard, dans le temps, et non posé d'un coup.
 
 Le rouge du direct n'est pas dans la palette : ce rouge dit « en ce moment »,
 et une touche de la même couleur le ferait mentir.
@@ -46,11 +47,10 @@ PAGE = """<!DOCTYPE html>
   html, body { margin: 0; height: 100%; background: #000; color: #eee;
     font: 15px sans-serif; touch-action: none; }
   body { display: flex; flex-direction: column; }
-  #scene { position: relative; flex: 1; min-height: 0; touch-action: none;
-    cursor: crosshair; }
-  #scene img, #scene canvas { position: absolute; inset: 0; width: 100%; height: 100%;
-    touch-action: none; }
-  #scene img { object-fit: contain; }
+  #scene { position: relative; flex: 1; min-height: 0; touch-action: none; }
+  #scene img { position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; }
+  #calque { position: absolute; touch-action: none; cursor: crosshair; }
   .note { margin: 0; padding: 8px 10px 0; color: #aaa; font-size: 13px; }
   .barre { display: flex; gap: 8px; padding: 10px; align-items: center;
     background: #111; }
@@ -63,7 +63,7 @@ PAGE = """<!DOCTYPE html>
 <body>
 <div id="scene">
   <img id="cadre" alt="">
-  <canvas id="encre"></canvas>
+  <canvas id="calque"></canvas>
 </div>
 <p class="note">Plus tard. Pas sur le direct.</p>
 <div class="barre" id="barre"></div>
@@ -73,12 +73,15 @@ const couleurs = COULEURS_JSON;
 const TRAIT = TRAIT_JSON;
 let couleur = couleurs[0][0];
 let css = couleurs[0][1];
-let dernier = null;
-let actif = null;
 let file = [];
 const img = document.getElementById("cadre");
-const toile = document.getElementById("encre");
+const calque = document.getElementById("calque");
+const scene = document.getElementById("scene");
 const barre = document.getElementById("barre");
+let traits = [];
+let courant = null;
+let dessin = false;
+let coupure = true;
 couleurs.forEach(([nom, teinte]) => {
   const b = document.createElement("button");
   b.style.background = teinte;
@@ -101,12 +104,13 @@ efface.addEventListener("pointerdown", (ev) => {
   ev.preventDefault();
   ev.stopPropagation();
   fetch("/efface?j=" + encodeURIComponent(jeton), {method: "POST"});
+  traits = [];
+  courant = null;
   dessin = false;
+  coupure = true;
   file = [];
-  dernier = null;
-  const dpr = window.devicePixelRatio || 1;
-  toile.width = Math.max(1, Math.round(toile.getBoundingClientRect().width * dpr));
-  toile.height = Math.max(1, Math.round(toile.getBoundingClientRect().height * dpr));
+  const ctx = calque.getContext("2d");
+  ctx.clearRect(0, 0, calque.width, calque.height);
 });
 barre.appendChild(efface);
 function boite() {
@@ -119,35 +123,65 @@ function boite() {
   const oy = r.top + (r.height - dh) / 2;
   return {r, iw, dw, dh, ox, oy};
 }
-function point(ev) {
+function place() {
   const b = boite();
-  if (!b.dw || !b.dh) return null;
-  const x = (ev.clientX - b.ox) / b.dw;
-  const y = (ev.clientY - b.oy) / b.dh;
+  const s = scene.getBoundingClientRect();
+  if (!b.dw || !b.dh) return;
+  calque.style.left = (b.ox - s.left) + "px";
+  calque.style.top = (b.oy - s.top) + "px";
+  calque.style.width = b.dw + "px";
+  calque.style.height = b.dh + "px";
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(b.dw * dpr));
+  const h = Math.max(1, Math.round(b.dh * dpr));
+  if (Math.abs(calque.width - w) < 2 && Math.abs(calque.height - h) < 2) return;
+  if (dessin) return;
+  calque.width = w;
+  calque.height = h;
+  repeint();
+}
+function sur(ev) {
+  const r = calque.getBoundingClientRect();
+  if (!r.width || !r.height) return null;
+  const x = (ev.clientX - r.left) / r.width;
+  const y = (ev.clientY - r.top) / r.height;
   if (x < 0 || y < 0 || x > 1 || y > 1) return null;
   return {x, y};
 }
-let dessin = false;
-function taille() {
-  if (dessin) return;
-  const dpr = window.devicePixelRatio || 1;
-  const r = toile.getBoundingClientRect();
-  const w = Math.max(1, Math.round(r.width * dpr));
-  const h = Math.max(1, Math.round(r.height * dpr));
-  if (!w || !h || (toile.width === w && toile.height === h)) return;
-  toile.width = w;
-  toile.height = h;
+function epaisseur() {
+  return Math.max(1, Math.round(TRAIT * calque.width / 1600));
 }
-function encre(de, vers) {
-  const b = boite();
-  if (!b.dw || !b.dh) return;
-  const dpr = window.devicePixelRatio || 1;
-  const ctx = toile.getContext("2d");
-  const ep = Math.max(1, Math.round(TRAIT * b.iw / 1600)) * (b.dw / b.iw) * dpr;
-  const X = (p) => (b.ox - b.r.left + p.x * b.dw) * dpr;
-  const Y = (p) => (b.oy - b.r.top + p.y * b.dh) * dpr;
-  ctx.fillStyle = css;
-  ctx.strokeStyle = css;
+function repeint() {
+  const ctx = calque.getContext("2d");
+  ctx.clearRect(0, 0, calque.width, calque.height);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = epaisseur();
+  traits.forEach((trait) => {
+    if (!trait.points.length) return;
+    ctx.strokeStyle = trait.css;
+    ctx.fillStyle = trait.css;
+    ctx.beginPath();
+    trait.points.forEach((p, i) => {
+      const x = p.x * (calque.width - 1);
+      const y = p.y * (calque.height - 1);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    const a = trait.points[0];
+    ctx.beginPath();
+    ctx.arc(a.x * (calque.width - 1), a.y * (calque.height - 1), epaisseur() / 2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+function segment(de, vers, teinte) {
+  const ctx = calque.getContext("2d");
+  const ep = epaisseur();
+  const X = (p) => p.x * (calque.width - 1);
+  const Y = (p) => p.y * (calque.height - 1);
+  ctx.strokeStyle = teinte;
+  ctx.fillStyle = teinte;
   ctx.lineWidth = ep;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -162,13 +196,21 @@ function encre(de, vers) {
   ctx.lineTo(X(vers), Y(vers));
   ctx.stroke();
 }
-function envoie(ev, suite) {
-  const p = point(ev);
-  if (!p) return;
-  if (suite && dernier && Math.hypot(p.x - dernier.x, p.y - dernier.y) < 0.001) return;
-  encre(suite ? dernier : null, p);
-  dernier = p;
-  file.push({x: p.x, y: p.y, suite: !!suite});
+function pose(ev) {
+  const p = sur(ev);
+  if (!p) { coupure = true; return; }
+  const avant = courant && courant.points.length ? courant.points[courant.points.length - 1] : null;
+  const relie = !coupure && avant;
+  if (relie) {
+    const r = calque.getBoundingClientRect();
+    const dx = (p.x - avant.x) * r.width;
+    const dy = (p.y - avant.y) * r.height;
+    if (dx * dx + dy * dy < 0.6) return;
+  }
+  coupure = false;
+  courant.points.push(p);
+  file.push({x: p.x, y: p.y, suite: !!relie});
+  segment(relie ? avant : null, p, courant.css);
 }
 let pompe = Promise.resolve();
 function vide() {
@@ -181,30 +223,27 @@ function vide() {
     body: JSON.stringify({couleur, points}),
   })).catch(() => {});
 }
-function trace(ev, suite) {
-  // Les échantillons groupés de cette machine gardent la hauteur du clic
-  // et ne font varier que la largeur : le crayon part en segments horizontaux.
-  envoie(ev, suite);
-}
-toile.addEventListener("pointerdown", (ev) => {
+calque.addEventListener("pointerdown", (ev) => {
   if (ev.button !== 0) return;
   ev.preventDefault();
   dessin = true;
-  actif = ev.pointerId;
-  dernier = null;
-  trace(ev, false);
+  coupure = true;
+  courant = {css, points: []};
+  traits.push(courant);
+  pose(ev);
 }, {passive: false});
 window.addEventListener("pointermove", (ev) => {
   if (!dessin) return;
   if ((ev.buttons & 1) === 0) return;
   ev.preventDefault();
-  trace(ev, true);
+  pose(ev);
 }, {passive: false});
 function leve() {
   if (!dessin) return;
   dessin = false;
-  actif = null;
+  courant = null;
   vide();
+  place();
 }
 window.addEventListener("pointerup", leve);
 window.addEventListener("pointercancel", (ev) => {
@@ -212,10 +251,23 @@ window.addEventListener("pointercancel", (ev) => {
   leve();
 });
 setInterval(vide, 30);
-setInterval(taille, 400);
-taille();
+place();
+setInterval(place, 400);
+window.addEventListener("resize", place);
+img.addEventListener("load", place);
 function rafraichit() {
-  img.src = "/cadre.jpg?j=" + encodeURIComponent(jeton) + "&t=" + Date.now();
+  if (img.dataset.chargement === "1") return;
+  img.dataset.chargement = "1";
+  const url = "/cadre.jpg?j=" + encodeURIComponent(jeton) + "&t=" + Date.now();
+  fetch(url).then((reponse) => reponse.status === 200 ? reponse.blob() : null).then((blob) => {
+    img.dataset.chargement = "0";
+    if (!blob) return;
+    const objet = URL.createObjectURL(blob);
+    const ancien = img.dataset.objet || "";
+    img.onload = () => { if (ancien) URL.revokeObjectURL(ancien); place(); };
+    img.dataset.objet = objet;
+    img.src = objet;
+  }).catch(() => { img.dataset.chargement = "0"; });
 }
 setInterval(rafraichit, 250);
 rafraichit();
