@@ -2,6 +2,351 @@
   "version": "0.6.32",
   "events": [
     {
+      "id": "2026-10-07T06-23-18Z-motion-57",
+      "t": "2026-10-07T06:23:18Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T06-23-18Z-motion-57.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3092,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.186,
+          "kept": 0.347,
+          "area_ratio": 0.00089,
+          "duration_s": 11.0,
+          "frames": 12,
+          "width_m": 2.5,
+          "height_m": 5.0,
+          "width_named_m": 4.0,
+          "height_named_m": 4.5,
+          "rise_ms": 0.0,
+          "drift_rate": 0.174,
+          "seen_as": [
+            "car 0.53 sur 6%",
+            "person 0.49 sur 0%",
+            "person 0.48 sur 0%",
+            "person 0.26 sur 0%"
+          ]
+        },
+        "box": [
+          0.0719,
+          0.6889,
+          0.0859,
+          0.3028
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T06-23-18Z-motion-57.jpg"
+    },
+    {
+      "id": "2026-10-07T06-20-36Z-missed-56",
+      "t": "2026-10-07T06:20:36Z",
+      "type": "missed",
+      "label": "Lueur dans la météo",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T06-20-36Z-missed-56.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La tache chaude reste ambiguë par ce temps.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0689,
+          "area_grow": 159.3,
+          "clipped": true,
+          "shade": 1.22,
+          "kept": 0.786,
+          "area_ratio": 0.07605,
+          "duration_s": 5.0,
+          "frames": 5,
+          "width_m": 174.4,
+          "height_m": 34.7,
+          "width_named_m": 0.5,
+          "height_named_m": 1.3,
+          "rise_ms": 2.23,
+          "drift_rate": 0.028,
+          "seen_as": [
+            "person 0.31 sur 0%"
+          ]
+        },
+        "refused": "weather_glow",
+        "box": [
+          0.5359,
+          0.2889,
+          0.4641,
+          0.1639
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T06-20-36Z-missed-56.jpg"
+    },
+    {
+      "id": "2026-10-07T06-19-46Z-cycle-54",
+      "t": "2026-10-07T06:19:46Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "roundabout",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-07T06-19-46Z-cycle-54.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 1.2,
+        "period": "twilight",
+        "weather": "brouillard",
+        "context": "au crépuscule, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0309,
+          "area_grow": 0.24,
+          "clipped": false,
+          "shade": 1.058,
+          "kept": 0.107,
+          "area_ratio": 0.00059,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 1.2,
+          "height_m": 2.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.215,
+          "seen_as": []
+        },
+        "surface": "island",
+        "box": [
+          0.2391,
+          0.7472,
+          0.0281,
+          0.0861
+        ],
+        "trace": [
+          [
+            1791353985.65,
+            0.2391,
+            0.7472,
+            0.0281,
+            0.0861
+          ],
+          [
+            1791353986.65,
+            0.2297,
+            0.8083,
+            0.0266,
+            0.0222
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T06-19-46Z-cycle-54.jpg"
+    },
+    {
+      "id": "2026-10-07T06-19-46Z-cycle-55",
+      "t": "2026-10-07T06:19:46Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-07T06-19-46Z-cycle-55.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "twilight",
+        "weather": "brouillard",
+        "context": "au crépuscule, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0445,
+          "area_grow": 0.88,
+          "clipped": false,
+          "shade": 0.982,
+          "kept": 0.0,
+          "area_ratio": 0.00049,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 5.8,
+          "height_m": 11.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 11.7,
+          "drift_rate": 0.25,
+          "seen_as": []
+        },
+        "box": [
+          0.2516,
+          0.5528,
+          0.0125,
+          0.0444
+        ],
+        "trace": [
+          [
+            1791353985.65,
+            0.2516,
+            0.5528,
+            0.0125,
+            0.0444
+          ],
+          [
+            1791353986.65,
+            0.2516,
+            0.5083,
+            0.0109,
+            0.0444
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T06-19-46Z-cycle-55.jpg"
+    },
+    {
+      "id": "2026-10-07T06-18-02Z-missed-53",
+      "t": "2026-10-07T06:18:02Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T06-18-02Z-missed-53.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "twilight",
+        "weather": "brouillard",
+        "context": "au crépuscule, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.073,
+          "area_grow": 2.12,
+          "clipped": false,
+          "shade": 1.146,
+          "kept": 0.733,
+          "area_ratio": 0.02647,
+          "duration_s": 5.0,
+          "frames": 5,
+          "width_m": 94.4,
+          "height_m": 50.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 1.94,
+          "drift_rate": 0.056,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.5328,
+          0.2722,
+          0.1672,
+          0.1583
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T06-18-02Z-missed-53.jpg"
+    },
+    {
+      "id": "2026-10-07T06-17-52Z-motion-52",
+      "t": "2026-10-07T06:17:52Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T06-17-52Z-motion-52.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "brouillard",
+        "context": "au crépuscule, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0583,
+          "area_grow": 0.03,
+          "clipped": false,
+          "shade": 1.039,
+          "kept": 0.303,
+          "area_ratio": 0.00048,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 5.8,
+          "height_m": 2.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.051,
+          "seen_as": []
+        },
+        "box": [
+          0.5,
+          0.7139,
+          0.1422,
+          0.1028
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T06-17-52Z-motion-52.jpg"
+    },
+    {
+      "id": "2026-10-07T06-17-51Z-cycle-51",
+      "t": "2026-10-07T06:17:51Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-07T06-17-51Z-cycle-51.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 0.9,
+        "period": "twilight",
+        "weather": "brouillard",
+        "context": "au crépuscule, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0885,
+          "area_grow": 1.14,
+          "clipped": false,
+          "shade": 0.921,
+          "kept": 0.292,
+          "area_ratio": 0.00167,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 0.9,
+          "height_m": 1.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 2.765,
+          "seen_as": []
+        },
+        "surface": "roundabout",
+        "box": [
+          0.575,
+          0.8083,
+          0.025,
+          0.0667
+        ],
+        "trace": [
+          [
+            1791353870.65,
+            0.5047,
+            0.7611,
+            0.0375,
+            0.0389
+          ],
+          [
+            1791353871.65,
+            0.575,
+            0.8083,
+            0.025,
+            0.0667
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T06-17-51Z-cycle-51.jpg"
+    },
+    {
       "id": "2026-10-07T06-12-59Z-cycle-50",
       "t": "2026-10-07T06:12:59Z",
       "type": "cycle",
