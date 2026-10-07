@@ -2,6 +2,149 @@
   "version": "0.6.37",
   "events": [
     {
+      "id": "2026-10-07T20-39-40Z-cycle-16",
+      "t": "2026-10-07T20:39:40Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "roundabout",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-07T20-39-40Z-cycle-16.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 1.9,
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0589,
+          "area_grow": 7.93,
+          "clipped": false,
+          "shade": 1.072,
+          "kept": 0.268,
+          "area_ratio": 0.00413,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 1.9,
+          "height_m": 1.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.79,
+          "seen_as": []
+        },
+        "surface": "island",
+        "box": [
+          0.1359,
+          0.8361,
+          0.0531,
+          0.0778
+        ],
+        "trace": [
+          [
+            1791405579.26,
+            0.1859,
+            0.8167,
+            0.0234,
+            0.0222
+          ],
+          [
+            1791405580.26,
+            0.1359,
+            0.8361,
+            0.0531,
+            0.0778
+          ]
+        ],
+        "count": 2,
+        "since": "2026-10-07T20:39:40Z"
+      },
+      "closeup": "data/closeups/2026-10-07T20-39-40Z-cycle-16.jpg"
+    },
+    {
+      "id": "2026-10-07T20-38-50Z-motion-15",
+      "t": "2026-10-07T20:38:50Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T20-38-50Z-motion-15.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1771,
+          "area_grow": 3.41,
+          "clipped": false,
+          "shade": 1.182,
+          "kept": 0.633,
+          "area_ratio": 0.00173,
+          "duration_s": 12.0,
+          "frames": 11,
+          "width_m": 12.9,
+          "height_m": 13.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.232,
+          "seen_as": []
+        },
+        "box": [
+          0.1625,
+          0.5889,
+          0.0609,
+          0.1139
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T20-38-50Z-motion-15.jpg"
+    },
+    {
+      "id": "2026-10-07T20-38-45Z-missed-14",
+      "t": "2026-10-07T20:38:45Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T20-38-45Z-missed-14.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 51 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1775,
+          "area_grow": 14.5,
+          "clipped": false,
+          "shade": 1.163,
+          "kept": 0.684,
+          "area_ratio": 0.0141,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 51.5,
+          "height_m": 49.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 5.32,
+          "drift_rate": 0.349,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.2625,
+          0.4111,
+          0.0906,
+          0.1556
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T20-38-45Z-missed-14.jpg"
+    },
+    {
       "id": "2026-10-07T20-29-41Z-cycle-13",
       "t": "2026-10-07T20:29:41Z",
       "type": "cycle",
