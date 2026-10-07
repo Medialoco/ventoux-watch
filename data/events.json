@@ -2,6 +2,89 @@
   "version": "0.6.32",
   "events": [
     {
+      "id": "2026-10-07T09-56-52Z-motion-131",
+      "t": "2026-10-07T09:56:52Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T09-56-52Z-motion-131.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0391,
+          "area_grow": 0.33,
+          "clipped": false,
+          "shade": 1.068,
+          "kept": 0.444,
+          "area_ratio": 0.00059,
+          "duration_s": 13.0,
+          "frames": 14,
+          "width_m": 5.1,
+          "height_m": 1.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.053,
+          "seen_as": []
+        },
+        "box": [
+          0.4828,
+          0.7056,
+          0.0594,
+          0.0306
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T09-56-52Z-motion-131.jpg"
+    },
+    {
+      "id": "2026-10-07T09-56-52Z-missed-132",
+      "t": "2026-10-07T09:56:52Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T09-56-52Z-missed-132.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0213,
+          "area_grow": 0.04,
+          "clipped": false,
+          "shade": 1.071,
+          "kept": 0.704,
+          "area_ratio": 0.00059,
+          "duration_s": 13.0,
+          "frames": 14,
+          "width_m": 5.5,
+          "height_m": 2.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.004,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.5672,
+          0.6889,
+          0.1344,
+          0.1167
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T09-56-52Z-missed-132.jpg"
+    },
+    {
       "id": "2026-10-07T09-07-14Z-missed-129",
       "t": "2026-10-07T09:07:14Z",
       "type": "missed",
