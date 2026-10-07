@@ -46,7 +46,8 @@ PAGE = """<!DOCTYPE html>
   html, body { margin: 0; height: 100%; background: #000; color: #eee;
     font: 15px sans-serif; touch-action: none; }
   body { display: flex; flex-direction: column; }
-  #scene { position: relative; flex: 1; min-height: 0; touch-action: none; }
+  #scene { position: relative; flex: 1; min-height: 0; touch-action: none;
+    cursor: crosshair; }
   #scene img, #scene canvas { position: absolute; inset: 0; width: 100%; height: 100%;
     touch-action: none; }
   #scene img { object-fit: contain; }
@@ -100,6 +101,7 @@ efface.addEventListener("pointerdown", (ev) => {
   ev.preventDefault();
   ev.stopPropagation();
   fetch("/efface?j=" + encodeURIComponent(jeton), {method: "POST"});
+  dessin = false;
   file = [];
   dernier = null;
   const dpr = window.devicePixelRatio || 1;
@@ -125,21 +127,21 @@ function point(ev) {
   if (x < 0 || y < 0 || x > 1 || y > 1) return null;
   return {x, y};
 }
-function prepare() {
+let dessin = false;
+function taille() {
+  if (dessin) return;
   const dpr = window.devicePixelRatio || 1;
   const r = toile.getBoundingClientRect();
   const w = Math.max(1, Math.round(r.width * dpr));
   const h = Math.max(1, Math.round(r.height * dpr));
-  if (toile.width !== w || toile.height !== h) {
-    toile.width = w;
-    toile.height = h;
-  }
-  return dpr;
+  if (!w || !h || (toile.width === w && toile.height === h)) return;
+  toile.width = w;
+  toile.height = h;
 }
 function encre(de, vers) {
   const b = boite();
   if (!b.dw || !b.dh) return;
-  const dpr = prepare();
+  const dpr = window.devicePixelRatio || 1;
   const ctx = toile.getContext("2d");
   const ep = Math.max(1, Math.round(TRAIT * b.iw / 1600)) * (b.dw / b.iw) * dpr;
   const X = (p) => (b.ox - b.r.left + p.x * b.dw) * dpr;
@@ -163,46 +165,55 @@ function encre(de, vers) {
 function envoie(ev, suite) {
   const p = point(ev);
   if (!p) return;
-  if (suite && dernier && Math.hypot(p.x - dernier.x, p.y - dernier.y) < 0.003) return;
+  if (suite && dernier && Math.hypot(p.x - dernier.x, p.y - dernier.y) < 0.001) return;
   encre(suite ? dernier : null, p);
   dernier = p;
   file.push({x: p.x, y: p.y, suite: !!suite});
 }
+let pompe = Promise.resolve();
 function vide() {
   if (!file.length) return;
   const points = file;
   file = [];
-  fetch("/touche?j=" + encodeURIComponent(jeton), {
+  pompe = pompe.then(() => fetch("/touche?j=" + encodeURIComponent(jeton), {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({couleur, points}),
-  });
+  })).catch(() => {});
 }
 function trace(ev, suite) {
   const lot = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
-  lot.forEach((un, i) => envoie(un, suite || i > 0));
+  const utiles = lot.filter((un) => un.clientX || un.clientY);
+  (utiles.length ? utiles : [ev]).forEach((un, i) => envoie(un, suite || i > 0));
 }
 toile.addEventListener("pointerdown", (ev) => {
-  if (ev.pointerType === "mouse" && ev.button !== 0) return;
+  if (ev.button !== 0) return;
   ev.preventDefault();
-  toile.setPointerCapture(ev.pointerId);
+  dessin = true;
   actif = ev.pointerId;
   dernier = null;
   trace(ev, false);
 }, {passive: false});
-toile.addEventListener("pointermove", (ev) => {
-  if (ev.pointerId !== actif) return;
+window.addEventListener("pointermove", (ev) => {
+  if (!dessin) return;
+  if ((ev.buttons & 1) === 0) return;
   ev.preventDefault();
   trace(ev, true);
 }, {passive: false});
-function leve(ev) {
-  if (ev.pointerId !== actif) return;
+function leve() {
+  if (!dessin) return;
+  dessin = false;
   actif = null;
   vide();
 }
-toile.addEventListener("pointerup", leve);
-toile.addEventListener("pointercancel", leve);
-setInterval(vide, 40);
+window.addEventListener("pointerup", leve);
+window.addEventListener("pointercancel", (ev) => {
+  if ((ev.buttons & 1) !== 0) return;
+  leve();
+});
+setInterval(vide, 30);
+setInterval(taille, 400);
+taille();
 function rafraichit() {
   img.src = "/cadre.jpg?j=" + encodeURIComponent(jeton) + "&t=" + Date.now();
 }

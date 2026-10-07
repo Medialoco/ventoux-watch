@@ -7539,7 +7539,8 @@ class ColoriageTests(unittest.TestCase):
         from watcher.coloriage import PAGE, TRAIT, Coloriage
         self.assertEqual(TRAIT, 4)
         self.assertIn("const TRAIT = 4", PAGE)
-        self.assertIn("setPointerCapture", PAGE)
+        self.assertIn('window.addEventListener("pointermove"', PAGE)
+        self.assertNotIn("setPointerCapture", PAGE)
         coloriage = Coloriage()
         coloriage.pose(0.2, 0.5, "blanc", 0.0)
         coloriage.pose(0.8, 0.5, "blanc", 0.0, suite=True)
