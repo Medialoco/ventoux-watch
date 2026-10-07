@@ -52,7 +52,7 @@ Benoît Prieur. Wikimedia Commons, CC0.
 https://commons.wikimedia.org/wiki/File:Vue_de_l%27H%C3%B4tel_Le_Splendid_(Cannes)_en_avril_2023.JPG
 
 Le médaillon de la boîte de droite quand le lieu affiché est Cannes.
-La photo reste en couleurs : c'est l'hôtel qu'on doit reconnaître.
+À l'écran il prend le même bleu que le trampoline et le Raspberry.
 
 ## dogmazic.svg
 

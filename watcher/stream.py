@@ -2352,7 +2352,7 @@ def pose_les_boites(toile: np.ndarray, colonnes: list[tuple[int, int, int, int]]
     """Les trois cartouches à leur taille, dans la rangée.
 
     Chacune a la disposition du cartouche de droite : heure, lieu, disque,
-    compteur. Le médaillon de Cannes reste la photo, pas un cyan.
+    compteur. Le médaillon de Cannes prend le même bleu que les autres.
     """
     if len(colonnes) < 5:
         return
@@ -2364,7 +2364,7 @@ def pose_les_boites(toile: np.ndarray, colonnes: list[tuple[int, int, int, int]]
                  bord_droit=colonnes[2][0] + colonnes[2][2] - 1)
     pose_horloge(toile, quand, direct=direct, autre=autre, commune=nom_cannes,
                  carte=carte_pays, ou=ou_cannes, remue=-remue, photo=photo_cannes,
-                 ratio=ratio_beau, nuit=False, couleur=True,
+                 ratio=ratio_beau, nuit=False,
                  bord_droit=colonnes[4][0] + colonnes[4][2] - 1)
 
 
@@ -6719,8 +6719,7 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                  ratio: tuple | None = None,
                  nuit: bool = False,
                  bord_droit: int | None = None,
-                 garde: bool = False,
-                 couleur: bool = False) -> None:
+                 garde: bool = False) -> None:
     """L'heure qui tourne, en haut à droite, avec le point rouge des chaînes.
 
     Le point clignote à la seconde : c'est ce qui fait qu'un écran fixe a l'air
@@ -6800,12 +6799,7 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     pose_date_heure(image, x, date_y, heure_y, jour, heure, echelle)
     pose_lieu(image, lieu, x, ville_y, LIEU_CORPS * echelle * HORLOGE_LIEU, echelle)
     if dessin:
-        if photo is None:
-            teinte = None
-        elif couleur:
-            teinte = photo
-        else:
-            teinte = tamise_la_photo(photo)
+        teinte = tamise_la_photo(photo) if photo is not None else None
         pose_carte_et_photo(
             image, x, haut_carte, droite + 1 - marge - x,
             bas - haut_carte - marge - bande, carte, ou, teinte, echelle)
@@ -8214,8 +8208,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                              ou=ou_secours if cannes_a_droite else ou_camera,
                              remue=-remue,
                              photo=photo_splendid if cannes_a_droite else photo_trampoline,
-                             ratio=beau, nuit=nuit_carte,
-                             couleur=cannes_a_droite)
+                             ratio=beau, nuit=nuit_carte)
                 if figee and not secours:
                     pose_mode_degrade(toile, cadrage, phrase_secours if secours else None)
                 pose_machine(toile, machine, photo_machine, ville, remue,

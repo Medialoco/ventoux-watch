@@ -6076,8 +6076,7 @@ class DuplexTests(unittest.TestCase):
             return int(ys.max()) - int(ys.min())
         self.assertLessEqual(abs(bas(toile, cols[4]) - bas(ref, (ref.shape[1] - lc, 0, lc, 1))), 2)
         self.assertLessEqual(abs(bas(toile, cols[4]) - bas(toile, cols[2])), 4)
-        source_boites = inspect.getsource(stream.pose_les_boites)
-        self.assertIn("couleur=True", source_boites)
+        self.assertIn("tamise_la_photo", inspect.getsource(stream.pose_horloge))
         xs = np.where(toile[:, cols[4][0]:].any(axis=2))[1]
         self.assertGreaterEqual(int(xs.max()) + cols[4][0], 1278)
 
