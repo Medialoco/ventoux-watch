@@ -8271,6 +8271,21 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # sur les encarts. Jamais par-dessus la montagne : il s'arrête au
             # bord de la fenêtre, où il est le plus vif.
             pose_eclat(toile, cadrage, quand - attrape, attrape_nom, attrape_teinte)
+            # Le trait appartient au mode affiché quand le geste commence.
+            # Le col, Cannes seule, la rangée, le secours, le relief, la reprise :
+            # chacun garde ses séquences, et ne montre pas celles des autres.
+            if colonnes_mixte is not None:
+                coloriage.mode = "mixte"
+            elif cannes_seul:
+                coloriage.mode = "cannes"
+            elif secours:
+                coloriage.mode = "secours"
+            elif survol is not None:
+                coloriage.mode = "survol"
+            elif rediff is not None:
+                coloriage.mode = "reprise"
+            else:
+                coloriage.mode = "serein"
             # La page recharge cette photo nue et dessine dessus, sur son
             # calque. Le trait n'y est pas recollé : ça le montrait en segments.
             coloriage.retiens(toile, time.time())
@@ -8318,7 +8333,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 time.sleep(min(attente, 1.0))
             try:
                 # Le même trait que le calque, sur l'image qui part.
-                coloriage.dessine(toile, time.time())
+                coloriage.dessine(toile, time.time(), coloriage.mode)
                 sortie.stdin.write(toile.tobytes())
                 diffusees += 1
             except BrokenPipeError:

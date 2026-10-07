@@ -64,7 +64,7 @@ PAGE = """<!DOCTYPE html>
   <img id="cadre" alt="">
   <canvas id="calque"></canvas>
 </div>
-<p class="note">Le trait part sur le direct.</p>
+<p class="note">Le trait reste dans le mode où il a commencé.</p>
 <div class="barre" id="barre"></div>
 <script>
 const jeton = new URLSearchParams(location.search).get("j") || "";
@@ -81,6 +81,7 @@ let traits = [];
 let courant = null;
 let dessin = false;
 let coupure = true;
+let modeVu = "serein";
 couleurs.forEach(([nom, teinte]) => {
   const b = document.createElement("button");
   b.style.background = teinte;
@@ -102,14 +103,13 @@ efface.textContent = "Effacer";
 efface.addEventListener("pointerdown", (ev) => {
   ev.preventDefault();
   ev.stopPropagation();
-  fetch("/efface?j=" + encodeURIComponent(jeton), {method: "POST"});
-  traits = [];
+  fetch("/efface?j=" + encodeURIComponent(jeton) + "&mode=" + encodeURIComponent(modeVu), {method: "POST"});
+  traits = traits.filter((trait) => trait.mode !== modeVu);
   courant = null;
   dessin = false;
   coupure = true;
   file = [];
-  const ctx = calque.getContext("2d");
-  ctx.clearRect(0, 0, calque.width, calque.height);
+  repeint();
 });
 barre.appendChild(efface);
 function boite() {
@@ -157,7 +157,7 @@ function repeint() {
   ctx.lineJoin = "round";
   ctx.lineWidth = epaisseur();
   traits.forEach((trait) => {
-    if (!trait.points.length) return;
+    if (trait.mode !== modeVu || !trait.points.length) return;
     ctx.strokeStyle = trait.css;
     ctx.fillStyle = trait.css;
     ctx.beginPath();
@@ -175,6 +175,7 @@ function repeint() {
   });
 }
 function segment(de, vers, teinte) {
+  if (!courant || courant.mode !== modeVu) return;
   const ctx = calque.getContext("2d");
   const ep = epaisseur();
   const X = (p) => p.x * (calque.width - 1);
@@ -208,7 +209,7 @@ function pose(ev) {
   }
   coupure = false;
   courant.points.push(p);
-  file.push({x: p.x, y: p.y, suite: !!relie});
+  file.push({x: p.x, y: p.y, suite: !!relie, mode: courant.mode});
   segment(relie ? avant : null, p, courant.css);
 }
 let pompe = Promise.resolve();
@@ -227,7 +228,7 @@ calque.addEventListener("pointerdown", (ev) => {
   ev.preventDefault();
   dessin = true;
   coupure = true;
-  courant = {css, points: []};
+  courant = {css, points: [], mode: modeVu};
   traits.push(courant);
   pose(ev);
 }, {passive: false});
@@ -258,12 +259,22 @@ function rafraichit() {
   if (img.dataset.chargement === "1") return;
   img.dataset.chargement = "1";
   const url = "/cadre.jpg?j=" + encodeURIComponent(jeton) + "&t=" + Date.now();
-  fetch(url).then((reponse) => reponse.status === 200 ? reponse.blob() : null).then((blob) => {
+  fetch(url).then((reponse) => {
+    if (reponse.status !== 200) return null;
+    const mode = reponse.headers.get("X-Mode") || "serein";
+    const change = mode !== modeVu;
+    modeVu = mode;
+    return reponse.blob().then((blob) => ({blob, change}));
+  }).then((recu) => {
     img.dataset.chargement = "0";
-    if (!blob) return;
-    const objet = URL.createObjectURL(blob);
+    if (!recu || !recu.blob) return;
+    const objet = URL.createObjectURL(recu.blob);
     const ancien = img.dataset.objet || "";
-    img.onload = () => { if (ancien) URL.revokeObjectURL(ancien); place(); };
+    img.onload = () => {
+      if (ancien) URL.revokeObjectURL(ancien);
+      place();
+      if (recu.change) repeint();
+    };
     img.dataset.objet = objet;
     img.src = objet;
   }).catch(() => { img.dataset.chargement = "0"; });
@@ -292,8 +303,10 @@ class Coloriage:
 
     def __init__(self, journal: Path | None = None) -> None:
         self.journal = journal
-        self._touches: list[tuple[float, float, float, tuple[int, int, int], int]] = []
+        self._touches: list[tuple[float, float, float, tuple[int, int, int], int, str]] = []
         self._trait = 0
+        self.mode = "serein"
+        self._mode_image = "serein"
         self._verrou = threading.Lock()
         self._jpeg = b""
         self._apercu = 0.0
@@ -302,7 +315,7 @@ class Coloriage:
         self._fil: threading.Thread | None = None
 
     def pose(self, x: float, y: float, nom: str, quand: float, suite: bool = False,
-             trait: int | None = None, note: bool = True) -> bool:
+             trait: int | None = None, note: bool = True, mode: str | None = None) -> bool:
         teinte = COULEURS.get(nom)
         if teinte is None:
             return False
@@ -313,16 +326,22 @@ class Coloriage:
             return False
         with self._verrou:
             if trait is None:
-                if not suite or self._trait == 0:
+                if not suite or not self._touches:
                     self._trait += 1
-                trait = self._trait
+                    trait = self._trait
+                    mode = str(mode or self.mode or "serein")
+                else:
+                    trait = self._trait
+                    mode = self._touches[-1][5]
             else:
                 trait = int(trait)
                 self._trait = max(self._trait, trait)
-            touche = (float(quand), x, y, teinte, trait)
+                mode = str(mode or "")
+            touche = (float(quand), x, y, teinte, trait, mode)
             self._touches.append(touche)
         if note:
-            self._note({"t": touche[0], "x": x, "y": y, "couleur": nom, "trait": trait})
+            self._note({"t": touche[0], "x": x, "y": y, "couleur": nom,
+                        "trait": trait, "mode": mode})
         return True
 
     def relis(self) -> None:
@@ -339,17 +358,21 @@ class Coloriage:
             except ValueError:
                 continue
             if recu.get("efface"):
-                with self._verrou:
-                    self._touches.clear()
+                self.efface(str(recu.get("mode") or "") or None, note=False)
                 continue
             self.pose(recu.get("x", -1), recu.get("y", -1),
                       str(recu.get("couleur") or ""), recu.get("t") or 0.0,
-                      trait=recu.get("trait"), note=False)
+                      trait=recu.get("trait"), note=False,
+                      mode=str(recu.get("mode") or "") or None)
 
-    def efface(self) -> None:
+    def efface(self, mode: str | None = None, note: bool = True) -> None:
         with self._verrou:
-            self._touches.clear()
-        self._note({"t": time.time(), "efface": True})
+            if mode:
+                self._touches = [touche for touche in self._touches if touche[5] != mode]
+            else:
+                self._touches.clear()
+        if note:
+            self._note({"t": time.time(), "efface": True, "mode": mode or ""})
 
     def _note(self, ligne: dict) -> None:
         """Le geste, pour la diffusion plus tard. Un échec d'écriture n'arrête pas le flux."""
@@ -362,17 +385,22 @@ class Coloriage:
         except OSError:
             pass
 
-    def dessine(self, image: np.ndarray, quand: float) -> None:
-        """Pose les touches dont l'heure est déjà passée. Les autres attendent."""
+    def dessine(self, image: np.ndarray, quand: float, mode: str | None = None) -> None:
+        """Pose les touches dont l'heure est déjà passée. Les autres attendent.
+
+        Avec un mode, seules les séquences commencées dans ce mode sont posées.
+        """
         with self._verrou:
             lot = [touche for touche in self._touches if touche[0] <= quand]
+        if mode is not None:
+            lot = [touche for touche in lot if touche[5] == mode]
         if not lot:
             return
         hauteur, largeur = image.shape[:2]
         epaisseur = max(1, int(round(TRAIT * largeur / 1600)))
         rayon = max(1, epaisseur // 2)
         precedent = None
-        for _quand, x, y, teinte, trait in lot:
+        for _quand, x, y, teinte, trait, _mode in lot:
             px = int(x * (largeur - 1))
             py = int(y * (hauteur - 1))
             if precedent is not None and precedent[0] == trait:
@@ -391,6 +419,7 @@ class Coloriage:
             return
         with self._verrou:
             self._jpeg = tampon.tobytes()
+            self._mode_image = self.mode
 
     def ouvre(self, jeton: str, port: int = PORT) -> None:
         self._jeton = jeton
@@ -424,6 +453,7 @@ class Coloriage:
                     self.send_response(200)
                     self.send_header("Content-Type", "image/jpeg")
                     self.send_header("Cache-Control", "no-store")
+                    self.send_header("X-Mode", coloriage._mode_image or "serein")
                     self.send_header("Content-Length", str(len(corps)))
                     self.end_headers()
                     self.wfile.write(corps)
@@ -442,7 +472,8 @@ class Coloriage:
                     return
                 chemin = urlparse(self.path).path
                 if chemin == "/efface":
-                    coloriage.efface()
+                    mode = (parse_qs(urlparse(self.path).query).get("mode") or [""])[0]
+                    coloriage.efface(mode or None)
                 elif chemin == "/touche":
                     taille = int(self.headers.get("Content-Length") or 0)
                     if taille > 65536:
@@ -462,7 +493,8 @@ class Coloriage:
                         for point in points[:400]:
                             if isinstance(point, dict):
                                 coloriage.pose(point.get("x", -1), point.get("y", -1),
-                                               nom, quand, suite=bool(point.get("suite")))
+                                               nom, quand, suite=bool(point.get("suite")),
+                                               mode=str(point.get("mode") or "") or None)
                     else:
                         coloriage.pose(recu.get("x", -1), recu.get("y", -1), nom, quand)
                 self.send_response(204)
