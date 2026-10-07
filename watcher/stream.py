@@ -7461,6 +7461,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     fetes: set[float] = set()
     journal = Journal(racine / "data" / "rushs", cfg["stream_fps"])
     coloriage = Coloriage(racine / "data" / "coloriage.jsonl")
+    coloriage.relis()
     if cfg.get("coloriage_jeton"):
         try:
             coloriage.ouvre(str(cfg["coloriage_jeton"]), COLORIAGE_PORT)
@@ -8270,9 +8271,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # sur les encarts. Jamais par-dessus la montagne : il s'arrête au
             # bord de la fenêtre, où il est le plus vif.
             pose_eclat(toile, cadrage, quand - attrape, attrape_nom, attrape_teinte)
-            # Le coloriage ne part pas en direct, et il ne rentre pas dans
-            # l'image non plus. Le calque de la page porte le trait : le
-            # recopier ici le montrait en segments à chaque JPEG.
+            # La page recharge cette photo nue et dessine dessus, sur son
+            # calque. Le trait n'y est pas recollé : ça le montrait en segments.
             coloriage.retiens(toile, time.time())
             # Le rush est cette image-ci, pas la photographie nue : le rectangle
             # du mouvement, le nom de la classe, et GOOD CATCH sont déjà posés.
@@ -8317,6 +8317,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             if attente > 0:
                 time.sleep(min(attente, 1.0))
             try:
+                # Le même trait que le calque, sur l'image qui part.
+                coloriage.dessine(toile, time.time())
                 sortie.stdin.write(toile.tobytes())
                 diffusees += 1
             except BrokenPipeError:

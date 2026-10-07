@@ -1,10 +1,9 @@
-"""Le coloriage du cadre, sur un calque, pour une diffusion plus tard.
+"""Le coloriage du cadre, sur un calque, et sur l'image qui part.
 
-La page montre le cadre, et le crayon vit sur un calque posé dessus. Le trait
-suit la souris tant que le bouton est enfoncé, comme dans Paint. Il n'est pas
-recopié dans l'image : la recopier le cassait en segments à chaque
-rafraîchissement. YouTube n'en reçoit aucune. Le geste est noté pour être
-rediffusé plus tard, dans le temps, et non posé d'un coup.
+La page montre le cadre nu, et le crayon vit sur un calque posé dessus : le
+trait suit la souris tant que le bouton est enfoncé. Ce même trait est posé
+sur l'image envoyée à YouTube. Le journal le retrouve au redémarrage, pour
+qu'un envoi ne l'efface pas.
 
 Le rouge du direct n'est pas dans la palette : ce rouge dit « en ce moment »,
 et une touche de la même couleur le ferait mentir.
@@ -65,7 +64,7 @@ PAGE = """<!DOCTYPE html>
   <img id="cadre" alt="">
   <canvas id="calque"></canvas>
 </div>
-<p class="note">Plus tard. Pas sur le direct.</p>
+<p class="note">Le trait part sur le direct.</p>
 <div class="barre" id="barre"></div>
 <script>
 const jeton = new URLSearchParams(location.search).get("j") || "";
@@ -302,7 +301,8 @@ class Coloriage:
         self._serveur: ThreadingHTTPServer | None = None
         self._fil: threading.Thread | None = None
 
-    def pose(self, x: float, y: float, nom: str, quand: float, suite: bool = False) -> bool:
+    def pose(self, x: float, y: float, nom: str, quand: float, suite: bool = False,
+             trait: int | None = None, note: bool = True) -> bool:
         teinte = COULEURS.get(nom)
         if teinte is None:
             return False
@@ -312,13 +312,39 @@ class Coloriage:
         except (TypeError, ValueError):
             return False
         with self._verrou:
-            if not suite or self._trait == 0:
-                self._trait += 1
-            trait = self._trait
+            if trait is None:
+                if not suite or self._trait == 0:
+                    self._trait += 1
+                trait = self._trait
+            else:
+                trait = int(trait)
+                self._trait = max(self._trait, trait)
             touche = (float(quand), x, y, teinte, trait)
             self._touches.append(touche)
-        self._note({"t": touche[0], "x": x, "y": y, "couleur": nom, "trait": trait})
+        if note:
+            self._note({"t": touche[0], "x": x, "y": y, "couleur": nom, "trait": trait})
         return True
+
+    def relis(self) -> None:
+        """Reprend le journal. Un envoi redémarre le flux : le trait déjà fait revient."""
+        if self.journal is None or not self.journal.exists():
+            return
+        try:
+            lignes = self.journal.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return
+        for ligne in lignes:
+            try:
+                recu = json.loads(ligne)
+            except ValueError:
+                continue
+            if recu.get("efface"):
+                with self._verrou:
+                    self._touches.clear()
+                continue
+            self.pose(recu.get("x", -1), recu.get("y", -1),
+                      str(recu.get("couleur") or ""), recu.get("t") or 0.0,
+                      trait=recu.get("trait"), note=False)
 
     def efface(self) -> None:
         with self._verrou:

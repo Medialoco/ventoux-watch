@@ -7490,10 +7490,14 @@ class JournalTests(unittest.TestCase):
         self.assertLess(source.index("pose_eclat("), voit)
         self.assertLess(voit, source.index("journal.relache("))
         self.assertLess(source.index("journal.sujet("), voit)
-        # Le trait est sur le calque. L'image rechargée et le direct restent nus.
+        # La page recharge la photo nue. Le trait est posé ensuite, sur
+        # l'image qui part, et pas avant l'archivage du rush.
         self.assertIn("coloriage.retiens(toile", source)
-        self.assertNotIn("coloriage.dessine(", source)
         self.assertLess(source.index("coloriage.retiens(toile"),
+                        source.index("journal.voit("))
+        self.assertLess(source.index("journal.voit("),
+                        source.index("coloriage.dessine(toile"))
+        self.assertLess(source.index("coloriage.dessine(toile"),
                         source.index("sortie.stdin.write"))
         self.assertIn("sortie.stdin.write(toile.tobytes())", source)
 
@@ -7562,3 +7566,21 @@ class ColoriageTests(unittest.TestCase):
         ys, xs = np.nonzero(cadre.any(axis=2))
         self.assertLessEqual(int(xs.max() - xs.min()), 8)
         self.assertLessEqual(int(ys.max() - ys.min()), 8)
+
+    def test_a_restart_puts_the_journal_back_on_the_frame(self):
+        import tempfile
+        from pathlib import Path
+        from watcher.coloriage import Coloriage
+        journal = Path(tempfile.mkdtemp()) / "coloriage.jsonl"
+        premier = Coloriage(journal)
+        premier.pose(0.5, 0.5, "blanc", 0.0)
+        premier.efface()
+        premier.pose(0.25, 0.5, "ambre", 1.0)
+        compte = journal.read_text(encoding="utf-8").count("\n")
+        second = Coloriage(journal)
+        second.relis()
+        self.assertEqual(journal.read_text(encoding="utf-8").count("\n"), compte)
+        image = self._image()
+        second.dessine(image, 10.0)
+        self.assertGreater(int(image[:, :80].sum()), 0)
+        self.assertEqual(int(image[:, 80:].sum()), 0)
