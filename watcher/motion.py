@@ -367,7 +367,9 @@ AFFICHE_PLAGE = 0.0008
 AFFICHE_PORTEE = 0.12
 AFFICHE_TRACE = 8
 AFFICHE_TROUS = 2
-AFFICHE_MAX = 8
+# Trois, pas toute la foule. Dessiner chaque tache chargerait le Pi
+# pour un écran illisible.
+AFFICHE_MAX = 3
 
 
 class Afficheur:
@@ -426,6 +428,9 @@ class Afficheur:
             if zone != "beach" and aire < AFFICHE_AIRE:
                 continue
             utiles.append(blob)
+        if len(utiles) > AFFICHE_MAX:
+            utiles.sort(key=lambda blob: blob["area_ratio"], reverse=True)
+            del utiles[AFFICHE_MAX:]
         self._rattache(utiles, largeur, hauteur)
         return [piste for piste in self._pistes if piste["misses"] == 0]
 

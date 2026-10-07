@@ -7448,10 +7448,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             break
     # Deux fonds. Aucun des deux n'écrit une piste : la veille classe
     # toujours de son côté, une image par seconde, avec son plancher.
-    affiche_ventoux = Afficheur(zones_ventoux)
-    affiche_cannes = Afficheur(zones_cannes)
+    # Moitié de la largeur de la veille : ces boîtes ne servent pas à nommer.
+    affiche_ventoux = Afficheur(zones_ventoux, motion_width=320)
+    affiche_cannes = Afficheur(zones_cannes, motion_width=320)
     affiche_demande = False
     affiche_sur_secours = False
+    affiche_hors_ventoux = False
     contour_ciel = contours.get("sky")
     # Le lampadaire du rond-point, s'il a été mesuré. Il faut les trois points :
     # la lanterne, que la carte donne, et les deux bouts du poteau, qu'on a
@@ -8159,11 +8161,15 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     if vue_suivi is not None:
                         pose_affiche(toile, affiche_cannes.voit(image), vue_suivi)
                 else:
-                    suivis_ventoux = affiche_ventoux.voit(image)
-                    if not cannes_seul and survol is not None and encart is not None:
-                        pose_affiche(toile, suivis_ventoux, encart)
-                    elif not cannes_seul and survol is None:
-                        pose_affiche(toile, suivis_ventoux, cadrage)
+                    # Cannes seule : on ne calcule pas le Ventoux qu'on ne dessine pas.
+                    if cannes_seul:
+                        if not affiche_hors_ventoux:
+                            affiche_ventoux.oublie()
+                    elif survol is not None and encart is not None:
+                        pose_affiche(toile, affiche_ventoux.voit(image), encart)
+                    elif survol is None:
+                        pose_affiche(toile, affiche_ventoux.voit(image), cadrage)
+                    affiche_hors_ventoux = cannes_seul
                     if voisin is not None:
                         vue_cannes = cadrage if cannes_seul else cadre_cannes
                         if vue_cannes is not None:

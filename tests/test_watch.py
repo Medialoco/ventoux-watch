@@ -776,6 +776,23 @@ class MotionTests(unittest.TestCase):
         self.assertGreater(len(vues[0]["trace"]), 1)
         self.assertGreater(vues[0]["trace"][-1][0], vues[0]["trace"][0][0])
         self.assertRegex(vues[0]["code"], "^[ABCDEFGHJKMNPQRSTUVWXYZ][23456789][ABCDEFGHJKMNPQRSTUVWXYZ]$")
+        from watcher.motion import AFFICHE_MAX
+        self.assertLessEqual(AFFICHE_MAX, 3)
+        foule = Afficheur(
+            {"priority": ["road"], "polygons": {"road": [[0, 0], [1, 0], [1, 1], [0, 1]]}},
+            motion_width=160, warmup_frames=2)
+        calme = np.full((90, 160, 3), 30, dtype=np.uint8)
+        for _ in range(2):
+            foule.voit(calme)
+        dernier = []
+        for pas in range(4):
+            cadre = calme.copy()
+            for i in range(6):
+                x = 8 + i * 24 + pas * 2
+                cadre[20:40, x:x + 12] = 255
+            dernier = foule.voit(cadre)
+        self.assertGreater(len(dernier), 0)
+        self.assertLessEqual(len(dernier), AFFICHE_MAX)
         corps = inspect.getsource(Afficheur.voit)
         self.assertLess(corps.index("_eteint"), corps.index("_blobs"))
         toile = np.zeros((80, 200, 3), np.uint8)
