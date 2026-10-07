@@ -64,9 +64,12 @@ STREAM_RETRY_S = 2
 # retard, et la lecture du code, sans garder la nuit entière en mémoire.
 CHERCHE_S = 150.0
 # Un piéton reste souvent une minute. On redemande la classe tant qu'il est
-# là, pas seulement quand il part : le spectateur voit la recherche, et la
-# classe peut tomber pendant qu'il est encore dans le champ.
-RELIRE_S = 4.0
+# là, pas seulement quand il part. Pas toutes les quatre secondes : la pluie
+# ouvrait une piste après l'autre et chacune relançait le réseau.
+RELIRE_S = 20.0
+# Une lecture du modèle à la fois. Le mouvement, lui, est dessiné à chaque
+# image, sans attendre cette lecture.
+YOLO_ECART_S = 8.0
 LOS_ANGELES = ZoneInfo("America/Los_Angeles")
 STREAM_RETRY_MAX_S = 60
 
@@ -265,6 +268,7 @@ def main() -> None:
     _aligne_prises(score, store.events, root / "data" / "score.json")
     pending: list[dict] = []
     last_fire: dict[str, float] = {}
+    dernier_yolo = 0.0
     alerted: set[int] = set()
     last_gtfs = 0.0
     last_publish = 0.0
@@ -322,12 +326,27 @@ def main() -> None:
                 step = motion.step(frame, prise)
                 _note_cherche(cherche, annonces, motion.tracks, step.ended, frame, prise,
                               root / "data" / "cherche.json", score, root / "data" / "score.json")
-                for track in step.ended:
-                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score)
+                # Le feu d'abord : une fois écarté, il ne repasse pas. Ensuite
+                # une seule piste, la plus tenue. Les autres gardent leur
+                # rectangle de mouvement et traversent la règle sans le réseau.
+                budget = now - dernier_yolo >= YOLO_ECART_S
                 for track in _burning(motion.tracks, prise, cfg, carte, alerted):
-                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score)
-                for track in _a_relire(motion.tracks, prise):
-                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score, tot=True)
+                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score, modele=True)
+                    dernier_yolo = now
+                    budget = False
+                finies = sorted(step.ended, key=lambda piste: piste.frames, reverse=True)
+                if budget and finies:
+                    _on_track(finies[0], prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score, modele=True)
+                    dernier_yolo = now
+                    budget = False
+                    finies = finies[1:]
+                for track in finies:
+                    _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score, modele=False)
+                if budget:
+                    for track in _a_relire(motion.tracks, prise):
+                        _on_track(track, prise, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, carte, score, tot=True, modele=True)
+                        dernier_yolo = now
+                        break
                 if now - sonde_source >= 60.0 and _mont_serein_vif(cfg) != (not secours):
                     log.info("La veille change de webcam")
                     break
@@ -347,7 +366,17 @@ def main() -> None:
         wait = _next_wait(seen, wait)
 
 
-def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map=None, score=None, tot: bool = False) -> None:
+def _modele_inutile(period: str, blind: bool) -> bool:
+    """La crête a disparu, et ce n'est pas le jour : le nom sera « brouillard ».
+
+    Le réseau ne change pas cette ligne. Le laisser tourner pendant la pluie
+    occupe le Pi pour une lecture qu'on jette. Le rectangle de mouvement,
+    lui, est déjà écrit.
+    """
+    return bool(blind) and period != "day"
+
+
+def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene, memory, scene_map=None, score=None, tot: bool = False, modele: bool = True) -> None:
     if getattr(track, "tenu", False):
         return
     # La mer et le sable sont dessinés, pas nommés. Une vague lue « piéton »
@@ -368,10 +397,17 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
     # vide. C'est aussi pourquoi le gros plan, lui, se lisait : il est découpé
     # sur « best_bbox » depuis toujours.
     moved = track.best_bbox if any(track.best_bbox) else track.bbox
-    detections = yolo.detect(frame, moved) if frame is not None else []
-    detections = [replace(hit, share=_covers(hit.box, moved)) if hit.box else hit for hit in detections]
     when = datetime.fromtimestamp(track.updated, timezone.utc)
-    current = scene.read(frame, when)
+    current = scene.read(frame, when) if scene is not None else None
+    # La nuit, crête absente, la règle répond « brouillard » sans regarder
+    # le réseau. On ne le lance pas. Sans ciel lu, on le lance quand même :
+    # c'est le cas d'une piste qu'on ne sait pas encore classer.
+    inutile = current is not None and _modele_inutile(current.period, current.blind)
+    if frame is not None and modele and not inutile:
+        detections = yolo.detect(frame, moved)
+    else:
+        detections = []
+    detections = [replace(hit, share=_covers(hit.box, moved)) if hit.box else hit for hit in detections]
     scene_map = scene_map or SceneMap()
     box = _norm_box(frame, track)
     surface = scene_map.surface_under(box) if box else ""
@@ -504,8 +540,8 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         # the rule has settled on one aircraft there is nothing to ask about.
         decision.detail.update(describe_route(sky.route(decision.detail["icao24"], track.updated)))
     # Pendant que la piste est ouverte, on ne garde que ce dont on est sûr.
-    # Le reste continue d'être cherché : un refus écrit toutes les quatre
-    # secondes noierait le journal et féliciterait un doute.
+    # Le reste continue d'être cherché : un refus écrit à chaque relecture
+    # noierait le journal et féliciterait un doute.
     sure = (decision.publish and decision.type in CLASSES_SURES
             and float(decision.confidence or 0) >= CONFIANCE_SURE)
     if tot and not sure:
@@ -662,11 +698,11 @@ def _note_cherche(souvenir: dict, annonces: set, tracks, ended, frame, prise: fl
 
 
 def _a_relire(tracks, maintenant: float) -> list:
-    """Les pistes encore ouvertes à qui on redemande la classe.
+    """La piste ouverte la plus tenue, quand l'heure de la relire est venue.
 
     Un piéton qui reste une minute ne doit pas attendre d'être parti pour
-    avoir un nom. On redemande toutes les quelques secondes, et on ne publie
-    que si la lecture est assez sûre pour un point.
+    avoir un nom. On n'en relit qu'une : la pluie en tenait dix, et chacune
+    réclamait le réseau.
     """
     dus = []
     for track in tracks:
@@ -674,9 +710,12 @@ def _a_relire(tracks, maintenant: float) -> list:
             continue
         if maintenant - track.essai < RELIRE_S:
             continue
-        track.essai = maintenant
         dus.append(track)
-    return dus
+    if not dus:
+        return []
+    choisi = max(dus, key=lambda piste: piste.frames)
+    choisi.essai = maintenant
+    return [choisi]
 
 
 def _charge_score(chemin: Path) -> dict:

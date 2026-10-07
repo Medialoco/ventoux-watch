@@ -2199,9 +2199,6 @@ def cadre(cam: np.ndarray, largeur: int, hauteur: int) -> np.ndarray:
 DUPLEX_PREMIER_S = 75.0
 DUPLEX_TENUE_S = 90.0
 DUPLEX_PAUSE_S = 900.0
-# Le décodeur de Cannes est lancé avant le créneau : la première image
-# met une dizaine de secondes à arriver.
-AMORCE_DUPLEX_S = 25.0
 # Du cadre partagé, le Ventoux garde la plus grande part. L'encart du
 # Raspberry est déjà à gauche de l'écran, hors de cette fenêtre.
 PART_VENTOUX = 0.62
@@ -6957,12 +6954,24 @@ class Compagne:
         self._voulu = threading.Event()
         self._stop = threading.Event()
         self._lock = threading.Lock()
+        self._proc: subprocess.Popen | None = None
         self._image: np.ndarray | None = None
         self._vu = 0.0
         threading.Thread(target=self._boucle, daemon=True).start()
 
     def voulu(self, oui: bool) -> None:
-        (self._voulu.set if oui else self._voulu.clear)()
+        if oui:
+            self._voulu.set()
+            return
+        self._voulu.clear()
+        self._coupe()
+
+    def _coupe(self) -> None:
+        """Ferme le décodeur tout de suite. Une lecture bloquée ne le saurait pas."""
+        with self._lock:
+            proc = self._proc
+        if proc is not None and proc.poll() is None:
+            proc.kill()
 
     def fraiche(self) -> np.ndarray | None:
         with self._lock:
@@ -6994,9 +7003,14 @@ class Compagne:
                 continue
             proc = self._ouvre()
             if proc is None or proc.stdout is None:
+                if proc is not None:
+                    proc.kill()
+                    proc.wait(timeout=2)
                 if self._stop.wait(8):
                     return
                 continue
+            with self._lock:
+                self._proc = proc
             octets = self.TAILLE[0] * self.TAILLE[1] * 3
             try:
                 while self._voulu.is_set() and not self._stop.is_set():
@@ -7010,7 +7024,13 @@ class Compagne:
                         self._vu = time.time()
             finally:
                 proc.kill()
+                try:
+                    proc.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    pass
                 with self._lock:
+                    if self._proc is proc:
+                        self._proc = None
                     if not self._voulu.is_set():
                         self._image = None
 
@@ -7912,13 +7932,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     log.warning("Duplex sans image")
                 duplex_depuis = -1.0
                 duplex_peint = False
-            # Le décodeur part avant l'image, pour que la colonne soit pleine
-            # dès la première seconde du créneau.
-            amorce = (not secours and not figee and survol is None
-                      and rediff is None and a_poser is None
-                      and duplex_depuis < 0
-                      and 0 <= prochain_duplex - quand <= AMORCE_DUPLEX_S)
-            compagne.voulu(demande or amorce)
+            # Le décodeur ne tourne que pendant que Cannes est à l'écran.
+            # Vingt-cinq secondes avant le créneau occupaient un cœur pour
+            # une colonne encore noire.
+            compagne.voulu(demande)
             voisin = compagne.fraiche() if demande else None
             cadre_cannes = None
             colonnes_mixte = None
@@ -8235,10 +8252,15 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 except (OSError, ValueError):
                     agenda, agenda_credit = [], ""
             pose_agenda(toile, agenda, agenda_credit, quand - origine)
-            pose_fil(toile, cadrage, remue)
-            # Le seul nom du flux, sous la montagne. YouTube ne voit pas le
-            # site : sans ce mot sur l'image, on n'a pas de nom.
+            # Dans la rangée, le fil traverserait les cartouches et les deux
+            # images. Il ne relie que la page à une seule webcam.
+            if colonnes_mixte is None:
+                pose_fil(toile, cadrage, remue)
+            # Le seul nom du flux, sous chaque image à l'écran. YouTube ne
+            # voit pas le site : sans ce mot, on n'a pas de nom.
             pose_diese(toile, cadrage)
+            if cadre_cannes is not None:
+                pose_diese(toile, cadre_cannes)
             # La musique en dernier : c'est elle qu'on vient écouter, et c'est
             # elle que la licence oblige à nommer.
             pose_bloc_musique(toile, prog, racine / "data" / "musique",

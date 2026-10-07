@@ -1579,6 +1579,14 @@ class FogTests(unittest.TestCase):
         self.assertEqual(decide(car).type, "vehicle")
         self.assertEqual(decide(car).action, "publish")
 
+    def test_la_nuit_aveugle_ne_demande_pas_le_reseau(self):
+        from watcher.main import _modele_inutile
+
+        self.assertTrue(_modele_inutile("night", True))
+        self.assertTrue(_modele_inutile("twilight", True))
+        self.assertFalse(_modele_inutile("day", True))
+        self.assertFalse(_modele_inutile("night", False))
+
     def test_the_box_is_drawn_on_the_thing_that_was_named(self):
         """27 September, 16:06 local. A car and a group of walkers moved
         together on the roundabout. The word published was "Voiture" and the
@@ -6082,6 +6090,24 @@ class DuplexTests(unittest.TestCase):
         self.assertNotIn("cannes_seul", avant_tapis)
         xs = np.where(toile[:, cols[4][0]:].any(axis=2))[1]
         self.assertGreaterEqual(int(xs.max()) + cols[4][0], 1278)
+        diffuse = inspect.getsource(stream.diffuse)
+        self.assertIn("if colonnes_mixte is None:", diffuse)
+        self.assertIn("pose_diese(toile, cadre_cannes)", diffuse)
+        self.assertIn("compagne.voulu(demande)", diffuse)
+        self.assertNotIn("compagne.voulu(demande or amorce)", diffuse)
+        image = np.zeros((720, 1280, 3), np.uint8)
+        gauche = (200, 40, 300, 180)
+        droite = (780, 40, 300, 180)
+        stream.pose_diese(image, gauche)
+        stream.pose_diese(image, droite)
+
+        def sous(vue):
+            x, y, w, h = vue
+            bande = image[y + h:y + h + 40, x:x + w]
+            return int(np.count_nonzero(np.all(bande == stream.CYAN, axis=2)))
+
+        self.assertGreater(sous(gauche), 40)
+        self.assertGreater(sous(droite), 40)
 
     def test_la_maquette_ne_porte_pas_de_voyant_orange(self):
         toile = np.zeros((420, 1600, 3), np.uint8)
