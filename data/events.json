@@ -2,6 +2,187 @@
   "version": "0.6.32",
   "events": [
     {
+      "id": "2026-10-07T11-18-04Z-motion-147",
+      "t": "2026-10-07T11:18:04Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T11-18-04Z-motion-147.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0236,
+          "area_grow": 0.5,
+          "clipped": false,
+          "shade": 0.894,
+          "kept": 0.677,
+          "area_ratio": 0.00052,
+          "duration_s": 9.0,
+          "frames": 10,
+          "width_m": 14.4,
+          "height_m": 8.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.047,
+          "seen_as": []
+        },
+        "box": [
+          0.0953,
+          0.6139,
+          0.0516,
+          0.0556
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T11-18-04Z-motion-147.jpg"
+    },
+    {
+      "id": "2026-10-07T11-18-04Z-cycle-148",
+      "t": "2026-10-07T11:18:04Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-07T11-18-04Z-cycle-148.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1084,
+          "area_grow": 0.67,
+          "clipped": false,
+          "shade": 0.894,
+          "kept": 1.0,
+          "area_ratio": 0.00059,
+          "duration_s": 7.0,
+          "frames": 8,
+          "width_m": 5.5,
+          "height_m": 13.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.14,
+          "drift_rate": 0.889,
+          "seen_as": []
+        },
+        "box": [
+          0.2578,
+          0.5694,
+          0.0172,
+          0.0722
+        ],
+        "trace": [
+          [
+            1791371877.05,
+            0.2234,
+            0.5611,
+            0.0266,
+            0.0333
+          ],
+          [
+            1791371878.05,
+            0.2578,
+            0.5694,
+            0.0172,
+            0.0722
+          ],
+          [
+            1791371879.05,
+            0.2578,
+            0.5694,
+            0.0172,
+            0.0722
+          ],
+          [
+            1791371880.05,
+            0.2578,
+            0.5694,
+            0.0172,
+            0.0722
+          ],
+          [
+            1791371881.05,
+            0.2578,
+            0.5694,
+            0.0172,
+            0.0722
+          ],
+          [
+            1791371882.05,
+            0.3312,
+            0.5556,
+            0.0266,
+            0.0222
+          ],
+          [
+            1791371883.05,
+            0.3312,
+            0.5556,
+            0.0266,
+            0.0222
+          ],
+          [
+            1791371884.05,
+            0.3312,
+            0.5556,
+            0.0266,
+            0.0222
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T11-18-04Z-cycle-148.jpg"
+    },
+    {
+      "id": "2026-10-07T11-01-23Z-missed-146",
+      "t": "2026-10-07T11:01:23Z",
+      "type": "missed",
+      "label": "Lueur dans la météo",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-07T11-01-23Z-missed-146.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La tache chaude reste ambiguë par ce temps.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0852,
+          "area_grow": 11.94,
+          "clipped": false,
+          "shade": 0.941,
+          "kept": 0.764,
+          "area_ratio": 0.00705,
+          "duration_s": 13.0,
+          "frames": 14,
+          "width_m": 24.4,
+          "height_m": 4.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.06,
+          "drift_rate": 0.035,
+          "seen_as": []
+        },
+        "refused": "weather_glow",
+        "box": [
+          0.6937,
+          0.5861,
+          0.1812,
+          0.0583
+        ]
+      },
+      "closeup": "data/closeups/2026-10-07T11-01-23Z-missed-146.jpg"
+    },
+    {
       "id": "2026-10-07T10-56-57Z-motion-145",
       "t": "2026-10-07T10:56:57Z",
       "type": "motion",
