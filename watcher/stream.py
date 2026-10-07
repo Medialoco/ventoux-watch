@@ -2208,7 +2208,8 @@ PART_VENTOUX = 0.62
 
 
 def _dans_la_colonne(toile: np.ndarray, image: np.ndarray,
-                     colonne: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+                     colonne: tuple[int, int, int, int],
+                     ancre: str = "centre") -> tuple[int, int, int, int]:
     """Pose l'image dans la colonne sans l'étirer, et rend son rectangle."""
     x, y, w, h = colonne
     if image is None or image.size == 0 or w < 4 or h < 4:
@@ -2217,7 +2218,7 @@ def _dans_la_colonne(toile: np.ndarray, image: np.ndarray,
     echelle = min(w / iw, h / ih)
     dw, dh = max(1, int(iw * echelle)), max(1, int(ih * echelle))
     ox = x + (w - dw) // 2
-    oy = y + (h - dh) // 2
+    oy = y if ancre == "haut" else y + (h - dh) // 2
     toile[oy:oy + dh, ox:ox + dw] = cv2.resize(
         image, (dw, dh), interpolation=cv2.INTER_AREA)
     return ox, oy, dw, dh
@@ -2322,13 +2323,18 @@ def pose_mixte(ventoux: np.ndarray, cannes: np.ndarray,
         colonnes.append((cx, y, max(1, lw), h))
         cx += max(1, lw) + gap
     toile = np.zeros((hauteur, largeur, 3), np.uint8)
-    vue_ventoux = _dans_la_colonne(toile, ventoux, colonnes[1])
-    vue_cannes = _dans_la_colonne(toile, cannes, colonnes[3])
+    # Le nom tient dans une marge au-dessus de la photo. L'image part
+    # juste dessous : elle ne flotte pas au milieu d'une colonne vide.
+    marge_nom = int(round(28 * echelle))
+    vues = []
+    for indice in (1, 3):
+        cx, cy, cw, ch = colonnes[indice]
+        vues.append(_dans_la_colonne(
+            toile, ventoux if indice == 1 else cannes,
+            (cx, cy + marge_nom, cw, max(1, ch - marge_nom)), ancre="haut"))
+    vue_ventoux, vue_cannes = vues
     pose_cartouche(toile, colonnes[1], "MONT SEREIN")
     pose_cartouche(toile, colonnes[3], nom_cannes or "CANNES")
-    for i in range(4):
-        joint = colonnes[i][0] + colonnes[i][2] + max(0, gap // 2)
-        cv2.line(toile, (joint, y), (joint, y + h - 1), (232, 232, 232), 1, cv2.LINE_8)
     return toile, vue_ventoux, vue_cannes, colonnes
 
 
@@ -2345,10 +2351,8 @@ def pose_les_boites(toile: np.ndarray, colonnes: list[tuple[int, int, int, int]]
                     remue: float = 0.0) -> None:
     """Les trois cartouches à leur taille, dans la rangée.
 
-    Pas une réduction d'un dessin fait pour le bord : chacune est posée
-    là où sa colonne finit. Le compteur de Beaumont est sur la boîte de
-    droite, pas un troisième chiffre. Beaumont, au milieu, garde la place
-    de ce compteur pour que les deux disques s'arrêtent sur la même ligne.
+    Chacune a la disposition du cartouche de droite : heure, lieu, disque,
+    compteur. Le médaillon de Cannes reste la photo, pas un cyan.
     """
     if len(colonnes) < 5:
         return
@@ -2356,11 +2360,11 @@ def pose_les_boites(toile: np.ndarray, colonnes: list[tuple[int, int, int, int]]
                  quand, ratio_los)
     pose_horloge(toile, quand, direct=direct, autre=autre, commune=commune,
                  carte=carte_pays, ou=ou_camera, remue=-remue, photo=photo,
-                 ratio=None, nuit=nuit, garde=True,
+                 ratio=ratio_beau, nuit=nuit,
                  bord_droit=colonnes[2][0] + colonnes[2][2] - 1)
     pose_horloge(toile, quand, direct=direct, autre=autre, commune=nom_cannes,
                  carte=carte_pays, ou=ou_cannes, remue=-remue, photo=photo_cannes,
-                 ratio=ratio_beau, nuit=False,
+                 ratio=ratio_beau, nuit=False, couleur=True,
                  bord_droit=colonnes[4][0] + colonnes[4][2] - 1)
 
 
@@ -6715,7 +6719,8 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
                  ratio: tuple | None = None,
                  nuit: bool = False,
                  bord_droit: int | None = None,
-                 garde: bool = False) -> None:
+                 garde: bool = False,
+                 couleur: bool = False) -> None:
     """L'heure qui tourne, en haut à droite, avec le point rouge des chaînes.
 
     Le point clignote à la seconde : c'est ce qui fait qu'un écran fixe a l'air
@@ -6795,7 +6800,12 @@ def pose_horloge(image: np.ndarray, quand: float, direct: bool = True,
     pose_date_heure(image, x, date_y, heure_y, jour, heure, echelle)
     pose_lieu(image, lieu, x, ville_y, LIEU_CORPS * echelle * HORLOGE_LIEU, echelle)
     if dessin:
-        teinte = tamise_la_photo(photo) if photo is not None else None
+        if photo is None:
+            teinte = None
+        elif couleur:
+            teinte = photo
+        else:
+            teinte = tamise_la_photo(photo)
         pose_carte_et_photo(
             image, x, haut_carte, droite + 1 - marge - x,
             bas - haut_carte - marge - bande, carte, ou, teinte, echelle)
@@ -8204,7 +8214,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                              ou=ou_secours if cannes_a_droite else ou_camera,
                              remue=-remue,
                              photo=photo_splendid if cannes_a_droite else photo_trampoline,
-                             ratio=beau, nuit=nuit_carte)
+                             ratio=beau, nuit=nuit_carte,
+                             couleur=cannes_a_droite)
                 if figee and not secours:
                     pose_mode_degrade(toile, cadrage, phrase_secours if secours else None)
                 pose_machine(toile, machine, photo_machine, ville, remue,

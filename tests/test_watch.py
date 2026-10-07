@@ -6075,7 +6075,9 @@ class DuplexTests(unittest.TestCase):
             ys = np.where(image[:, x:x + w].any(axis=2))[0]
             return int(ys.max()) - int(ys.min())
         self.assertLessEqual(abs(bas(toile, cols[4]) - bas(ref, (ref.shape[1] - lc, 0, lc, 1))), 2)
-        self.assertGreater(bas(toile, cols[4]) - bas(toile, cols[2]), 40)
+        self.assertLessEqual(abs(bas(toile, cols[4]) - bas(toile, cols[2])), 4)
+        source_boites = inspect.getsource(stream.pose_les_boites)
+        self.assertIn("couleur=True", source_boites)
         xs = np.where(toile[:, cols[4][0]:].any(axis=2))[1]
         self.assertGreaterEqual(int(xs.max()) + cols[4][0], 1278)
 
