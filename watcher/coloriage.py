@@ -24,6 +24,9 @@ import numpy as np
 # Épaisseur du trait, à la largeur de référence. Fin : un stylet, ou la souris
 # bouton enfoncé. Encore lisible une fois le cadre encodé.
 TRAIT = 4
+# La prochaine séquence se ferme quand le crayon se tait, puis elle revient.
+SILENCE_SEQUENCE_S = 45.0
+REPRISE_SEQUENCE_S = 2 * 3600.0
 PORT = 8766
 
 # BGR, les mêmes teintes que le flux, sauf le rouge du badge.
@@ -64,7 +67,7 @@ PAGE = """<!DOCTYPE html>
   <img id="cadre" alt="">
   <canvas id="calque"></canvas>
 </div>
-<p class="note">Le trait reste dans le mode où il a commencé.</p>
+<p class="note">La prochaine séquence revient toutes les deux heures.</p>
 <div class="barre" id="barre"></div>
 <script>
 const jeton = new URLSearchParams(location.search).get("j") || "";
@@ -307,6 +310,10 @@ class Coloriage:
         self._trait = 0
         self.mode = "serein"
         self._mode_image = "serein"
+        self._derniere = 0.0
+        self._sequence: list[tuple[float, float, float, tuple[int, int, int], int, str]] | None = None
+        self._rejoue_a = 0.0
+        self._rejoue_depuis = 0.0
         self._verrou = threading.Lock()
         self._jpeg = b""
         self._apercu = 0.0
@@ -339,6 +346,8 @@ class Coloriage:
                 mode = str(mode or "")
             touche = (float(quand), x, y, teinte, trait, mode)
             self._touches.append(touche)
+            if self._sequence is None:
+                self._derniere = touche[0]
         if note:
             self._note({"t": touche[0], "x": x, "y": y, "couleur": nom,
                         "trait": trait, "mode": mode})
@@ -369,8 +378,13 @@ class Coloriage:
         with self._verrou:
             if mode:
                 self._touches = [touche for touche in self._touches if touche[5] != mode]
+                if self._sequence and self._sequence[0][5] == mode:
+                    self._sequence = None
+                    self._rejoue_depuis = 0.0
             else:
                 self._touches.clear()
+                self._sequence = None
+                self._rejoue_depuis = 0.0
         if note:
             self._note({"t": time.time(), "efface": True, "mode": mode or ""})
 
@@ -389,9 +403,13 @@ class Coloriage:
         """Pose les touches dont l'heure est déjà passée. Les autres attendent.
 
         Avec un mode, seules les séquences commencées dans ce mode sont posées.
+        La première séquence, une fois le crayon tu, ne reste pas : elle
+        revient toutes les deux heures, redessinée au même rythme.
         """
         with self._verrou:
+            self._cloture(quand)
             lot = [touche for touche in self._touches if touche[0] <= quand]
+            lot.extend(self._rejeu(quand, mode))
         if mode is not None:
             lot = [touche for touche in lot if touche[5] == mode]
         if not lot:
@@ -408,6 +426,34 @@ class Coloriage:
                          teinte, epaisseur, cv2.LINE_AA)
             cv2.circle(image, (px, py), rayon, teinte, -1, cv2.LINE_AA)
             precedent = (trait, px, py)
+
+    def _cloture(self, quand: float) -> None:
+        if self._sequence is not None or not self._touches:
+            return
+        if quand - self._derniere < SILENCE_SEQUENCE_S:
+            return
+        self._sequence = list(self._touches)
+        self._touches.clear()
+        self._rejoue_a = self._derniere + REPRISE_SEQUENCE_S
+        self._rejoue_depuis = 0.0
+
+    def _rejeu(self, quand: float, mode: str | None) -> list:
+        if not self._sequence:
+            return []
+        mode_seq = self._sequence[0][5]
+        debut = self._sequence[0][0]
+        duree = max(2.0, self._sequence[-1][0] - debut)
+        if self._rejoue_depuis:
+            ecoule = quand - self._rejoue_depuis
+            if ecoule > duree:
+                self._rejoue_a = self._rejoue_depuis + REPRISE_SEQUENCE_S
+                self._rejoue_depuis = 0.0
+                return []
+            return [touche for touche in self._sequence if touche[0] - debut <= ecoule]
+        if quand >= self._rejoue_a and (mode is None or mode == mode_seq):
+            self._rejoue_depuis = quand
+            return [touche for touche in self._sequence if touche[0] <= debut]
+        return []
 
     def retiens(self, image: np.ndarray, quand: float, periode: float = 0.25) -> None:
         """Garde un aperçu pour l'iPad, pas à chaque image."""
