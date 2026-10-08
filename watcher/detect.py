@@ -72,7 +72,13 @@ class YoloDetector:
             return
         import onnxruntime as ort
 
-        self.session = ort.InferenceSession(str(path), providers=["CPUExecutionProvider"])
+        options = ort.SessionOptions()
+        # Un passage par seconde. Deux fils suffisent ; quatre réveillaient
+        # tout le Pi au moment où Cannes décodait déjà.
+        options.intra_op_num_threads = 2
+        options.inter_op_num_threads = 1
+        self.session = ort.InferenceSession(
+            str(path), sess_options=options, providers=["CPUExecutionProvider"])
         self.input_name = self.session.get_inputs()[0].name
 
     @property

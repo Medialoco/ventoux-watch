@@ -214,6 +214,8 @@ def _published(root: Path) -> bool:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    # Même borne que le flux : OpenCV ne prend pas un fil par cœur.
+    cv2.setNumThreads(2)
     log.info("Veilleur v%s", __version__)
     cfg = load_config()
     root = Path(cfg["_root"])
@@ -1295,6 +1297,7 @@ def _frames(url: str, horloge: bool = False):
             # Plus près du bord que l'antenne : la minute de marge du flux
             # est le temps qu'on a pour nommer avant que l'image ne passe.
             "-live_start_index", str(-RECUL_VEILLE),
+            "-threads", "1",
             "-i", url, "-an", "-vf", "fps=1",
             "-f", "image2pipe", "-vcodec", "mjpeg", "-",
         ]
@@ -1304,6 +1307,7 @@ def _frames(url: str, horloge: bool = False):
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
             "-live_start_index", str(-RECUL_VEILLE),
+            "-threads", "1",
             "-i", url, "-an", "-vf", "fps=1",
             "-f", "image2pipe", "-vcodec", "mjpeg", "-",
         ]

@@ -6919,6 +6919,15 @@ FORMAT_YOUTUBE = (
     "best[height<=720][protocol*=m3u8]"
     "/270/232/best[height<=1080][protocol*=m3u8]/best[height<=1080]"
 )
+# ffmpeg prend un fil par cœur. Le Pi en a quatre : le décodeur du Mont
+# Serein, celui de Cannes et l'encodeur se réveillaient tous les trois à
+# pleine largeur, et la charge affichée saturait dès que Cannes s'ouvrait.
+FILS_ENTREE = 2
+FILS_CANNES = 1
+FILS_SORTIE = 2
+# La colonne de Cannes tient dans 640 px. Deux images par seconde suffisent :
+# le reste du flux continue à six et réaffiche la dernière.
+CADENCE_CANNES = 2
 
 
 # Une minute derrière le bord. Le Raspberry est en wifi : collé au dernier
@@ -6949,7 +6958,7 @@ def duree_de_segment(url: str) -> float:
 
 
 def _entree_cadre(url: str, largeur: int, hauteur: int, fps: int,
-                  recul: int) -> subprocess.Popen:
+                  recul: int, fils: int = FILS_CANNES) -> subprocess.Popen:
     """N'importe quelle autre webcam, au rythme et à la taille du Mont Serein.
 
     Leur flux peut être à trente images et plusieurs mégabits. On n'en veut
@@ -6967,6 +6976,7 @@ def _entree_cadre(url: str, largeur: int, hauteur: int, fps: int,
         # YouTube sert une heure d'enregistrement. L'index négatif part de la
         # fin : une minute, pas le début du fichier et pas le dernier segment.
         "-live_start_index", str(-recul),
+        "-threads", str(fils),
         "-i", url, "-an",
         "-vf", f"fps={fps},scale={largeur}:{hauteur}",
         "-f", "rawvideo", "-pix_fmt", "bgr24", "-",
@@ -7089,7 +7099,7 @@ def _ouvre_secours(cfg: dict, largeur: int, hauteur: int, fps: int) -> subproces
     duree = duree_de_segment(url)
     recul = max(1, int(round(RETARD_SECOURS_S / duree)))
     log.info("Secours ouvert : %s, marge %.0f s", nom, recul * duree)
-    return _entree_cadre(url, largeur, hauteur, fps, recul)
+    return _entree_cadre(url, largeur, hauteur, fps, recul, FILS_ENTREE)
 
 
 def _webcam_vive(url: str) -> bool:
@@ -7130,6 +7140,7 @@ def _entree(url: str, recul: int, fps: int = 6) -> subprocess.Popen:
         "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
         # Le retard, pris chez le serveur plutôt qu'en mémoire.
         "-live_start_index", str(-recul),
+        "-threads", str(FILS_ENTREE),
         "-i", url, "-an",
         # La webcam publie vingt-cinq images par seconde de montagne. Sans ce
         # filtre, chaque image brute était comptée comme une image à six par
@@ -7197,6 +7208,7 @@ def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
         # toucher au code, et pour qu'on puisse remonter le jour où la machine
         # saura se refroidir.
         "-c:v", "libx264", "-preset", vitesse, "-tune", "zerolatency",
+        "-threads", str(FILS_SORTIE),
         "-pix_fmt", "yuv420p", "-b:v", debit, "-maxrate", debit, "-bufsize", "4M",
         # La source ne donne que six images par seconde et YouTube se méfie en
         # dessous de vingt-cinq. On le laisse dupliquer lui-même plutôt que de
@@ -7356,6 +7368,9 @@ class Journal:
 
 
 def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: int) -> None:
+    # OpenCV prend aussi un fil par cœur. La soustraction de Cannes, à chaque
+    # image, réveillait les quatre. Deux suffisent pour une image de 160 px.
+    cv2.setNumThreads(FILS_ENTREE)
     muet = not cfg.get("stream_musique", True)
     musique = Musique(racine / "data" / "musique", racine, muet=muet)
     if muet:
@@ -7579,7 +7594,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     duplex_peint = False
     duplex_mode = ""
     prochain_duplex = origine + DUPLEX_PREMIER_S
-    compagne = Compagne(cfg, int(cfg["stream_fps"]))
+    compagne = Compagne(cfg, CADENCE_CANNES)
     pensee_jour, pensee_rang, pensee_etape, pensee_feu = _pensee_lue(racine)
     dijon_jour, dijon_rang = _dijon_lue(racine)
     dijon_feu = 0.0
@@ -8081,9 +8096,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # au rond-point : ils restent quand l'image est celle de Cannes.
             if survol is None:
                 pose_danseurs(toile, quand - origine, musique.pouls(), vue=cadrage)
-            # Ils connaissent le rond-point et la crête, et ils jouent
-            # aussi quand Cannes occupe le cadre : la fenêtre est la leur
-            # pour ces quatre-vingt-dix secondes.
+            # Propres au Mont Serein. Ils connaissent le rond-point et la
+            # crête, et ils jouent aussi quand Cannes occupe le cadre : la
+            # fenêtre est la leur pour ces quatre-vingt-dix secondes.
             if not figee and survol is None:
                 # Le tapis vole au-dessus de la crête, donc il passe quoi qu'il
                 # arrive. L'éléphant danse sur le rond-point, c'est-à-dire en
