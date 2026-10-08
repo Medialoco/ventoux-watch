@@ -2,6 +2,108 @@
   "version": "0.6.42",
   "events": [
     {
+      "id": "2026-10-08T08-04-08Z-vehicle-62",
+      "t": "2026-10-08T08:04:08Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.785,
+      "thumb": "data/thumbs/2026-10-08T08-04-08Z-vehicle-62.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2912,
+          "area_grow": 16.49,
+          "clipped": true,
+          "shade": 2.28,
+          "kept": 0.517,
+          "area_ratio": 0.04959,
+          "duration_s": 12.3,
+          "frames": 2,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.069,
+          "seen_as": [
+            "car 0.79 sur 42%",
+            "car 0.73 sur 78%",
+            "car 0.68 sur 2%",
+            "car 0.43 sur 0%"
+          ]
+        },
+        "box": [
+          0.614,
+          0.8167,
+          0.3147,
+          0.1833
+        ],
+        "trace": [
+          [
+            1791446636.03,
+            0.9672,
+            0.7167,
+            0.0328,
+            0.0917
+          ],
+          [
+            1791446648.32,
+            0.5844,
+            0.8389,
+            0.3078,
+            0.1611
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-08T08-04-08Z-vehicle-62.jpg"
+    },
+    {
+      "id": "2026-10-08T07-59-56Z-motion-61",
+      "t": "2026-10-08T07:59:56Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-08T07-59-56Z-motion-61.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1371,
+          "area_grow": 1.08,
+          "clipped": false,
+          "shade": 1.693,
+          "kept": 0.167,
+          "area_ratio": 0.00047,
+          "duration_s": 6.5,
+          "frames": 2,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 1.054,
+          "seen_as": []
+        },
+        "box": [
+          0.6016,
+          0.5722,
+          0.0187,
+          0.025
+        ]
+      },
+      "closeup": "data/closeups/2026-10-08T07-59-56Z-motion-61.jpg"
+    },
+    {
       "id": "2026-10-08T07-54-23Z-motion-58",
       "t": "2026-10-08T07:54:48Z",
       "type": "person",
