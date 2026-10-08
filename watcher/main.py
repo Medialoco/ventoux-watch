@@ -63,6 +63,9 @@ STREAM_RETRY_S = 2
 # fichier qui ne les contient plus. Quatre-vingt-dix secondes couvrent ce
 # retard, et la lecture du code, sans garder la nuit entière en mémoire.
 CHERCHE_S = 150.0
+# Une vague se voit, puis s'en va. Deux minutes et demie, et la mer
+# reste couverte de codes longtemps après que l'écume a disparu.
+VAGUE_CHERCHE_S = 12.0
 # Un piéton reste souvent une minute. On redemande la classe tant qu'il est
 # là, pas seulement quand il part. Pas toutes les quatre secondes : la pluie
 # ouvrait une piste après l'autre et chacune relançait le réseau.
@@ -684,10 +687,11 @@ def _note_cherche(souvenir: dict, annonces: set, tracks, ended, frame, prise: fl
         if not fiche["points"] or abs(fiche["points"][-1][0] - point[0]) > 0.01:
             fiche["points"].append(point)
     for identifiant in [i for i, fiche in souvenir.items()
-                        if not fiche["points"] or prise - fiche["points"][-1][0] > CHERCHE_S]:
+                        if not fiche["points"] or prise - fiche["points"][-1][0] > _duree_cherche(fiche.get("zone"))]:
         del souvenir[identifiant]
     for fiche in souvenir.values():
-        fiche["points"] = [p for p in fiche["points"] if prise - p[0] <= CHERCHE_S]
+        tenue = _duree_cherche(fiche.get("zone"))
+        fiche["points"] = [p for p in fiche["points"] if prise - p[0] <= tenue]
     payload = {"tracks": [{"code": fiche["code"], "zone": fiche["zone"], "points": fiche["points"]}
                           for fiche in souvenir.values() if fiche["points"]]}
     try:
@@ -697,6 +701,17 @@ def _note_cherche(souvenir: dict, annonces: set, tracks, ended, frame, prise: fl
         temporaire.replace(chemin)
     except OSError:
         log.warning("Pistes en cours non écrites", exc_info=True)
+
+
+def _duree_cherche(zone: str | None) -> float:
+    """Combien de temps le rectangle reste après le dernier point.
+
+    La route garde le code assez longtemps pour qu'on le recopie. La mer
+    et le sable, non : le dessin y est le mouvement lui-même.
+    """
+    if zone in {"sea", "beach"}:
+        return VAGUE_CHERCHE_S
+    return CHERCHE_S
 
 
 def _a_relire(tracks, maintenant: float) -> list:

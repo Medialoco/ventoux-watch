@@ -796,12 +796,16 @@ def pistes_visibles(tracks: list[dict], quand: float) -> list[dict]:
 
 
 def cherche_encore(vu: dict, pistes: list[dict], quand: float) -> bool:
-    """Vrai tant que la tache est là et que la classe n'est pas encore tombée.
+    """Vrai tant que le rectangle rouge doit encore couvrir cette tache.
 
-    La fiche datée est la fin de la piste : avant cette heure, le nom qu'elle
-    porte n'était pas connu. On laisse le rectangle rouge et le code, et le
-    « good catch » attend.
+    Une fiche nommée est déjà décidée : le flux la lit en retard sur la
+    veille, donc le nom est connu pendant que le sujet est encore là.
+    Attendre la fin de la fiche posait le carré et le good catch sur le
+    vide, la cloche sonnait encore après. Le nom prend la place tout de
+    suite. Sans nom, le rouge tient jusqu'à l'heure de la fiche.
     """
+    if vu.get("sur"):
+        return False
     if not pistes or quand >= float(vu.get("t") or 0):
         return False
     debut, fin = presence(vu)
@@ -814,7 +818,7 @@ def cherche_encore(vu: dict, pistes: list[dict], quand: float) -> bool:
 def _classe_connue(piste: dict, vus: list[dict], quand: float) -> bool:
     """Vrai quand une prise nommée recouvre déjà cette tache."""
     for vu in vus:
-        if quand < float(vu.get("t") or 0):
+        if not vu.get("sur"):
             continue
         debut, fin = presence(vu)
         if not debut <= quand <= fin:
@@ -1054,6 +1058,24 @@ def prise_a_feter(vus: list[dict], quand: float, fetes: set) -> dict | None:
             continue
         return vu
     return None
+
+
+def prise_a_sonner(vus: list[dict], quand: float, avance: float,
+                   deja: set) -> dict | None:
+    """La prise dont la cloche, versée maintenant, sera entendue avec le carré.
+
+    Le son versé a de l'avance sur l'image — douze secondes, mesurées.
+    Posée au moment du good catch, la cloche arrive après le carré.
+    On la verse quand l'image, dans ce délai, en sera au début du passage.
+    """
+    cible = quand + max(0.0, avance)
+    vu = prise_a_feter(vus, cible, deja)
+    if vu is None:
+        return None
+    debut, _fin = presence(vu)
+    if cible - debut > 0.5:
+        return None
+    return vu
 
 
 def duree_audio(chemin: Path) -> float:
@@ -1561,6 +1583,19 @@ class Musique:
         remis = (self.octets - self.session_a) / debit
         diffuse = (self.repere - self.session_a) / debit + self.ecran
         return max(0.0, min(remis, diffuse))
+
+    def avance(self) -> float:
+        """De combien le son versé précède l'image, en secondes.
+
+        Une réplique posée maintenant est entendue après ce délai : c'est
+        la file de l'entrée, pas un choix. La cloche s'en sert pour partir
+        plus tôt et arriver avec le carré.
+        """
+        debit = ECHANTILLONS_S * VOIES * OCTETS_PAR_ECHANTILLON
+        if debit <= 0:
+            return 0.0
+        ecrit = (self.octets - self.repere) / debit
+        return max(0.0, ecrit - self.ecran)
 
     def a_suivre(self) -> str:
         """Le morceau d'après, pour qui aime savoir ce qui arrive."""
@@ -7531,6 +7566,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # Les prises déjà fêtées, pour ne pas les fêter à chaque image des quatre
     # secondes où leur rectangle est à l'écran. Purgé à chaque fête.
     fetes: set[float] = set()
+    # La cloche est versée avant l'image, pour être entendue avec elle.
+    sonnees: set[float] = set()
     journal = Journal(racine / "data" / "rushs", cfg["stream_fps"])
     coloriage = Coloriage(racine / "data" / "coloriage.jsonl")
     coloriage.relis()
@@ -7872,6 +7909,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # une voiture en gros carrés n'est plus une voiture.
             if not figee and quand - dernier_vu > TENUE_S:
                 applique_effet(image, *effet_du_moment(quand - origine), quand - origine)
+            # La cloche part avant le carré : le son versé n'est entendu
+            # qu'après son avance, et c'est à cet instant-là que l'image
+            # doit montrer la prise.
+            if (secours or not figee) and musique.felicitations:
+                bientot = prise_a_sonner(vus, quand, musique.avance(), sonnees)
+                if bientot is not None:
+                    sonnees = {t for t in sonnees if t > quand - 3600} | {bientot["t"]}
+                    musique.dis(tirage.choice(musique.felicitations))
+                    log.info("Cloche pour %s, avec l'image dans %.0f s",
+                             bientot["label"], musique.avance())
             # La fête suit le rectangle, pas l'arrivée de la fiche.
             if (secours or not figee) and quand - attrape > ATTRAPE_S:
                 neuve = prise_a_feter(vus, quand, fetes)
@@ -7881,7 +7928,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     fetes = {t for t in fetes if t > quand - 3600} | {neuve["t"]}
                     attrape, attrape_nom = quand, neuve["label"]
                     attrape_teinte = teinte_de(neuve)
-                    if musique.felicitations:
+                    if neuve["t"] not in sonnees and musique.felicitations:
+                        sonnees = {t for t in sonnees if t > quand - 3600} | {neuve["t"]}
                         musique.dis(tirage.choice(musique.felicitations))
                     log.info("Prise à l'écran : %s — %s", neuve["label"],
                              musique.voix_dit or "sans voix")

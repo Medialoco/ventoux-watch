@@ -747,7 +747,7 @@ class MotionTests(unittest.TestCase):
         mer = [{"cx": 0.15, "cy": 0.70, "area_ratio": 0.0002 + i * 0.002} for i in range(8)]
         route = [{"cx": 0.85, "cy": 0.85, "area_ratio": 0.01}]
         gardes = formes_utiles(mer + route, zones)
-        self.assertEqual(sum(1 for blob in gardes if blob["cx"] < 0.5), 4)
+        self.assertEqual(sum(1 for blob in gardes if blob["cx"] < 0.5), 2)
         self.assertIn(route[0], gardes)
         avant, _apres = inspect.getsource(main._on_track).split("yolo.detect", 1)
         self.assertIn('track.zone in {"sea", "beach"}', avant)
@@ -3419,6 +3419,16 @@ class DiffusionTests(unittest.TestCase):
         # Et jamais deux fois : quatre secondes \u00e0 six images par seconde font
         # vingt-quatre occasions de crier pour une seule voiture.
         self.assertIsNone(stream.prise_a_feter([vu], 1000.0 + 1.0, {1000.0}))
+        # La cloche a douze secondes d'avance sur l'image : versée au début
+        # du passage, elle serait entendue après. On la verse douze secondes
+        # plus tôt, pour qu'elle tombe avec le carré.
+        trace = {"t": 2000.0, "type": "vehicle", "label": "Voiture",
+                 "box": [0.4, 0.8, 0.1, 0.1], "confiance": 0.9, "sur": True,
+                 "trace": [[2000.0, 0.4, 0.8, 0.1, 0.1],
+                           [2012.0, 0.5, 0.8, 0.1, 0.1]]}
+        self.assertIs(stream.prise_a_sonner([trace], 2000.0 - 12.0, 12.0, set()), trace)
+        self.assertIsNone(stream.prise_a_sonner([trace], 2000.0, 12.0, set()))
+        self.assertIs(stream.prise_a_sonner([trace], 2000.0, 0.0, set()), trace)
 
     def test_a_replay_shows_today_before_last_week(self):
         """La r\u00e9serve remontrait surtout le 25 septembre.
@@ -3615,7 +3625,9 @@ class DiffusionTests(unittest.TestCase):
                                         [debut + 6.0, 0.48, 0.62, 0.08, 0.12]]}],
             debut + 2.0)
         self.assertEqual([p["code"] for p in pistes], ["K7M"])
-        self.assertTrue(stream.cherche_encore(vu, pistes, debut + 2.0))
+        # Le nom est déjà dans la fiche : il se pose pendant le passage,
+        # pas à la dernière image, quand le sujet est parti.
+        self.assertFalse(stream.cherche_encore(vu, pistes, debut + 2.0))
         self.assertFalse(stream.cherche_encore(vu, pistes, debut + 6.0))
         image = np.zeros((360, 640, 3), np.uint8)
         stream.pose_recherches(image, pistes, None, [vu], debut + 2.0)
@@ -5854,6 +5866,12 @@ class HorlogeDuCreditTests(unittest.TestCase):
         self.assertAlmostEqual(musique._seconde(), 30.0, places=6)
         self.assertIn("Nemeton", musique.credit())
 
+    def test_the_bell_lead_is_how_far_the_sound_is_ahead_of_the_picture(self):
+        """Douze secondes : c'est le temps que la cloche met à sortir."""
+        musique = self._musique()
+        self._diffuse(musique, 40.0)
+        self.assertAlmostEqual(musique.avance(), self.EN_VOL, places=3)
+
     def test_a_new_output_restarts_the_image_clock_but_not_the_music(self):
         """YouTube raccroche, on rouvre : la vidéo repart à zéro, pas le morceau.
 
@@ -7328,8 +7346,11 @@ class RechercheTests(unittest.TestCase):
               "trace": [[1000.0, 0.4, 0.6, 0.05, 0.08],
                         [1030.0, 0.42, 0.6, 0.05, 0.08]]}
         pistes = [{"code": "K7M", "box": (0.4, 0.6, 0.05, 0.08)}]
-        self.assertTrue(stream.cherche_encore(vu, pistes, 1010.0))
+        self.assertFalse(stream.cherche_encore(vu, pistes, 1010.0))
         self.assertFalse(stream.cherche_encore(vu, pistes, 1030.0))
+        muet = dict(vu, sur=False)
+        self.assertTrue(stream.cherche_encore(muet, pistes, 1010.0))
+        self.assertFalse(stream.cherche_encore(muet, pistes, 1030.0))
 
     def test_a_doubt_is_not_a_catch(self):
         doute = {"t": 1000.0, "type": "person", "label": "Piéton",

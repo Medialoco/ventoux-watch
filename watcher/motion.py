@@ -203,6 +203,8 @@ class MotionDetector:
             return MotionStep()
         mask = self.bg.apply(small, learningRate=0)
         mask = _prepare_mask(mask, self.zones, small.shape[1], small.shape[0])
+        # L'écume disparaît. Une déferlante, elle, reste une seule masse.
+        _calme_la_mer(mask, self.zones)
         ratio = float(cv2.countNonZero(mask)) / float(mask.size)
         if ratio > self.max_foreground_ratio:
             return MotionStep(global_change=True)
@@ -210,7 +212,7 @@ class MotionDetector:
         # scene as it was without the thing that just moved.
         behind = self.bg.getBackgroundImage()
         self.bg.apply(small, learningRate=-1)
-        blobs = _blobs(mask, scale)
+        blobs = formes_utiles(_blobs(mask, scale), self.zones)
         for blob in blobs:
             blob["shade"], blob["texture"] = _lighting(small, behind, blob["bbox"], scale)
         return self._update_tracks(blobs, frame, now)
@@ -222,6 +224,8 @@ class MotionDetector:
             span = _bbox_span(blob["bbox"], frame.shape[1], frame.shape[0])
             match = self._match(blob["cx"], blob["cy"], zone, unused, span,
                                 frame.shape[:2])
+            if match is None and zone in {"sea", "beach"}:
+                match = _reprise(self.tracks, unused, zone, blob["cx"], blob["cy"])
             if match is None:
                 track = Track(
                     id=self._next_id,
@@ -247,7 +251,8 @@ class MotionDetector:
                     trace=[(now, blob["bbox"])],
                 )
                 self._next_id += 1
-                track.best_jpeg = _jpeg(frame)
+                if zone not in {"sea", "beach"}:
+                    track.best_jpeg = _jpeg(frame)
                 self.tracks.append(track)
                 continue
             unused.discard(match)
@@ -266,7 +271,8 @@ class MotionDetector:
             if _better_view(track, blob, frame):
                 track.best_area = blob["area_ratio"]
                 track.best_bbox = blob["bbox"]
-                track.best_jpeg = _jpeg(frame)
+                if track.zone not in {"sea", "beach"}:
+                    track.best_jpeg = _jpeg(frame)
                 # Sur la vue où la tache est la plus grande : une voiture jugée
                 # sur l'image où elle n'était qu'un coin d'aile passerait pour
                 # un changement de lumière.
@@ -321,19 +327,55 @@ class MotionDetector:
 
 # L'écume n'est pas une forme. En dessous, une tache sur l'eau ne devient pas
 # une piste : à chaque vague elles seraient des centaines, et le modèle n'aurait
-# plus le temps des voitures. Au-dessus, on n'en garde qu'une poignée, les
-# plus grandes — un bateau, une déferlante — pour que le dessin reste.
+# plus le temps des voitures. Au-dessus, deux suffisent. Quatre, et la mer se
+# couvre de rectangles : le dessin devient illisible, et le Pi n'a plus de
+# marge. Un bateau, une déferlante, et la place reste aux voitures.
 SEA_MIN_AREA = 0.0012
-SEA_GARDES = 4
-BEACH_GARDES = 6
+SEA_GARDES = 2
+BEACH_GARDES = 2
+
+
+def _reprise(tracks: list, libres: set[int], zone: str, cx: float, cy: float) -> int | None:
+    """Une vague de plus rejoint une piste déjà ouverte.
+
+    Deux tiennent l'eau, deux le sable. Au-delà, la nouvelle tache prend
+    la piste la plus proche, même loin : sinon chaque déferlante ouvre un
+    code, et l'image se couvre.
+    """
+    plafond = SEA_GARDES if zone == "sea" else BEACH_GARDES
+    memes = [i for i, piste in enumerate(tracks) if piste.zone == zone]
+    if len(memes) < plafond:
+        return None
+    candidats = [i for i in memes if i in libres]
+    if not candidats:
+        return None
+    return min(candidats, key=lambda i: (tracks[i].centroid[0] - cx) ** 2
+               + (tracks[i].centroid[1] - cy) ** 2)
+
+
+def _calme_la_mer(mask: np.ndarray, zones: dict) -> None:
+    """L'écume n'est plus une centaine de contours. La vague, si."""
+    voile = _voile_muet(mask.shape, zones, ("sea",))
+    if voile is None or not cv2.countNonZero(voile):
+        return
+    mer = cv2.bitwise_and(mask, voile)
+    if not cv2.countNonZero(mer):
+        return
+    cote = max(3, mask.shape[1] // 80)
+    if cote % 2 == 0:
+        cote += 1
+    noyau = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (cote, cote))
+    calme = cv2.morphologyEx(mer, cv2.MORPH_OPEN, noyau)
+    mask[voile > 0] = 0
+    mask[calme > 0] = 255
 
 
 def formes_utiles(blobs: list[dict], zones: dict) -> list[dict]:
     """Ce qui mérite une piste.
 
     La route et le trottoir passent tous. La mer et le sable n'en gardent que
-    les grandes taches : le reste est l'écume, et la classer ralentirait
-    l'image sans rien ajouter au dessin.
+    les deux plus grandes taches : le reste est l'écume, et la dessiner
+    remplirait l'image en occupant le Pi.
     """
     mer: list[dict] = []
     plage: list[dict] = []
