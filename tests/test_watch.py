@@ -3429,6 +3429,15 @@ class DiffusionTests(unittest.TestCase):
         self.assertIs(stream.prise_a_sonner([trace], 2000.0 - 12.0, 12.0, set()), trace)
         self.assertIsNone(stream.prise_a_sonner([trace], 2000.0, 12.0, set()))
         self.assertIs(stream.prise_a_sonner([trace], 2000.0, 0.0, set()), trace)
+        # Un pas d'image qui dépasse la demi-seconde reste le début du passage.
+        # Le refuser faisait sonner la cloche avec le good catch, donc après.
+        self.assertIs(stream.prise_a_sonner([trace], 2000.0 + 0.8 - 12.0, 12.0, set()), trace)
+        longue = {"t": 2030.0, "type": "vehicle", "label": "Voiture grise",
+                  "box": [0.2, 0.8, 0.1, 0.1], "confiance": 0.9, "sur": True,
+                  "trace": [[1990.0, 0.2, 0.8, 0.1, 0.1],
+                            [2030.0, 0.3, 0.8, 0.1, 0.1]]}
+        self.assertIs(stream.prise_a_sonner([longue, trace], 2000.0 - 12.0, 12.0, set()),
+                      trace)
 
     def test_a_replay_shows_today_before_last_week(self):
         """La r\u00e9serve remontrait surtout le 25 septembre.

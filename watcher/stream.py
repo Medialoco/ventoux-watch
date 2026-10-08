@@ -1064,18 +1064,39 @@ def prise_a_sonner(vus: list[dict], quand: float, avance: float,
                    deja: set) -> dict | None:
     """La prise dont la cloche, versée maintenant, sera entendue avec le carré.
 
-    Le son versé a de l'avance sur l'image — douze secondes, mesurées.
-    Posée au moment du good catch, la cloche arrive après le carré.
-    On la verse quand l'image, dans ce délai, en sera au début du passage.
+    Le son versé a de l'avance sur l'image. On le verse quand cette avance
+    tombe sur le passage, le plus près possible de son début. Un pas d'image
+    qui dépasse d'une fraction de seconde reste bon : la cloche arrive avec
+    la voiture. La refuser au-delà d'une demi-seconde laissait le secours du
+    good catch, et la cloche partait après le carré.
+
+    Plusieurs passages se recouvrent. On prend celui qui commence, pas le
+    premier de la liste, qui peut être là depuis dix secondes.
     """
-    cible = quand + max(0.0, avance)
-    vu = prise_a_feter(vus, cible, deja)
-    if vu is None:
-        return None
-    debut, _fin = presence(vu)
-    if cible - debut > 0.5:
-        return None
-    return vu
+    avance = max(0.0, avance)
+    cible = quand + avance
+    choisi: dict | None = None
+    ecart: float | None = None
+    for vu in vus:
+        if (vu.get("type") or "") not in PRISES:
+            continue
+        if float(vu.get("confiance") or 0.0) < CONFIANCE_MOT:
+            continue
+        if vu["t"] in deja:
+            continue
+        debut, fin = presence(vu)
+        if not debut <= cible <= fin:
+            continue
+        # L'image est déjà au passage et le son a de l'avance : le verser
+        # maintenant s'entend après le carré. Sans avance, il s'entend
+        # tout de suite, avec lui.
+        if avance > 0.25 and quand >= debut:
+            continue
+        retard = cible - debut
+        if ecart is None or retard < ecart:
+            ecart = retard
+            choisi = vu
+    return choisi
 
 
 def duree_audio(chemin: Path) -> float:
@@ -6970,6 +6991,11 @@ CADENCE_CANNES = 2
 # ça reste du quasi-réel. La veille, elle, reste plus près du bord, donc
 # elle a cette minute d'avance pour nommer avant que l'image ne passe.
 RETARD_SECOURS_S = 60.0
+# Cannes arrive en plein cadre. La fenêtre à l'antenne fait moins de neuf
+# cents pixels de large : garder le 1080 jusqu'au filtre de couleur occupait
+# le fil des images, et la cadence décrochait. La moitié linéaire suffit,
+# les rectangles sont en fractions et suivent.
+TAILLE_CANNES = (960, 540)
 # Cannes a une heure d'enregistrement derrière elle. Trois minutes de marge
 # avalent un trou de wifi sans coller au bord, et le duplex seul les paie :
 # le décodeur ne tourne pas le reste du temps.
@@ -7270,7 +7296,9 @@ RUSH_AVANT_S = 3.0
 RUSH_APRES_S = 4.0
 RUSH_ATTENTE_S = 15.0
 RUSH_PLAFOND_S = 90.0
-RUSH_LARGE = 1280
+# Plus petit que la toile : ce fichier n'est pas l'antenne. L'encoder sur
+# le fil des images, à la taille du direct, mangeait la marge de cadence.
+RUSH_LARGE = 640
 
 
 def _jpeg_rush(image: np.ndarray) -> bytes:
@@ -7444,6 +7472,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # montrer la montagne deux fois, déchirée en diagonale.
     source_l, source_h = 1920, 1080
     octets = source_l * source_h * 3
+
+    def _vue_source(cannes: bool) -> None:
+        nonlocal source_l, source_h, octets
+        source_l, source_h = TAILLE_CANNES if cannes else (1920, 1080)
+        octets = source_l * source_h * 3
+
     largeur, hauteur = cfg["stream_size"]
     sortie = son = None
     # Les images déjà remises à la sortie en cours. Comptées à part de « images »,
@@ -7684,10 +7718,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     if figee:
         # L'autre webcam de la collection, tout de suite. La dernière image
         # du Mont Serein ne sert que si ce relais ne s'ouvre pas.
-        autre = _ouvre_secours(cfg, source_l, source_h, int(cfg["stream_fps"]))
+        autre = _ouvre_secours(cfg, *TAILLE_CANNES, int(cfg["stream_fps"]))
         if autre is not None:
             entree.kill()
             entree = autre
+            _vue_source(True)
             secours = True
             cadence = None
             log.info("Collection : %s remplace Mont Serein", nom_secours)
@@ -7724,9 +7759,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                             continue
                     except Exception:
                         log.info("Webcam toujours interrompue")
-                    autre = _ouvre_secours(cfg, source_l, source_h, int(cfg["stream_fps"]))
+                    autre = _ouvre_secours(cfg, *TAILLE_CANNES, int(cfg["stream_fps"]))
                     if autre is not None:
                         entree = autre
+                        _vue_source(True)
                         secours = True
                         figee = True
                         cadence = None
@@ -7745,6 +7781,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         ouvert = _ancre_montage(cfg["stream_url"], recul)
                         entree = _entree(cfg["stream_url"], recul, int(cfg["stream_fps"]))
                         assert entree.stdout is not None
+                        _vue_source(False)
                         vues = 0
                         cadence = None
                         secours = False
@@ -7753,10 +7790,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         continue
                     except Exception:
                         log.warning("Retour au Mont Serein impossible", exc_info=True)
-                        autre = _ouvre_secours(cfg, source_l, source_h,
+                        autre = _ouvre_secours(cfg, *TAILLE_CANNES,
                                                int(cfg["stream_fps"]))
                         if autre is not None:
                             entree = autre
+                            _vue_source(True)
                             cadence = None
                         continue
                 brut = entree.stdout.read(octets)
@@ -7776,9 +7814,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     log.warning("Le flux s'est tari après %d images : on rouvre l'entrée", images)
                     entree.kill()
                     if secours and not _webcam_vive(cfg["stream_url"]):
-                        autre = _ouvre_secours(cfg, source_l, source_h, int(cfg["stream_fps"]))
+                        autre = _ouvre_secours(cfg, *TAILLE_CANNES, int(cfg["stream_fps"]))
                         if autre is not None:
                             entree = autre
+                            _vue_source(True)
                             cadence = None
                             continue
                         secours = False
@@ -7818,6 +7857,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     ouvert = _ancre_montage(cfg["stream_url"], recul)
                     entree = _entree(cfg["stream_url"], recul, int(cfg["stream_fps"]))
                     assert entree.stdout is not None
+                    _vue_source(False)
                     vues = 0
                     cadence = None
                     continue
