@@ -5845,6 +5845,23 @@ class HorlogeDuCreditTests(unittest.TestCase):
         self._diffuse(musique, 121.0)
         self.assertIn("Naxar", musique.credit())
 
+    def test_the_cover_changes_when_the_sound_ends_not_when_the_label_does(self):
+        """L'en-tête ment. La pochette suit les échantillons, pas ce chiffre."""
+        musique = self._musique()
+        musique._index = 0
+        musique._tenues = [None, None]
+        # Annoncé 120 s, on en entend déjà 130, le fichier joue encore.
+        self._diffuse(musique, 130.0)
+        self.assertIn("Nemeton", musique.credit())
+        # Le décodeur s'est tu à 140 s. L'oreille n'y est pas encore.
+        musique._tenues = [140.0, None]
+        musique._index = 1
+        self._diffuse(musique, 139.0)
+        self.assertIn("Nemeton", musique.credit())
+        self._diffuse(musique, 141.0)
+        self.assertIn("Naxar", musique.credit())
+        self.assertAlmostEqual(musique.programme()["duree"], 90.0, places=3)
+
     def test_the_clock_ignores_whatever_waits_in_the_pipe(self):
         """Verser dix minutes d'avance ne doit pas avancer le crédit d'autant."""
         musique = self._musique()

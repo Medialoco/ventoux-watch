@@ -1329,7 +1329,9 @@ def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None =
     # L'ordre et les durées à côté de la liste : c'est ce qui permettra de dire
     # à l'écran quel morceau passe, sans redemander quoi que ce soit à ffmpeg.
     (dossier / "session.json").write_text(
-        json.dumps([{"f": b["f"], "d": b["d"]} for b in suite]), encoding="utf-8")
+        json.dumps([{"f": b["f"], "d": b["d"], "debut": b["debut"],
+                     "entier": b["debut"] + b["d"] >= durees[b["chemin"]] - 0.05}
+                    for b in suite]), encoding="utf-8")
     log.info("Session %s de %.1f h : %d tranches, %d sets et %d morceaux",
              "de nuit" if nuit else "de jour", total / 3600, len(suite), len(sets), len(courts))
     return chemin
@@ -1367,6 +1369,12 @@ class Musique:
         self.octets = 0
         self.session_a = 0
         self.repere = 0
+        # Le morceau en cours de décodage, et la durée réelle de ceux déjà
+        # finis. None tant que le décodeur n'a pas fermé le fichier : l'en-tête
+        # ne décide pas de la pochette.
+        self._index = 0
+        self._tenues: list[float | None] = []
+        self._lus = 0
         # Où en est l'image réellement diffusée, en secondes depuis l'ouverture
         # de la sortie. Posée par la boucle des images ; c'est l'horloge du
         # spectateur, et donc la seule qui ait le droit de dater un crédit.
@@ -1402,17 +1410,40 @@ class Musique:
             self.suite = json.loads((self.dossier / "session.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
             self.suite = []
+        self._index = 0
+        self._tenues = [None] * len(self.suite)
+        self._lus = 0
+        self._lance()
+
+    def _lance(self) -> None:
+        """Ouvre le morceau en cours, et le joue jusqu'au bout du fichier.
+
+        L'en-tête annonce une durée. Le décodeur, lui, s'arrête quand il n'a
+        plus d'échantillons. On le suit : la pochette change quand ce tuyau
+        se ferme, pas quand le chiffre de l'en-tête est atteint. Une tranche
+        voulue, au milieu d'un long set, garde sa coupe.
+        """
+        if self._index >= len(self.suite):
+            return
+        piste = self.suite[self._index]
+        chemin = self.dossier / str(piste["f"])
+        debut = float(piste.get("debut") or 0.0)
+        commande = ["ffmpeg", "-hide_banner", "-loglevel", "error",
+                    "-ss", f"{debut:.3f}", "-i", str(chemin)]
+        if not piste.get("entier", True):
+            commande += ["-t", f"{float(piste['d']):.3f}"]
+        commande += [
+            # Les morceaux d'une bibliothèque n'ont pas tous le même niveau,
+            # et six décibels d'écart entre deux titres font sursauter à trois
+            # heures du matin. « dynaudnorm » recale au fil de l'eau pour
+            # quelques pour cent de processeur, là où « loudnorm » demanderait
+            # une passe entière sur chaque fichier.
+            "-af", "dynaudnorm=f=250:g=15",
+            "-f", "s16le", "-ar", str(ECHANTILLONS_S), "-ac", str(VOIES), "-",
+        ]
+        self._lus = 0
         self.process = subprocess.Popen(
-            ["ffmpeg", "-hide_banner", "-loglevel", "error",
-             "-f", "concat", "-safe", "0", "-i", str(self.session),
-             # Les morceaux d'une bibliothèque n'ont pas tous le même niveau,
-             # et six décibels d'écart entre deux titres font sursauter à trois
-             # heures du matin. « dynaudnorm » recale au fil de l'eau pour
-             # quelques pour cent de processeur, là où « loudnorm » demanderait
-             # une passe entière sur chaque fichier.
-             "-af", "dynaudnorm=f=250:g=15",
-             "-f", "s16le", "-ar", str(ECHANTILLONS_S), "-ac", str(VOIES), "-"],
-            stdout=subprocess.PIPE, bufsize=10 ** 7)
+            commande, stdout=subprocess.PIPE, bufsize=10 ** 7)
 
     def dis(self, clip: Path) -> bool:
         """Met une réplique en attente : elle partira avec la prochaine tranche.
@@ -1455,6 +1486,43 @@ class Musique:
         with self._verrou:
             return (self.voix_dit or "").split("_")[0] if self.voix else ""
 
+    def _lire_musique(self, n: int, reprises: int = 0) -> bytes:
+        """Lit n octets, et passe au morceau suivant quand le fichier se tait.
+
+        La durée retenue est le nombre d'échantillons sortis, pas celui écrit
+        dans l'en-tête. C'est ce chiffre qui fera changer la pochette, une
+        fois que l'oreille — en retard sur cette lecture — l'aura atteint.
+        """
+        if reprises > len(self.suite) + 1:
+            return b""
+        if self.process is None or self.process.stdout is None:
+            return b""
+        try:
+            morceau = self.process.stdout.read(n)
+        except OSError:
+            morceau = b""
+        self._lus += len(morceau)
+        if len(morceau) == n:
+            return morceau
+        debit = ECHANTILLONS_S * VOIES * OCTETS_PAR_ECHANTILLON
+        with self._verrou:
+            if self._index < len(self._tenues):
+                self._tenues[self._index] = self._lus / debit if debit else 0.0
+            self._index += 1
+            self._lus = 0
+        self.arrete()
+        if self._index >= len(self.suite):
+            # La session neuve commence après ce qu'on vient de lire.
+            self.session_a = self.octets + len(morceau)
+            if not self.muet:
+                self.session = batir_session(self.dossier, nuit=est_nuit(self.racine))
+                self._ouvre()
+        else:
+            self._lance()
+        if self.process is not None and self.process.stdout is not None and len(morceau) < n:
+            morceau += self._lire_musique(n - len(morceau), reprises + 1)
+        return morceau
+
     def tranche(self, octets: int) -> bytes:
         """Le son des prochaines images, ou du silence si la musique manque.
 
@@ -1466,36 +1534,13 @@ class Musique:
         if self.process is None or self.process.stdout is None:
             return self._avec_la_voix(b"\0" * octets)
         try:
-            morceau = self.process.stdout.read(octets)
-        except OSError:
+            morceau = self._lire_musique(octets)
+        except Exception:
+            log.warning("La musique s'est tue, le flux continue", exc_info=True)
             morceau = b""
+            self.process = None
         if len(morceau) < octets:
-            # Soit la session est finie, soit un de ses fichiers a disparu
-            # pendant qu'on jouait — ce qui se produit dès qu'on nettoie la
-            # bibliothèque sans redémarrer. Dans les deux cas on en rebat une
-            # et on complète la tranche, pour qu'aucun battement ne parte
-            # incomplet.
-            try:
-                self.arrete()
-                # La session neuve commence exactement là où l'ancienne s'est
-                # tarie, c'est-à-dire après la fin de tranche qu'on vient de
-                # lire — et non au début de la tranche, qui tient encore les
-                # dernières mesures du morceau précédent.
-                self.session_a = self.octets + len(morceau)
-                # La session suivante est bâtie pour l'heure qu'il sera, pas
-                # pour celle qu'il était : une session de jour tirée à cinq
-                # heures du matin jouerait au soleil levant une sélection
-                # faite pour la nuit.
-                if not self.muet:
-                    self.session = batir_session(self.dossier,
-                                                 nuit=est_nuit(self.racine))
-                    self._ouvre()
-                if self.process is not None and self.process.stdout is not None:
-                    morceau += self.process.stdout.read(octets - len(morceau))
-            except Exception:
-                log.warning("La musique s'est tue, le flux continue",
-                            exc_info=True)
-                self.process = None
+            morceau = morceau.ljust(octets, b"\0")
         self.octets += octets
         servi = self._avec_la_voix(morceau.ljust(octets, b"\0"))
         self._mesure(servi)
@@ -1618,14 +1663,52 @@ class Musique:
         ecrit = (self.octets - self.repere) / debit
         return max(0.0, ecrit - self.ecran)
 
+    def _suite_du_son(self) -> list[dict]:
+        """La file, avec les durées que le décodeur a vraiment produites.
+
+        Tant qu'un fichier n'est pas fini, le crédit ne le quitte pas, même
+        si l'en-tête est déjà dépassé. Quand il se ferme, sa durée devient
+        le nombre d'échantillons lus : la pochette change avec le son, pas
+        avec le chiffre annoncé.
+        """
+        if getattr(self, "_tenues", None) is None or getattr(self, "_index", None) is None:
+            return self.suite
+        verrou = getattr(self, "_verrou", None)
+        if verrou is None:
+            mesures, index = list(self._tenues), self._index
+        else:
+            with verrou:
+                mesures, index = list(self._tenues), self._index
+        entendu = self._seconde()
+        passe = 0.0
+        for i in range(min(index, len(self.suite))):
+            if i < len(mesures) and mesures[i] is not None:
+                passe += mesures[i]
+            else:
+                passe += float(self.suite[i]["d"])
+        dans = max(0.0, entendu - passe)
+        vue = []
+        for i, piste in enumerate(self.suite):
+            if i < len(mesures) and mesures[i] is not None:
+                d = mesures[i]
+            elif i == index:
+                d = max(float(piste["d"]), dans + 1.0)
+            else:
+                d = float(piste["d"])
+            item = dict(piste)
+            item["d"] = d
+            vue.append(item)
+        return vue
+
     def a_suivre(self) -> str:
         """Le morceau d'après, pour qui aime savoir ce qui arrive."""
         seconde = self._seconde()
-        for i, piste in enumerate(self.suite):
+        suite = self._suite_du_son()
+        for i, piste in enumerate(suite):
             if seconde < piste["d"]:
-                if i + 1 >= len(self.suite):
+                if i + 1 >= len(suite):
                     return ""
-                fiche = self.fiches.get(self.suite[i + 1]["f"])
+                fiche = self.fiches.get(suite[i + 1]["f"])
                 return "" if not fiche else f"{fiche['auteur']} — {fiche['titre']}"
             seconde -= piste["d"]
         return ""
@@ -1648,7 +1731,8 @@ class Musique:
         les secondes écoulées, et les durées de la session disent lequel c'est.
         """
         seconde = self._seconde()
-        for i, piste in enumerate(self.suite):
+        suite = self._suite_du_son()
+        for i, piste in enumerate(suite):
             if seconde >= piste["d"]:
                 seconde -= piste["d"]
                 continue
@@ -1658,16 +1742,16 @@ class Musique:
             # tranche en cours, et c'est vrai pour la file, qui annoncerait
             # sinon comme « à suivre » ce qu'on est déjà en train d'écouter.
             debut = i
-            while debut > 0 and self.suite[debut - 1]["f"] == piste["f"]:
+            while debut > 0 and suite[debut - 1]["f"] == piste["f"]:
                 debut -= 1
             fin = i
-            while fin + 1 < len(self.suite) and self.suite[fin + 1]["f"] == piste["f"]:
+            while fin + 1 < len(suite) and suite[fin + 1]["f"] == piste["f"]:
                 fin += 1
-            ecoule = sum(self.suite[j]["d"] for j in range(debut, i)) + seconde
-            duree = sum(self.suite[j]["d"] for j in range(debut, fin + 1))
+            ecoule = sum(suite[j]["d"] for j in range(debut, i)) + seconde
+            duree = sum(suite[j]["d"] for j in range(debut, fin + 1))
 
             def tenue(nom: str) -> float:
-                return sum(p["d"] for p in self.suite if p["f"] == nom)
+                return sum(p["d"] for p in suite if p["f"] == nom)
 
             def copie(fiche: dict | None, long: float) -> dict | None:
                 if not fiche:
@@ -1678,20 +1762,20 @@ class Musique:
 
             avant = None
             if debut > 0:
-                nom_avant = self.suite[debut - 1]["f"]
+                nom_avant = suite[debut - 1]["f"]
                 avant = copie(self.fiches.get(nom_avant), tenue(nom_avant))
-            suite, j, vus = [], fin + 1, {piste["f"]}
-            while j < len(self.suite) and len(suite) < 2:
-                nom = self.suite[j]["f"]
+            suivants, j, vus = [], fin + 1, {piste["f"]}
+            while j < len(suite) and len(suivants) < 2:
+                nom = suite[j]["f"]
                 if nom not in vus:
                     vus.add(nom)
                     fiche = copie(self.fiches.get(nom), tenue(nom))
                     if fiche:
-                        suite.append(fiche)
+                        suivants.append(fiche)
                 j += 1
             return {"avant": avant,
                     "en_cours": copie(self.fiches.get(piste["f"]), duree),
-                    "ecoule": ecoule, "duree": duree, "suite": suite}
+                    "ecoule": ecoule, "duree": duree, "suite": suivants}
         return dict(PROG_VIDE)
 
     def credit(self) -> str:
@@ -1707,7 +1791,7 @@ class Musique:
         par tranches, donc le nombre d'octets versés divisé par le débit donne
         les secondes écoulées, et les durées de la session disent lequel c'est.
         """
-        return qui_passe(self.suite, self.fiches, self._seconde())
+        return qui_passe(self._suite_du_son(), self.fiches, self._seconde())
 
     def arrete(self) -> None:
         """Ferme le lecteur de musique, s'il y en a un.
