@@ -19,25 +19,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.build_relief import (
-    _beacons,
-    _buildings,
-    _cover,
-    _figures,
-    _heightfield,
-    _lamps,
-    _masts,
-    _ribbons,
-    _roads,
-    _trees,
-    _ways,
-    _woods,
-)
-from watcher.frustum import Pose
-from watcher.osm import around
-from watcher.terrain import Terrain
-
 # The node the site created. Direction and mount are the tags on it.
+# 190° is the tag on the node. It is not the perpendicular of the shore.
 LAT, LON = 43.5467593, 6.9754344
 YAW = 190.0
 OSM = "node/14255983894"
@@ -47,10 +30,31 @@ REACH = 380.0
 # groyne is still a thing.
 STAND_M = 22.0
 LOOK_M = 110.0
-SAND, WATER = 4, 5
+# The elevation model stays on its own step. The mesh is resampled finer
+# so a beach sixty metres wide is a band, not one cell.
+FINE_M = 10.0
+# Cover codes shared with the page: grey city, park, sand, water.
+BUILT, PARK, SAND, WATER = 3, 1, 4, 5
 
 
 def main() -> int:
+    from scripts.build_relief import (
+        _beacons,
+        _buildings,
+        _figures,
+        _heightfield,
+        _lamps,
+        _masts,
+        _ribbons,
+        _roads,
+        _trees,
+        _ways,
+        _woods,
+    )
+    from watcher.frustum import Pose
+    from watcher.osm import around
+    from watcher.terrain import Terrain
+
     root = Path(__file__).resolve().parents[1]
     osm_dir = root / "data" / "osm"
     osm_dir.mkdir(parents=True, exist_ok=True)
@@ -68,9 +72,8 @@ def main() -> int:
     pose = Pose(lat=LAT, lon=LON, ele=ground, yaw=YAW, pitch=0.0, height_m=0.0)
     data = around(LAT, LON, REACH, osm_dir / "cannes-around.json", max_age_s=7 * 86400)
     ways = list(_ways(data, pose, REACH))
-    cover = _cover(ways, REACH)
-    _paint(cover, ways, REACH)
-    field = _heightfield(terrain, ground, REACH)
+    field = _refine_field(_heightfield(terrain, ground, REACH))
+    cover = _city_cover(ways, field)
     _flatten_sea(field, cover)
 
     payload = {
@@ -108,6 +111,68 @@ def main() -> int:
     return 0
 
 
+def _refine_field(field: dict) -> dict:
+    """Resample the heightfield so the shore can be coloured finer than the model."""
+    step = float(field["step_m"])
+    factor = int(round(step / FINE_M))
+    if factor <= 1:
+        return field
+    return {
+        "step_m": round(step / factor, 3),
+        "reach_m": field["reach_m"],
+        "grid": _refine(field["grid"], factor),
+    }
+
+
+def _refine(grid: list, factor: int) -> list[list[float]]:
+    old = np.asarray(grid, dtype=np.float64)
+    side = old.shape[0]
+    fine = (side - 1) * factor + 1
+    out = np.empty((fine, fine), dtype=np.float64)
+    for row in range(fine):
+        y = row / factor
+        y0 = min(int(np.floor(y)), side - 2)
+        ty = y - y0
+        for col in range(fine):
+            x = col / factor
+            x0 = min(int(np.floor(x)), side - 2)
+            tx = x - x0
+            top = old[y0, x0] * (1.0 - tx) + old[y0, x0 + 1] * tx
+            bottom = old[y0 + 1, x0] * (1.0 - tx) + old[y0 + 1, x0 + 1] * tx
+            out[row, col] = top * (1.0 - ty) + bottom * ty
+    return [[round(float(value), 1) for value in line] for line in out]
+
+
+def _city_cover(ways, field: dict) -> dict:
+    """City grey, then parks, then the beach, then the sea out to the edge."""
+    step = float(field["step_m"])
+    reach = float(field["reach_m"])
+    side = len(field["grid"])
+    grid = [[BUILT for _ in range(side)] for _ in range(side)]
+    parks = [
+        points
+        for tags, points in ways
+        if _is_park(tags) and len(points) >= 4 and np.allclose(points[0], points[-1])
+    ]
+    for row in range(side):
+        north = reach - row * step
+        for col in range(side):
+            east = col * step - reach
+            if any(_inside(east, north, ring) for ring in parks):
+                grid[row][col] = PARK
+    cover = {"step_m": step, "reach_m": reach, "grid": grid}
+    _paint(cover, ways, reach)
+    return cover
+
+
+def _is_park(tags: dict) -> bool:
+    return (
+        tags.get("leisure") == "park"
+        or tags.get("landuse") in {"grass", "meadow"}
+        or tags.get("natural") in {"wood", "grassland"}
+    )
+
+
 def _paint(cover: dict, ways, reach: float) -> None:
     """Sand on the beach, water on the sea side of the coastline."""
     step = float(cover["step_m"])
@@ -121,7 +186,7 @@ def _paint(cover: dict, ways, reach: float) -> None:
             east = col * step - reach
             if any(_inside(east, north, ring) for ring in beaches):
                 grid[row][col] = SAND
-            elif coasts and _at_sea(east, north, coasts):
+            elif coasts and _at_sea(east, north, coasts, reach):
                 grid[row][col] = WATER
 
 
@@ -151,18 +216,20 @@ def _groynes(ways) -> list[dict]:
 
 
 def _shores(ways) -> list[dict]:
+    """The beach, as a surface. A freight yard is not one.
+
+    The merchandise station at la Bocca is a closed landuse=railway whose
+    ring contains the camera and crosses the sand. Drawn flat, it was a
+    brown slab over the view. The beach ring has more corners than that
+    yard, and an eighty-point cap was dropping the sand and keeping the yard.
+    """
     out = []
     for tags, points in ways:
-        kind = None
-        if tags.get("natural") == "beach":
-            kind = "beach"
-        elif tags.get("landuse") == "railway":
-            kind = "railway"
-        if not kind or len(points) < 4 or not np.allclose(points[0], points[-1]):
+        if tags.get("natural") != "beach" or len(points) < 4 or not np.allclose(points[0], points[-1]):
             continue
-        if len(points) > 80:
+        if len(points) > 400:
             continue
-        out.append({"k": kind, "p": [[round(float(e), 1), round(float(n), 1)] for e, n in points]})
+        out.append({"k": "beach", "p": [[round(float(e), 1), round(float(n), 1)] for e, n in points]})
     return out
 
 
@@ -179,15 +246,17 @@ def _inside(east: float, north: float, ring: np.ndarray) -> bool:
     return within
 
 
-def _at_sea(east: float, north: float, coasts: list[np.ndarray]) -> bool:
-    """True on the right of the nearest coastline segment.
+def _at_sea(east: float, north: float, coasts: list[np.ndarray], reach: float) -> bool:
+    """True on the right of the nearest coastline segment inside the model.
 
     OpenStreetMap walks a coastline with the land on the left and the sea
-    on the right. The right-hand side is the water.
+    on the right. The right-hand side is the water, out to the edge of the
+    mesh: a cutoff left the far sea the colour of a meadow.
     """
     best = None
     sea = False
     point = np.array([east, north], dtype=np.float64)
+    origin = np.zeros(2, dtype=np.float64)
     for line in coasts:
         for a, b in zip(line[:-1], line[1:]):
             start = np.asarray(a, dtype=np.float64)
@@ -195,6 +264,11 @@ def _at_sea(east: float, north: float, coasts: list[np.ndarray]) -> bool:
             run = end - start
             length = float(np.hypot(run[0], run[1]))
             if length < 1.0:
+                continue
+            # A kink of the same way, a kilometre along the coast, is not
+            # the shore in front of this camera.
+            home = float(np.clip(np.dot(origin - start, run) / (length * length), 0.0, 1.0))
+            if float(np.hypot(*(start + home * run))) > reach:
                 continue
             along = float(np.clip(np.dot(point - start, run) / (length * length), 0.0, 1.0))
             nearest = start + along * run
@@ -204,7 +278,7 @@ def _at_sea(east: float, north: float, coasts: list[np.ndarray]) -> bool:
                 # Cross product: positive means the point is left of start→end.
                 cross = float(run[0] * (point[1] - start[1]) - run[1] * (point[0] - start[0]))
                 sea = cross < 0
-    return bool(sea and best is not None and best < 220.0)
+    return bool(sea and best is not None)
 
 
 if __name__ == "__main__":
