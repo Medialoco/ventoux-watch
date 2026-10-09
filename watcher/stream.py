@@ -185,6 +185,11 @@ VEILLE_DIRECT_SEUIL = 2
 # page du site n'a rien à incruster tant qu'on ne le sait pas, et c'est juste
 # après un redémarrage qu'on ne le sait pas.
 VEILLE_DIRECT_CHERCHE_S = 20.0
+# Le trou mesuré pour qu'une diffusion terminée lâche l'arrivée. Rouvrir
+# ffmpeg dans la foulée, comme on le fait sur un tuyau cassé, rattache la
+# session morte : les octets repartent, la chaîne reste noire. Douze secondes
+# sans rien envoyer, puis un processus neuf, et YouTube peut en ouvrir une.
+LACHE_DIRECT_S = 12.0
 
 
 def page_du_direct(chaine: str) -> str | None:
@@ -351,7 +356,8 @@ def note_le_direct(racine: Path, chaine: str, numero: str) -> None:
 
 
 def veille_le_direct(chaine: str, coupe: threading.Event,
-                     racine: Path | None = None) -> None:
+                     racine: Path | None = None,
+                     lache: threading.Event | None = None) -> None:
     """Dire quand on pousse des octets dans le vide, et sous quel numéro on émet.
 
     Une diffusion terminée par YouTube ne se voit pas d'ici : l'arrivée continue
@@ -359,9 +365,11 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     reste propre. Le premier octobre, on a poussé quatre heures dans le vide
     avec un journal irréprochable, et c'est l'utilisateur qui s'en est aperçu.
 
-    Alors on va regarder dehors. Ça ne répare rien — rouvrir une diffusion
-    demande le compte — mais ça change « quatre heures sans le savoir » en
-    « dix minutes et c'est écrit ».
+    Alors on va regarder dehors. Quand on a déjà vu un direct et que la chaîne
+    ne le montre plus, on lâche la sortie une fois : douze secondes sans octets,
+    puis systemd rouvre le processus. On ne le fait pas tant qu'on n'a jamais
+    été en direct, sinon un démarrage qui attend le studio se relancerait en
+    boucle.
 
     Le premier coup d'oeil se donne tout de suite et non au bout de dix minutes :
     c'est lui qui note le numéro du direct, et une page qui s'ouvre pendant ces
@@ -377,6 +385,7 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     """
     absences = 0
     connu = ""
+    porte = False
     premier = True
     while premier or not coupe.wait(VEILLE_DIRECT_S if connu else VEILLE_DIRECT_CHERCHE_S):
         premier = False
@@ -392,6 +401,7 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
         if vu:
             if absences >= VEILLE_DIRECT_SEUIL:
                 log.info("La diffusion est de nouveau visible sur la chaîne")
+            porte = True
             absences = 0
             continue
         absences += 1
@@ -400,6 +410,12 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
                       "alors qu'on émet : les octets partent dans le vide. Il "
                       "faut rouvrir un direct dans YouTube Studio, la clé est "
                       "déjà alimentée.", VEILLE_DIRECT_S * absences / 60)
+            # Une fois, et seulement si ce processus a déjà porté un direct.
+            # La page noire d'un démarrage n'est pas une coupure.
+            if porte and lache is not None and not lache.is_set():
+                log.warning("On lâche la sortie %.0f s pour qu'une diffusion "
+                            "neuve puisse s'attacher", LACHE_DIRECT_S)
+                lache.set()
 
 
 def identifications(chemin: Path, depuis: float) -> list[dict]:
@@ -7571,11 +7587,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     verseur: threading.Thread | None = None
     coupe = threading.Event()
     coupe_son = threading.Event()
+    lache = threading.Event()
     ouverte_a = 0.0
     chaine = cfg.get("youtube_chaine")
     salle = Salle()
     if chaine and cible.startswith("rtmp"):
-        threading.Thread(target=veille_le_direct, args=(chaine, coupe, racine),
+        threading.Thread(target=veille_le_direct, args=(chaine, coupe, racine, lache),
                          daemon=True).start()
         threading.Thread(target=veille_salle, args=(chaine, coupe, salle),
                          daemon=True).start()
@@ -8576,6 +8593,20 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # du mouvement, le nom de la classe, et GOOD CATCH sont déjà posés.
             journal.voit(toile, quand)
             journal.relache(quand)
+            if lache.is_set():
+                # Le direct public a disparu alors qu'on en portait un. Fermer
+                # ffmpeg et attendre est le trou qui laisse YouTube oublier
+                # l'arrivée morte. Le processus s'arrête ensuite : systemd le
+                # rouvre, une fois, sans qu'on martèle.
+                log.warning("Sortie lâchée %.0f s : le direct n'est plus sur la chaîne",
+                            LACHE_DIRECT_S)
+                coupe_son.set()
+                if verseur is not None:
+                    verseur.join(timeout=5)
+                _ferme_sortie(sortie, son)
+                sortie = son = verseur = None
+                time.sleep(LACHE_DIRECT_S)
+                break
             if sortie is None:
                 sortie, son = _sortie(cible, largeur, hauteur, cfg["stream_fps"],
                                       cfg["stream_bitrate"], cfg["stream_out_fps"],

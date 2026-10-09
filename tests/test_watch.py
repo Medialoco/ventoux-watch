@@ -4733,6 +4733,45 @@ class DiffusionTests(unittest.TestCase):
         cris = [m for m in journal.output if "dans le vide" in m]
         self.assertEqual(len(cris), 1, "on le dit une fois, pas a chaque tour")
 
+    def test_a_live_that_vanishes_drops_the_output_once(self):
+        """On a porté un direct, la chaîne ne le montre plus : on lâche une fois.
+
+        Un démarrage qui n'a encore rien porté ne lâche pas. Sinon le studio
+        fermé relancerait le processus toutes les vingt secondes.
+        """
+        pages = iter([
+            '{"videoDetails":{"videoId":"mmf5x1r2rvQ"},"isLive":true}',
+            "channelMetadataRenderer",
+            "channelMetadataRenderer",
+        ])
+        coupe = threading.Event()
+        lache = threading.Event()
+
+        def patiente(_):
+            if lache.is_set():
+                coupe.set()
+            return coupe.is_set()
+
+        with mock.patch.object(stream, "page_du_direct", lambda _: next(pages)), \
+                mock.patch.object(coupe, "wait", patiente):
+            stream.veille_le_direct("UCxxxx", coupe, lache=lache)
+        self.assertTrue(lache.is_set())
+
+        coupe = threading.Event()
+        lache = threading.Event()
+        tours = []
+
+        def reste(_):
+            tours.append(1)
+            if len(tours) > 4:
+                coupe.set()
+            return coupe.is_set()
+
+        with mock.patch.object(stream, "page_du_direct", lambda _: "channelMetadataRenderer"), \
+                mock.patch.object(coupe, "wait", reste):
+            stream.veille_le_direct("UCxxxx", coupe, lache=lache)
+        self.assertFalse(lache.is_set())
+
     def test_a_channel_we_cannot_read_is_never_declared_dead(self):
         """« Je ne sais pas » n'est pas « non ».
 
