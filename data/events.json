@@ -2,6 +2,92 @@
   "version": "0.6.47",
   "events": [
     {
+      "id": "2026-10-09T17-45-10Z-missed-107",
+      "t": "2026-10-09T17:45:10Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-09T17-45-10Z-missed-107.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3262,
+          "area_grow": 414.8,
+          "clipped": true,
+          "shade": 0.785,
+          "kept": 0.596,
+          "area_ratio": 0.05401,
+          "duration_s": 13.0,
+          "frames": 14,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.062,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.0,
+          0.1833,
+          0.3516,
+          0.2861
+        ]
+      },
+      "closeup": "data/closeups/2026-10-09T17-45-10Z-missed-107.jpg"
+    },
+    {
+      "id": "2026-10-09T17-34-27Z-missed-106",
+      "t": "2026-10-09T17:34:27Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-09T17-34-27Z-missed-106.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 38 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "twilight",
+        "weather": "ciel dégagé",
+        "context": "au crépuscule, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0816,
+          "area_grow": 0.06,
+          "clipped": false,
+          "shade": 1.31,
+          "kept": 0.469,
+          "area_ratio": 0.00043,
+          "duration_s": 20.0,
+          "frames": 21,
+          "width_m": 38.2,
+          "height_m": 16.1,
+          "width_named_m": 5.6,
+          "height_named_m": 5.2,
+          "rise_ms": 0.36,
+          "drift_rate": 0.04,
+          "seen_as": [
+            "car 0.30 sur 5%"
+          ]
+        },
+        "refused": "oversized",
+        "box": [
+          0.0172,
+          0.5694,
+          0.1,
+          0.075
+        ]
+      },
+      "closeup": "data/closeups/2026-10-09T17-34-27Z-missed-106.jpg"
+    },
+    {
       "id": "2026-10-09T17-32-14Z-missed-105",
       "t": "2026-10-09T17:32:14Z",
       "type": "missed",
