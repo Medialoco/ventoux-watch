@@ -2327,6 +2327,22 @@ class FogTests(unittest.TestCase):
         self.assertIn("pose_horloge(toile, heure_antenne", diffuse)
         self.assertIn("quand=heure_antenne", diffuse)
 
+    def test_les_pantins_du_mont_serein_jouent_sur_cannes_en_secours(self):
+        """La playlist fermée tenait ces numéros éteints. Cannes est l'image.
+
+        Au retour du Mont Serein, figee redevient faux et le même bloc
+        rejoue sur son cadre. Le survol, lui, reste une autre image.
+        """
+        diffuse = inspect.getsource(stream.diffuse)
+        _, propre = diffuse.split("Commun à toutes les webcams", 1)[1].split(
+            "Propres au Mont Serein", 1)
+        self.assertIn("(secours or not figee) and survol is None", propre)
+        for nom in ("pose_ours", "pose_tapis", "pose_elephant", "pose_sous_marin",
+                    "pose_piste", "pose_batiments"):
+            self.assertIn(nom, propre)
+        self.assertIn("(secours or not figee) and quand - dernier_vu > TENUE_S", diffuse)
+        self.assertIn("if secours or not figee:", diffuse)
+
     def test_le_detecteur_recoit_la_boite_de_limage_quon_lui_donne(self):
         """L'image et le rectangle doivent venir du même instant.
 

@@ -8011,11 +8011,15 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 photo_figee = image.copy()
             # D'abord la teinte, ensuite seulement ce qu'on dessine dessus.
             # Pas sur la photo tenue : c'est une photographie, plus un traitement.
-            if not figee:
+            # La photo tenue du Mont Serein reste une photographie : pas de
+            # teinte, pas de grain. Cannes en secours est une image vivante,
+            # elle prend les mêmes traitements que le versant.
+            if secours or not figee:
                 applique_teinte(image, *teinte_du_moment(quand - origine))
             # Le soleil d'enfant avant les filtres : il fait partie de l'image
-            # du ciel, donc il se pixellise et il ondule avec elle.
-            if not figee and soleil is not None:
+            # du ciel, donc il se pixellise et il ondule avec elle. Même place
+            # dans le cadre quand c'est Cannes qui est à l'antenne.
+            if (secours or not figee) and soleil is not None:
                 pose_soleil_dessine(image, soleil, quand - origine)
             # Le lampadaire au même endroit du traitement, et pour la même
             # raison : il n'est pas posé sur la vitre, il remplace un objet du
@@ -8026,12 +8030,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # allumée. De jour, un lampadaire de livre d'images planté au
             # milieu d'une photo en plein soleil ne serait plus un dessin posé
             # sur un objet, ce serait un objet en moins.
-            if not figee and lampadaire is not None and (hauteur_soleil or -90.0) <= HORIZON:
+            if ((secours or not figee) and lampadaire is not None
+                    and (hauteur_soleil or -90.0) <= HORIZON):
                 pose_lampadaire(image, *lampadaire, quand - origine)
             # Le grain ne tombe jamais sur une prise. Tout l'intérêt d'un
             # rectangle rouge est qu'on puisse regarder ce qu'il entoure, et
             # une voiture en gros carrés n'est plus une voiture.
-            if not figee and quand - dernier_vu > TENUE_S:
+            if (secours or not figee) and quand - dernier_vu > TENUE_S:
                 applique_effet(image, *effet_du_moment(quand - origine), quand - origine)
             # La cloche part avant le carré : le son versé n'est entendu
             # qu'après son avance, et c'est à cet instant-là que l'image
@@ -8269,9 +8274,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             if survol is None:
                 pose_danseurs(toile, quand - origine, musique.pouls(), vue=cadrage)
             # Propres au Mont Serein. Ils connaissent le rond-point et la
-            # crête, et ils jouent aussi quand Cannes occupe le cadre : la
-            # fenêtre est la leur pour ces quatre-vingt-dix secondes.
-            if not figee and survol is None:
+            # crête, et ils jouent sur le cadre entier dès que c'est Cannes
+            # qui l'occupe : les quatre-vingt-dix secondes prévues, et tout
+            # le temps où Cannes est le secours. Au retour du Mont Serein,
+            # le même dessin reprend sa place sur son image.
+            if (secours or not figee) and survol is None:
                 # Le tapis vole au-dessus de la crête, donc il passe quoi qu'il
                 # arrive. L'éléphant danse sur le rond-point, c'est-à-dire en
                 # plein sur l'endroit où les choses se passent : il n'y va que
