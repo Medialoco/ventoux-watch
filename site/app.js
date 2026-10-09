@@ -966,14 +966,28 @@ function hideCamera() {
 // Never written into the page. YouTube closes a broadcast and opens another
 // whenever the stream restarts, and the number changes with it; a page holding
 // yesterday's number shows a finished recording and says "live" above it. The
-// watch writes the current one into data/direct.json, so the page asks.
+// watch writes the current one into data/direct.json on main. The copy shipped
+// with this page only moves when the page is published, so the page asks main
+// first and keeps that copy as a spare.
 let diffusion = "";
+const DIRECT = [
+  "https://raw.githubusercontent.com/Medialoco/ventoux-watch/main/data/direct.json",
+  "data/direct.json",
+];
+
+async function lisLeDirect() {
+  for (const url of DIRECT) {
+    try {
+      const fiche = await fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+      if (fiche && /^[\w-]{11}$/.test(String(fiche.video || ""))) return fiche;
+    } catch (_) { /* the spare copy is the next address */ }
+  }
+  return null;
+}
 
 async function suisLeDirect() {
-  let fiche = null;
-  try {
-    fiche = await fetch("data/direct.json", { cache: "no-store" }).then((r) => r.json());
-  } catch (_) {
+  const fiche = await lisLeDirect();
+  if (!fiche) {
     if (!diffusion) showCamera();
     return;
   }
