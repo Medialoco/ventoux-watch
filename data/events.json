@@ -2,6 +2,345 @@
   "version": "0.6.47",
   "events": [
     {
+      "id": "2026-10-09T17-32-14Z-missed-105",
+      "t": "2026-10-09T17:32:14Z",
+      "type": "missed",
+      "label": "Décor de l'îlot",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-09T17-32-14Z-missed-105.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur l'îlot central du rond-point, et ça n'a pas bougé. Les pierres et les figures y sont plantées.",
+        "period": "twilight",
+        "weather": "ciel dégagé",
+        "context": "au crépuscule, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.292,
+          "kept": 0.6,
+          "area_ratio": 0.00058,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 1.4,
+          "height_m": 0.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.012,
+          "seen_as": []
+        },
+        "refused": "island",
+        "box": [
+          0.2141,
+          0.8167,
+          0.0312,
+          0.025
+        ]
+      },
+      "closeup": "data/closeups/2026-10-09T17-32-14Z-missed-105.jpg"
+    },
+    {
+      "id": "2026-10-09T17-30-19Z-missed-104",
+      "t": "2026-10-09T17:30:19Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-09T17-30-19Z-missed-104.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 45 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "twilight",
+        "weather": "ciel dégagé",
+        "context": "au crépuscule, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.138,
+          "kept": 1.0,
+          "area_ratio": 0.00057,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 0.5,
+          "height_m": 0.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "tarmac",
+        "box": [
+          0.5281,
+          0.9694,
+          0.0187,
+          0.0306
+        ]
+      },
+      "closeup": "data/closeups/2026-10-09T17-30-19Z-missed-104.jpg"
+    },
+    {
+      "id": "2026-10-09T17-29-07Z-motion-103",
+      "t": "2026-10-09T17:29:07Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-09T17-29-07Z-motion-103.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "ciel dégagé",
+        "context": "au crépuscule, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2766,
+          "area_grow": 1.07,
+          "clipped": false,
+          "shade": 1.141,
+          "kept": 0.645,
+          "area_ratio": 0.00046,
+          "duration_s": 11.0,
+          "frames": 11,
+          "width_m": 13.5,
+          "height_m": 4.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.58,
+          "drift_rate": 0.092,
+          "seen_as": []
+        },
+        "box": [
+          0.0938,
+          0.6806,
+          0.2062,
+          0.125
+        ]
+      },
+      "closeup": "data/closeups/2026-10-09T17-29-07Z-motion-103.jpg"
+    },
+    {
+      "id": "2026-10-09T17-18-59Z-vehicle-102",
+      "t": "2026-10-09T17:18:59Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.632,
+      "thumb": "data/thumbs/2026-10-09T17-18-59Z-vehicle-102.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 2.5,
+        "period": "twilight",
+        "weather": "ciel dégagé",
+        "context": "au crépuscule, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2502,
+          "area_grow": 12.18,
+          "clipped": false,
+          "shade": 0.985,
+          "kept": 0.25,
+          "area_ratio": 0.00635,
+          "duration_s": 23.0,
+          "frames": 24,
+          "width_m": 2.5,
+          "height_m": 3.2,
+          "width_named_m": 2.7,
+          "height_named_m": 3.1,
+          "rise_ms": 0.0,
+          "drift_rate": 0.066,
+          "seen_as": [
+            "truck 0.63 sur 72%"
+          ]
+        },
+        "surface": "island",
+        "box": [
+          0.0792,
+          0.7262,
+          0.0613,
+          0.1244
+        ],
+        "trace": [
+          [
+            1791566316.15,
+            0.0063,
+            0.5556,
+            0.0187,
+            0.0278
+          ],
+          [
+            1791566317.15,
+            0.0078,
+            0.5556,
+            0.0172,
+            0.0306
+          ],
+          [
+            1791566318.15,
+            0.0094,
+            0.5556,
+            0.0156,
+            0.0361
+          ],
+          [
+            1791566319.15,
+            0.0125,
+            0.5611,
+            0.0141,
+            0.0333
+          ],
+          [
+            1791566320.15,
+            0.0125,
+            0.5611,
+            0.0172,
+            0.0361
+          ],
+          [
+            1791566321.15,
+            0.0125,
+            0.5611,
+            0.0203,
+            0.0389
+          ],
+          [
+            1791566322.15,
+            0.0125,
+            0.5611,
+            0.0219,
+            0.0444
+          ],
+          [
+            1791566323.15,
+            0.0172,
+            0.5667,
+            0.0203,
+            0.0417
+          ],
+          [
+            1791566324.15,
+            0.0172,
+            0.5639,
+            0.025,
+            0.0472
+          ],
+          [
+            1791566325.15,
+            0.0203,
+            0.5722,
+            0.0234,
+            0.0417
+          ],
+          [
+            1791566326.15,
+            0.025,
+            0.575,
+            0.025,
+            0.0528
+          ],
+          [
+            1791566327.15,
+            0.025,
+            0.5778,
+            0.0297,
+            0.0556
+          ],
+          [
+            1791566328.15,
+            0.0297,
+            0.5861,
+            0.0281,
+            0.0528
+          ],
+          [
+            1791566329.15,
+            0.0312,
+            0.5889,
+            0.0312,
+            0.0611
+          ],
+          [
+            1791566330.15,
+            0.0328,
+            0.5889,
+            0.0297,
+            0.0611
+          ],
+          [
+            1791566331.15,
+            0.0328,
+            0.5889,
+            0.0297,
+            0.0611
+          ],
+          [
+            1791566332.15,
+            0.0328,
+            0.5889,
+            0.0297,
+            0.0611
+          ],
+          [
+            1791566333.15,
+            0.0328,
+            0.5889,
+            0.0297,
+            0.0611
+          ],
+          [
+            1791566334.15,
+            0.0328,
+            0.5889,
+            0.0297,
+            0.0611
+          ],
+          [
+            1791566335.15,
+            0.0328,
+            0.5889,
+            0.0297,
+            0.0611
+          ],
+          [
+            1791566336.15,
+            0.0328,
+            0.5889,
+            0.0297,
+            0.0611
+          ],
+          [
+            1791566337.15,
+            0.0734,
+            0.6806,
+            0.0391,
+            0.0722
+          ],
+          [
+            1791566338.15,
+            0.0703,
+            0.7028,
+            0.0484,
+            0.0889
+          ],
+          [
+            1791566339.15,
+            0.0828,
+            0.7417,
+            0.0531,
+            0.1194
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-09T17-18-59Z-vehicle-102.jpg"
+    },
+    {
       "id": "2026-10-09T17-17-06Z-vehicle-101",
       "t": "2026-10-09T17:17:06Z",
       "type": "vehicle",
