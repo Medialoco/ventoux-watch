@@ -31,6 +31,7 @@ import subprocess
 import sys
 import threading
 import time
+import unicodedata
 import urllib.request
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
@@ -1287,6 +1288,75 @@ def _espace(suite: list[Path], auteurs: dict[str, str],
     return ordre
 
 
+# Une fois par heure, pas une fois par hasard. La période se compte du début
+# d'un passage au début du suivant : le morceau est dans l'heure.
+HEURE_RADIO_S = 3600.0
+
+
+def _credits_musique(dossier: Path) -> dict:
+    """Les fiches du dossier, ou rien si le fichier manque ou ment."""
+    try:
+        brut = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return brut if isinstance(brut, dict) else {}
+
+
+def _morceaux_horaires(dossier: Path, credits: dict,
+                       durees: dict[Path, float]) -> list[dict]:
+    """Les morceaux marqués pour passer à l'heure, hors du tirage."""
+    vus = []
+    for nom, fiche in credits.items():
+        if not isinstance(fiche, dict) or not fiche.get("horaire"):
+            continue
+        piste = dossier / str(nom)
+        if piste.suffix.lower() not in EXTENSIONS or durees.get(piste, 0.0) <= 1.0:
+            continue
+        vus.append({"f": piste.name, "chemin": piste, "debut": 0.0,
+                    "d": durees[piste]})
+    vus.sort(key=lambda bout: bout["f"])
+    return vus
+
+
+def _pose_a_l_heure(suite: list[dict], rendezvous: dict,
+                    periode: float = HEURE_RADIO_S) -> list[dict]:
+    """Pose un morceau au début de la session, puis toutes les heures.
+
+    Le découpage d'un morceau déjà en file se fait sur place : ce qui était
+    avant l'heure reste avant, ce qui était après reste après. Rien ne se
+    perd, et le rendez-vous n'attend pas la fin d'un set de quinze minutes.
+    """
+    duree = float(rendezvous.get("d") or 0.0)
+    if duree <= 1.0 or duree >= periode or not suite:
+        return suite
+    sortie: list[dict] = []
+    t = 0.0
+    prochain = 0.0
+    for bout in suite:
+        reste_debut = float(bout.get("debut") or 0.0)
+        reste = float(bout["d"])
+        while reste > 1e-3 and t + reste > prochain + 1e-3:
+            avant = prochain - t
+            if avant > 1e-3:
+                part = dict(bout)
+                part["debut"] = reste_debut
+                part["d"] = avant
+                sortie.append(part)
+                t += avant
+                reste_debut += avant
+                reste -= avant
+            sortie.append(dict(rendezvous))
+            t += duree
+            prochain += periode
+        if reste > 1e-3:
+            part = dict(bout)
+            part["debut"] = reste_debut
+            part["d"] = reste
+            sortie.append(part)
+            t += reste
+    return sortie
+
+
 def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None = None,
                   nuit: bool = False) -> Path | None:
     """Tire une session dans la bibliothèque et l'écrit pour ffmpeg.
@@ -1301,7 +1371,9 @@ def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None =
     if not morceaux:
         return None
     durees = {p: duree_audio(p) for p in morceaux}
-    morceaux = [p for p in morceaux if durees[p] > 1.0]
+    horaires = _morceaux_horaires(dossier, _credits_musique(dossier), durees)
+    reserves = {bout["f"] for bout in horaires}
+    morceaux = [p for p in morceaux if durees[p] > 1.0 and p.name not in reserves]
     if not morceaux:
         return None
     tirage = random.Random(graine)
@@ -1337,6 +1409,8 @@ def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None =
             if not premier_tour and total >= heures * 3600:
                 break
         premier_tour = False
+    for rendezvous in horaires:
+        suite = _pose_a_l_heure(suite, rendezvous)
     chemin = dossier / "session.txt"
     chemin.write_text("".join(
         "file '%s'\ninpoint %.3f\noutpoint %.3f\n"
@@ -1350,6 +1424,9 @@ def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None =
                     for b in suite]), encoding="utf-8")
     log.info("Session %s de %.1f h : %d tranches, %d sets et %d morceaux",
              "de nuit" if nuit else "de jour", total / 3600, len(suite), len(sets), len(courts))
+    if horaires:
+        log.info("À l'heure, toutes les %.0f min : %s", HEURE_RADIO_S / 60,
+                 ", ".join(bout["f"] for bout in horaires))
     return chemin
 
 
@@ -2952,6 +3029,140 @@ def pose_bloc_musique(image: np.ndarray, programme: dict, dossier: Path,
                       AMBRE if i == 0 else GRIS_ENCART,
                       BLANC if i == 0 else PLAY_GRIS,
                       0.42, 0.52, infos=_ligne_infos(fiche))
+
+
+_PAROLES: dict[str, tuple[float, list]] = {}
+
+
+def _pour_hershey(texte: str) -> str:
+    """Le même mot, en lettres que la police du flux sait dessiner.
+
+    Hershey n'a pas d'accents. Les retirer ici plutôt que dans le texte de
+    l'auteur : la phrase reste la sienne, seuls les signes changent.
+    """
+    plat = unicodedata.normalize("NFKD", texte)
+    plat = "".join(ch for ch in plat if not unicodedata.combining(ch))
+    for src, dst in (("—", "-"), ("–", "-"), ("“", '"'), ("”", '"'),
+                     ("’", "'"), ("‘", "'"), ("…", "...")):
+        plat = plat.replace(src, dst)
+    return "".join(ch if 32 <= ord(ch) < 127 else " " for ch in plat)
+
+
+def _charge_paroles(chemin: Path) -> list:
+    """Les lignes datées d'un morceau, relues seulement si le fichier change."""
+    try:
+        age = chemin.stat().st_mtime
+    except OSError:
+        return []
+    garde = _PAROLES.get(str(chemin))
+    if garde and garde[0] == age:
+        return garde[1]
+    try:
+        brut = json.loads(chemin.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    lignes = brut.get("lignes") if isinstance(brut, dict) else brut
+    if not isinstance(lignes, list):
+        lignes = []
+    _PAROLES[str(chemin)] = (age, lignes)
+    return lignes
+
+
+def _mots_a_l_heure(texte: str, debut: float, fin: float,
+                    maintenant: float) -> list[tuple[str, bool]]:
+    """Chaque mot, et s'il est déjà chanté.
+
+    Le temps d'un mot suit sa longueur : un « matters » dure plus qu'un
+    « a », et le vert avance avec la voix plutôt qu'au hasard.
+    """
+    mots = texte.split()
+    if not mots:
+        return []
+    poids = [max(len(mot.strip(".,;:!?\"'")), 1) for mot in mots]
+    total = sum(poids) or 1
+    duree = max(0.05, fin - debut)
+    curseur = debut
+    vus = []
+    for i, (mot, poids_mot) in enumerate(zip(mots, poids)):
+        if i == len(mots) - 1:
+            fin_mot = fin
+        else:
+            fin_mot = curseur + duree * poids_mot / total
+        vus.append((mot, maintenant >= curseur))
+        curseur = fin_mot
+    return vus
+
+
+def pose_paroles(image: np.ndarray, programme: dict, racine: Path) -> None:
+    """La ligne en cours, en karaoké, le temps que le morceau la chante.
+
+    Rien le reste du temps : une phrase qui resterait entre deux morceaux
+    dirait que la radio sous-titre tout, et ce n'est pas le cas. Le mot déjà
+    passé passe au vert, celui qui vient reste blanc.
+    """
+    fiche = programme.get("en_cours") or None
+    if not fiche:
+        return
+    nom = str(fiche.get("paroles") or "")
+    if not nom:
+        return
+    lignes = _charge_paroles(racine / "data" / "paroles" / nom)
+    if not lignes:
+        return
+    ecoule = float(programme.get("ecoule") or 0.0)
+    texte, debut, fin = "", 0.0, 0.0
+    for ligne in lignes:
+        if not isinstance(ligne, (list, tuple)) or len(ligne) < 3:
+            continue
+        t0, t1, phrase = float(ligne[0]), float(ligne[1]), str(ligne[2])
+        if t0 <= ecoule < t1:
+            texte, debut, fin = phrase, t0, t1
+            break
+    texte = _pour_hershey(texte).strip()
+    if not texte:
+        return
+    hauteur, largeur = image.shape[:2]
+    echelle = largeur / 1600
+    marge = int(PLAY_MARGE * echelle)
+    maintenant = int(PLAY_MAINTENANT * echelle)
+    tete = int(20 * echelle)
+    extra = int(22 * echelle)
+    bloc_h = tete + maintenant + extra + 2 * marge
+    haut = hauteur - int(AGENDA_H * echelle) - bloc_h
+    police = cv2.FONT_HERSHEY_DUPLEX
+    trait = max(1, int(round(echelle)))
+    taille = 0.72 * echelle
+    mots = _mots_a_l_heure(texte, debut, fin, ecoule)
+    espace, _ = cv2.getTextSize(" ", police, taille, trait)[:1][0]
+    large = 0
+    mesures = []
+    for mot, chante in mots:
+        (w, h), _ = cv2.getTextSize(mot, police, taille, trait)
+        mesures.append((mot, chante, w, h))
+        large += w
+    large += espace * max(0, len(mesures) - 1)
+    while large > int(largeur * 0.92) and taille > 0.35 * echelle:
+        taille *= 0.92
+        espace, _ = cv2.getTextSize(" ", police, taille, trait)[:1][0]
+        large = 0
+        mesures = []
+        for mot, chante in mots:
+            (w, h), _ = cv2.getTextSize(mot, police, taille, trait)
+            mesures.append((mot, chante, w, h))
+            large += w
+        large += espace * max(0, len(mesures) - 1)
+    haut_mot = max((h for _, _, _, h in mesures), default=0)
+    bande_h = haut_mot + int(16 * echelle)
+    y1 = max(0, haut - bande_h - int(8 * echelle))
+    y2 = min(hauteur, y1 + bande_h)
+    if y2 > y1:
+        image[y1:y2, :] = (image[y1:y2, :] * 0.38).astype(np.uint8)
+    x = max(marge, (largeur - large) // 2)
+    base = y2 - int(8 * echelle)
+    for mot, chante, w, _h in mesures:
+        _pose_encre(image, mot, (x, base), police, taille, trait,
+                    VERT if chante else BLANC)
+        x += w + espace
 
 
 # Le silence qu'il faut avant d'aller chercher dans les archives, et le temps
@@ -8567,6 +8778,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             pose_bloc_musique(toile, prog, racine / "data" / "musique",
                               musique.pouls(), quand - origine,
                               forme=effet_du_moment(quand - origine)[0])
+            pose_paroles(toile, prog, racine)
             # Et le flash par-dessus tout le reste, parce qu'une prise prime
             # sur les encarts. Jamais par-dessus la montagne : il s'arrête au
             # bord de la fenêtre, où il est le plus vif.

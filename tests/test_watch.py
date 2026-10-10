@@ -3302,6 +3302,69 @@ class DiffusionTests(unittest.TestCase):
             suite = json.loads((racine / "session.json").read_text(encoding="utf-8"))
             self.assertEqual({bout["f"] for bout in suite}, set(noms))
 
+    def test_the_hourly_song_opens_each_hour_and_stays_out_of_the_draw(self):
+        """Une fois par heure, au début de l'heure, et jamais entre deux.
+
+        Le tirage continuerait de la servir au hasard, et on l'entendrait
+        deux fois dans la même heure. Elle sort donc de la pioche.
+        """
+        with tempfile.TemporaryDirectory() as dossier:
+            racine = Path(dossier)
+            durees = {}
+            for nom, duree in (("a.mp3", 2500.0), ("b.mp3", 2500.0),
+                               ("ventoux-whatmoves.mp3", 200.0)):
+                (racine / nom).write_bytes(b"x")
+                durees[racine / nom] = duree
+            (racine / "credits.json").write_text(json.dumps({
+                "a.mp3": {"auteur": "a", "titre": "A"},
+                "b.mp3": {"auteur": "b", "titre": "B"},
+                "ventoux-whatmoves.mp3": {
+                    "auteur": "thepriben", "titre": "#WhatMoves", "horaire": True,
+                },
+            }), encoding="utf-8")
+            with mock.patch.object(stream, "duree_audio",
+                                   lambda p: durees.get(p, 0.0)):
+                stream.batir_session(racine, heures=3, graine=1)
+            suite = json.loads((racine / "session.json").read_text(encoding="utf-8"))
+            t = 0.0
+            debuts = []
+            for bout in suite:
+                if bout["f"] == "ventoux-whatmoves.mp3":
+                    debuts.append(t)
+                t += bout["d"]
+            self.assertGreaterEqual(len(debuts), 3)
+            self.assertAlmostEqual(debuts[0], 0.0, delta=1.0)
+            for i in range(1, len(debuts)):
+                self.assertAlmostEqual(debuts[i] - debuts[i - 1], 3600.0, delta=1.0)
+            self.assertEqual({bout["f"] for bout in suite},
+                             {"a.mp3", "b.mp3", "ventoux-whatmoves.mp3"})
+            hors = [bout for bout in suite if bout["f"] != "ventoux-whatmoves.mp3"]
+            self.assertGreaterEqual(sum(b["d"] for b in hors), 5000.0)
+
+    def test_karaoke_turns_sung_words_green_and_stays_quiet_before(self):
+        """La ligne s'allume mot à mot, et le silence d'avant ne porte rien."""
+        with tempfile.TemporaryDirectory() as dossier:
+            racine = Path(dossier)
+            (racine / "data" / "paroles").mkdir(parents=True)
+            (racine / "data" / "paroles" / "ventoux-whatmoves.json").write_text(
+                json.dumps({"lignes": [[10.0, 14.0, "Voilà, move."]]}),
+                encoding="utf-8")
+            programme = {
+                "en_cours": {"paroles": "ventoux-whatmoves.json",
+                             "auteur": "thepriben", "titre": "#WhatMoves"},
+                "ecoule": 0.0, "duree": 20.0, "suite": [], "avant": None,
+            }
+            muet = np.zeros((720, 1280, 3), np.uint8)
+            stream.pose_paroles(muet, programme, racine)
+            self.assertEqual(int(muet.max()), 0)
+            programme["ecoule"] = 11.2
+            toile = np.zeros((720, 1280, 3), np.uint8)
+            stream.pose_paroles(toile, programme, racine)
+            vert = (toile[:, :, 1] > 200) & (toile[:, :, 2] < 180)
+            blanc = (toile[:, :, 0] > 220) & (toile[:, :, 1] > 220)
+            self.assertGreater(int(vert.sum()), 30)
+            self.assertGreater(int(blanc.sum()), 30)
+
     def test_no_track_holds_the_stream_for_more_than_ten_minutes(self):
         """Un set de cinquante minutes se sert par tranches, pas d'un bloc.
 
