@@ -2,6 +2,407 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-10T16-07-40Z-missed-348",
+      "t": "2026-10-10T16:07:40Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-10T16-07-40Z-missed-348.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.065,
+          "kept": 0.51,
+          "area_ratio": 0.05705,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.0125,
+          0.0,
+          0.3312,
+          0.1722
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T16-07-40Z-missed-348.jpg"
+    },
+    {
+      "id": "2026-10-10T16-07-37Z-vehicle-346",
+      "t": "2026-10-10T16:07:37Z",
+      "type": "vehicle",
+      "label": "Voiture bleue",
+      "zone": "road",
+      "confidence": 0.816,
+      "thumb": "data/thumbs/2026-10-10T16-07-37Z-vehicle-346.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.0,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.3836,
+          "area_grow": 12.58,
+          "clipped": false,
+          "shade": 0.806,
+          "kept": 0.314,
+          "area_ratio": 0.00639,
+          "duration_s": 10.0,
+          "frames": 11,
+          "width_m": 3.0,
+          "height_m": 2.8,
+          "width_named_m": 2.9,
+          "height_named_m": 2.5,
+          "rise_ms": 0.0,
+          "drift_rate": 0.29,
+          "seen_as": [
+            "car 0.82 sur 85%",
+            "motorcycle 0.46 sur 0%",
+            "truck 0.30 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.058,
+          0.7715,
+          0.1027,
+          0.1588
+        ],
+        "trace": [
+          [
+            1791648447.68,
+            0.0422,
+            0.6611,
+            0.0141,
+            0.0361
+          ],
+          [
+            1791648448.68,
+            0.0422,
+            0.6611,
+            0.0141,
+            0.0361
+          ],
+          [
+            1791648449.68,
+            0.0422,
+            0.6611,
+            0.0141,
+            0.0361
+          ],
+          [
+            1791648450.68,
+            0.0422,
+            0.6611,
+            0.0141,
+            0.0361
+          ],
+          [
+            1791648451.68,
+            0.0422,
+            0.6611,
+            0.0141,
+            0.0361
+          ],
+          [
+            1791648452.68,
+            0.0422,
+            0.6611,
+            0.0141,
+            0.0361
+          ],
+          [
+            1791648453.68,
+            0.0422,
+            0.6611,
+            0.0141,
+            0.0361
+          ],
+          [
+            1791648454.68,
+            0.0422,
+            0.7528,
+            0.0531,
+            0.1056
+          ],
+          [
+            1791648455.68,
+            0.0656,
+            0.7861,
+            0.0828,
+            0.1389
+          ],
+          [
+            1791648456.68,
+            0.1266,
+            0.85,
+            0.1234,
+            0.15
+          ],
+          [
+            1791648457.68,
+            0.2516,
+            0.9361,
+            0.1,
+            0.0639
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T16-07-37Z-vehicle-346.jpg"
+    },
+    {
+      "id": "2026-10-10T16-07-37Z-cycle-347",
+      "t": "2026-10-10T16:07:37Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-10T16-07-37Z-cycle-347.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1352,
+          "area_grow": 1.16,
+          "clipped": false,
+          "shade": 0.608,
+          "kept": 0.889,
+          "area_ratio": 0.00085,
+          "duration_s": 10.0,
+          "frames": 11,
+          "width_m": 12.6,
+          "height_m": 12.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.6,
+          "seen_as": []
+        },
+        "box": [
+          0.1234,
+          0.55,
+          0.0203,
+          0.0361
+        ],
+        "trace": [
+          [
+            1791648447.68,
+            0.1219,
+            0.5528,
+            0.0219,
+            0.0333
+          ],
+          [
+            1791648448.68,
+            0.1219,
+            0.5528,
+            0.0219,
+            0.0333
+          ],
+          [
+            1791648449.68,
+            0.1219,
+            0.5528,
+            0.0219,
+            0.0333
+          ],
+          [
+            1791648450.68,
+            0.1219,
+            0.5528,
+            0.0219,
+            0.0333
+          ],
+          [
+            1791648451.68,
+            0.1234,
+            0.55,
+            0.0203,
+            0.0361
+          ],
+          [
+            1791648452.68,
+            0.1234,
+            0.55,
+            0.0203,
+            0.0361
+          ],
+          [
+            1791648453.68,
+            0.1234,
+            0.55,
+            0.0203,
+            0.0361
+          ],
+          [
+            1791648454.68,
+            0.1234,
+            0.55,
+            0.0203,
+            0.0333
+          ],
+          [
+            1791648455.68,
+            0.1234,
+            0.55,
+            0.0203,
+            0.0278
+          ],
+          [
+            1791648456.68,
+            0.0,
+            0.6028,
+            0.0234,
+            0.0556
+          ],
+          [
+            1791648457.68,
+            0.0,
+            0.6056,
+            0.0203,
+            0.0417
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T16-07-37Z-cycle-347.jpg"
+    },
+    {
+      "id": "2026-10-10T16-04-37Z-missed-345",
+      "t": "2026-10-10T16:04:37Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-10T16-04-37Z-missed-345.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 30 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.025,
+          "area_grow": 1.5,
+          "clipped": false,
+          "shade": 1.493,
+          "kept": 1.0,
+          "area_ratio": 0.00073,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 29.7,
+          "height_m": 8.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.411,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.9266,
+          0.2083,
+          0.0375,
+          0.0194
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T16-04-37Z-missed-345.jpg"
+    },
+    {
+      "id": "2026-10-10T16-03-31Z-vehicle-344",
+      "t": "2026-10-10T16:03:31Z",
+      "type": "vehicle",
+      "label": "Camion blanc",
+      "zone": "road",
+      "confidence": 0.608,
+      "thumb": "data/thumbs/2026-10-10T16-03-31Z-vehicle-344.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 9.6,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0207,
+          "area_grow": 1.38,
+          "clipped": false,
+          "shade": 0.845,
+          "kept": 0.25,
+          "area_ratio": 0.00078,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 9.6,
+          "height_m": 5.3,
+          "width_named_m": 5.5,
+          "height_named_m": 5.3,
+          "rise_ms": 0.0,
+          "drift_rate": 0.163,
+          "seen_as": [
+            "truck 0.61 sur 48%"
+          ]
+        },
+        "box": [
+          0.0556,
+          0.6248,
+          0.0207,
+          0.0356
+        ],
+        "trace": [
+          [
+            1791648208.68,
+            0.0437,
+            0.6139,
+            0.0203,
+            0.0278
+          ],
+          [
+            1791648209.68,
+            0.0469,
+            0.6333,
+            0.0281,
+            0.0278
+          ],
+          [
+            1791648210.68,
+            0.0469,
+            0.6333,
+            0.0281,
+            0.0278
+          ],
+          [
+            1791648211.68,
+            0.0469,
+            0.6333,
+            0.0281,
+            0.0278
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T16-03-31Z-vehicle-344.jpg"
+    },
+    {
       "id": "2026-10-10T16-01-40Z-motion-343",
       "t": "2026-10-10T16:01:40Z",
       "type": "motion",
