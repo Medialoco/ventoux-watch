@@ -2,6 +2,151 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-10T08-23-19Z-cycle-55",
+      "t": "2026-10-10T08:23:19Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-10T08-23-19Z-cycle-55.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 0.9,
+        "period": "day",
+        "weather": "couvert",
+        "context": "de jour, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.084,
+          "area_grow": 4.58,
+          "clipped": false,
+          "shade": 1.493,
+          "kept": 1.0,
+          "area_ratio": 0.00191,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 0.9,
+          "height_m": 0.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.16,
+          "drift_rate": 3.027,
+          "seen_as": []
+        },
+        "box": [
+          0.8891,
+          0.9194,
+          0.025,
+          0.0167
+        ],
+        "trace": [
+          [
+            1791620598.02,
+            0.8891,
+            0.9194,
+            0.025,
+            0.0167
+          ],
+          [
+            1791620599.02,
+            0.9688,
+            0.9111,
+            0.0312,
+            0.0611
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T08-23-19Z-cycle-55.jpg"
+    },
+    {
+      "id": "2026-10-10T08-17-16Z-missed-54",
+      "t": "2026-10-10T08:17:16Z",
+      "type": "missed",
+      "label": "Nuage",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-10T08-17-16Z-missed-54.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 116 m de large d'emblée. Un feu qui commence est petit ; ce qui arrive déjà large est un nuage.",
+        "period": "day",
+        "weather": "nuageux",
+        "context": "de jour, nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0334,
+          "area_grow": 6.57,
+          "clipped": false,
+          "shade": 1.25,
+          "kept": 0.396,
+          "area_ratio": 0.00376,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 115.5,
+          "height_m": 38.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.058,
+          "seen_as": []
+        },
+        "refused": "cloud",
+        "box": [
+          0.6062,
+          0.2139,
+          0.0797,
+          0.0472
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T08-17-16Z-missed-54.jpg"
+    },
+    {
+      "id": "2026-10-10T08-14-12Z-vehicle-52",
+      "t": "2026-10-10T08:14:12Z",
+      "type": "vehicle",
+      "label": "Voiture bleue",
+      "zone": "roundabout",
+      "confidence": 0.885,
+      "thumb": "data/thumbs/2026-10-10T08-14-12Z-vehicle-52.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.0,
+        "period": "day",
+        "weather": "nuageux",
+        "context": "de jour, nuageux",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.744,
+          "kept": 0.232,
+          "area_ratio": 0.01081,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.0,
+          "height_m": 2.7,
+          "width_named_m": 2.9,
+          "height_named_m": 2.5,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.88 sur 81%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.106,
+          0.7679,
+          0.0973,
+          0.1493
+        ],
+        "count": 2,
+        "since": "2026-10-10T08:14:12Z"
+      },
+      "closeup": "data/closeups/2026-10-10T08-14-12Z-vehicle-52.jpg"
+    },
+    {
       "id": "2026-10-10T07-50-22Z-cycle-51",
       "t": "2026-10-10T07:50:22Z",
       "type": "cycle",
