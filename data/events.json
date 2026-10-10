@@ -2,6 +2,327 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-10T14-52-31Z-fire-299",
+      "t": "2026-10-10T14:52:31Z",
+      "type": "fire",
+      "label": "Départ de feu",
+      "zone": "slope",
+      "confidence": 0.327,
+      "thumb": "data/thumbs/2026-10-10T14-52-31Z-fire-299.jpg",
+      "clip_url": "",
+      "detail": {
+        "warm_ratio": 0.327,
+        "smoke_ratio": 0.14,
+        "rise": 0.0778,
+        "grow": 2.14,
+        "width_m": 27.4,
+        "surface": "forest",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1913,
+          "area_grow": 2.14,
+          "clipped": false,
+          "shade": 1.301,
+          "kept": 0.667,
+          "area_ratio": 0.00125,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 27.4,
+          "height_m": 13.7,
+          "width_named_m": 10.1,
+          "height_named_m": 3.4,
+          "rise_ms": 5.47,
+          "drift_rate": 0.854,
+          "seen_as": [
+            "car 0.26 sur 0%"
+          ]
+        },
+        "box": [
+          0.4531,
+          0.4556,
+          0.0437,
+          0.0389
+        ],
+        "trace": [
+          [
+            1791643946.83,
+            0.4594,
+            0.4583,
+            0.0422,
+            0.0139
+          ],
+          [
+            1791643947.83,
+            0.4531,
+            0.4556,
+            0.0437,
+            0.0389
+          ],
+          [
+            1791643948.83,
+            0.5547,
+            0.4722,
+            0.0406,
+            0.0167
+          ],
+          [
+            1791643949.83,
+            0.5563,
+            0.4667,
+            0.0531,
+            0.0222
+          ],
+          [
+            1791643950.83,
+            0.6484,
+            0.3833,
+            0.0266,
+            0.0389
+          ],
+          [
+            1791643951.83,
+            0.6484,
+            0.3806,
+            0.0266,
+            0.0472
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T14-52-31Z-fire-299.jpg"
+    },
+    {
+      "id": "2026-10-10T14-44-30Z-motion-298",
+      "t": "2026-10-10T14:44:30Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-10T14-44-30Z-motion-298.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2894,
+          "area_grow": 34.83,
+          "clipped": false,
+          "shade": 0.604,
+          "kept": 0.279,
+          "area_ratio": 0.01814,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 3.7,
+          "height_m": 2.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.204,
+          "seen_as": []
+        },
+        "box": [
+          0.1172,
+          0.8222,
+          0.1187,
+          0.1528
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T14-44-30Z-motion-298.jpg"
+    },
+    {
+      "id": "2026-10-10T14-23-38Z-vehicle-296",
+      "t": "2026-10-10T14:23:38Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.624,
+      "thumb": "data/thumbs/2026-10-10T14-23-38Z-vehicle-296.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.8,
+        "height_m": 1.6,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0269,
+          "area_grow": 0.86,
+          "clipped": false,
+          "shade": 0.659,
+          "kept": 0.251,
+          "area_ratio": 0.01484,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 4.8,
+          "height_m": 1.6,
+          "width_named_m": 3.3,
+          "height_named_m": 1.6,
+          "rise_ms": 0.09,
+          "drift_rate": 0.046,
+          "seen_as": [
+            "car 0.62 sur 67%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4371,
+          0.8454,
+          0.1513,
+          0.1268
+        ],
+        "trace": [
+          [
+            1791642215.17,
+            0.4,
+            0.8611,
+            0.1719,
+            0.1
+          ],
+          [
+            1791642216.17,
+            0.4,
+            0.8611,
+            0.1719,
+            0.1
+          ],
+          [
+            1791642217.17,
+            0.4,
+            0.8611,
+            0.1719,
+            0.1
+          ],
+          [
+            1791642218.17,
+            0.3906,
+            0.8444,
+            0.1484,
+            0.1
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T14-23-38Z-vehicle-296.jpg"
+    },
+    {
+      "id": "2026-10-10T14-23-37Z-motion-297",
+      "t": "2026-10-10T14:23:37Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-10T14-23-37Z-motion-297.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1823,
+          "area_grow": 0.31,
+          "clipped": false,
+          "shade": 1.154,
+          "kept": 0.227,
+          "area_ratio": 0.00043,
+          "duration_s": 20.0,
+          "frames": 21,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.065,
+          "seen_as": []
+        },
+        "box": [
+          0.05,
+          0.2889,
+          0.0406,
+          0.0444
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T14-23-37Z-motion-297.jpg"
+    },
+    {
+      "id": "2026-10-10T14-23-21Z-cycle-295",
+      "t": "2026-10-10T14:23:21Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "roundabout",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-10T14-23-21Z-cycle-295.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 0.9,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0535,
+          "area_grow": 1.33,
+          "clipped": false,
+          "shade": 0.943,
+          "kept": 0.5,
+          "area_ratio": 0.00057,
+          "duration_s": 4.0,
+          "frames": 4,
+          "width_m": 0.9,
+          "height_m": 0.8,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.37,
+          "drift_rate": 0.095,
+          "seen_as": []
+        },
+        "surface": "island",
+        "box": [
+          0.1156,
+          0.8361,
+          0.0187,
+          0.0306
+        ],
+        "trace": [
+          [
+            1791642197.17,
+            0.125,
+            0.8917,
+            0.0172,
+            0.025
+          ],
+          [
+            1791642198.17,
+            0.125,
+            0.8917,
+            0.0172,
+            0.025
+          ],
+          [
+            1791642199.17,
+            0.125,
+            0.8917,
+            0.0172,
+            0.025
+          ],
+          [
+            1791642201.17,
+            0.1156,
+            0.8361,
+            0.0187,
+            0.0306
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T14-23-21Z-cycle-295.jpg"
+    },
+    {
       "id": "2026-10-10T14-22-35Z-cycle-293",
       "t": "2026-10-10T14:22:35Z",
       "type": "cycle",
