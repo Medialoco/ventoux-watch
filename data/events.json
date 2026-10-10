@@ -2,6 +2,360 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-10T14-18-14Z-motion-283",
+      "t": "2026-10-10T14:18:14Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-10T14-18-14Z-motion-283.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3421,
+          "area_grow": 0.04,
+          "clipped": false,
+          "shade": 0.809,
+          "kept": 0.375,
+          "area_ratio": 0.00049,
+          "duration_s": 11.0,
+          "frames": 12,
+          "width_m": 4.8,
+          "height_m": 1.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.19,
+          "drift_rate": 0.217,
+          "seen_as": []
+        },
+        "box": [
+          0.3234,
+          0.8028,
+          0.1391,
+          0.0972
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T14-18-14Z-motion-283.jpg"
+    },
+    {
+      "id": "2026-10-10T14-14-35Z-vehicle-282",
+      "t": "2026-10-10T14:14:35Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.786,
+      "thumb": "data/thumbs/2026-10-10T14-14-35Z-vehicle-282.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 7.4,
+        "height_m": 2.0,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0343,
+          "area_grow": 0.02,
+          "clipped": false,
+          "shade": 0.905,
+          "kept": 0.392,
+          "area_ratio": 0.00052,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 7.4,
+          "height_m": 2.0,
+          "width_named_m": 3.2,
+          "height_named_m": 1.8,
+          "rise_ms": 0.0,
+          "drift_rate": 0.011,
+          "seen_as": [
+            "car 0.79 sur 38%",
+            "person 0.32 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4485,
+          0.8304,
+          0.1473,
+          0.1458
+        ],
+        "trace": [
+          [
+            1791641669.17,
+            0.4203,
+            0.8611,
+            0.2344,
+            0.1389
+          ],
+          [
+            1791641670.17,
+            0.4203,
+            0.8611,
+            0.2344,
+            0.1389
+          ],
+          [
+            1791641671.17,
+            0.4203,
+            0.8611,
+            0.2344,
+            0.1389
+          ],
+          [
+            1791641672.17,
+            0.3906,
+            0.8444,
+            0.2641,
+            0.1306
+          ],
+          [
+            1791641673.17,
+            0.5578,
+            0.9278,
+            0.0266,
+            0.0194
+          ],
+          [
+            1791641674.17,
+            0.5578,
+            0.9278,
+            0.0266,
+            0.0194
+          ],
+          [
+            1791641675.17,
+            0.5578,
+            0.9278,
+            0.0266,
+            0.0194
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T14-14-35Z-vehicle-282.jpg"
+    },
+    {
+      "id": "2026-10-10T14-13-38Z-missed-281",
+      "t": "2026-10-10T14:13:38Z",
+      "type": "missed",
+      "label": "Décor de l'îlot",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-10T14-13-38Z-missed-281.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur l'îlot central du rond-point, et ça n'a pas bougé. Les pierres et les figures y sont plantées.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.847,
+          "kept": 0.492,
+          "area_ratio": 0.00491,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 2.4,
+          "height_m": 1.8,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "island",
+        "box": [
+          0.3172,
+          0.7889,
+          0.0609,
+          0.0806
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T14-13-38Z-missed-281.jpg"
+    },
+    {
+      "id": "2026-10-10T14-12-42Z-person-279",
+      "t": "2026-10-10T14:12:49Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "road",
+      "confidence": 0.835,
+      "thumb": "data/thumbs/2026-10-10T14-12-42Z-person-279.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.113,
+          "area_grow": 3.41,
+          "clipped": false,
+          "shade": 0.938,
+          "kept": 0.278,
+          "area_ratio": 0.00422,
+          "duration_s": 17.0,
+          "frames": 18,
+          "width_m": 3.4,
+          "height_m": 2.6,
+          "width_named_m": 0.8,
+          "height_named_m": 2.6,
+          "rise_ms": 0.0,
+          "drift_rate": 0.015,
+          "seen_as": [
+            "person 0.83 sur 21%",
+            "person 0.75 sur 9%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.044,
+          0.7457,
+          0.0167,
+          0.0984
+        ],
+        "trace": [
+          [
+            1791641552.17,
+            0.05,
+            0.675,
+            0.0297,
+            0.0417
+          ],
+          [
+            1791641553.17,
+            0.05,
+            0.675,
+            0.0297,
+            0.0417
+          ],
+          [
+            1791641554.17,
+            0.05,
+            0.675,
+            0.0297,
+            0.0417
+          ],
+          [
+            1791641555.17,
+            0.0516,
+            0.6833,
+            0.0359,
+            0.0528
+          ],
+          [
+            1791641556.17,
+            0.0516,
+            0.6833,
+            0.0359,
+            0.0528
+          ],
+          [
+            1791641557.17,
+            0.0516,
+            0.6833,
+            0.0359,
+            0.0528
+          ],
+          [
+            1791641558.17,
+            0.0516,
+            0.6833,
+            0.0359,
+            0.0528
+          ],
+          [
+            1791641559.17,
+            0.0156,
+            0.7417,
+            0.0344,
+            0.0389
+          ],
+          [
+            1791641560.17,
+            0.0156,
+            0.7417,
+            0.0344,
+            0.0389
+          ],
+          [
+            1791641561.17,
+            0.0156,
+            0.7417,
+            0.0344,
+            0.0389
+          ],
+          [
+            1791641562.17,
+            0.0156,
+            0.7417,
+            0.0344,
+            0.0389
+          ],
+          [
+            1791641563.17,
+            0.0,
+            0.7472,
+            0.0672,
+            0.0667
+          ],
+          [
+            1791641564.17,
+            0.0,
+            0.7472,
+            0.0672,
+            0.0667
+          ],
+          [
+            1791641565.17,
+            0.0,
+            0.7472,
+            0.0672,
+            0.0667
+          ],
+          [
+            1791641566.17,
+            0.0047,
+            0.7667,
+            0.0563,
+            0.075
+          ],
+          [
+            1791641567.17,
+            0.0047,
+            0.7667,
+            0.0563,
+            0.075
+          ],
+          [
+            1791641568.17,
+            0.0047,
+            0.7667,
+            0.0563,
+            0.075
+          ],
+          [
+            1791641569.17,
+            0.0047,
+            0.7667,
+            0.0563,
+            0.075
+          ]
+        ],
+        "count": 2,
+        "since": "2026-10-10T14:12:42Z"
+      },
+      "closeup": "data/closeups/2026-10-10T14-12-42Z-person-279.jpg"
+    },
+    {
       "id": "2026-10-10T14-11-01Z-missed-278",
       "t": "2026-10-10T14:11:01Z",
       "type": "missed",
