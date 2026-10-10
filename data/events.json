@@ -2,6 +2,93 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-10T17-21-51Z-motion-378",
+      "t": "2026-10-10T17:21:51Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-10T17-21-51Z-motion-378.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2709,
+          "area_grow": 0.01,
+          "clipped": false,
+          "shade": 1.066,
+          "kept": 0.723,
+          "area_ratio": 0.00057,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 10.5,
+          "height_m": 3.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.316,
+          "seen_as": []
+        },
+        "box": [
+          0.2188,
+          0.7333,
+          0.3563,
+          0.2222
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T17-21-51Z-motion-378.jpg"
+    },
+    {
+      "id": "2026-10-10T17-16-06Z-motion-377",
+      "t": "2026-10-10T17:16:06Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-10T17-16-06Z-motion-377.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.102,
+          "area_grow": 1.11,
+          "clipped": true,
+          "shade": 1.122,
+          "kept": 0.738,
+          "area_ratio": 0.11646,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 14.1,
+          "height_m": 3.2,
+          "width_named_m": 0.7,
+          "height_named_m": 1.5,
+          "rise_ms": 0.7,
+          "drift_rate": 0.522,
+          "seen_as": [
+            "person 0.45 sur 0%",
+            "person 0.33 sur 0%",
+            "car 0.31 sur 0%",
+            "person 0.31 sur 0%"
+          ]
+        },
+        "box": [
+          0.2812,
+          0.7833,
+          0.5375,
+          0.2167
+        ]
+      },
+      "closeup": "data/closeups/2026-10-10T17-16-06Z-motion-377.jpg"
+    },
+    {
       "id": "2026-10-10T17-10-41Z-vehicle-376",
       "t": "2026-10-10T17:10:41Z",
       "type": "vehicle",
