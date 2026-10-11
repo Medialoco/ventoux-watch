@@ -477,6 +477,11 @@ def identifications(chemin: Path, depuis: float) -> list[dict]:
 # C'est un score de modèle et non une mesure de ce terrain : il se transporte
 # tel quel sur une autre caméra, là où une largeur en mètres ne le ferait pas.
 CONFIANCE_MOT = 0.60
+# Good catch and the bell use a lower bar than the word on screen. Many cars
+# and small trucks are published between 0,55 and 0,59 — shape reads, buses
+# without a schedule, a grey truck at 0,585 — while the name on the rectangle
+# still waits for 0,60.
+CONFIANCE_ATTRAPE = 0.55
 
 
 def nomme(label: str, confiance: float) -> bool:
@@ -1066,7 +1071,7 @@ def prise_a_feter(vus: list[dict], quand: float, fetes: set) -> dict | None:
     for vu in vus:
         if (vu.get("type") or "") not in PRISES:
             continue
-        if float(vu.get("confiance") or 0.0) < CONFIANCE_MOT:
+        if float(vu.get("confiance") or 0.0) < CONFIANCE_ATTRAPE:
             continue
         debut, fin = presence(vu)
         if not debut <= quand <= fin:
@@ -1097,7 +1102,7 @@ def prise_a_sonner(vus: list[dict], quand: float, avance: float,
     for vu in vus:
         if (vu.get("type") or "") not in PRISES:
             continue
-        if float(vu.get("confiance") or 0.0) < CONFIANCE_MOT:
+        if float(vu.get("confiance") or 0.0) < CONFIANCE_ATTRAPE:
             continue
         if vu["t"] in deja:
             continue
@@ -3048,6 +3053,12 @@ def _pour_hershey(texte: str) -> str:
     return "".join(ch if 32 <= ord(ch) < 127 else " " for ch in plat)
 
 
+# À une image par seconde, une ligne de 0,9 s est une image, ou rien. Tenir
+# un peu plus longtemps que la voix n'est pas mentir : c'est sous-titrer.
+PAROLES_TENUE_S = 2.4
+# Un souffle entre deux vers : on garde la ligne plutôt que d'éteindre.
+
+
 def _charge_paroles(chemin: Path) -> list:
     """Les lignes datées d'un morceau, relues seulement si le fichier change."""
     try:
@@ -3093,6 +3104,38 @@ def _mots_a_l_heure(texte: str, debut: float, fin: float,
     return vus
 
 
+def _ligne_a_lire(lignes: list, ecoule: float) -> tuple[str, float, float]:
+    """La phrase à écrire, tenue assez longtemps pour être lue.
+
+    Une ligne trop courte disparaissait entre deux images du flux. On la
+    garde jusqu'à PAROLES_TENUE_S, ou jusqu'à la suivante si elle arrive
+    tout de suite. Un trou plus long que la tenue — un couplet instrumental —
+    reste vide.
+    """
+    courante = precedente = suivante = None
+    for ligne in lignes:
+        if not isinstance(ligne, (list, tuple)) or len(ligne) < 3:
+            continue
+        t0, t1, phrase = float(ligne[0]), float(ligne[1]), str(ligne[2])
+        if t0 <= ecoule < t1:
+            courante = (phrase, t0, t1)
+            break
+        if t1 <= ecoule:
+            precedente = (phrase, t0, t1)
+        elif suivante is None and t0 > ecoule:
+            suivante = (phrase, t0, t1)
+    if courante:
+        return courante
+    if not precedente:
+        return "", 0.0, 0.0
+    phrase, t0, t1 = precedente
+    tenue = max(t1, t0 + PAROLES_TENUE_S)
+    plafond = suivante[1] if suivante else tenue
+    if ecoule < min(tenue, plafond):
+        return phrase, t0, tenue
+    return "", 0.0, 0.0
+
+
 def pose_paroles(image: np.ndarray, programme: dict, racine: Path) -> None:
     """La ligne en cours, en karaoké, le temps que le morceau la chante.
 
@@ -3110,14 +3153,7 @@ def pose_paroles(image: np.ndarray, programme: dict, racine: Path) -> None:
     if not lignes:
         return
     ecoule = float(programme.get("ecoule") or 0.0)
-    texte, debut, fin = "", 0.0, 0.0
-    for ligne in lignes:
-        if not isinstance(ligne, (list, tuple)) or len(ligne) < 3:
-            continue
-        t0, t1, phrase = float(ligne[0]), float(ligne[1]), str(ligne[2])
-        if t0 <= ecoule < t1:
-            texte, debut, fin = phrase, t0, t1
-            break
+    texte, debut, fin = _ligne_a_lire(lignes, ecoule)
     texte = _pour_hershey(texte).strip()
     if not texte:
         return

@@ -624,7 +624,7 @@ def _on_track(track, now, cfg, yolo, sky, gtfs, store, last_fire, pending, scene
         log.info("Recadrage gardé pour %s : %s [%s]", decision.label, close, track.code)
     log.info("Publié %s %s [%s]", decision.type, decision.label, track.code)
     _ligne_code(track, decision)
-    # Le good catch attend 0,60. Le compteur, lui, retient toute classe
+    # Le good catch attend 0,55. Le compteur, lui, retient toute classe
     # publiée : sinon un vélo lu à 0,50 disparaît des deux journées, et
     # passé minuit en France il ne reste plus que du côté américain.
     if (score is not None and decision.type in CLASSES_SURES
@@ -799,7 +799,7 @@ def _marque_vue(score: dict, prise: float, chemin: Path) -> None:
 def _aligne_prises(score: dict, events: list, chemin: Path) -> None:
     """Le numérateur reprend les classes déjà publiées.
 
-    Le fichier du jour ne gardait que les good catch, au-dessus de 0,60.
+    Le fichier du jour ne gardait que les good catch, au-dessus de 0,55.
     Une classe publiée en dessous existait dans l'historique et manquait
     au tableau. On réécrit le numérateur depuis l'historique, sans toucher
     aux mouvements déjà comptés.

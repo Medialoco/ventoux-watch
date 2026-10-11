@@ -3347,12 +3347,13 @@ class DiffusionTests(unittest.TestCase):
             racine = Path(dossier)
             (racine / "data" / "paroles").mkdir(parents=True)
             (racine / "data" / "paroles" / "ventoux-whatmoves.json").write_text(
-                json.dumps({"lignes": [[10.0, 14.0, "Voilà, move."]]}),
+                json.dumps({"lignes": [[10.0, 14.0, "Voilà, move."],
+                                       [18.0, 19.0, "Move."]]}),
                 encoding="utf-8")
             programme = {
                 "en_cours": {"paroles": "ventoux-whatmoves.json",
                              "auteur": "thepriben", "titre": "#WhatMoves"},
-                "ecoule": 0.0, "duree": 20.0, "suite": [], "avant": None,
+                "ecoule": 0.0, "duree": 22.0, "suite": [], "avant": None,
             }
             muet = np.zeros((720, 1280, 3), np.uint8)
             stream.pose_paroles(muet, programme, racine)
@@ -3364,6 +3365,16 @@ class DiffusionTests(unittest.TestCase):
             blanc = (toile[:, :, 0] > 220) & (toile[:, :, 1] > 220)
             self.assertGreater(int(vert.sum()), 30)
             self.assertGreater(int(blanc.sum()), 30)
+            # La voix s'est tue à 19 s ; le mot reste le temps d'être lu.
+            programme["ecoule"] = 19.8
+            encore = np.zeros((720, 1280, 3), np.uint8)
+            stream.pose_paroles(encore, programme, racine)
+            self.assertGreater(int(encore.max()), 0)
+            # Un couplet instrumental n'hérite pas de la ligne d'avant.
+            programme["ecoule"] = 15.5
+            vide = np.zeros((720, 1280, 3), np.uint8)
+            stream.pose_paroles(vide, programme, racine)
+            self.assertEqual(int(vide.max()), 0)
 
     def test_no_track_holds_the_stream_for_more_than_ten_minutes(self):
         """Un set de cinquante minutes se sert par tranches, pas d'un bloc.
@@ -7499,8 +7510,14 @@ class RechercheTests(unittest.TestCase):
     def test_a_doubt_is_not_a_catch(self):
         doute = {"t": 1000.0, "type": "person", "label": "Piéton",
                  "box": [0.4, 0.8, 0.05, 0.1], "confiance": 0.45}
+        presque = dict(doute, confiance=0.54)
+        assez = dict(doute, confiance=0.55)
         sur = dict(doute, confiance=0.8)
+        self.assertAlmostEqual(stream.CONFIANCE_ATTRAPE, 0.55)
+        self.assertGreater(stream.CONFIANCE_MOT, stream.CONFIANCE_ATTRAPE)
         self.assertIsNone(stream.prise_a_feter([doute], 1001.0, set()))
+        self.assertIsNone(stream.prise_a_feter([presque], 1001.0, set()))
+        self.assertIs(stream.prise_a_feter([assez], 1001.0, set()), assez)
         self.assertIs(stream.prise_a_feter([sur], 1001.0, set()), sur)
 
     def test_confetti_falls_and_then_stops(self):
