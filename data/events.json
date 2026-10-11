@@ -2,6 +2,218 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-11T18-02-23Z-missed-10",
+      "t": "2026-10-11T18:02:23Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-11T18-02-23Z-missed-10.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0087,
+          "area_grow": 1.24,
+          "clipped": false,
+          "shade": 1.128,
+          "kept": 1.0,
+          "area_ratio": 0.00065,
+          "duration_s": 10.0,
+          "frames": 10,
+          "width_m": 1.1,
+          "height_m": 1.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.023,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.3,
+          0.825,
+          0.0297,
+          0.0528
+        ]
+      },
+      "closeup": "data/closeups/2026-10-11T18-02-23Z-missed-10.jpg"
+    },
+    {
+      "id": "2026-10-11T17-54-52Z-vehicle-9",
+      "t": "2026-10-11T17:54:52Z",
+      "type": "vehicle",
+      "label": "Véhicule",
+      "zone": "other",
+      "confidence": 0.567,
+      "thumb": "data/thumbs/2026-10-11T17-54-52Z-vehicle-9.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1674,
+          "area_grow": 0.28,
+          "clipped": false,
+          "shade": 1.178,
+          "kept": 0.864,
+          "area_ratio": 0.00103,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 2.3,
+          "height_m": 2.1,
+          "width_named_m": 1.0,
+          "height_named_m": 2.4,
+          "rise_ms": 0.0,
+          "drift_rate": 0.174,
+          "seen_as": [
+            "person 0.38 sur 19%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.5203,
+          0.8,
+          0.0766,
+          0.1278
+        ],
+        "trace": [
+          [
+            1791741287.46,
+            0.5359,
+            0.7806,
+            0.0453,
+            0.0806
+          ],
+          [
+            1791741288.46,
+            0.5359,
+            0.8194,
+            0.0266,
+            0.0417
+          ],
+          [
+            1791741289.46,
+            0.5422,
+            0.8139,
+            0.0297,
+            0.0528
+          ],
+          [
+            1791741290.46,
+            0.5203,
+            0.8,
+            0.0766,
+            0.1278
+          ],
+          [
+            1791741291.46,
+            0.5578,
+            0.9278,
+            0.0344,
+            0.025
+          ],
+          [
+            1791741292.46,
+            0.5953,
+            0.9611,
+            0.0266,
+            0.0389
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-11T17-54-52Z-vehicle-9.jpg"
+    },
+    {
+      "id": "2026-10-11T17-54-51Z-motion-8",
+      "t": "2026-10-11T17:54:51Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-11T17-54-51Z-motion-8.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1718,
+          "area_grow": 0.53,
+          "clipped": false,
+          "shade": 1.193,
+          "kept": 1.0,
+          "area_ratio": 0.00041,
+          "duration_s": 3.0,
+          "frames": 3,
+          "width_m": 1.7,
+          "height_m": 1.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.758,
+          "seen_as": []
+        },
+        "box": [
+          0.3312,
+          0.7278,
+          0.0234,
+          0.0333
+        ]
+      },
+      "closeup": "data/closeups/2026-10-11T17-54-51Z-motion-8.jpg"
+    },
+    {
+      "id": "2026-10-11T17-54-48Z-missed-7",
+      "t": "2026-10-11T17:54:48Z",
+      "type": "missed",
+      "label": "Décor connu",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-11T17-54-48Z-missed-7.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "cabane n'a pas bougé. Une lumière est passée dessus.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.22,
+          "kept": 1.0,
+          "area_ratio": 0.00051,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 1.3,
+          "height_m": 1.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "landmark",
+        "box": [
+          0.3109,
+          0.7194,
+          0.0141,
+          0.0361
+        ]
+      },
+      "closeup": "data/closeups/2026-10-11T17-54-48Z-missed-7.jpg"
+    },
+    {
       "id": "2026-10-11T17-51-03Z-missed-6",
       "t": "2026-10-11T17:51:03Z",
       "type": "missed",
