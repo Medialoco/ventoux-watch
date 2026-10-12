@@ -2,6 +2,92 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-12T10-47-07Z-motion-141",
+      "t": "2026-10-12T10:47:07Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-12T10-47-07Z-motion-141.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1823,
+          "area_grow": 0.23,
+          "clipped": false,
+          "shade": 0.799,
+          "kept": 0.389,
+          "area_ratio": 0.00313,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 3.4,
+          "height_m": 1.8,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 1.22,
+          "drift_rate": 1.124,
+          "seen_as": []
+        },
+        "box": [
+          0.3703,
+          0.8333,
+          0.1219,
+          0.1139
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T10-47-07Z-motion-141.jpg"
+    },
+    {
+      "id": "2026-10-12T10-47-05Z-vehicle-140",
+      "t": "2026-10-12T10:47:05Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.568,
+      "thumb": "data/thumbs/2026-10-12T10-47-05Z-vehicle-140.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.8,
+        "height_m": 1.4,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.058,
+          "kept": 0.477,
+          "area_ratio": 0.01576,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 4.8,
+          "height_m": 1.4,
+          "width_named_m": 4.0,
+          "height_named_m": 1.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.57 sur 61%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.6221,
+          0.9203,
+          0.184,
+          0.0797
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T10-47-05Z-vehicle-140.jpg"
+    },
+    {
       "id": "2026-10-12T10-41-35Z-vehicle-139",
       "t": "2026-10-12T10:41:35Z",
       "type": "vehicle",
