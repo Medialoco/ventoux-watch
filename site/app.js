@@ -1729,7 +1729,7 @@ async function load() {
   const payload = await response.json();
   events = payload.events || [];
   const stamp = document.getElementById("version");
-  if (stamp && payload.version) stamp.textContent = `v${payload.version}`;
+  if (stamp && payload.version) stamp.textContent = `Watch v${payload.version}`;
   render();
   paintFigures();
   try {
@@ -2035,7 +2035,22 @@ async function loadSequence() {
 document.querySelector("#seq-prev")?.addEventListener("click", () => stepSequence(-1));
 document.querySelector("#seq-next")?.addEventListener("click", () => stepSequence(1));
 
+async function loadSiteVersion() {
+  try {
+    const fiche = await fetch("version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+    const hull = document.getElementById("site-version");
+    const lien = document.getElementById("site-version-link");
+    if (!fiche?.version || !hull) return;
+    hull.textContent = fiche.version;
+    if (lien) {
+      const watch = document.getElementById("version")?.textContent || "";
+      lien.title = watch ? `Site ${fiche.version} · ${watch}` : `Site ${fiche.version}`;
+    }
+  } catch (_) { /* version.json n'existe qu'après publish Pages */ }
+}
+
 load();
+loadSiteVersion();
 setInterval(load, 60000);
 loadSequence();
 followSections();

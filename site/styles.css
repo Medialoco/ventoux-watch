@@ -767,6 +767,43 @@ tr.wrong .event .sub { text-decoration: none; display: block; }
   font-variant-numeric: tabular-nums;
 }
 
+/* Numéro de release du site sur la coque, pas dans le texte du pied de page. */
+.sub-version {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 22px;
+  flex: 0 0 auto;
+  opacity: 0.42;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.sub-version:hover,
+.sub-version:focus-visible {
+  opacity: 0.72;
+}
+
+.sub-version-hull {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+.sub-version-n {
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  transform: translateX(-50%);
+  font-size: 6px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  pointer-events: none;
+}
+
 .box a, .foot a {
   color: var(--pine);
 }

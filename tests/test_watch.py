@@ -2850,7 +2850,8 @@ class FogTests(unittest.TestCase):
             payload = json.loads((root / "events.json").read_text(encoding="utf-8"))
         self.assertEqual(payload["version"], watcher.__version__)
         page = (Path(__file__).resolve().parents[1] / "site" / "index.html").read_text(encoding="utf-8")
-        self.assertIn('id="version"></span>', page)
+        self.assertIn('id="site-version"', page)
+        self.assertIn('id="version"', page)
 
     def test_a_correction_keeps_the_measurements_that_caused_it(self):
         """A verdict must leave more than a tally behind.
