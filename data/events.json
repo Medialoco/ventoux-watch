@@ -2,6 +2,95 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-12T14-14-09Z-missed-197",
+      "t": "2026-10-12T14:14:09Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-12T14-14-09Z-missed-197.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 39 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.82,
+          "kept": 0.5,
+          "area_ratio": 0.00049,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 0.7,
+          "height_m": 0.4,
+          "width_named_m": 0.2,
+          "height_named_m": 0.5,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "person 0.39 sur 0%"
+          ]
+        },
+        "refused": "tarmac",
+        "box": [
+          0.4875,
+          0.9,
+          0.0219,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T14-14-09Z-missed-197.jpg"
+    },
+    {
+      "id": "2026-10-12T14-13-37Z-motion-196",
+      "t": "2026-10-12T14:13:37Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-12T14-13-37Z-motion-196.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1625,
+          "area_grow": 6.82,
+          "clipped": false,
+          "shade": 0.902,
+          "kept": 0.542,
+          "area_ratio": 0.00358,
+          "duration_s": 16.0,
+          "frames": 17,
+          "width_m": 3.2,
+          "height_m": 2.4,
+          "width_named_m": 0.7,
+          "height_named_m": 2.2,
+          "rise_ms": 0.0,
+          "drift_rate": 0.124,
+          "seen_as": [
+            "person 0.35 sur 15%",
+            "person 0.30 sur 17%",
+            "person 0.27 sur 0%"
+          ]
+        },
+        "box": [
+          0.1078,
+          0.7472,
+          0.0516,
+          0.0694
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T14-13-37Z-motion-196.jpg"
+    },
+    {
       "id": "2026-10-12T14-03-31Z-vehicle-195",
       "t": "2026-10-12T14:03:31Z",
       "type": "vehicle",
