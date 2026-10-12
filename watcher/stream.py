@@ -333,13 +333,17 @@ def direct_visible(chaine: str) -> bool | None:
     return lit_le_direct(page_du_direct(chaine))[0]
 
 
-def note_le_direct(racine: Path, chaine: str, numero: str) -> None:
+def note_le_direct(racine: Path, chaine: str, numero: str, *, live: bool) -> None:
     """Dit au reste du monde quel direct est en cours.
 
     Le site personnel incruste le direct ; sans ce fichier il devrait deviner
     l'adresse, et la seule qu'on puisse écrire sans le numéro — celle qui
     demande à YouTube de résoudre « le direct de cette chaîne » — n'est plus
     tenue et sert régulièrement une vidéo indisponible.
+
+    Quand la chaîne s'éteint, on garde le dernier numéro pour la mémoire mais
+    on écrit live: false, afin que la page bascule sur la webcam plutôt que sur
+    un enregistrement fini.
 
     Écrit puis renommé : une page qui lit pendant qu'on écrit doit trouver
     l'ancien fichier entier plutôt que le nouveau à moitié.
@@ -349,6 +353,7 @@ def note_le_direct(racine: Path, chaine: str, numero: str) -> None:
     texte = json.dumps({
         "chaine": chaine,
         "video": numero,
+        "live": live,
         "vu": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }, ensure_ascii=False, indent=2)
     passage = fichier.with_suffix(".json.tmp")
@@ -391,10 +396,13 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     while premier or not coupe.wait(VEILLE_DIRECT_S if connu else VEILLE_DIRECT_CHERCHE_S):
         premier = False
         vu, numero = lit_le_direct(page_du_direct(chaine))
-        if racine is not None and numero:
+        if racine is not None:
             try:
-                note_le_direct(racine, chaine, numero)
-                connu = numero
+                if vu is True and numero:
+                    note_le_direct(racine, chaine, numero, live=True)
+                    connu = numero
+                elif vu is False and connu:
+                    note_le_direct(racine, chaine, connu, live=False)
             except OSError as souci:
                 log.warning("Numéro du direct non noté : %s", souci)
         if vu is None:
@@ -3872,6 +3880,7 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
     ne les pose déjà pas. Pas sur un Short : il n'y a nulle part où aller,
     et le milieu appartient encore à la montagne.
     """
+    return
     if energie < DANSE_ARRET:
         return
     hauteur, largeur = image.shape[:2]
@@ -8524,19 +8533,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     nom = next((str(vu.get("label") or "") for vu in nommes
                                 if vu.get("sur") and vu.get("label")), "")
                     journal.sujet(quand, nom or "Mouvement")
-            # Les pantins sur la toile et non sur l'image de la caméra, depuis
-            # qu'ils ont le droit d'aller danser dans la bande noire : posés
-            # sur la vue, ils étaient enfermés dedans par construction. Ils
-            # gardent leur place habituelle dans le cadre, on leur dit seulement
-            # où il finit.
-            #
-            # Et pas pendant un survol. Le relief en trois dimensions est un
-            # autre sujet que la montagne en direct, et deux pantins dansant
-            # dessus diraient que c'est le même plan filmé autrement.
-            # Commun à toutes les webcams. Les danseurs n'appartiennent pas
-            # au rond-point : ils restent quand l'image est celle de Cannes.
-            if survol is None:
-                pose_danseurs(toile, quand - origine, musique.pouls(), vue=cadrage)
             # Propres au Mont Serein. Ils connaissent le rond-point et la
             # crête, et ils jouent sur le cadre entier dès que c'est Cannes
             # qui l'occupe : les quatre-vingt-dix secondes prévues, et tout

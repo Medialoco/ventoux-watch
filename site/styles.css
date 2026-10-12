@@ -1020,6 +1020,13 @@ section[id] { scroll-margin-top: 50px; }
   font-size: 12px;
 }
 
+/* Incrusté depuis benoit-prieur.fr : le bouton thème reste joignable. */
+html.in-frame .top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
 /* The pipeline, drawn */
 
 .chart { padding: 14px 16px 4px; }

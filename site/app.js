@@ -594,7 +594,10 @@ function locale() {
 // The 3D view is a separate module and must not keep a second copy of the
 // wording: one dictionary, or the same place ends up named two ways.
 const THEME_KEY = "ventoux-theme";
+const THEME_ALT_KEY = "theme";
+const THEME_MSG = "ventoux-theme";
 let theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+let hashTileCache = { color: "", tile: null };
 
 const HASH = "#FREETECHNORADIO";
 const HASH_GLYPHS = {
@@ -637,7 +640,10 @@ function hashTile(color) {
 
 function paintHash() {
   const color = getComputedStyle(document.documentElement).getPropertyValue("--pine").trim() || "#1e3a30";
-  const tile = hashTile(color);
+  if (!hashTileCache.tile || hashTileCache.color !== color) {
+    hashTileCache = { color, tile: hashTile(color) };
+  }
+  const tile = hashTileCache.tile;
   document.querySelectorAll("canvas.hash-title").forEach((canvas) => {
     const scale = Math.max(2, Math.min(3, Math.floor((canvas.parentElement?.clientWidth || 720) / tile.width)));
     canvas.width = tile.width * scale;
@@ -675,6 +681,7 @@ function paintHash() {
 
 function applyTheme() {
   document.documentElement.dataset.theme = theme;
+  document.documentElement.classList.toggle("in-frame", window.parent !== window);
   const knob = document.getElementById("theme");
   if (knob) {
     const next = theme === "dark" ? t("themeBack") : t("theme");
@@ -686,10 +693,34 @@ function applyTheme() {
   paintHash();
 }
 
-document.getElementById("theme")?.addEventListener("click", () => {
-  theme = theme === "dark" ? "light" : "dark";
-  localStorage.setItem(THEME_KEY, theme);
+function commitTheme(next, { broadcast = true } = {}) {
+  theme = next === "dark" ? "dark" : "light";
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+    localStorage.setItem(THEME_ALT_KEY, theme);
+  } catch (_) { /* private mode */ }
   applyTheme();
+  if (!broadcast) return;
+  try {
+    window.parent?.postMessage({ type: THEME_MSG, theme }, "*");
+  } catch (_) { /* cross-origin */ }
+}
+
+document.getElementById("theme")?.addEventListener("click", () => {
+  commitTheme(theme === "dark" ? "light" : "dark");
+});
+window.addEventListener("message", (event) => {
+  const payload = event.data;
+  if (!payload || payload.type !== THEME_MSG) return;
+  if (payload.theme !== "dark" && payload.theme !== "light") return;
+  if (payload.theme === theme) return;
+  commitTheme(payload.theme, { broadcast: false });
+});
+window.addEventListener("storage", (event) => {
+  if (event.key !== THEME_KEY && event.key !== THEME_ALT_KEY) return;
+  if (event.newValue !== "dark" && event.newValue !== "light") return;
+  if (event.newValue === theme) return;
+  commitTheme(event.newValue, { broadcast: false });
 });
 document.addEventListener("ventoux-lang", applyTheme);
 applyTheme();
@@ -937,6 +968,10 @@ function showCamera() {
   if (!video.hidden) return;
   direct.hidden = true;
   video.hidden = false;
+  if (secours) {
+    secours.destroy();
+    secours = null;
+  }
   if (window.Hls && Hls.isSupported()) {
     secours = new Hls();
     secours.loadSource(STREAM);
@@ -976,6 +1011,10 @@ const DIRECT = [
   "https://raw.githubusercontent.com/Medialoco/ventoux-watch/main/data/direct.json",
   "data/direct.json",
 ];
+const ANTENNE = [
+  "https://raw.githubusercontent.com/Medialoco/ventoux-watch/main/data/antenne.json",
+  "data/antenne.json",
+];
 
 async function lisLeDirect() {
   for (const url of DIRECT) {
@@ -987,23 +1026,52 @@ async function lisLeDirect() {
   return null;
 }
 
+async function lisAntenne() {
+  for (const url of ANTENNE) {
+    try {
+      const fiche = await fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+      if (fiche && typeof fiche.live === "boolean") return fiche;
+    } catch (_) { /* spare copy next */ }
+  }
+  return null;
+}
+
+function chaineEnDirect(fiche, antenne) {
+  if (fiche?.live === false || antenne?.live === false) return false;
+  if (fiche?.live === true || antenne?.live === true) return true;
+  return null;
+}
+
+function abandonneYoutube() {
+  diffusion = "";
+  if (direct) {
+    direct.hidden = true;
+    direct.removeAttribute("src");
+  }
+  showCamera();
+}
+
 async function suisLeDirect() {
   const fiche = await lisLeDirect();
-  if (!fiche) {
-    if (!diffusion) showCamera();
+  const antenne = await lisAntenne();
+  const enDirect = chaineEnDirect(fiche, antenne);
+  if (fiche?.chaine && surYouTube) {
+    surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
+  }
+  if (!fiche || enDirect === false) {
+    if (diffusion || !video.hidden) abandonneYoutube();
+    else showCamera();
     return;
   }
   const numero = String(fiche.video || "");
   if (!/^[\w-]{11}$/.test(numero)) {
-    if (!diffusion) showCamera();
+    if (diffusion || !video.hidden) abandonneYoutube();
+    else showCamera();
     return;
-  }
-  if (fiche.chaine && surYouTube) {
-    surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
   }
   // Only when it has actually changed. Reassigning src reloads the player, and
   // a check every few minutes would restart the stream under the viewer.
-  if (numero === diffusion) return;
+  if (numero === diffusion && enDirect !== false) return;
   diffusion = numero;
   const lance = new URLSearchParams(location.search).get("play") === "1";
   direct.src = `https://www.youtube.com/embed/${numero}?autoplay=1&mute=${lance ? 0 : 1}&playsinline=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
@@ -1136,7 +1204,11 @@ document.addEventListener("mousemove", (event) => {
 });
 document.addEventListener("mouseout", (event) => {
   if (!loupe) return;
-  if (event.target.closest?.(AGRANDIR)) loupe.hidden = true;
+  if (event.target.closest?.(AGRANDIR)) {
+    loupe.hidden = true;
+    loupeImg.removeAttribute("src");
+    if (loupeNear) loupeNear.removeAttribute("src");
+  }
 });
 
 document.querySelectorAll(".filters button").forEach((button) => {
