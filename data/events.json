@@ -2,6 +2,188 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-12T12-31-51Z-vehicle-163",
+      "t": "2026-10-12T12:31:57Z",
+      "type": "vehicle",
+      "label": "Voiture blanche",
+      "zone": "other",
+      "confidence": 0.84,
+      "thumb": "data/thumbs/2026-10-12T12-31-51Z-vehicle-163.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.3,
+        "height_m": 2.1,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.3475,
+          "area_grow": 0.54,
+          "clipped": false,
+          "shade": 0.869,
+          "kept": 0.326,
+          "area_ratio": 0.01117,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 4.3,
+          "height_m": 2.1,
+          "width_named_m": 3.7,
+          "height_named_m": 1.8,
+          "rise_ms": 0.26,
+          "drift_rate": 0.356,
+          "seen_as": [
+            "truck 0.84 sur 57%",
+            "truck 0.39 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.3678,
+          0.798,
+          0.1513,
+          0.128
+        ],
+        "trace": [
+          [
+            1791808311.21,
+            0.35,
+            0.8111,
+            0.1547,
+            0.1333
+          ],
+          [
+            1791808312.21,
+            0.3,
+            0.775,
+            0.1125,
+            0.1139
+          ],
+          [
+            1791808313.21,
+            0.1828,
+            0.7472,
+            0.1344,
+            0.0833
+          ],
+          [
+            1791808314.21,
+            0.0969,
+            0.725,
+            0.125,
+            0.0917
+          ],
+          [
+            1791808315.21,
+            0.0406,
+            0.7111,
+            0.1219,
+            0.0917
+          ],
+          [
+            1791808316.21,
+            0.0406,
+            0.7111,
+            0.1219,
+            0.0917
+          ],
+          [
+            1791808317.21,
+            0.0406,
+            0.7111,
+            0.1219,
+            0.0917
+          ]
+        ],
+        "count": 2,
+        "since": "2026-10-12T12:31:51Z"
+      },
+      "closeup": "data/closeups/2026-10-12T12-31-51Z-vehicle-163.jpg"
+    },
+    {
+      "id": "2026-10-12T12-20-59Z-missed-162",
+      "t": "2026-10-12T12:20:59Z",
+      "type": "missed",
+      "label": "Décor connu",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-12T12-20-59Z-missed-162.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "cabane est fixé au sol. C'est une lumière qui a bougé, pas lui.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.306,
+          "kept": 0.5,
+          "area_ratio": 0.00045,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 3.2,
+          "height_m": 5.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "landmark",
+        "box": [
+          0.3047,
+          0.6139,
+          0.0125,
+          0.0361
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T12-20-59Z-missed-162.jpg"
+    },
+    {
+      "id": "2026-10-12T12-18-08Z-motion-161",
+      "t": "2026-10-12T12:18:08Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-12T12-18-08Z-motion-161.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2964,
+          "area_grow": 29.08,
+          "clipped": false,
+          "shade": 0.806,
+          "kept": 0.443,
+          "area_ratio": 0.02474,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 4.6,
+          "height_m": 2.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.182,
+          "seen_as": []
+        },
+        "box": [
+          0.0922,
+          0.8278,
+          0.1562,
+          0.1583
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T12-18-08Z-motion-161.jpg"
+    },
+    {
       "id": "2026-10-12T12-04-34Z-motion-160",
       "t": "2026-10-12T12:04:34Z",
       "type": "motion",
