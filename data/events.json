@@ -2,6 +2,261 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-12T09-32-22Z-vehicle-99",
+      "t": "2026-10-12T09:32:22Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.728,
+      "thumb": "data/thumbs/2026-10-12T09-32-22Z-vehicle-99.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.4,
+        "height_m": 2.1,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.4301,
+          "area_grow": 2.76,
+          "clipped": true,
+          "shade": 0.736,
+          "kept": 0.344,
+          "area_ratio": 0.01896,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 3.4,
+          "height_m": 2.1,
+          "width_named_m": 3.1,
+          "height_named_m": 1.6,
+          "rise_ms": 0.48,
+          "drift_rate": 1.075,
+          "seen_as": [
+            "car 0.73 sur 58%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4224,
+          0.8454,
+          0.1427,
+          0.1268
+        ],
+        "trace": [
+          [
+            1791797539.08,
+            0.8438,
+            0.9528,
+            0.1453,
+            0.0472
+          ],
+          [
+            1791797540.08,
+            0.6609,
+            0.9389,
+            0.1469,
+            0.0611
+          ],
+          [
+            1791797541.08,
+            0.5156,
+            0.9,
+            0.1516,
+            0.1
+          ],
+          [
+            1791797542.08,
+            0.4234,
+            0.8556,
+            0.1313,
+            0.1444
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T09-32-22Z-vehicle-99.jpg"
+    },
+    {
+      "id": "2026-10-12T09-13-00Z-missed-98",
+      "t": "2026-10-12T09:13:00Z",
+      "type": "missed",
+      "label": "Décor connu",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-12T09-13-00Z-missed-98.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "cabane n'a pas bougé. Une lumière est passée dessus.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.965,
+          "kept": 0.409,
+          "area_ratio": 0.00819,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.5,
+          "height_m": 3.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "landmark",
+        "box": [
+          0.2531,
+          0.7056,
+          0.0719,
+          0.1139
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T09-13-00Z-missed-98.jpg"
+    },
+    {
+      "id": "2026-10-12T09-11-49Z-person-97",
+      "t": "2026-10-12T09:11:49Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "road",
+      "confidence": 0.673,
+      "thumb": "data/thumbs/2026-10-12T09-11-49Z-person-97.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0581,
+          "area_grow": 1.23,
+          "clipped": false,
+          "shade": 0.952,
+          "kept": 0.657,
+          "area_ratio": 0.00097,
+          "duration_s": 12.0,
+          "frames": 13,
+          "width_m": 6.3,
+          "height_m": 5.3,
+          "width_named_m": 1.5,
+          "height_named_m": 4.4,
+          "rise_ms": 0.0,
+          "drift_rate": 0.036,
+          "seen_as": [
+            "person 0.67 sur 4%",
+            "person 0.62 sur 5%",
+            "person 0.58 sur 4%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.0722,
+          0.688,
+          0.0113,
+          0.0593
+        ],
+        "trace": [
+          [
+            1791796297.07,
+            0.0469,
+            0.6583,
+            0.0203,
+            0.0389
+          ],
+          [
+            1791796298.07,
+            0.05,
+            0.6583,
+            0.0172,
+            0.0389
+          ],
+          [
+            1791796299.07,
+            0.05,
+            0.6639,
+            0.0172,
+            0.0444
+          ],
+          [
+            1791796300.07,
+            0.05,
+            0.6639,
+            0.0172,
+            0.0417
+          ],
+          [
+            1791796301.07,
+            0.05,
+            0.6694,
+            0.0172,
+            0.0472
+          ],
+          [
+            1791796302.07,
+            0.0516,
+            0.6667,
+            0.0172,
+            0.0528
+          ],
+          [
+            1791796303.07,
+            0.0531,
+            0.6667,
+            0.0187,
+            0.0528
+          ],
+          [
+            1791796304.07,
+            0.0344,
+            0.725,
+            0.0359,
+            0.075
+          ],
+          [
+            1791796305.07,
+            0.0344,
+            0.6861,
+            0.0437,
+            0.1167
+          ],
+          [
+            1791796306.07,
+            0.0281,
+            0.6861,
+            0.0516,
+            0.1167
+          ],
+          [
+            1791796307.07,
+            0.0141,
+            0.6917,
+            0.0719,
+            0.1083
+          ],
+          [
+            1791796308.07,
+            0.0703,
+            0.7,
+            0.0219,
+            0.0444
+          ],
+          [
+            1791796309.07,
+            0.0703,
+            0.7083,
+            0.0219,
+            0.0444
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T09-11-49Z-person-97.jpg"
+    },
+    {
       "id": "2026-10-12T09-08-33Z-motion-96",
       "t": "2026-10-12T09:08:33Z",
       "type": "motion",
