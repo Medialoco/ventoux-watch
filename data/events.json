@@ -2,6 +2,265 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-12T06-59-52Z-missed-42",
+      "t": "2026-10-12T06:59:52Z",
+      "type": "missed",
+      "label": "machine",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-12T06-59-52Z-missed-42.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Le haut de la tache ne monte qu'à 0.5 m/s. La fumée d'un feu qui vient de prendre s'élève plusieurs fois plus vite : elle est portée par sa propre chaleur.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0139,
+          "area_grow": 4.71,
+          "clipped": false,
+          "shade": 1.451,
+          "kept": 0.625,
+          "area_ratio": 0.00243,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 13.8,
+          "height_m": 26.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.49,
+          "drift_rate": 0.019,
+          "seen_as": []
+        },
+        "refused": "machine",
+        "box": [
+          0.4313,
+          0.4278,
+          0.0266,
+          0.0917
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T06-59-52Z-missed-42.jpg"
+    },
+    {
+      "id": "2026-10-12T06-59-52Z-fire-43",
+      "t": "2026-10-12T06:59:52Z",
+      "type": "fire",
+      "label": "Départ de feu",
+      "zone": "slope",
+      "confidence": 0.296,
+      "thumb": "data/thumbs/2026-10-12T06-59-52Z-fire-43.jpg",
+      "clip_url": "",
+      "detail": {
+        "warm_ratio": 0.0,
+        "smoke_ratio": 0.369,
+        "rise": 0.025,
+        "grow": 1.98,
+        "width_m": 15.5,
+        "surface": "forest",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0125,
+          "area_grow": 1.98,
+          "clipped": false,
+          "shade": 1.553,
+          "kept": 0.733,
+          "area_ratio": 0.00104,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 15.5,
+          "height_m": 25.8,
+          "width_named_m": 9.5,
+          "height_named_m": 20.2,
+          "rise_ms": 2.32,
+          "drift_rate": 0.006,
+          "seen_as": [
+            "person 0.29 sur 0%"
+          ]
+        },
+        "box": [
+          0.4219,
+          0.4083,
+          0.0187,
+          0.0556
+        ],
+        "trace": [
+          [
+            1791788387.02,
+            0.4234,
+            0.4333,
+            0.0172,
+            0.0306
+          ],
+          [
+            1791788388.02,
+            0.4234,
+            0.4333,
+            0.0172,
+            0.0306
+          ],
+          [
+            1791788389.02,
+            0.4234,
+            0.4333,
+            0.0172,
+            0.0306
+          ],
+          [
+            1791788390.02,
+            0.4219,
+            0.4083,
+            0.0187,
+            0.0556
+          ],
+          [
+            1791788391.02,
+            0.4219,
+            0.4083,
+            0.0187,
+            0.0556
+          ],
+          [
+            1791788392.02,
+            0.4219,
+            0.4083,
+            0.0187,
+            0.0556
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T06-59-52Z-fire-43.jpg"
+    },
+    {
+      "id": "2026-10-12T06-59-39Z-motion-41",
+      "t": "2026-10-12T06:59:39Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-12T06-59-39Z-motion-41.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2808,
+          "area_grow": 16.06,
+          "clipped": true,
+          "shade": 0.99,
+          "kept": 0.682,
+          "area_ratio": 0.00997,
+          "duration_s": 13.0,
+          "frames": 14,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.073,
+          "seen_as": []
+        },
+        "box": [
+          0.0,
+          0.3306,
+          0.2437,
+          0.1306
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T06-59-39Z-motion-41.jpg"
+    },
+    {
+      "id": "2026-10-12T06-59-34Z-missed-40",
+      "t": "2026-10-12T06:59:34Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-12T06-59-34Z-missed-40.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 27 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1389,
+          "area_grow": 0.21,
+          "clipped": false,
+          "shade": 0.977,
+          "kept": 0.867,
+          "area_ratio": 0.00024,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 27.1,
+          "height_m": 17.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 12.46,
+          "drift_rate": 0.024,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.9578,
+          0.1583,
+          0.0312,
+          0.0361
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T06-59-34Z-missed-40.jpg"
+    },
+    {
+      "id": "2026-10-12T06-59-33Z-missed-39",
+      "t": "2026-10-12T06:59:33Z",
+      "type": "missed",
+      "label": "low sun",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-12T06-59-33Z-missed-39.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Le soleil est à 12° de hauteur, juste dans cette direction. C'est sa lumière dans les branches, et il n'y a pas de fumée.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3358,
+          "area_grow": 61.2,
+          "clipped": false,
+          "shade": 1.296,
+          "kept": 0.669,
+          "area_ratio": 0.02789,
+          "duration_s": 7.0,
+          "frames": 8,
+          "width_m": 108.0,
+          "height_m": 66.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.046,
+          "seen_as": []
+        },
+        "refused": "low_sun",
+        "box": [
+          0.1953,
+          0.3694,
+          0.1594,
+          0.175
+        ]
+      },
+      "closeup": "data/closeups/2026-10-12T06-59-33Z-missed-39.jpg"
+    },
+    {
       "id": "2026-10-12T06-53-28Z-missed-38",
       "t": "2026-10-12T06:53:28Z",
       "type": "missed",
