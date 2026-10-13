@@ -119,11 +119,15 @@ port 8767 (voir `config.json`, clé `radio`). Pour que GitHub Pages puisse
 écouter sans contenu mixte, une URL HTTPS publique est écrite dans
 `config/radio_public.env` (`VENTOUX_RADIO_PUBLIC_URL`) ou `radio.public_url`
 dans `config/local.json` ; le flux lit ce fichier via
-`EnvironmentFile` dans `deploy/ventoux-stream.service`. Le service
-`ventoux-radio-tunnel` lance un tunnel Cloudflare quick vers
-`http://127.0.0.1:8767` (`scripts/radio_tunnel.sh`) et met à jour
-`radio_public.env` quand l'URL change. `data/radio.json` voyage avec le reste
-de la publication.
+`EnvironmentFile` dans `deploy/ventoux-stream.service`.
+
+Le service `ventoux-radio-tunnel` exécute `scripts/radio_tunnel_run.sh` :
+tunnel **nommé** Cloudflare si `config/radio_tunnel.token` (recommandé, URL
+fixe) ou `config/cloudflared-radio.yml` existe ; sinon tunnel **quick**
+trycloudflare.com. L'hôte prévu est `radio.benoit-prieur.fr` (zone Cloudflare
+requise). Voir le README pour la création du tunnel dans Zero Trust. Avant le
+token, le quick tunnel peut encore alimenter `radio_public.env`. `data/radio.json`
+voyage avec le reste de la publication.
 
 ## Le stockage
 

@@ -56,4 +56,24 @@ On the Pi, one command, safe to run again:
 ssh ventoux 'bash -s' < scripts/pi_install.sh
 ```
 
+### Radio HTTPS (when YouTube is down)
+
+The same mix that feeds YouTube is also tee'd to HLS on the Pi (`data/radio/`). GitHub Pages cannot play plain HTTP, so a public HTTPS URL is published in `data/radio.json` for the site audio fallback.
+
+**Named Cloudflare tunnel (stable URL).** The intended hostname is `https://radio.benoit-prieur.fr` (`radio.tunnel_hostname` in `config.json`). One-time setup:
+
+1. Add the domain to [Cloudflare](https://dash.cloudflare.com) (DNS for `benoit-prieur.fr` can stay on OVH with Cloudflare nameservers, or use full setup).
+2. In [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → **Networks** → **Tunnels** → **Create a tunnel** (name e.g. `ventoux-radio`).
+3. **Public Hostname**: `radio.benoit-prieur.fr` → `http://127.0.0.1:8767` (same machine as `ventoux-stream`).
+4. Copy the **connector token** onto the Pi (not in git):
+
+   ```bash
+   ssh ventoux 'install -m 600 /dev/stdin /opt/ventoux-watch/config/radio_tunnel.token' <<< 'PASTE_TOKEN'
+   ```
+
+5. In `/opt/ventoux-watch/config/local.json`, set `"radio": { "public_url": "https://radio.benoit-prieur.fr" }` (merge with existing keys).
+6. Restart: `sudo systemctl restart ventoux-radio-tunnel ventoux-stream`, then publish from the Pi so `data/radio.json` updates.
+
+Until the token exists, `ventoux-radio-tunnel` falls back to a **quick** trycloudflare.com URL (changes on restart). Locally managed tunnels can use `config/cloudflared-radio.yml.example` instead of a token.
+
 Secrets are not in the repository. `config/local.json` is copied by hand, once, and git ignores it. OpenSky and Drive are optional. The hardware, the card, the disk and the watchdog are in [`infra.md`](infra.md). Outages are in [`incidents.md`](incidents.md). Where this is going is in [`plan.md`](plan.md).

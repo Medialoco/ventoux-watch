@@ -1,5 +1,5 @@
 [Unit]
-Description=Cloudflare quick tunnel for Ventoux radio HLS (HTTPS fallback)
+Description=Cloudflare tunnel for Ventoux radio HLS (named or quick fallback)
 After=network-online.target ventoux-stream.service
 Wants=network-online.target
 
@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 User=ventoux
 WorkingDirectory=/opt/ventoux-watch
-ExecStart=/opt/ventoux-watch/scripts/radio_tunnel.sh
+ExecStart=/opt/ventoux-watch/scripts/radio_tunnel_run.sh
 Restart=always
 RestartSec=15
 

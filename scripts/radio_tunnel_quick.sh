@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quick Cloudflare tunnel vers le serveur HLS local (port 8767).
+# Tunnel Cloudflare éphémère (trycloudflare.com) — secours si pas de tunnel nommé.
 set -euo pipefail
 ROOT="/opt/ventoux-watch"
 CLOUDFLARED="${CLOUDFLARED:-/usr/local/bin/cloudflared}"
