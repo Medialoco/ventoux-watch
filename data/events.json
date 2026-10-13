@@ -2,6 +2,103 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-13T05-20-48Z-motion-287",
+      "t": "2026-10-13T05:20:48Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-13T05-20-48Z-motion-287.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0206,
+          "area_grow": 0.32,
+          "clipped": false,
+          "shade": 1.232,
+          "kept": 0.776,
+          "area_ratio": 0.00141,
+          "duration_s": 1.4,
+          "frames": 2,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.03,
+          "seen_as": []
+        },
+        "box": [
+          0.8938,
+          0.625,
+          0.075,
+          0.0583
+        ]
+      },
+      "closeup": "data/closeups/2026-10-13T05-20-48Z-motion-287.jpg"
+    },
+    {
+      "id": "2026-10-13T05-20-39Z-cycle-286",
+      "t": "2026-10-13T05:20:39Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-13T05-20-39Z-cycle-286.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0815,
+          "area_grow": 1.57,
+          "clipped": false,
+          "shade": 1.161,
+          "kept": 0.6,
+          "area_ratio": 0.00097,
+          "duration_s": 1.6,
+          "frames": 2,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 1.338,
+          "seen_as": []
+        },
+        "box": [
+          0.8672,
+          0.9028,
+          0.0203,
+          0.0306
+        ],
+        "trace": [
+          [
+            1791868838.27,
+            0.8672,
+            0.9028,
+            0.0203,
+            0.0306
+          ],
+          [
+            1791868839.87,
+            0.9172,
+            0.9611,
+            0.025,
+            0.0389
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-13T05-20-39Z-cycle-286.jpg"
+    },
+    {
       "id": "2026-10-13T05-18-56Z-cycle-285",
       "t": "2026-10-13T05:18:56Z",
       "type": "cycle",
