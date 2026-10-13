@@ -2,6 +2,83 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-13T16-03-49Z-vehicle-29",
+      "t": "2026-10-13T16:04:46Z",
+      "type": "vehicle",
+      "label": "Voiture noire",
+      "zone": "road",
+      "confidence": 0.926,
+      "thumb": "data/thumbs/2026-10-13T16-03-49Z-vehicle-29.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0479,
+          "area_grow": 0.08,
+          "clipped": true,
+          "shade": 1.061,
+          "kept": 0.35,
+          "area_ratio": 0.00174,
+          "duration_s": 12.1,
+          "frames": 4,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.017,
+          "seen_as": [
+            "car 0.93 sur 98%",
+            "car 0.81 sur 0%",
+            "car 0.81 sur 0%",
+            "car 0.61 sur 0%"
+          ]
+        },
+        "box": [
+          0.8242,
+          0.7864,
+          0.1758,
+          0.2136
+        ],
+        "trace": [
+          [
+            1791907474.27,
+            0.8812,
+            0.8083,
+            0.1187,
+            0.1722
+          ],
+          [
+            1791907481.95,
+            0.9266,
+            0.7444,
+            0.0734,
+            0.0444
+          ],
+          [
+            1791907483.88,
+            0.8953,
+            0.7639,
+            0.1047,
+            0.1778
+          ],
+          [
+            1791907486.4,
+            0.9688,
+            0.8861,
+            0.0312,
+            0.0556
+          ]
+        ],
+        "count": 3,
+        "since": "2026-10-13T16:03:49Z"
+      },
+      "closeup": "data/closeups/2026-10-13T16-03-49Z-vehicle-29.jpg"
+    },
+    {
       "id": "2026-10-13T16-01-19Z-vehicle-27",
       "t": "2026-10-13T16:01:19Z",
       "type": "vehicle",
@@ -72,7 +149,9 @@
             0.0172,
             0.0667
           ]
-        ]
+        ],
+        "count": 2,
+        "since": "2026-10-13T16:01:19Z"
       },
       "closeup": "data/closeups/2026-10-13T16-01-19Z-vehicle-27.jpg"
     },
