@@ -42,6 +42,7 @@ def publish(repo: Path) -> bool:
         # termine la diffusion et qu'on en rouvre une ; une page qui l'écrirait
         # en dur finirait par incruster un enregistrement fini.
         "data/direct.json",
+        "data/antenne.json",
     ]
     try:
         # --autostash : la veille écrit dans data/ en permanence, et un rebase

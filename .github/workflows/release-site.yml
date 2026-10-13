@@ -1,0 +1,66 @@
+name: release-site
+
+# Release du site statique (site/VERSION), indépendante de la veille v0.x.
+# Déclencher à la main quand le site mérite une étiquette : Actions → release-site.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: patch | minor | major
+        required: true
+        default: patch
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Bump site/VERSION
+        id: bump
+        run: |
+          python3 <<'PY'
+          import os, re, sys
+          path = "site/VERSION"
+          kind = os.environ.get("BUMP", "patch")
+          raw = open(path, encoding="utf-8").read().strip()
+          m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", raw)
+          if not m:
+              sys.exit(f"Bad site/VERSION: {raw!r}")
+          a, b, c = (int(m.group(i)) for i in range(1, 4))
+          if kind == "major":
+              a, b, c = a + 1, 0, 0
+          elif kind == "minor":
+              b, c = b + 1, 0
+          else:
+              c += 1
+          new = f"{a}.{b}.{c}"
+          open(path, "w", encoding="utf-8").write(new + "\n")
+          print(f"version={new}")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"version={new}\n")
+          PY
+        env:
+          BUMP: ${{ inputs.bump }}
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/VERSION
+          git commit -m "Release site v${{ steps.bump.outputs.version }}"
+          git tag "site-v${{ steps.bump.outputs.version }}"
+          git push origin main
+          git push origin "site-v${{ steps.bump.outputs.version }}"
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "site-v${{ steps.bump.outputs.version }}" \
+            --title "Site v${{ steps.bump.outputs.version }}" \
+            --notes "Release du site GitHub Pages (medialoco.github.io/ventoux-watch). La veille sur le Pi garde son propre numéro v* dans events.json."
+      - name: Publish Pages
+        run: gh workflow run pages.yml

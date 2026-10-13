@@ -9,7 +9,9 @@
       var q = new URLSearchParams(location.search).get("theme");
       var theme = (q === "dark" || q === "light") ? q : null;
       if (!theme) {
-        try { theme = localStorage.getItem("ventoux-theme"); } catch (e) {}
+        try {
+          theme = localStorage.getItem("ventoux-theme") || localStorage.getItem("theme");
+        } catch (e) {}
       }
       if (theme !== "dark" && theme !== "light") {
         try {
@@ -20,7 +22,10 @@
         }
       }
       document.documentElement.dataset.theme = theme;
-      try { localStorage.setItem("ventoux-theme", theme); } catch (e) {}
+      try {
+        localStorage.setItem("ventoux-theme", theme);
+        localStorage.setItem("theme", theme);
+      } catch (e) {}
     })();
   </script>
   <link rel="stylesheet" href="styles.css">
@@ -131,13 +136,13 @@
             <tr><td></td><td data-i18n="effectSun">Sun</td><td data-i18n="stillSoleil">Drawn when the sun is up and still behind the ridge, or the weather is cloud, overcast, fog, mist, rain, snow or storm. A circle, eleven uneven rays, a smile, placed where the real sun falls in the frame. If that point is outside the view, it sits in the corner of the sky on the side where the sun is, once the sun is at least 3° up. It breathes, about one turn in 10 s. Drawn before pixel and wave, so those treatments take it with the mountain.</td></tr>
             <tr><td></td><td data-i18n="effectLamp">Lamp</td><td data-i18n="stillLamp">At night, once the sun is at or below the horizon. The pole follows the measured mast, 7 m, from foot to shoulder, and the bracket runs to the lantern the map places on the bulb. Its length in the picture comes from that height, the distance and the lens. The glow is the lamp’s own light, turned up around the bulb, and it breathes slowly. A camera whose pole was never measured gets no lamp. Drawn before pixel and wave.</td></tr>
             <tr><td></td><td data-i18n="effectReplay">Replay</td><td data-i18n="stillReplay">Gate: 300 s with nothing named. Hold 10 s. Pause 600 s before another. Only a passage marked accepted can return. On air the picture is greyed and blocked, at most 24 blocks; the file on disk stays sharp. It is enlarged at most 3 times, and kept within 0.32 of the width. The card is amber, with the word replay and the date. A sung line announces it. The moment something new is seen, the archive leaves.</td></tr>
-            <tr><td></td><td data-i18n="effectMeet">Meeting</td><td data-i18n="stillRencontre">Two puppets stand in the lower corners when the music is pushing, drawn at half opacity. They meet every 419 s, with a 90 s offset. Glide 4 s each way, hold 6 s in the middle. Between meetings they step into the black bands: period 180 s, slide 3 s, hold 5 s. During a flyover they are left off the relief.</td></tr>
             <tr><td></td><td data-i18n="effectVersion">Version</td><td data-i18n="stillVersion">For the whole session, while a track plays. A cyan pill sits beside NOW PLAYING and reads v followed by the number in the watcher. This build is v0.6.47. The type is Hershey simplex at 0.44 of the 1600 px reference, in a frame filled at 0.22 of cyan and stroked at 0.70. The same number is written into events.json at each publish, and the footer of this page reads it back.</td></tr>
             <tr><td></td><td data-i18n="effectDeploy">Deployed</td><td data-i18n="stillDeploy">On stream start, for 6 s, centred at 40% of the frame height. It rises over 0.6 s and leaves over 0.8 s. Two cyan lines, Hershey duplex: DEPLOYED at size 1.15, and v plus the version at size 1.8, 88 px lower at the 1600 px reference. A voice says Deployed. Four fifths of that voice pass straight through. The rest is multiplied by a 90 Hz tone. After the six seconds the lines leave. The pill on the console is what keeps the number.</td></tr>
             <tr><td></td><td data-i18n="effectFriend">Friend</td><td data-i18n="stillFriend">Once a day, at 7:15 Europe/Paris. Grace 240 s: a restart inside those four minutes does not say it twice, and past the window the day stays quiet. The voice says: To my very good friend David Vincent or Vincent David or David Vincent, Je pense à toi. The line DAVID VINCENT OR VINCENT DAVID stays written for 17 s.</td></tr>
             <tr><td></td><td data-i18n="effectDijon">Dijon</td><td data-i18n="stillDijon">A collaboration. Twice a day, at 23:00 and at 23:15 Europe/Paris. Grace 240 s: a restart does not repeat a slot, and a missed slot is closed. Hold 14 s. Fade 0.5 s in and 0.7 s out. The camera window is graded toward mustard, BGR (36, 164, 214), at strength 0.55. The line reads UNE COLLAB. The hour is written above the logo. At 23:00 a voice says Il est vingt-trois heures à Dijon. At 23:15 it says Il est vingt-trois heures quinze à Dijon.</td></tr>
           </tbody>
         </table>
+        <p class="sun-layer-note" data-i18n="stillSoleilQuirk">The drawn sun (breathing rays, almost a GIF) was wired into the real layer by mistake, so OpenCV sometimes chases the wobbling rays of the little sun. Cute.</p>
       </div>
 
       <aside class="box" id="music" aria-labelledby="music-title">
@@ -186,7 +191,7 @@
 
   <footer class="foot">
     <p>
-      <span class="tag" id="version"></span>
+      <span class="sr" id="version"></span>
       <a href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener" data-i18n="repoPrivate">Source and history of every change.</a>
     </p>
   </footer>

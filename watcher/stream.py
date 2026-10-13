@@ -333,13 +333,17 @@ def direct_visible(chaine: str) -> bool | None:
     return lit_le_direct(page_du_direct(chaine))[0]
 
 
-def note_le_direct(racine: Path, chaine: str, numero: str) -> None:
+def note_le_direct(racine: Path, chaine: str, numero: str, *, live: bool) -> None:
     """Dit au reste du monde quel direct est en cours.
 
     Le site personnel incruste le direct ; sans ce fichier il devrait deviner
     l'adresse, et la seule qu'on puisse écrire sans le numéro — celle qui
     demande à YouTube de résoudre « le direct de cette chaîne » — n'est plus
     tenue et sert régulièrement une vidéo indisponible.
+
+    Quand la chaîne s'éteint, on garde le dernier numéro pour la mémoire mais
+    on écrit live: false, afin que la page bascule sur la webcam plutôt que sur
+    un enregistrement fini.
 
     Écrit puis renommé : une page qui lit pendant qu'on écrit doit trouver
     l'ancien fichier entier plutôt que le nouveau à moitié.
@@ -349,6 +353,7 @@ def note_le_direct(racine: Path, chaine: str, numero: str) -> None:
     texte = json.dumps({
         "chaine": chaine,
         "video": numero,
+        "live": live,
         "vu": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }, ensure_ascii=False, indent=2)
     passage = fichier.with_suffix(".json.tmp")
@@ -391,10 +396,13 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     while premier or not coupe.wait(VEILLE_DIRECT_S if connu else VEILLE_DIRECT_CHERCHE_S):
         premier = False
         vu, numero = lit_le_direct(page_du_direct(chaine))
-        if racine is not None and numero:
+        if racine is not None:
             try:
-                note_le_direct(racine, chaine, numero)
-                connu = numero
+                if vu is True and numero:
+                    note_le_direct(racine, chaine, numero, live=True)
+                    connu = numero
+                elif vu is False and connu:
+                    note_le_direct(racine, chaine, connu, live=False)
             except OSError as souci:
                 log.warning("Numéro du direct non noté : %s", souci)
         if vu is None:
@@ -3872,6 +3880,7 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
     ne les pose déjà pas. Pas sur un Short : il n'y a nulle part où aller,
     et le milieu appartient encore à la montagne.
     """
+    return
     if energie < DANSE_ARRET:
         return
     hauteur, largeur = image.shape[:2]
@@ -4581,11 +4590,40 @@ def _colle(image: np.ndarray, vignette: np.ndarray, x: int, y: int,
     zone[:] = (bout[:, :, :3] * voile + zone * (1.0 - voile)).astype(np.uint8)
 
 
+def lit_version_site(racine: Path) -> str:
+    """Release du site statique (site/VERSION), distincte de la veille."""
+    try:
+        return (racine / "site" / "VERSION").read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def _griffe_coque_sous_marin(vignette: np.ndarray, version: str) -> None:
+    """Numéro de release sur la coque, lisible seulement en agrandissant."""
+    if not version:
+        return
+    texte = version if len(version) <= 10 else version[:10]
+    haut, large = vignette.shape[:2]
+    if haut < 24 or large < 24:
+        return
+    taille = max(0.22, min(0.38, haut / 180))
+    police = cv2.FONT_HERSHEY_SIMPLEX
+    epais = 1
+    (tw, _), _ = cv2.getTextSize(texte, police, taille, epais)
+    x = max(1, (large - tw) // 2)
+    y = max(int(haut * 0.78), int(haut * 0.55))
+    cv2.putText(vignette, texte, (x, y), police, taille, (30, 30, 30), epais + 1,
+                cv2.LINE_AA)
+    cv2.putText(vignette, texte, (x, y), police, taille, (220, 200, 60), epais,
+                cv2.LINE_AA)
+
+
 def pose_sous_marin(image: np.ndarray, seconde: float,
                     vignette: np.ndarray | None,
                     ciel: list | None = None,
                     vue: tuple[int, int, int, int] | None = None,
-                    nuit: bool = False) -> bool:
+                    nuit: bool = False,
+                    version_site: str = "") -> bool:
     """Le sous-marin jaune traverse le ciel du Ventoux, de temps en temps.
 
     Un sous-marin à mille quatre cents mètres d'altitude est une absurdité, et
@@ -4632,6 +4670,7 @@ def pose_sous_marin(image: np.ndarray, seconde: float,
     milieu = min(milieu, cime + ciel_haut - haut / 2)
     petit = cv2.resize(vignette, (max(2, int(large)), max(2, int(haut))),
                        interpolation=cv2.INTER_AREA)
+    _griffe_coque_sous_marin(petit, version_site)
     # Il entre et sort en fondu d'une seconde, comme l'éléphant : apparaître
     # d'un coup se lit comme une image sautée.
     bord = min(phase_cycle, SOUS_MARIN_TRAVERSEE_S - phase_cycle, 1.0)
@@ -8524,19 +8563,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     nom = next((str(vu.get("label") or "") for vu in nommes
                                 if vu.get("sur") and vu.get("label")), "")
                     journal.sujet(quand, nom or "Mouvement")
-            # Les pantins sur la toile et non sur l'image de la caméra, depuis
-            # qu'ils ont le droit d'aller danser dans la bande noire : posés
-            # sur la vue, ils étaient enfermés dedans par construction. Ils
-            # gardent leur place habituelle dans le cadre, on leur dit seulement
-            # où il finit.
-            #
-            # Et pas pendant un survol. Le relief en trois dimensions est un
-            # autre sujet que la montagne en direct, et deux pantins dansant
-            # dessus diraient que c'est le même plan filmé autrement.
-            # Commun à toutes les webcams. Les danseurs n'appartiennent pas
-            # au rond-point : ils restent quand l'image est celle de Cannes.
-            if survol is None:
-                pose_danseurs(toile, quand - origine, musique.pouls(), vue=cadrage)
             # Propres au Mont Serein. Ils connaissent le rond-point et la
             # crête, et ils jouent sur le cadre entier dès que c'est Cannes
             # qui l'occupe : les quatre-vingt-dix secondes prévues, et tout
@@ -8574,7 +8600,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 # drôle. Il ne dépend pas non plus de la musique : le tapis et
                 # l'éléphant dansent, lui navigue.
                 pose_sous_marin(toile, quand - origine, sous_marin,
-                                contour_ciel, vue=cadrage, nuit=not fait_jour)
+                                contour_ciel, vue=cadrage, nuit=not fait_jour,
+                                version_site=lit_version_site(racine))
                 # La descente non plus n'attend pas de creux : elle se passe
                 # sur le versant, loin de la route, et le trait blanc s'efface
                 # derrière le surfeur. Rien ne reste sur l'image.

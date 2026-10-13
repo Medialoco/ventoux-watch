@@ -1020,6 +1020,13 @@ section[id] { scroll-margin-top: 50px; }
   font-size: 12px;
 }
 
+/* Incrusté depuis benoit-prieur.fr : le bouton thème reste joignable. */
+html.in-frame .top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
 /* The pipeline, drawn */
 
 .chart { padding: 14px 16px 4px; }
@@ -1365,6 +1372,27 @@ section[id] { scroll-margin-top: 50px; }
 .effects td:nth-child(2) {
   white-space: nowrap;
   font-weight: 600;
+}
+
+.sun-layer-note {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  max-width: 72ch;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--pine);
+  border-radius: 6px;
+  box-shadow: 0 1px 0 var(--shade);
+}
+
+:root[data-theme="dark"] .sun-layer-note {
+  background: #1f2329;
+  border-color: var(--line);
+  border-left-color: var(--pine);
+  color: var(--ink);
 }
 
 @media (max-width: 1400px) {

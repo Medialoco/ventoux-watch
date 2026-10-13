@@ -51,6 +51,11 @@ jobs:
         run: |
           mkdir -p _site/data/thumbs _site/data/closeups
           cp -R site/. _site/
+          if [ -f site/VERSION ]; then
+            V=$(tr -d ' \n\r' < site/VERSION)
+            printf '%s\n' "{\"version\":\"${V}\"}" > _site/version.json
+          fi
+          if [ -f assets/sous-marin.png ]; then cp assets/sous-marin.png _site/submarine.png; fi
           cp data/events.json _site/data/events.json
           cp config/relief.json _site/data/relief.json
           if [ -f config/cannes-relief.json ]; then cp config/cannes-relief.json _site/data/cannes-relief.json; fi
@@ -62,6 +67,7 @@ jobs:
           # rouvre une : écrit en dur dans une page, il finirait par désigner
           # un enregistrement fini.
           if [ -f data/direct.json ]; then cp data/direct.json _site/data/direct.json; fi
+          if [ -f data/antenne.json ]; then cp data/antenne.json _site/data/antenne.json; fi
           if [ -f data/learning.json ]; then cp data/learning.json _site/data/learning.json; fi
           if [ -f data/view.json ]; then cp data/view.json _site/data/view.json; fi
           if [ -f data/view.jpg ]; then cp data/view.jpg _site/data/view.jpg; fi

@@ -67,6 +67,29 @@ const host = document.getElementById("relief");
 const PLACES = { serein: "data/relief.json", cannes: "data/cannes-relief.json" };
 let session = null;
 let ticket = 0;
+
+function disposeGraph(root) {
+  root.traverse((node) => {
+    if (node.geometry) node.geometry.dispose();
+    const materials = node.material
+      ? (Array.isArray(node.material) ? node.material : [node.material])
+      : [];
+    for (const material of materials) {
+      for (const key of Object.keys(material)) {
+        const value = material[key];
+        if (value && typeof value.dispose === "function") value.dispose();
+      }
+      material.dispose();
+    }
+  });
+}
+
+window.addEventListener("pagehide", () => {
+  if (session) {
+    session();
+    session = null;
+  }
+});
 if (host) {
   document.querySelectorAll("[data-place]").forEach((button) => {
     button.addEventListener("click", () => choose(button.dataset.place));
@@ -199,18 +222,20 @@ async function start(host, url) {
   const caption = document.getElementById("relief-name");
   const finder = new THREE.Raycaster();
   const cursor = new THREE.Vector2();
-  renderer.domElement.addEventListener("pointermove", (event) => {
-    const box = renderer.domElement.getBoundingClientRect();
-    cursor.x = ((event.clientX - box.left) / box.width) * 2 - 1;
-    cursor.y = -((event.clientY - box.top) / box.height) * 2 + 1;
+  const onPointerMove = (event) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    cursor.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    cursor.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     finder.setFromCamera(cursor, camera);
     const hit = finder.intersectObjects(named)[0];
     caption.textContent = hit ? hit.object.name : "";
     caption.hidden = !hit;
-  });
-  renderer.domElement.addEventListener("pointerleave", () => {
+  };
+  const onPointerLeave = () => {
     caption.hidden = true;
-  });
+  };
+  renderer.domElement.addEventListener("pointermove", onPointerMove);
+  renderer.domElement.addEventListener("pointerleave", onPointerLeave);
 
   function fit() {
     // Sixteen by nine, always. Filling a screen of another shape would widen
@@ -231,6 +256,11 @@ async function start(host, url) {
   session = () => {
     renderer.setAnimationLoop(null);
     clearInterval(clock);
+    renderer.domElement.removeEventListener("pointerdown", onWake);
+    renderer.domElement.removeEventListener("pointermove", onPointerMove);
+    renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
+    controls.dispose();
+    disposeGraph(world);
     renderer.dispose();
     renderer.domElement.remove();
     window.removeEventListener("resize", fit);
@@ -240,6 +270,7 @@ async function start(host, url) {
     wake?.removeEventListener("click", onWake);
     wideButton?.removeEventListener("click", onWide);
     back?.removeEventListener("click", home);
+    if (document.fullscreenElement === stage) document.exitFullscreen?.();
   };
 }
 

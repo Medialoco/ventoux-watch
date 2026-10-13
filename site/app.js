@@ -106,6 +106,7 @@ const COPY = {
     stillElephant: "Period 661 s, hold 4 s. Only from 01:00 to 06:00. Gate: the music is pushing, and 300 s have passed with nothing named, because he covers the road. At night the period is divided by 3. He fills about 0.95 of the frame. A trunk to the left, a small solid eye.",
     stillOurs: "Period 8191 s, which is 2 h 16 min 31 s. Not divided at night: the bear keeps his own pace. First turn delayed 90 s, long enough for YouTube to open the picture. Walk 2.6 s from the statue at (0.5698, 0.8593) of the camera window to the island at (0.2304, 0.8706), on a smoothstep. Dance 10 s on the island. The cutout is 72/1920 by 140/1080 of the window, times 43/47 on the island, then swelled to 1.35. During the dance he weeps and the line THIS IS MY HOME!!!!! is drawn in yellow. A small card sits bottom right, colour kept, Gaussian blur of sigma 1.1, label REPLAY · 2025. The sculpture itself does not move.",
     stillSoleil: "Drawn when the sun is up and still behind the ridge, or the weather is cloud, overcast, fog, mist, rain, snow or storm. A circle, eleven uneven rays, a smile, placed where the real sun falls in the frame. If that point is outside the view, it sits in the corner of the sky on the side where the sun is, once the sun is at least 3° up. It breathes, about one turn in 10 s. Drawn before pixel and wave, so those treatments take it with the mountain.",
+    stillSoleilQuirk: "The drawn sun (breathing rays, almost a GIF) was wired into the real layer by mistake, so OpenCV sometimes chases the wobbling rays of the little sun. Cute.",
     stillLamp: "At night, once the sun is at or below the horizon. The pole follows the measured mast, 7 m, from foot to shoulder, and the bracket runs to the lantern the map places on the bulb. Its length in the picture comes from that height, the distance and the lens. The glow is the lamp’s own light, turned up around the bulb, and it breathes slowly. A camera whose pole was never measured gets no lamp. Drawn before pixel and wave.",
     cannesTitle: "Three modes",
     cannesLead: "Three modes, and each camera is the other's backup. Mont Serein: the playlist is open and the frame is the pass, with Cannes waiting. Cannes: the Mont Serein playlist is closed and the frame is the beach. Both: while the pass is up, Cannes joins the frame for a short turn. Cannes is a municipal camera used for safety at sea. It has not been interrupted since 2022. Mont Serein has had two long interruptions this week, from 08:49 Europe/Paris on 6 October (last segment 2026-10-06T06:49:04Z, #EXT-X-ENDLIST) and from 09:16 on 8 October (last segment 2026-10-08T07:16:39Z), with restarts in between that did not hold.",
@@ -344,6 +345,7 @@ const COPY = {
     stillElephant: "Période 661 s, tenue 4 s. Seulement de 01:00 à 06:00. Porte : la musique pousse, et 300 s se sont passées sans rien de nommé, parce qu’il couvre la route. La nuit, la période est divisée par 3. Il occupe environ 0,95 du cadre. Une trompe à gauche, un petit œil plein.",
     stillOurs: "Période 8191 s, soit 2 h 16 min 31 s. Pas divisée la nuit : l’ours garde sa cadence. Premier tour retardé de 90 s, le temps que YouTube ouvre l’image. Marche 2,6 s, de la statue en (0,5698, 0,8593) de la fenêtre jusqu’à l’îlot en (0,2304, 0,8706), en smoothstep. Danse 10 s sur l’îlot. La découpe fait 72/1920 sur 140/1080 de la fenêtre, fois 43/47 sur l’îlot, puis gonflée à 1,35. Pendant la danse il pleure et la ligne THIS IS MY HOME!!!!! s’écrit en jaune. Une petite carte se pose en bas à droite, couleur gardée, flou gaussien d’écart-type 1,1, libellé REPLAY · 2025. La sculpture elle-même ne bouge pas.",
     stillSoleil: "Dessiné quand le soleil est levé et encore derrière la crête, ou que le temps est nuageux, couvert, brouillard, brume, pluie, neige ou orage. Un rond, onze rayons inégaux, un sourire, posé là où le vrai soleil tombe dans le cadre. Si ce point est hors champ, il se pose dans le coin du ciel, du côté où est le soleil, dès qu’il est à au moins 3°. Il respire, environ un tour en 10 s. Dessiné avant le pixel et l’onde, donc ces traitements l’emportent avec la montagne.",
+    stillSoleilQuirk: "L’effet soleil (rayons qui respirent, presque un GIF) a été câblé dans la couche « réel » par erreur : OpenCV poursuit parfois les rayons du petit soleil. C’est mignon.",
     stillLamp: "La nuit, dès que le soleil est à l’horizon ou en dessous. Le mât suit le poteau mesuré, 7 m, du pied à l’épaule, et la potence va jusqu’à la lanterne que la carte pose sur l’ampoule. Sa longueur dans l’image vient de cette hauteur, de la distance et de l’objectif. La lueur est celle de la lampe, remontée autour de l’ampoule, et elle respire lentement. Une caméra dont le poteau n’a pas été mesuré n’a pas de lampadaire. Dessiné avant le pixel et l’onde.",
     cannesTitle: "Trois modes",
     cannesLead: "Trois modes, et chaque caméra est le relais de l’autre. Le Mont Serein : la playlist est ouverte, le cadre est le col, Cannes attend. Cannes : la playlist du Mont Serein est fermée, le cadre est la plage. Les deux : tant que le col est là, Cannes entre dans le cadre pour un court passage. Cannes est une caméra municipale au service de la sécurité en mer. Elle n’a pas eu d’interruption depuis 2022. Le Mont Serein a eu deux interruptions longues cette semaine, le 6 octobre à partir de 08:49, heure de Paris (dernier segment 2026-10-06T06:49:04Z, #EXT-X-ENDLIST), et le 8 octobre à partir de 09:16 (dernier segment 2026-10-08T07:16:39Z), avec entre les deux des reprises qui n’ont pas tenu.",
@@ -594,7 +596,10 @@ function locale() {
 // The 3D view is a separate module and must not keep a second copy of the
 // wording: one dictionary, or the same place ends up named two ways.
 const THEME_KEY = "ventoux-theme";
+const THEME_ALT_KEY = "theme";
+const THEME_MSG = "ventoux-theme";
 let theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+let hashTileCache = { color: "", tile: null };
 
 const HASH = "#FREETECHNORADIO";
 const HASH_GLYPHS = {
@@ -637,7 +642,10 @@ function hashTile(color) {
 
 function paintHash() {
   const color = getComputedStyle(document.documentElement).getPropertyValue("--pine").trim() || "#1e3a30";
-  const tile = hashTile(color);
+  if (!hashTileCache.tile || hashTileCache.color !== color) {
+    hashTileCache = { color, tile: hashTile(color) };
+  }
+  const tile = hashTileCache.tile;
   document.querySelectorAll("canvas.hash-title").forEach((canvas) => {
     const scale = Math.max(2, Math.min(3, Math.floor((canvas.parentElement?.clientWidth || 720) / tile.width)));
     canvas.width = tile.width * scale;
@@ -675,6 +683,7 @@ function paintHash() {
 
 function applyTheme() {
   document.documentElement.dataset.theme = theme;
+  document.documentElement.classList.toggle("in-frame", window.parent !== window);
   const knob = document.getElementById("theme");
   if (knob) {
     const next = theme === "dark" ? t("themeBack") : t("theme");
@@ -686,10 +695,34 @@ function applyTheme() {
   paintHash();
 }
 
-document.getElementById("theme")?.addEventListener("click", () => {
-  theme = theme === "dark" ? "light" : "dark";
-  localStorage.setItem(THEME_KEY, theme);
+function commitTheme(next, { broadcast = true } = {}) {
+  theme = next === "dark" ? "dark" : "light";
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+    localStorage.setItem(THEME_ALT_KEY, theme);
+  } catch (_) { /* private mode */ }
   applyTheme();
+  if (!broadcast) return;
+  try {
+    window.parent?.postMessage({ type: THEME_MSG, theme }, "*");
+  } catch (_) { /* cross-origin */ }
+}
+
+document.getElementById("theme")?.addEventListener("click", () => {
+  commitTheme(theme === "dark" ? "light" : "dark");
+});
+window.addEventListener("message", (event) => {
+  const payload = event.data;
+  if (!payload || payload.type !== THEME_MSG) return;
+  if (payload.theme !== "dark" && payload.theme !== "light") return;
+  if (payload.theme === theme) return;
+  commitTheme(payload.theme, { broadcast: false });
+});
+window.addEventListener("storage", (event) => {
+  if (event.key !== THEME_KEY && event.key !== THEME_ALT_KEY) return;
+  if (event.newValue !== "dark" && event.newValue !== "light") return;
+  if (event.newValue === theme) return;
+  commitTheme(event.newValue, { broadcast: false });
 });
 document.addEventListener("ventoux-lang", applyTheme);
 applyTheme();
@@ -937,6 +970,10 @@ function showCamera() {
   if (!video.hidden) return;
   direct.hidden = true;
   video.hidden = false;
+  if (secours) {
+    secours.destroy();
+    secours = null;
+  }
   if (window.Hls && Hls.isSupported()) {
     secours = new Hls();
     secours.loadSource(STREAM);
@@ -976,6 +1013,10 @@ const DIRECT = [
   "https://raw.githubusercontent.com/Medialoco/ventoux-watch/main/data/direct.json",
   "data/direct.json",
 ];
+const ANTENNE = [
+  "https://raw.githubusercontent.com/Medialoco/ventoux-watch/main/data/antenne.json",
+  "data/antenne.json",
+];
 
 async function lisLeDirect() {
   for (const url of DIRECT) {
@@ -987,23 +1028,52 @@ async function lisLeDirect() {
   return null;
 }
 
+async function lisAntenne() {
+  for (const url of ANTENNE) {
+    try {
+      const fiche = await fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+      if (fiche && typeof fiche.live === "boolean") return fiche;
+    } catch (_) { /* spare copy next */ }
+  }
+  return null;
+}
+
+function chaineEnDirect(fiche, antenne) {
+  if (fiche?.live === false || antenne?.live === false) return false;
+  if (fiche?.live === true || antenne?.live === true) return true;
+  return null;
+}
+
+function abandonneYoutube() {
+  diffusion = "";
+  if (direct) {
+    direct.hidden = true;
+    direct.removeAttribute("src");
+  }
+  showCamera();
+}
+
 async function suisLeDirect() {
   const fiche = await lisLeDirect();
-  if (!fiche) {
-    if (!diffusion) showCamera();
+  const antenne = await lisAntenne();
+  const enDirect = chaineEnDirect(fiche, antenne);
+  if (fiche?.chaine && surYouTube) {
+    surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
+  }
+  if (!fiche || enDirect === false) {
+    if (diffusion || !video.hidden) abandonneYoutube();
+    else showCamera();
     return;
   }
   const numero = String(fiche.video || "");
   if (!/^[\w-]{11}$/.test(numero)) {
-    if (!diffusion) showCamera();
+    if (diffusion || !video.hidden) abandonneYoutube();
+    else showCamera();
     return;
-  }
-  if (fiche.chaine && surYouTube) {
-    surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
   }
   // Only when it has actually changed. Reassigning src reloads the player, and
   // a check every few minutes would restart the stream under the viewer.
-  if (numero === diffusion) return;
+  if (numero === diffusion && enDirect !== false) return;
   diffusion = numero;
   const lance = new URLSearchParams(location.search).get("play") === "1";
   direct.src = `https://www.youtube.com/embed/${numero}?autoplay=1&mute=${lance ? 0 : 1}&playsinline=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
@@ -1136,7 +1206,11 @@ document.addEventListener("mousemove", (event) => {
 });
 document.addEventListener("mouseout", (event) => {
   if (!loupe) return;
-  if (event.target.closest?.(AGRANDIR)) loupe.hidden = true;
+  if (event.target.closest?.(AGRANDIR)) {
+    loupe.hidden = true;
+    loupeImg.removeAttribute("src");
+    if (loupeNear) loupeNear.removeAttribute("src");
+  }
 });
 
 document.querySelectorAll(".filters button").forEach((button) => {
@@ -1657,7 +1731,7 @@ async function load() {
   const payload = await response.json();
   events = payload.events || [];
   const stamp = document.getElementById("version");
-  if (stamp && payload.version) stamp.textContent = `v${payload.version}`;
+  if (stamp && payload.version) stamp.textContent = `Watch v${payload.version}`;
   render();
   paintFigures();
   try {
