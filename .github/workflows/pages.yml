@@ -14,10 +14,16 @@ name: pages
 # D'où une horloge, toutes les heures pendant qu'il fait jour — de cinq à dix-
 # neuf heures UTC, ce qui couvre le lever et le coucher du soleil sur ce
 # versant en toute saison. La nuit n'a rien à montrer que le lampadaire du
-# chalet. La prudence tient toujours : ce sont les heures qui publient, pas
-# les commits, et couper ces trois lignes refige le site aussitôt.
+# chalet. Les changements sous site/ (ou ce workflow) repartent aussi au push ;
+# le reste du dépôt ne déclenche pas Pages, pour ne pas publier à chaque
+# commit de la veille.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
   schedule:
     # Deux fois par heure, et jamais à l'heure pile. GitHub n'exécute pas les
     # horloges qu'on lui donne : il les met dans une file commune et jette ce
@@ -51,11 +57,6 @@ jobs:
         run: |
           mkdir -p _site/data/thumbs _site/data/closeups
           cp -R site/. _site/
-          if [ -f site/VERSION ]; then
-            V=$(tr -d ' \n\r' < site/VERSION)
-            printf '%s\n' "{\"version\":\"${V}\"}" > _site/version.json
-          fi
-          if [ -f assets/sous-marin.png ]; then cp assets/sous-marin.png _site/submarine.png; fi
           cp data/events.json _site/data/events.json
           cp config/relief.json _site/data/relief.json
           if [ -f config/cannes-relief.json ]; then cp config/cannes-relief.json _site/data/cannes-relief.json; fi
@@ -68,6 +69,7 @@ jobs:
           # un enregistrement fini.
           if [ -f data/direct.json ]; then cp data/direct.json _site/data/direct.json; fi
           if [ -f data/antenne.json ]; then cp data/antenne.json _site/data/antenne.json; fi
+          if [ -f data/radio.json ]; then cp data/radio.json _site/data/radio.json; fi
           if [ -f data/learning.json ]; then cp data/learning.json _site/data/learning.json; fi
           if [ -f data/view.json ]; then cp data/view.json _site/data/view.json; fi
           if [ -f data/view.jpg ]; then cp data/view.jpg _site/data/view.jpg; fi
