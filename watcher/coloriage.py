@@ -31,6 +31,8 @@ REPRISE_SEQUENCE_S = 2 * 3600.0
 SEQUENCE_TENUE_S = 120.0
 # Une fois lancée, la séquence reste en place au moins un quart d'heure.
 PRESENCE_SEQUENCE_S = 15 * 60.0
+# La reprise n'a pas le rythme du crayon : un quart, pour qu'on voie le trait naître.
+VITESSE_REJEU = 0.25
 PORT = 8766
 
 # BGR, les mêmes teintes que le flux, sauf le rouge du badge.
@@ -410,7 +412,7 @@ class Coloriage:
 
         Avec un mode, seules les séquences commencées dans ce mode sont posées.
         La première séquence, une fois le crayon tu, ne reste pas : elle
-        revient toutes les deux heures, redessinée au même rythme, puis
+        revient toutes les deux heures, redessinée au quart de sa vitesse, puis
         elle demeure en place au moins un quart d'heure.
         """
         with self._verrou:
@@ -456,7 +458,8 @@ class Coloriage:
                 self._rejoue_a = self._rejoue_depuis + REPRISE_SEQUENCE_S
                 self._rejoue_depuis = 0.0
                 return []
-            return [touche for touche in self._sequence if touche[0] - debut <= ecoule]
+            return [touche for touche in self._sequence
+                    if touche[0] - debut <= ecoule * VITESSE_REJEU]
         if quand >= self._rejoue_a and (mode is None or mode == mode_seq):
             self._rejoue_depuis = quand
             return [touche for touche in self._sequence if touche[0] <= debut]
@@ -483,7 +486,7 @@ class Coloriage:
     def _duree_rejeu(self) -> float:
         if not self._sequence:
             return 0.0
-        trace = self._sequence[-1][0] - self._sequence[0][0]
+        trace = (self._sequence[-1][0] - self._sequence[0][0]) / VITESSE_REJEU
         return max(PRESENCE_SEQUENCE_S, trace)
 
     def retiens(self, image: np.ndarray, quand: float, periode: float = 0.25) -> None:
