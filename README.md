@@ -22,7 +22,7 @@ La veille voit beaucoup de mouvement. Le réseau n’est appelé que de temps en
 
 Veilleur **v0.6.47**.
 
-Le direct est sur [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). Le site est [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Les façons dont l’image change y sont écrites, chacune d’après le code qui tourne.
+Le direct est sur [YouTube](https://www.youtube.com/watch?v=oz6iTjKvdNE) (le numéro courant est aussi dans `data/direct.json`). Le site est [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Les façons dont l’image change y sont écrites, chacune d’après le code qui tourne.
 
 Le même mix que YouTube part aussi en HLS sur le Pi ; quand la plateforme tombe, le site lit `data/radio.json` et joue ce flux HTTPS, et #FREETECHNORADIO reste à l’antenne comme une radio, pas seulement comme un direct vidéo.
 

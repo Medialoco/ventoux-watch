@@ -22,7 +22,7 @@ The watch sees a lot of motion. The model is asked only from time to time, and n
 
 Watcher **v0.6.47**.
 
-The live picture is on [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). The site is [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). The ways the picture changes are written there, each one from the code that is running.
+The live picture is on [YouTube](https://www.youtube.com/watch?v=oz6iTjKvdNE) (the current id is also in `data/direct.json`). The site is [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). The ways the picture changes are written there, each one from the code that is running.
 
 The same mix that feeds YouTube is also tee'd to HLS on the Pi; when the platform drops, the site reads `data/radio.json` and plays that HTTPS stream, so #FREETECHNORADIO stays on the air as a radio, not only a video live.
 
