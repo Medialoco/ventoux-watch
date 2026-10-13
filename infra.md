@@ -111,6 +111,20 @@ pour rien ; l'environnement Python ; et le service systemd.
 Le modèle `models/yolo11n.onnx` voyage avec le code. Le Pi n'installe jamais
 PyTorch : l'export du modèle se fait sur le Mac.
 
+### Radio HLS (secours du site)
+
+Pendant la diffusion, ffmpeg envoie le même mix qu'à YouTube vers des segments
+HLS dans `data/radio/` ; `watcher/radio_serveur.py` les sert en HTTP sur le
+port 8767 (voir `config.json`, clé `radio`). Pour que GitHub Pages puisse
+écouter sans contenu mixte, une URL HTTPS publique est écrite dans
+`config/radio_public.env` (`VENTOUX_RADIO_PUBLIC_URL`) ou `radio.public_url`
+dans `config/local.json` ; le flux lit ce fichier via
+`EnvironmentFile` dans `deploy/ventoux-stream.service`. Le service
+`ventoux-radio-tunnel` lance un tunnel Cloudflare quick vers
+`http://127.0.0.1:8767` (`scripts/radio_tunnel.sh`) et met à jour
+`radio_public.env` quand l'URL change. `data/radio.json` voyage avec le reste
+de la publication.
+
 ## Le stockage
 
 Pour l'instant **tout est sur la carte SD**. C'est acceptable au démarrage et

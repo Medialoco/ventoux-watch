@@ -24,6 +24,8 @@ Watcher **v0.6.47**.
 
 The live picture is on [YouTube](https://www.youtube.com/watch?v=OwLQpSJLs-I). The site is [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). The ways the picture changes are written there, each one from the code that is running.
 
+The same mix that feeds YouTube is also tee'd to HLS on the Pi; when the platform drops, the site reads `data/radio.json` and plays that HTTPS stream, so #FREETECHNORADIO stays on the air as a radio, not only a video live.
+
 ![Mont Serein at night: roundabout, road, slope and the summit beacon](docs/mont-serein-nuit.png)
 
 *24 September 2026, 23:41 Paris time. The photograph was taken at 14:41 in Los Angeles.*

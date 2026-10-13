@@ -73,7 +73,10 @@ const COPY = {
     watchEffects: "Drawn on the frame. The table below gives the period, the duration and the gate of each one.",
     watchMusicTitle: "Music",
     watchMusic: "The Pi selects the track and ducks it under a voice. Under the picture: previous cover, current track, next two, artist, title, licence, equaliser.",
-    watchOut: "The frame is encoded and sent to YouTube. The same audio also goes out as HLS; if YouTube drops, the site can play that stream when a public URL is configured.",
+    watchOut: "The frame is encoded and sent to YouTube.",
+    watchRadioTitle: "Radio",
+    watchRadio:
+      "The same mix is tee'd to HLS on the Pi and published over HTTPS in data/radio.json; when YouTube drops, this page plays that stream so #FREETECHNORADIO stays on the air as a radio.",
     radioFallbackLead: "YouTube is down. The same mix as the broadcast is still on the air.",
     listen: "Listen on Dogmazic",
     radio: "Audio stream",
@@ -313,7 +316,10 @@ const COPY = {
     watchEffects: "Dessinés sur le cadre. Le tableau plus bas donne la période, la durée et la porte de chacun.",
     watchMusicTitle: "Musique",
     watchMusic: "Le Pi choisit le morceau et le baisse sous une voix. Sous l’image : la pochette précédente, le morceau en cours, les deux suivants, l’artiste, le titre, la licence, l’égaliseur.",
-    watchOut: "Le cadre est encodé et envoyé à YouTube. Le même son part aussi en HLS ; si YouTube tombe, le site peut jouer ce flux quand une URL publique est configurée.",
+    watchOut: "Le cadre est encodé et envoyé à YouTube.",
+    watchRadioTitle: "Radio",
+    watchRadio:
+      "Le même mix part aussi en HLS sur le Pi et est publié en HTTPS dans data/radio.json ; si YouTube tombe, cette page joue ce flux et #FREETECHNORADIO reste à l'antenne comme une radio.",
     radioFallbackLead: "YouTube est en panne. Le même mix que l'antenne continue de partir.",
     listen: "Écouter sur Dogmazic",
     radio: "Flux audio",
