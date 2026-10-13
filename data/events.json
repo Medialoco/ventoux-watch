@@ -2,6 +2,67 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-13T17-01-01Z-vehicle-105",
+      "t": "2026-10-13T17:01:01Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.859,
+      "thumb": "data/thumbs/2026-10-13T17-01-01Z-vehicle-105.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "twilight",
+        "weather": "ciel dégagé",
+        "context": "au crépuscule, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.1822,
+          "area_grow": 1.86,
+          "clipped": true,
+          "shade": 0.939,
+          "kept": 0.374,
+          "area_ratio": 0.01656,
+          "duration_s": 1.4,
+          "frames": 2,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.564,
+          "seen_as": [
+            "car 0.92 sur 0%",
+            "car 0.90 sur 0%",
+            "car 0.86 sur 0%",
+            "car 0.86 sur 97%"
+          ]
+        },
+        "box": [
+          0.7392,
+          0.8905,
+          0.2173,
+          0.1095
+        ],
+        "trace": [
+          [
+            1791910860.48,
+            0.9437,
+            0.7389,
+            0.0563,
+            0.1583
+          ],
+          [
+            1791910861.87,
+            0.7625,
+            0.9028,
+            0.1703,
+            0.0972
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-13T17-01-01Z-vehicle-105.jpg"
+    },
+    {
       "id": "2026-10-13T16-59-43Z-cycle-103",
       "t": "2026-10-13T16:59:43Z",
       "type": "cycle",
@@ -81,7 +142,9 @@
             0.0125,
             0.0333
           ]
-        ]
+        ],
+        "count": 2,
+        "since": "2026-10-13T16:59:43Z"
       },
       "closeup": "data/closeups/2026-10-13T16-59-43Z-cycle-103.jpg"
     },
