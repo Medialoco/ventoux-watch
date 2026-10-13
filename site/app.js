@@ -106,6 +106,7 @@ const COPY = {
     stillElephant: "Period 661 s, hold 4 s. Only from 01:00 to 06:00. Gate: the music is pushing, and 300 s have passed with nothing named, because he covers the road. At night the period is divided by 3. He fills about 0.95 of the frame. A trunk to the left, a small solid eye.",
     stillOurs: "Period 8191 s, which is 2 h 16 min 31 s. Not divided at night: the bear keeps his own pace. First turn delayed 90 s, long enough for YouTube to open the picture. Walk 2.6 s from the statue at (0.5698, 0.8593) of the camera window to the island at (0.2304, 0.8706), on a smoothstep. Dance 10 s on the island. The cutout is 72/1920 by 140/1080 of the window, times 43/47 on the island, then swelled to 1.35. During the dance he weeps and the line THIS IS MY HOME!!!!! is drawn in yellow. A small card sits bottom right, colour kept, Gaussian blur of sigma 1.1, label REPLAY · 2025. The sculpture itself does not move.",
     stillSoleil: "Drawn when the sun is up and still behind the ridge, or the weather is cloud, overcast, fog, mist, rain, snow or storm. A circle, eleven uneven rays, a smile, placed where the real sun falls in the frame. If that point is outside the view, it sits in the corner of the sky on the side where the sun is, once the sun is at least 3° up. It breathes, about one turn in 10 s. Drawn before pixel and wave, so those treatments take it with the mountain.",
+    stillSoleilQuirk: "The drawn sun (breathing rays, almost a GIF) was wired into the real layer by mistake, so OpenCV sometimes chases the wobbling rays of the little sun. Cute.",
     stillLamp: "At night, once the sun is at or below the horizon. The pole follows the measured mast, 7 m, from foot to shoulder, and the bracket runs to the lantern the map places on the bulb. Its length in the picture comes from that height, the distance and the lens. The glow is the lamp’s own light, turned up around the bulb, and it breathes slowly. A camera whose pole was never measured gets no lamp. Drawn before pixel and wave.",
     cannesTitle: "Three modes",
     cannesLead: "Three modes, and each camera is the other's backup. Mont Serein: the playlist is open and the frame is the pass, with Cannes waiting. Cannes: the Mont Serein playlist is closed and the frame is the beach. Both: while the pass is up, Cannes joins the frame for a short turn. Cannes is a municipal camera used for safety at sea. It has not been interrupted since 2022. Mont Serein has had two long interruptions this week, from 08:49 Europe/Paris on 6 October (last segment 2026-10-06T06:49:04Z, #EXT-X-ENDLIST) and from 09:16 on 8 October (last segment 2026-10-08T07:16:39Z), with restarts in between that did not hold.",
@@ -344,6 +345,7 @@ const COPY = {
     stillElephant: "Période 661 s, tenue 4 s. Seulement de 01:00 à 06:00. Porte : la musique pousse, et 300 s se sont passées sans rien de nommé, parce qu’il couvre la route. La nuit, la période est divisée par 3. Il occupe environ 0,95 du cadre. Une trompe à gauche, un petit œil plein.",
     stillOurs: "Période 8191 s, soit 2 h 16 min 31 s. Pas divisée la nuit : l’ours garde sa cadence. Premier tour retardé de 90 s, le temps que YouTube ouvre l’image. Marche 2,6 s, de la statue en (0,5698, 0,8593) de la fenêtre jusqu’à l’îlot en (0,2304, 0,8706), en smoothstep. Danse 10 s sur l’îlot. La découpe fait 72/1920 sur 140/1080 de la fenêtre, fois 43/47 sur l’îlot, puis gonflée à 1,35. Pendant la danse il pleure et la ligne THIS IS MY HOME!!!!! s’écrit en jaune. Une petite carte se pose en bas à droite, couleur gardée, flou gaussien d’écart-type 1,1, libellé REPLAY · 2025. La sculpture elle-même ne bouge pas.",
     stillSoleil: "Dessiné quand le soleil est levé et encore derrière la crête, ou que le temps est nuageux, couvert, brouillard, brume, pluie, neige ou orage. Un rond, onze rayons inégaux, un sourire, posé là où le vrai soleil tombe dans le cadre. Si ce point est hors champ, il se pose dans le coin du ciel, du côté où est le soleil, dès qu’il est à au moins 3°. Il respire, environ un tour en 10 s. Dessiné avant le pixel et l’onde, donc ces traitements l’emportent avec la montagne.",
+    stillSoleilQuirk: "L’effet soleil (rayons qui respirent, presque un GIF) a été câblé dans la couche « réel » par erreur : OpenCV poursuit parfois les rayons du petit soleil. C’est mignon.",
     stillLamp: "La nuit, dès que le soleil est à l’horizon ou en dessous. Le mât suit le poteau mesuré, 7 m, du pied à l’épaule, et la potence va jusqu’à la lanterne que la carte pose sur l’ampoule. Sa longueur dans l’image vient de cette hauteur, de la distance et de l’objectif. La lueur est celle de la lampe, remontée autour de l’ampoule, et elle respire lentement. Une caméra dont le poteau n’a pas été mesuré n’a pas de lampadaire. Dessiné avant le pixel et l’onde.",
     cannesTitle: "Trois modes",
     cannesLead: "Trois modes, et chaque caméra est le relais de l’autre. Le Mont Serein : la playlist est ouverte, le cadre est le col, Cannes attend. Cannes : la playlist du Mont Serein est fermée, le cadre est la plage. Les deux : tant que le col est là, Cannes entre dans le cadre pour un court passage. Cannes est une caméra municipale au service de la sécurité en mer. Elle n’a pas eu d’interruption depuis 2022. Le Mont Serein a eu deux interruptions longues cette semaine, le 6 octobre à partir de 08:49, heure de Paris (dernier segment 2026-10-06T06:49:04Z, #EXT-X-ENDLIST), et le 8 octobre à partir de 09:16 (dernier segment 2026-10-08T07:16:39Z), avec entre les deux des reprises qui n’ont pas tenu.",
@@ -2035,22 +2037,7 @@ async function loadSequence() {
 document.querySelector("#seq-prev")?.addEventListener("click", () => stepSequence(-1));
 document.querySelector("#seq-next")?.addEventListener("click", () => stepSequence(1));
 
-async function loadSiteVersion() {
-  try {
-    const fiche = await fetch("version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
-    const hull = document.getElementById("site-version");
-    const lien = document.getElementById("site-version-link");
-    if (!fiche?.version || !hull) return;
-    hull.textContent = fiche.version;
-    if (lien) {
-      const watch = document.getElementById("version")?.textContent || "";
-      lien.title = watch ? `Site ${fiche.version} · ${watch}` : `Site ${fiche.version}`;
-    }
-  } catch (_) { /* version.json n'existe qu'après publish Pages */ }
-}
-
 load();
-loadSiteVersion();
 setInterval(load, 60000);
 loadSequence();
 followSections();
