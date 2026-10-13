@@ -10,6 +10,7 @@ RequiresMountsFor=/opt/ventoux-watch/data
 Type=simple
 User=ventoux
 WorkingDirectory=/opt/ventoux-watch
+EnvironmentFile=-/opt/ventoux-watch/config/radio_public.env
 ExecStart=/opt/ventoux-watch/.venv/bin/python -m watcher.stream
 Restart=always
 RestartSec=10

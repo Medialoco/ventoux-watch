@@ -73,7 +73,8 @@ const COPY = {
     watchEffects: "Drawn on the frame. The table below gives the period, the duration and the gate of each one.",
     watchMusicTitle: "Music",
     watchMusic: "The Pi selects the track and ducks it under a voice. Under the picture: previous cover, current track, next two, artist, title, licence, equaliser.",
-    watchOut: "The frame is encoded and sent to YouTube.",
+    watchOut: "The frame is encoded and sent to YouTube. The same audio also goes out as HLS; if YouTube drops, the site can play that stream when a public URL is configured.",
+    radioFallbackLead: "YouTube is down. The same mix as the broadcast is still on the air.",
     listen: "Listen on Dogmazic",
     radio: "Audio stream",
     radioOn: "Listening",
@@ -312,7 +313,8 @@ const COPY = {
     watchEffects: "Dessinés sur le cadre. Le tableau plus bas donne la période, la durée et la porte de chacun.",
     watchMusicTitle: "Musique",
     watchMusic: "Le Pi choisit le morceau et le baisse sous une voix. Sous l’image : la pochette précédente, le morceau en cours, les deux suivants, l’artiste, le titre, la licence, l’égaliseur.",
-    watchOut: "Le cadre est encodé et envoyé à YouTube.",
+    watchOut: "Le cadre est encodé et envoyé à YouTube. Le même son part aussi en HLS ; si YouTube tombe, le site peut jouer ce flux quand une URL publique est configurée.",
+    radioFallbackLead: "YouTube est en panne. Le même mix que l'antenne continue de partir.",
     listen: "Écouter sur Dogmazic",
     radio: "Flux audio",
     radioOn: "À l’écoute",
@@ -1017,6 +1019,10 @@ const ANTENNE = [
   "https://raw.githubusercontent.com/Medialoco/ventoux-watch/main/data/antenne.json",
   "data/antenne.json",
 ];
+const RADIO = [
+  "https://raw.githubusercontent.com/Medialoco/ventoux-watch/main/data/radio.json",
+  "data/radio.json",
+];
 
 async function lisLeDirect() {
   for (const url of DIRECT) {
@@ -1038,33 +1044,100 @@ async function lisAntenne() {
   return null;
 }
 
+async function lisRadio() {
+  for (const url of RADIO) {
+    try {
+      const fiche = await fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+      if (fiche && typeof fiche.live === "boolean") return fiche;
+    } catch (_) { /* spare copy next */ }
+  }
+  return null;
+}
+
 function chaineEnDirect(fiche, antenne) {
   if (fiche?.live === false || antenne?.live === false) return false;
   if (fiche?.live === true || antenne?.live === true) return true;
   return null;
 }
 
-function abandonneYoutube() {
+const radioFallback = document.querySelector("#radio-fallback");
+const radioAudio = document.querySelector("#radio-audio");
+let radioHls = null;
+let radioUrl = "";
+
+function arreteRadio() {
+  radioUrl = "";
+  if (radioHls) {
+    radioHls.destroy();
+    radioHls = null;
+  }
+  if (radioAudio) {
+    radioAudio.pause();
+    radioAudio.removeAttribute("src");
+    radioAudio.load();
+  }
+  if (radioFallback) radioFallback.hidden = true;
+}
+
+function demarreRadio(url) {
+  if (!radioAudio || !url) return;
+  if (url === radioUrl && !radioFallback?.hidden) return;
+  radioUrl = url;
+  abandonneYoutubeSansCamera();
+  hideCamera();
+  if (radioFallback) radioFallback.hidden = false;
+  if (radioHls) {
+    radioHls.destroy();
+    radioHls = null;
+  }
+  const lance = new URLSearchParams(location.search).get("play") === "1";
+  if (window.Hls && Hls.isSupported()) {
+    radioHls = new Hls();
+    radioHls.loadSource(url);
+    radioHls.attachMedia(radioAudio);
+    radioHls.on(Hls.Events.MANIFEST_PARSED, () => {
+      if (lance) radioAudio.play().catch(() => {});
+    });
+  } else if (radioAudio.canPlayType("application/vnd.apple.mpegurl")) {
+    radioAudio.src = url;
+    if (lance) radioAudio.play().catch(() => {});
+  }
+  if (liveMot) liveMot.textContent = t("radioOn");
+}
+
+function abandonneYoutubeSansCamera() {
   diffusion = "";
   if (direct) {
     direct.hidden = true;
     direct.removeAttribute("src");
   }
+}
+
+function abandonneYoutube() {
+  abandonneYoutubeSansCamera();
+  arreteRadio();
   showCamera();
 }
 
 async function suisLeDirect() {
   const fiche = await lisLeDirect();
   const antenne = await lisAntenne();
+  const radio = await lisRadio();
   const enDirect = chaineEnDirect(fiche, antenne);
   if (fiche?.chaine && surYouTube) {
     surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
   }
   if (!fiche || enDirect === false) {
-    if (diffusion || !video.hidden) abandonneYoutube();
+    const secoursAudio = radio?.live === true && typeof radio.url === "string" && /^https:\/\/.+\.m3u8(\?.*)?$/i.test(radio.url);
+    if (secoursAudio) {
+      demarreRadio(radio.url);
+      return;
+    }
+    if (diffusion || !video.hidden || radioUrl) abandonneYoutube();
     else showCamera();
     return;
   }
+  arreteRadio();
   const numero = String(fiche.video || "");
   if (!/^[\w-]{11}$/.test(numero)) {
     if (diffusion || !video.hidden) abandonneYoutube();
@@ -1073,12 +1146,14 @@ async function suisLeDirect() {
   }
   // Only when it has actually changed. Reassigning src reloads the player, and
   // a check every few minutes would restart the stream under the viewer.
+  arreteRadio();
   if (numero === diffusion && enDirect !== false) return;
   diffusion = numero;
   const lance = new URLSearchParams(location.search).get("play") === "1";
   direct.src = `https://www.youtube.com/embed/${numero}?autoplay=1&mute=${lance ? 0 : 1}&playsinline=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
   hideCamera();
   direct.hidden = false;
+  if (liveMot) liveMot.textContent = "LIVE";
   if (lance) demarreLeDirect();
 }
 

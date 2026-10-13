@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 secrets/
 config/local.json
+config/radio_public.env
 /yolo11n.pt
 /yolo11n.onnx
 runs/
@@ -78,6 +79,8 @@ data/agenda.json
 # L'adresse HLS de Cannes, redemandée à YouTube et reprise si YouTube
 # demande de se connecter. Elle expire, et elle ne se versionne pas.
 data/secours.url
+data/radio/*.ts
+data/radio/*.m3u8
 
 # Les doublons du Finder. Il en fabrique a chaque copie dans la fenetre, et
 # sept d entre eux ont fini versionnes : de vieux instantanes qui ressortaient

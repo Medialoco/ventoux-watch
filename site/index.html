@@ -79,6 +79,10 @@
             <iframe id="direct" title="#FREETECHNORADIO" allowfullscreen
                     allow="autoplay; encrypted-media; picture-in-picture" hidden></iframe>
             <video id="player" controls autoplay muted playsinline hidden></video>
+            <div id="radio-fallback" class="radio-fallback" hidden>
+              <p class="radio-fallback-lead" data-i18n="radioFallbackLead">YouTube is down. The same mix as the broadcast is still on the air.</p>
+              <audio id="radio-audio" controls playsinline></audio>
+            </div>
             <p id="degrade" class="degrade" hidden>
               <span>Degraded mode</span>
               Backup webcam, Cannes. Waiting for Mont Serein.

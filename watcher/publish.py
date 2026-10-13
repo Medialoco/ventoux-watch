@@ -43,6 +43,7 @@ def publish(repo: Path) -> bool:
         # en dur finirait par incruster un enregistrement fini.
         "data/direct.json",
         "data/antenne.json",
+        "data/radio.json",
     ]
     try:
         # --autostash : la veille écrit dans data/ en permanence, et un rebase

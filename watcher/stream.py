@@ -7627,7 +7627,8 @@ def _ferme_sortie(sortie: subprocess.Popen | None, son: int | None) -> None:
 
 def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
             debit: str, sortie_par_s: int = 25,
-            vitesse: str = "veryfast") -> tuple[subprocess.Popen, int]:
+            vitesse: str = "veryfast",
+            hls_playlist: Path | None = None) -> tuple[subprocess.Popen, int]:
     """La sortie, et le descripteur par lequel on lui donne le son.
 
     Deux tuyaux parce qu'un processus n'a qu'une entrée standard et qu'il faut
@@ -7668,7 +7669,23 @@ def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
         "-g", str(sortie_par_s * 2),
         "-c:a", "aac", "-b:a", "128k",
     ]
-    commande += ["-f", "flv", cible] if cible.startswith("rtmp") else [cible]
+    if hls_playlist is not None:
+        segments = hls_playlist.parent / "seg_%05d.ts"
+        commande += [
+            "-f", "flv", cible,
+            "-map", "1:a",
+            "-c:a", "aac", "-b:a", "128k",
+            "-f", "hls",
+            "-hls_time", "2",
+            "-hls_list_size", "12",
+            "-hls_flags", "delete_segments+append_list+omit_endlist",
+            "-hls_segment_filename", str(segments),
+            str(hls_playlist),
+        ]
+    elif cible.startswith("rtmp"):
+        commande += ["-f", "flv", cible]
+    else:
+        commande += [cible]
     process = subprocess.Popen(commande, stdin=subprocess.PIPE, pass_fds=(lecture,))
     os.close(lecture)
     return process, ecriture
@@ -7820,6 +7837,35 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # OpenCV prend aussi un fil par cœur. La soustraction de Cannes, à chaque
     # image, réveillait les quatre. Deux suffisent pour une image de 160 px.
     cv2.setNumThreads(FILS_ENTREE)
+    from watcher.radio_serveur import RadioServeur, note_radio
+
+    radio_cfg = cfg.get("radio") or {}
+    radio_actif = (
+        bool(radio_cfg.get("enabled", True))
+        and cible.startswith("rtmp")
+        and cfg.get("stream_musique", True)
+    )
+    radio_serveur: RadioServeur | None = None
+    hls_playlist: Path | None = None
+    radio_public = (
+        (radio_cfg.get("public_url") or os.environ.get("VENTOUX_RADIO_PUBLIC_URL") or "")
+        .strip()
+        .rstrip("/")
+    )
+    if radio_actif:
+        hls_dir = racine / "data" / "radio"
+        hls_dir.mkdir(parents=True, exist_ok=True)
+        hls_playlist = hls_dir / "index.m3u8"
+        port = int(radio_cfg.get("port") or 8767)
+        radio_serveur = RadioServeur(hls_dir)
+        radio_serveur.demarre(port)
+        if not radio_public:
+            log.warning(
+                "Radio HLS sur le port %d ; sans radio.public_url (HTTPS) le site "
+                "public ne peut pas basculer sur l'audio quand YouTube tombe",
+                port,
+            )
+        note_radio(racine, live=False, public_base=radio_public)
     muet = not cfg.get("stream_musique", True)
     musique = Musique(racine / "data" / "musique", racine, muet=muet)
     if muet:
@@ -8880,12 +8926,16 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     verseur.join(timeout=5)
                 _ferme_sortie(sortie, son)
                 sortie = son = verseur = None
+                if radio_actif:
+                    note_radio(racine, live=False, public_base=radio_public)
                 time.sleep(LACHE_DIRECT_S)
                 break
             if sortie is None:
                 sortie, son = _sortie(cible, largeur, hauteur, cfg["stream_fps"],
                                       cfg["stream_bitrate"], cfg["stream_out_fps"],
-                                      cfg["stream_preset"])
+                                      cfg["stream_preset"], hls_playlist)
+                if radio_actif:
+                    note_radio(racine, live=True, public_base=radio_public)
                 assert sortie.stdin is not None
                 ouverte_a = _maintenant()
                 # Horloge neuve des deux côtés : la vidéo de cette sortie-ci
@@ -8942,6 +8992,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     verseur.join(timeout=5)
                 _ferme_sortie(sortie, son)
                 sortie = son = verseur = None
+                if radio_actif:
+                    note_radio(racine, live=False, public_base=radio_public)
                 cadence = None
                 continue
             if duree_s is not None and _maintenant() - debut >= duree_s:
@@ -8955,6 +9007,10 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         if verseur is not None:
             verseur.join(timeout=5)
         _ferme_sortie(sortie, son)
+        if radio_actif:
+            note_radio(racine, live=False, public_base=radio_public)
+        if radio_serveur is not None:
+            radio_serveur.ferme()
     log.info("%d images diffusées", images)
 
 
