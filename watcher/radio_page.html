@@ -221,8 +221,7 @@
         if (!fiche) return;
         if (fiche.site && site) site.href = fiche.site;
         if (fiche.stream && stream) stream.href = fiche.stream;
-        const cible = fiche.releases || fiche.repo;
-        if (cible && repo) repo.href = cible;
+        if (fiche.repo && repo) repo.href = fiche.repo;
         if (fiche.version && ver) ver.textContent = fiche.version;
       } catch (_) { /* valeurs par défaut dans le HTML */ }
     }
