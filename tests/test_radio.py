@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from watcher.radio_serveur import note_radio
+from watcher.radio_serveur import habille_playlist, note_radio, publie_morceau, titre_du_morceau
 
 
 class TestRadioJson(unittest.TestCase):
@@ -27,6 +27,43 @@ class TestRadioJson(unittest.TestCase):
             fiche = json.loads((racine / "data" / "radio.json").read_text(encoding="utf-8"))
             self.assertFalse(fiche["live"])
             self.assertEqual(fiche["url"], "")
+
+
+class TestCreditRadio(unittest.TestCase):
+    def test_titre_porte_artiste_chanson_et_licence(self) -> None:
+        ligne = titre_du_morceau({
+            "auteur": "Nemeton",
+            "titre": "01nocti27",
+            "licence": "CC BY 4.0",
+        })
+        self.assertEqual(ligne, "Nemeton — 01nocti27 · CC BY 4.0")
+
+    def test_playlist_nomme_chaque_segment(self) -> None:
+        brut = (
+            "#EXTM3U\n"
+            "#EXT-X-VERSION:3\n"
+            "#EXTINF:2.000,\n"
+            "seg_00001.ts\n"
+        )
+        titre = "Nemeton — 01nocti27 · CC BY 4.0"
+        texte = habille_playlist(brut, titre)
+        self.assertIn(f"#EXTINF:2.000,{titre}", texte)
+        self.assertIn('URI="now.json"', texte)
+
+    def test_publie_morceau_ecrit_now_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dossier = Path(tmp)
+            publie_morceau(dossier, {
+                "auteur": "Naxar",
+                "titre": "Night Sky",
+                "licence": "CC BY-SA 3.0",
+                "url": "https://play.dogmazic.net/song.php?action=show_song&song_id=1",
+                "url_licence": "https://creativecommons.org/licenses/by-sa/3.0/",
+            })
+            fiche = json.loads((dossier / "now.json").read_text(encoding="utf-8"))
+            self.assertEqual(fiche["artiste"], "Naxar")
+            self.assertEqual(fiche["titre"], "Night Sky")
+            self.assertEqual(fiche["licence"], "CC BY-SA 3.0")
 
 
 class TestSortieHls(unittest.TestCase):

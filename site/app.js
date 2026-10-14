@@ -1083,6 +1083,7 @@ function arreteRadio() {
     radioAudio.load();
   }
   if (radioFallback) radioFallback.hidden = true;
+  arreteLeCredit();
 }
 
 function demarreRadio(url) {
@@ -1109,6 +1110,57 @@ function demarreRadio(url) {
     if (lance) radioAudio.play().catch(() => {});
   }
   if (liveMot) liveMot.textContent = t("radioOn");
+  montreLeMorceau();
+}
+
+function versLaRadio(radio) {
+  const secoursAudio = radio?.live === true && typeof radio.url === "string" && /^https:\/\/.+\.m3u8(\?.*)?$/i.test(radio.url);
+  if (!secoursAudio) return false;
+  demarreRadio(radio.url);
+  return true;
+}
+
+function creditRadio(fiche) {
+  if (!fiche) return "";
+  const morceau = [fiche.artiste, fiche.titre].filter(Boolean).join(" — ");
+  if (fiche.licence && morceau) return `${morceau} · ${fiche.licence}`;
+  return morceau || fiche.licence || "";
+}
+
+let creditRadioTimer = null;
+
+function arreteLeCredit() {
+  if (creditRadioTimer) {
+    clearInterval(creditRadioTimer);
+    creditRadioTimer = null;
+  }
+  const ligne = document.querySelector("#radio-credit");
+  if (ligne) {
+    ligne.hidden = true;
+    ligne.textContent = "";
+  }
+  if (navigator.mediaSession) navigator.mediaSession.metadata = null;
+}
+
+async function montreLeMorceau() {
+  const ligne = document.querySelector("#radio-credit");
+  if (!radioUrl || !ligne) return;
+  const adresse = radioUrl.replace(/index\.m3u8(\?.*)?$/i, "now.json");
+  if (adresse === radioUrl) return;
+  try {
+    const fiche = await fetch(adresse, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+    const texte = creditRadio(fiche);
+    ligne.hidden = !texte;
+    ligne.textContent = texte;
+    if (texte && fiche && navigator.mediaSession && window.MediaMetadata) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: fiche.titre || texte,
+        artist: fiche.artiste || "#FREETECHNORADIO",
+        album: fiche.licence || "",
+      });
+    }
+  } catch (_) { /* le flux joue même sans le crédit */ }
+  if (!creditRadioTimer) creditRadioTimer = setInterval(montreLeMorceau, 15000);
 }
 
 function abandonneYoutubeSansCamera() {
@@ -1130,15 +1182,13 @@ async function suisLeDirect() {
   const antenne = await lisAntenne();
   const radio = await lisRadio();
   const enDirect = chaineEnDirect(fiche, antenne);
-  if (fiche?.chaine && surYouTube) {
+  if (fiche?.video && /^[\w-]{11}$/.test(String(fiche.video)) && surYouTube) {
+    surYouTube.href = `https://www.youtube.com/watch?v=${fiche.video}`;
+  } else if (fiche?.chaine && surYouTube) {
     surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
   }
   if (!fiche || enDirect === false) {
-    const secoursAudio = radio?.live === true && typeof radio.url === "string" && /^https:\/\/.+\.m3u8(\?.*)?$/i.test(radio.url);
-    if (secoursAudio) {
-      demarreRadio(radio.url);
-      return;
-    }
+    if (await versLaRadio(radio)) return;
     if (diffusion || !video.hidden || radioUrl) abandonneYoutube();
     else showCamera();
     return;
@@ -1180,10 +1230,40 @@ function demarreLeDirect() {
   }, 700);
 }
 
+function youtubeFerme(data) {
+  if (!data || typeof data !== "object") return false;
+  if (data.event === "onError") return true;
+  const info = data.info;
+  const etat = info && typeof info === "object" ? info.playerState : info;
+  return (data.event === "onStateChange" || data.event === "infoDelivery") && etat === 0;
+}
+
+window.addEventListener("message", (event) => {
+  if (event.origin !== "https://www.youtube.com" || !direct || direct.hidden) return;
+  let data = event.data;
+  if (typeof data === "string") {
+    try { data = JSON.parse(data); } catch (_) { return; }
+  }
+  if (!youtubeFerme(data)) return;
+  lisRadio().then((radio) => { versLaRadio(radio); });
+});
+
+if (direct) {
+  direct.addEventListener("load", () => {
+    if (!direct.contentWindow) return;
+    direct.contentWindow.postMessage(JSON.stringify({
+      event: "listening",
+      id: direct.id,
+      channel: "widget",
+    }), "*");
+  });
+}
+
 suisLeDirect();
 // The watch refreshes the file every few minutes; a tab left open all night
-// should follow the broadcast that replaced the one it opened on.
-setInterval(suisLeDirect, 5 * 60 * 1000);
+// should follow the broadcast that replaced the one it opened on. A minute
+// is enough to leave a dead picture for the radio.
+setInterval(suisLeDirect, 60 * 1000);
 
 // The picture can outlive the camera. A closed playlist is a photograph;
 // the broadcast on this page keeps going, and the line says so. Two minutes

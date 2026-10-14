@@ -7842,7 +7842,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     # OpenCV prend aussi un fil par cœur. La soustraction de Cannes, à chaque
     # image, réveillait les quatre. Deux suffisent pour une image de 160 px.
     cv2.setNumThreads(FILS_ENTREE)
-    from watcher.radio_serveur import RadioServeur, note_radio
+    from watcher.radio_serveur import RadioServeur, note_radio, publie_morceau
 
     radio_cfg = cfg.get("radio") or {}
     radio_actif = (
@@ -7880,6 +7880,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 port,
             )
         note_radio(racine, live=False, public_base=url_radio())
+    morceau_radio: tuple[str, str, str] | None = None
     muet = not cfg.get("stream_musique", True)
     musique = Musique(racine / "data" / "musique", racine, muet=muet)
     if muet:
@@ -8366,6 +8367,19 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                           if soleil_absent(relief, cfg["camera"], montre, temps) else None)
                 mot_gris = BROUILLARD_MOTS.get(temps, "")
                 prog = PROG_VIDE if muet else musique.programme()
+                if radio_actif and hls_playlist is not None:
+                    courant = prog.get("en_cours")
+                    signe = (
+                        str((courant or {}).get("auteur") or ""),
+                        str((courant or {}).get("titre") or ""),
+                        str((courant or {}).get("licence") or ""),
+                    )
+                    if courant and signe != morceau_radio:
+                        morceau_radio = signe
+                        try:
+                            publie_morceau(hls_playlist.parent, courant)
+                        except OSError:
+                            log.warning("Crédit radio non écrit", exc_info=True)
                 relu = montre
             pistes = pistes_visibles(cherches, quand)
             nommes = [vu for vu in vus if not cherche_encore(vu, pistes, quand)]

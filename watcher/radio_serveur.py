@@ -21,6 +21,8 @@ log = logging.getLogger("ventoux.radio")
 
 RADIO_JSON = "data/radio.json"
 HLS_INDEX = "index.m3u8"
+NOW_JSON = "now.json"
+SESSION_DATA = '#EXT-X-SESSION-DATA:DATA-ID="com.freetechnoradio.now",URI="now.json"'
 
 
 def note_radio(racine: Path, *, live: bool, public_base: str) -> None:
@@ -37,6 +39,75 @@ def note_radio(racine: Path, *, live: bool, public_base: str) -> None:
     passage = fichier.with_suffix(".json.tmp")
     passage.write_text(texte + "\n", encoding="utf-8")
     passage.replace(fichier)
+
+
+def titre_du_morceau(fiche: dict | None) -> str:
+    """Artiste, titre et licence, sur une seule ligne de playlist.
+
+    C'est la contrepartie de la licence, portée par le flux lui-même : un
+    lecteur qui affiche le titre du segment en cours nomme l'œuvre, sans
+    avoir à ouvrir la page.
+    """
+    if not fiche:
+        return ""
+    artiste = str(fiche.get("artiste") or fiche.get("auteur") or "")
+    titre = str(fiche.get("titre") or "")
+    licence = str(fiche.get("licence") or "")
+    morceau = " — ".join(part.replace("\n", " ").strip() for part in (artiste, titre) if part.strip())
+    licence = licence.replace("\n", " ").strip()
+    if licence:
+        return f"{morceau} · {licence}" if morceau else licence
+    return morceau
+
+
+def publie_morceau(dossier: Path, fiche: dict | None) -> None:
+    """Écrit now.json à côté de la playlist. Le serveur s'en sert pour le titre."""
+    if not fiche or not titre_du_morceau(fiche):
+        return
+    dossier.mkdir(parents=True, exist_ok=True)
+    corps = {
+        "artiste": str(fiche.get("auteur") or fiche.get("artiste") or "").strip(),
+        "titre": str(fiche.get("titre") or "").strip(),
+        "licence": str(fiche.get("licence") or "").strip(),
+        "url": str(fiche.get("url") or "").strip(),
+        "url_licence": str(fiche.get("url_licence") or "").strip(),
+    }
+    fichier = dossier / NOW_JSON
+    texte = json.dumps(corps, ensure_ascii=False, indent=2) + "\n"
+    passage = fichier.with_suffix(".json.tmp")
+    passage.write_text(texte, encoding="utf-8")
+    passage.replace(fichier)
+
+
+def habille_playlist(texte: str, titre: str) -> str:
+    """Pose le crédit sur chaque segment, et pointe vers now.json."""
+    if not titre:
+        return texte
+    lignes: list[str] = []
+    pose = False
+    for ligne in texte.splitlines():
+        if ligne.startswith("#EXTINF:"):
+            duree = ligne.split(":", 1)[1].split(",", 1)[0]
+            lignes.append(f"#EXTINF:{duree},{titre}")
+            continue
+        lignes.append(ligne)
+        if not pose and ligne.startswith("#EXT-X-VERSION"):
+            lignes.append(SESSION_DATA)
+            pose = True
+    if not pose:
+        lignes.insert(1, SESSION_DATA)
+    return "\n".join(lignes) + "\n"
+
+
+def _playlist_habillée(racine: Path, brut: bytes) -> bytes:
+    try:
+        fiche = json.loads((racine / NOW_JSON).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return brut
+    titre = titre_du_morceau(fiche if isinstance(fiche, dict) else None)
+    if not titre:
+        return brut
+    return habille_playlist(brut.decode("utf-8", "replace"), titre).encode("utf-8")
 
 
 class RadioServeur:
@@ -80,6 +151,8 @@ class RadioServeur:
                 elif cible.suffix == ".ts":
                     mime = "video/mp2t"
                 corps = cible.read_bytes()
+                if cible.name == HLS_INDEX:
+                    corps = _playlist_habillée(racine, corps)
                 self.send_response(200)
                 self._cors()
                 self.send_header("Content-Type", mime or "application/octet-stream")
