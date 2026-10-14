@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>#FREETECHNORADIO</title>
+  <meta name="description" content="Web radio from a Raspberry Pi. The mix on the air; the picture on YouTube.">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font: 14px/1.45 ui-sans-serif, system-ui, sans-serif;
+      color: #e9eaec;
+      background: linear-gradient(165deg, #1a1f24 0%, #0d1014 100%);
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+      text-align: center;
+    }
+    canvas.hash {
+      display: block;
+      height: 46px;
+      width: auto;
+      max-width: 100%;
+      margin: 0 auto 22px;
+      image-rendering: pixelated;
+    }
+    .main {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 16px 20px;
+      text-align: left;
+      margin-bottom: 18px;
+    }
+    .cover {
+      width: 148px;
+      height: 148px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid #2b2f36;
+      background: #0a0c0e;
+    }
+    .cover[hidden] { display: none; }
+    .meta { flex: 1 1 180px; min-width: 0; }
+    .meta p { margin: 0 0 6px; line-height: 1.35; }
+    .artist { font-size: 0.85rem; color: #9aa0a8; }
+    .title { font-size: 1.12rem; font-weight: 650; }
+    .licence { font-size: 0.82rem; color: #9aa0a8; }
+    .licence a { color: #9dd3ba; }
+    audio {
+      width: 100%;
+      margin-bottom: 14px;
+    }
+    .yt {
+      width: min(300px, 100%);
+      margin: 0 auto;
+      aspect-ratio: 16 / 9;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #2b2f36;
+      background: #000;
+    }
+    .yt[hidden] { display: none; }
+    .yt iframe { width: 100%; height: 100%; border: 0; }
+    .hint {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .hint a { color: #9dd3ba; }
+    .live {
+      display: inline-block;
+      margin-bottom: 10px;
+      padding: 2px 8px;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #9dd3ba;
+      border: 1px solid color-mix(in srgb, #9dd3ba 45%, #2b2f36);
+      border-radius: 999px;
+    }
+    .live[hidden] { display: none; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <canvas class="hash" id="hash" aria-hidden="true"></canvas>
+    <p class="live" id="live-badge" hidden>YouTube · synced picture</p>
+    <div class="main">
+      <img class="cover" id="cover" alt="" width="148" height="148" hidden>
+      <div class="meta">
+        <p class="artist" id="artist" hidden></p>
+        <p class="title" id="title" hidden></p>
+        <p class="licence" id="licence" hidden></p>
+      </div>
+    </div>
+    <audio id="audio" controls playsinline></audio>
+    <div class="yt" id="yt-wrap" hidden>
+      <div id="yt"></div>
+    </div>
+    <p class="hint">Playlist for players: <a href="/index.m3u8">index.m3u8</a></p>
+  </div>
+  <script>
+    const HASH = "#FREETECHNORADIO";
+    const GLYPHS = {
+      "#": ["01010","11111","01010","11111","01010","00000","00000"],
+      A: ["01110","10001","10001","11111","10001","10001","10001"],
+      C: ["01110","10001","10000","10000","10000","10001","01110"],
+      D: ["11110","10001","10001","10001","10001","10001","11110"],
+      E: ["11111","10000","10000","11110","10000","10000","11111"],
+      F: ["11111","10000","10000","11110","10000","10000","10000"],
+      H: ["10001","10001","10001","11111","10001","10001","10001"],
+      I: ["01110","00100","00100","00100","00100","00100","01110"],
+      N: ["10001","11001","10101","10011","10001","10001","10001"],
+      O: ["01110","10001","10001","10001","10001","10001","01110"],
+      R: ["11110","10001","10001","11110","10100","10010","10001"],
+      T: ["11111","00100","00100","00100","00100","00100","00100"],
+    };
+    /** Audio in the HLS branch runs ahead of the YouTube picture (Pi, ~12.1 s). */
+    const EN_AVANCE = 12.1;
+
+    function paintHash() {
+      const cell = 3, gap = 1, step = cell + gap, stride = 6;
+      const tile = document.createElement("canvas");
+      tile.width = HASH.length * stride * step - gap;
+      tile.height = 7 * step - gap;
+      const t = tile.getContext("2d");
+      t.fillStyle = "#9dd3ba";
+      for (let i = 0; i < HASH.length; i++) {
+        const rows = GLYPHS[HASH[i]] || [];
+        for (let y = 0; y < rows.length; y++) {
+          for (let x = 0; x < rows[y].length; x++) {
+            if (rows[y][x] === "1") t.fillRect((i * stride + x) * step, y * step, cell, cell);
+          }
+        }
+      }
+      const canvas = document.getElementById("hash");
+      const scale = Math.max(4, Math.min(8, Math.floor((canvas.parentElement.clientWidth || 480) / tile.width)));
+      canvas.width = tile.width * scale;
+      canvas.height = tile.height * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(tile, 0, 0, canvas.width, canvas.height);
+    }
+    paintHash();
+    window.addEventListener("resize", paintHash);
+
+    const audio = document.getElementById("audio");
+    const stream = location.origin + "/index.m3u8";
+    let hls = null;
+    let audioCtx = null;
+    let delayNode = null;
+    let ytPlayer = null;
+    let ytLive = false;
+
+    function brancheAudioRetarde() {
+      if (!ytLive || audioCtx || !window.AudioContext) return;
+      try {
+        audioCtx = new AudioContext();
+        const source = audioCtx.createMediaElementSource(audio);
+        delayNode = audioCtx.createDelay(EN_AVANCE + 1);
+        delayNode.delayTime.value = EN_AVANCE;
+        source.connect(delayNode);
+        delayNode.connect(audioCtx.destination);
+      } catch (_) { /* already wired or blocked */ }
+    }
+
+    function demarreHls() {
+      if (window.Hls && Hls.isSupported()) {
+        hls = new Hls();
+        hls.loadSource(stream);
+        hls.attachMedia(audio);
+      } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
+        audio.src = stream;
+      }
+    }
+    demarreHls();
+    audio.addEventListener("play", () => {
+      brancheAudioRetarde();
+      audioCtx?.resume();
+      ytPlayer?.playVideo?.();
+    });
+
+    function pochette(nom) {
+      if (!nom) return "";
+      if (/^https?:\/\//i.test(nom)) return nom;
+      const base = location.origin + "/";
+      const chemin = nom.replace(/^\/+/, "");
+      return chemin.startsWith("pochettes/") ? base + chemin : base + "pochettes/" + chemin;
+    }
+
+    function peint(fiche) {
+      if (!fiche) return;
+      const artist = document.getElementById("artist");
+      const title = document.getElementById("title");
+      const licence = document.getElementById("licence");
+      const cover = document.getElementById("cover");
+      if (fiche.artiste) {
+        artist.textContent = fiche.artiste;
+        artist.hidden = false;
+      }
+      if (fiche.titre) {
+        title.textContent = fiche.titre;
+        title.hidden = false;
+      }
+      if (fiche.licence) {
+        const url = fiche.url_licence || fiche.url || "";
+        licence.innerHTML = url
+          ? `<a href="${url.replace(/"/g, "&quot;")}" rel="noopener">${fiche.licence}</a>`
+          : fiche.licence;
+        licence.hidden = false;
+      }
+      const src = pochette(fiche.pochette);
+      if (src) {
+        cover.src = src;
+        cover.hidden = false;
+      }
+    }
+
+    async function rafraichitCredit() {
+      try {
+        const fiche = await fetch("/now.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+        peint(fiche);
+      } catch (_) {}
+    }
+    rafraichitCredit();
+    setInterval(rafraichitCredit, 15000);
+
+    function monteYoutube(id) {
+      const wrap = document.getElementById("yt-wrap");
+      const badge = document.getElementById("live-badge");
+      if (!/^[\w-]{11}$/.test(id)) {
+        wrap.hidden = true;
+        badge.hidden = true;
+        ytLive = false;
+        return;
+      }
+      ytLive = true;
+      wrap.hidden = false;
+      badge.hidden = false;
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+      window.onYouTubeIframeAPIReady = () => {
+        ytPlayer = new YT.Player("yt", {
+          videoId: id,
+          playerVars: { autoplay: 0, mute: 1, playsinline: 1, rel: 0, modestbranding: 1 },
+          events: {
+            onReady: () => { if (!audio.paused) ytPlayer.playVideo(); },
+          },
+        });
+      };
+      if (window.YT && YT.Player) window.onYouTubeIframeAPIReady();
+    }
+
+    async function rafraichitDirect() {
+      try {
+        const fiche = await fetch("/direct.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+        if (fiche?.live === true && fiche.video) monteYoutube(String(fiche.video));
+      } catch (_) {}
+    }
+    rafraichitDirect();
+    setInterval(rafraichitDirect, 60000);
+  </script>
+</body>
+</html>

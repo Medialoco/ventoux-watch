@@ -8,7 +8,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from watcher.radio_serveur import habille_playlist, note_radio, publie_morceau, titre_du_morceau
+from watcher.radio_serveur import (
+    habille_playlist,
+    note_radio,
+    publie_morceau,
+    titre_du_morceau,
+    veut_page_html,
+)
 
 
 class TestRadioJson(unittest.TestCase):
@@ -66,6 +72,46 @@ class TestCreditRadio(unittest.TestCase):
             self.assertEqual(fiche["titre"], "Night Sky")
             self.assertEqual(fiche["licence"], "CC BY-SA 3.0")
             self.assertEqual(fiche["pochette"], "pochettes/naxar.jpg")
+
+
+class TestPageRadio(unittest.TestCase):
+    def test_veut_page_html(self) -> None:
+        self.assertTrue(veut_page_html("text/html,application/xhtml+xml"))
+        self.assertFalse(veut_page_html("application/vnd.apple.mpegurl"))
+        self.assertFalse(veut_page_html("*/*"))
+
+    def test_index_m3u8_navigateur_ou_lecteur(self) -> None:
+        import urllib.error
+        import urllib.request
+
+        from watcher.radio_serveur import RadioServeur
+
+        with tempfile.TemporaryDirectory() as tmp:
+            racine = Path(tmp)
+            (racine / "index.m3u8").write_text("#EXTM3U\n#EXT-X-VERSION:3\n", encoding="utf-8")
+            srv = RadioServeur(racine)
+            srv.demarre(28767)
+            try:
+                html = urllib.request.urlopen(
+                    urllib.request.Request(
+                        "http://127.0.0.1:28767/index.m3u8",
+                        headers={"Accept": "text/html,application/xhtml+xml"},
+                    ),
+                    timeout=2,
+                ).read()
+                self.assertIn(b"FREETECHNORADIO", html)
+                pl = urllib.request.urlopen(
+                    urllib.request.Request(
+                        "http://127.0.0.1:28767/index.m3u8",
+                        headers={"Accept": "*/*"},
+                    ),
+                    timeout=2,
+                ).read()
+                self.assertTrue(pl.startswith(b"#EXTM3U"))
+            except urllib.error.URLError as err:
+                self.skipTest(f"port 28767 indisponible : {err}")
+            finally:
+                srv.ferme()
 
 
 class TestSortieHls(unittest.TestCase):

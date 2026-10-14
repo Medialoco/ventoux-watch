@@ -7871,7 +7871,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         hls_dir.mkdir(parents=True, exist_ok=True)
         hls_playlist = hls_dir / "index.m3u8"
         port = int(radio_cfg.get("port") or 8767)
-        radio_serveur = RadioServeur(hls_dir, racine / "data" / "musique" / "pochettes")
+        radio_serveur = RadioServeur(
+            hls_dir,
+            racine / "data" / "musique" / "pochettes",
+            racine_watch=racine,
+        )
         radio_serveur.demarre(port)
         if not radio_public:
             log.warning(

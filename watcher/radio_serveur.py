@@ -22,7 +22,21 @@ log = logging.getLogger("ventoux.radio")
 RADIO_JSON = "data/radio.json"
 HLS_INDEX = "index.m3u8"
 NOW_JSON = "now.json"
+DIRECT_JSON = "data/direct.json"
+RADIO_PAGE = Path(__file__).with_name("radio_page.html")
 SESSION_DATA = '#EXT-X-SESSION-DATA:DATA-ID="com.freetechnoradio.now",URI="now.json"'
+
+
+def veut_page_html(accept: str) -> bool:
+    """Navigateur : page d'écoute. Lecteur HLS : la playlist telle quelle."""
+    entete = (accept or "").lower()
+    if "application/vnd.apple.mpegurl" in entete:
+        return False
+    return "text/html" in entete
+
+
+def _corps_page() -> bytes:
+    return RADIO_PAGE.read_bytes()
 
 
 def note_radio(racine: Path, *, live: bool, public_base: str) -> None:
@@ -112,9 +126,15 @@ def _playlist_habillée(racine: Path, brut: bytes) -> bytes:
 
 
 class RadioServeur:
-    def __init__(self, racine_hls: Path, pochettes: Path | None = None) -> None:
+    def __init__(
+        self,
+        racine_hls: Path,
+        pochettes: Path | None = None,
+        racine_watch: Path | None = None,
+    ) -> None:
         self.racine = racine_hls.resolve()
         self.pochettes = pochettes.resolve() if pochettes else None
+        self.racine_watch = racine_watch.resolve() if racine_watch else None
         self._serveur: ThreadingHTTPServer | None = None
         self._fil: threading.Thread | None = None
 
@@ -123,6 +143,7 @@ class RadioServeur:
             return
         racine = self.racine
         dossier_pochettes = self.pochettes
+        projet = self.racine_watch
 
         class Requete(BaseHTTPRequestHandler):
             def log_message(self, *_args) -> None:
@@ -133,15 +154,50 @@ class RadioServeur:
                 self.send_header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
                 self.send_header("Cache-Control", "no-store")
 
+            def _envoie(self, code: int, mime: str, corps: bytes) -> None:
+                self.send_response(code)
+                self._cors()
+                self.send_header("Content-Type", mime)
+                self.send_header("Content-Length", str(len(corps)))
+                self.end_headers()
+                if self.command != "HEAD":
+                    self.wfile.write(corps)
+
+            def _page(self) -> None:
+                if not RADIO_PAGE.is_file():
+                    self.send_response(404)
+                    self._cors()
+                    self.end_headers()
+                    return
+                self._envoie(200, "text/html; charset=utf-8", _corps_page())
+
             def do_OPTIONS(self) -> None:  # noqa: N802
                 self.send_response(204)
                 self._cors()
                 self.end_headers()
 
+            def do_HEAD(self) -> None:  # noqa: N802
+                self.do_GET()
+
             def do_GET(self) -> None:  # noqa: N802
                 chemin = unquote(urlparse(self.path).path.lstrip("/"))
-                if chemin == "":
-                    chemin = HLS_INDEX
+                accept = self.headers.get("Accept", "")
+
+                if chemin in ("", "listen", "index.html"):
+                    self._page()
+                    return
+                if chemin == HLS_INDEX and veut_page_html(accept):
+                    self._page()
+                    return
+                if chemin == "direct.json" and projet is not None:
+                    cible = (projet / DIRECT_JSON).resolve()
+                    if not str(cible).startswith(str(projet)) or not cible.is_file():
+                        self.send_response(404)
+                        self._cors()
+                        self.end_headers()
+                        return
+                    self._envoie(200, "application/json; charset=utf-8", cible.read_bytes())
+                    return
                 if chemin.startswith("pochettes/") and dossier_pochettes is not None:
                     rel = chemin.split("/", 1)[1]
                     cible = (dossier_pochettes / rel).resolve()
@@ -162,12 +218,7 @@ class RadioServeur:
                 corps = cible.read_bytes()
                 if cible.name == HLS_INDEX:
                     corps = _playlist_habillée(racine, corps)
-                self.send_response(200)
-                self._cors()
-                self.send_header("Content-Type", mime or "application/octet-stream")
-                self.send_header("Content-Length", str(len(corps)))
-                self.end_headers()
-                self.wfile.write(corps)
+                self._envoie(200, mime or "application/octet-stream", corps)
 
         ThreadingHTTPServer.allow_reuse_address = True
         self._serveur = ThreadingHTTPServer(("0.0.0.0", port), Requete)
