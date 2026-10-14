@@ -7645,6 +7645,11 @@ def _sortie(cible: str, largeur: int, hauteur: int, images_par_s: int,
         "-f", "rawvideo", "-pix_fmt", "bgr24",
         "-s", f"{largeur}x{hauteur}", "-r", str(images_par_s), "-i", "pipe:0",
         "-thread_queue_size", "512",
+        # Sans -re, la branche HLS ne lit que le son et le vide aussi vite
+        # que le tuyau se remplit. Les segments de 2 s naissent par dizaines
+        # à la seconde, sont effacés avant qu'un lecteur ait pu les prendre,
+        # et le flux s'arrête au bout de quelques secondes.
+        "-re",
         "-f", "s16le", "-ar", str(ECHANTILLONS_S), "-ac", str(VOIES), "-i", f"pipe:{lecture}",
         # Le Pi 5 n'a aucun encodeur matériel : il ne reste que le logiciel, et
         # « veryfast » est le compromis mesuré qui tient le temps réel sans
