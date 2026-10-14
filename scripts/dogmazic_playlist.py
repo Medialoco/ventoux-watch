@@ -27,6 +27,7 @@ import re
 import sys
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +39,7 @@ API = "https://play.dogmazic.net/server/json.server.php"
 NAVIGATEUR = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
 
 NOM = "Ventoux Watch — la webradio du Mont Serein"
+FICHE_JSON = "data/dogmazic_playlist.json"
 # L'album de la maison, dont les fichiers ne portent pas l'identifiant Dogmazic
 # dans leur nom puisqu'ils ont été déposés à la main.
 ALBUM_MAISON = "11242"
@@ -105,6 +107,51 @@ def chansons_de_la_bibliotheque(site: Dogmazic, dossier: Path) -> list[tuple[int
     return sorted(trouves.items())
 
 
+def ids_playlist(site: Dogmazic, identifiant: str) -> set[int]:
+    """Tous les morceaux d'une playlist, paginés."""
+    vus: set[int] = set()
+    for page in range(0, 5000, 500):
+        lot = site.fais("playlist_songs", filter=identifiant, limit=500, offset=page).get("song") or []
+        if isinstance(lot, dict):
+            lot = [lot]
+        if not lot:
+            break
+        for chanson in lot:
+            try:
+                vus.add(int(chanson["id"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+        if len(lot) < 500:
+            break
+    return vus
+
+
+def publie_fiche(
+    racine: Path,
+    *,
+    identifiant: str,
+    nom: str,
+    installés: int,
+    items: int,
+    à_jour: bool,
+) -> None:
+    url = f"https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id={identifiant}"
+    corps = {
+        "playlist_id": int(identifiant),
+        "url": url,
+        "nom": nom,
+        "installés": installés,
+        "items": items,
+        "à_jour": à_jour,
+        "vu": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    fichier = racine / FICHE_JSON
+    fichier.parent.mkdir(parents=True, exist_ok=True)
+    passage = fichier.with_suffix(".json.tmp")
+    passage.write_text(json.dumps(corps, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    passage.replace(fichier)
+
+
 def main() -> int:
     partie = argparse.ArgumentParser(description=__doc__)
     partie.add_argument("--dossier", default="data/musique")
@@ -113,6 +160,11 @@ def main() -> int:
                         help="montrer ce qui serait publié, sans rien écrire")
     partie.add_argument("--retire", type=int, default=0,
                         help="retirer ce numéro de la playlist existante, sans la recréer")
+    partie.add_argument(
+        "--verifie",
+        action="store_true",
+        help="ne recréer la playlist que si elle ne reflète plus la bibliothèque",
+    )
     args = partie.parse_args()
 
     cle = (load_config().get("dogmazic") or {}).get("api_key") or ""
@@ -122,6 +174,7 @@ def main() -> int:
     site = Dogmazic(cle)
     dossier = ROOT / args.dossier
     chansons = chansons_de_la_bibliotheque(site, dossier)
+    attendus = {identifiant for identifiant, _ in chansons}
     print(f"{len(chansons)} morceaux installés et retrouvés sur Dogmazic")
     for identifiant, nom in chansons[:6]:
         print(f"   {identifiant:>7}  {nom[:60]}")
@@ -132,6 +185,23 @@ def main() -> int:
         return 0
 
     existante = site.mienne(args.nom)
+    if args.verifie and existante is not None and not args.retire:
+        identifiant = str(existante["id"])
+        en_ligne = ids_playlist(site, identifiant)
+        if en_ligne == attendus:
+            items = int(existante.get("items") or len(en_ligne))
+            publie_fiche(
+                ROOT,
+                identifiant=identifiant,
+                nom=args.nom,
+                installés=len(chansons),
+                items=items,
+                à_jour=True,
+            )
+            print(f"playlist {identifiant} déjà à jour ({len(en_ligne)} morceaux)")
+            print(f"https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id={identifiant}")
+            return 0
+        print(f"playlist {identifiant} : {len(en_ligne)} en ligne, {len(attendus)} installés — mise à jour")
     if args.retire:
         if existante is None:
             print("playlist introuvable", file=sys.stderr)
@@ -167,7 +237,16 @@ def main() -> int:
         if reponse.get("success"):
             ajoutes += 1
     relu = site.fais("playlist", filter=identifiant)
-    print(f"playlist {identifiant} : {ajoutes} ajouts, {relu.get('items')} morceaux dedans")
+    items = int(relu.get("items") or ajoutes)
+    publie_fiche(
+        ROOT,
+        identifiant=identifiant,
+        nom=args.nom,
+        installés=len(chansons),
+        items=items,
+        à_jour=True,
+    )
+    print(f"playlist {identifiant} : {ajoutes} ajouts, {items} morceaux dedans")
     print(f"https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id={identifiant}")
     return 0
 

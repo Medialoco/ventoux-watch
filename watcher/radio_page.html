@@ -74,6 +74,16 @@
       color: #6b7280;
     }
     .hint a { color: #9dd3ba; }
+    .dogmazic {
+      display: inline-block;
+      margin-top: 10px;
+      font-size: 13px;
+      color: #9dd3ba;
+      text-decoration: none;
+      border-bottom: 1px solid color-mix(in srgb, #9dd3ba 35%, transparent);
+    }
+    .dogmazic:hover { color: #c5ead8; }
+    .dogmazic[hidden] { display: none; }
     .live {
       display: inline-block;
       margin-bottom: 10px;
@@ -105,7 +115,10 @@
     <div class="yt" id="yt-wrap" hidden>
       <div id="yt"></div>
     </div>
-    <p class="hint">Playlist for players: <a href="/index.m3u8">index.m3u8</a></p>
+    <p class="hint">
+      Playlist for players: <a href="/index.m3u8">index.m3u8</a><br>
+      <a class="dogmazic" id="dogmazic" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" hidden>Dogmazic playlist</a>
+    </p>
   </div>
   <script>
     const HASH = "#FREETECHNORADIO";
@@ -268,6 +281,22 @@
     }
     rafraichitDirect();
     setInterval(rafraichitDirect, 60000);
+
+    async function rafraichitDogmazic() {
+      const lien = document.getElementById("dogmazic");
+      try {
+        const fiche = await fetch("/dogmazic.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+        if (!fiche?.url) return;
+        lien.href = fiche.url;
+        const n = fiche.items ?? fiche.installés;
+        const note = fiche.à_jour === false ? " (updating…)" : "";
+        lien.textContent = n ? `Dogmazic playlist · ${n} tracks${note}` : "Dogmazic playlist";
+        lien.hidden = false;
+      } catch (_) {
+        lien.hidden = false;
+      }
+    }
+    rafraichitDogmazic();
   </script>
 </body>
 </html>
