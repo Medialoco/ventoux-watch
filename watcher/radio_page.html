@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>#FREETECHNORADIO</title>
-  <meta name="description" content="Web radio from a Raspberry Pi. The mix on the air; the picture on YouTube.">
+  <meta name="description" content="#FREETECHNORADIO — web radio from a Raspberry Pi. Free music on the air.">
   <style>
     * { box-sizing: border-box; }
     body {
@@ -62,17 +62,6 @@
       width: 100%;
       margin-bottom: 14px;
     }
-    .yt {
-      width: min(300px, 100%);
-      margin: 0 auto;
-      aspect-ratio: 16 / 9;
-      border-radius: 4px;
-      overflow: hidden;
-      border: 1px solid #2b2f36;
-      background: #000;
-    }
-    .yt[hidden] { display: none; }
-    .yt iframe { width: 100%; height: 100%; border: 0; }
     .links {
       margin-top: 18px;
       font-size: 13px;
@@ -85,25 +74,12 @@
       border-bottom: 1px solid color-mix(in srgb, #9dd3ba 35%, transparent);
     }
     .links a:hover { color: #c5ead8; }
-    .live {
-      display: inline-block;
-      margin-bottom: 10px;
-      padding: 2px 8px;
-      font-size: 10px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #9dd3ba;
-      border: 1px solid color-mix(in srgb, #9dd3ba 45%, #2b2f36);
-      border-radius: 999px;
-    }
-    .live[hidden] { display: none; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
 </head>
 <body>
   <div class="wrap">
     <canvas class="hash" id="hash" aria-hidden="true"></canvas>
-    <p class="live" id="live-badge" hidden>YouTube · muted</p>
     <div class="main">
       <img class="cover" id="cover" alt="" width="148" height="148" hidden>
       <div class="meta">
@@ -113,11 +89,8 @@
       </div>
     </div>
     <audio id="audio" controls playsinline></audio>
-    <div class="yt" id="yt-wrap" hidden>
-      <div id="yt"></div>
-    </div>
     <nav class="links" aria-label="Links">
-      <a id="stream" href="https://freetechnoradio.benoit-prieur.fr/index.m3u8">https://freetechnoradio.benoit-prieur.fr/index.m3u8</a><br>
+      <a id="stream" href="https://freetechnoradio.benoit-prieur.fr/index.m3u8">index.m3u8 (VLC)</a><br>
       <a id="dogmazic" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" target="_blank" rel="noopener">Dogmazic playlist</a><br>
       <a id="site-doc" href="https://medialoco.github.io/ventoux-watch/" target="_blank" rel="noopener">About the station</a><br>
       <a id="repo" href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener">Source · v<span id="release-ver">0.6.48</span></a>
@@ -168,7 +141,6 @@
     const audio = document.getElementById("audio");
     const stream = location.origin + "/index.m3u8";
     let hls = null;
-    let ytPlayer = null;
 
     function demarreHls() {
       if (window.Hls && Hls.isSupported()) {
@@ -180,12 +152,6 @@
       }
     }
     demarreHls();
-    audio.addEventListener("play", () => {
-      try {
-        ytPlayer?.mute?.();
-        ytPlayer?.playVideo?.();
-      } catch (_) {}
-    });
 
     function pochette(nom) {
       if (!nom) return "";
@@ -232,47 +198,6 @@
     rafraichitCredit();
     setInterval(rafraichitCredit, 15000);
 
-    function monteYoutube(id) {
-      const wrap = document.getElementById("yt-wrap");
-      const badge = document.getElementById("live-badge");
-      if (!/^[\w-]{11}$/.test(id)) {
-        wrap.hidden = true;
-        badge.hidden = true;
-        return;
-      }
-      wrap.hidden = false;
-      badge.hidden = false;
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(tag);
-      window.onYouTubeIframeAPIReady = () => {
-        ytPlayer = new YT.Player("yt", {
-          videoId: id,
-          playerVars: { autoplay: 0, mute: 1, playsinline: 1, rel: 0, modestbranding: 1 },
-          events: {
-            onReady: (ev) => {
-              ev.target.mute();
-              ev.target.setVolume(0);
-              if (!audio.paused) ev.target.playVideo();
-            },
-            onStateChange: (ev) => {
-              if (ev.data === YT.PlayerState.PLAYING) ev.target.mute();
-            },
-          },
-        });
-      };
-      if (window.YT && YT.Player) window.onYouTubeIframeAPIReady();
-    }
-
-    async function rafraichitDirect() {
-      try {
-        const fiche = await fetch("/direct.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
-        if (fiche?.live === true && fiche.video) monteYoutube(String(fiche.video));
-      } catch (_) {}
-    }
-    rafraichitDirect();
-    setInterval(rafraichitDirect, 60000);
-
     async function rafraichitDogmazic() {
       const lien = document.getElementById("dogmazic");
       try {
@@ -295,10 +220,7 @@
         const fiche = await fetch("/release.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
         if (!fiche) return;
         if (fiche.site && site) site.href = fiche.site;
-        if (fiche.stream && stream) {
-          stream.href = fiche.stream;
-          stream.textContent = fiche.stream;
-        }
+        if (fiche.stream && stream) stream.href = fiche.stream;
         const cible = fiche.releases || fiche.repo;
         if (cible && repo) repo.href = cible;
         if (fiche.version && ver) ver.textContent = fiche.version;

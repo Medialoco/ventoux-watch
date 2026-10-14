@@ -75,9 +75,9 @@ const COPY = {
     watchMusic: "The Pi selects the track and ducks it under a voice. Under the picture: previous cover, current track, next two, artist, title, licence, equaliser.",
     watchOut: "The picture is encoded and sent to YouTube. The radio does not depend on it.",
     watchRadioTitle: "Radio",
-    watchRadioLead: "Stream for VLC and radio apps: ",
-    watchRadioTail: " Credits on stream and now.json.",
-    footerStream: "HLS stream",
+    watchRadioLead: "Listen: ",
+    watchRadioTail: " — HLS for VLC: freetechnoradio.benoit-prieur.fr/index.m3u8. Credits on stream and now.json.",
+    footerRadio: "Radio",
     radioFallbackLead: "The station is on the air.",
     listen: "Dogmazic playlist",
     radio: "Audio stream",
@@ -319,9 +319,9 @@ const COPY = {
     watchMusic: "Le Pi choisit le morceau et le baisse sous une voix. Sous l’image : la pochette précédente, le morceau en cours, les deux suivants, l’artiste, le titre, la licence, l’égaliseur.",
     watchOut: "L'image est encodée et envoyée à YouTube. La radio n'en dépend pas.",
     watchRadioTitle: "Radio",
-    watchRadioLead: "Flux pour VLC et les apps radio : ",
-    watchRadioTail: " Crédits sur le flux et dans now.json.",
-    footerStream: "Flux HLS",
+    watchRadioLead: "Écouter : ",
+    watchRadioTail: " — HLS pour VLC : freetechnoradio.benoit-prieur.fr/index.m3u8. Crédits sur le flux et dans now.json.",
+    footerRadio: "Radio",
     radioFallbackLead: "L'antenne est ouverte.",
     listen: "Playlist Dogmazic",
     radio: "Flux audio",
@@ -972,8 +972,6 @@ const FALLBACK = "https://s1.vision-environnement.com/live/modules/timelapse/tim
 
 const video = document.querySelector("#player");
 const direct = document.querySelector("#direct");
-const directThumb = document.querySelector("#direct-thumb");
-const ytThumbWrap = document.querySelector("#yt-thumb-wrap");
 const liveHold = document.querySelector("#live-hold");
 const stageBrand = document.querySelector("#stage-brand");
 const surYouTube = document.querySelector("#sur-youtube");
@@ -1026,7 +1024,6 @@ function hideCamera() {
 // with this page only moves when the page is published, so the page asks main
 // first and keeps that copy as a spare.
 let diffusion = "";
-let diffusionThumb = "";
 const DIRECT = [
   "https://raw.githubusercontent.com/Medialoco/ventoux-watch/main/data/direct.json",
   "data/direct.json",
@@ -1102,7 +1099,6 @@ function arreteRadio() {
     radioAudio.load();
   }
   if (radioPanel) radioPanel.hidden = true;
-  cachePetitYoutube();
   layoutRadio(false);
   arreteLeCredit();
 }
@@ -1118,30 +1114,10 @@ function layoutRadio(on) {
   if (stageBrand) stageBrand.hidden = true;
 }
 
-function montrePetitYoutube(numero) {
-  if (!directThumb || !ytThumbWrap) return;
-  const id = String(numero || "");
-  if (!/^[\w-]{11}$/.test(id)) {
-    cachePetitYoutube();
-    return;
-  }
-  ytThumbWrap.hidden = false;
-  if (id === diffusionThumb && directThumb.src) return;
-  diffusionThumb = id;
-  directThumb.src = `https://www.youtube.com/embed/${id}?mute=1&playsinline=1&rel=0&modestbranding=1`;
-}
-
-function cachePetitYoutube() {
-  diffusionThumb = "";
-  if (directThumb) directThumb.removeAttribute("src");
-  if (ytThumbWrap) ytThumbWrap.hidden = true;
-}
-
-function demarreRadio(url, videoYoutube) {
+function demarreRadio(url) {
   if (!radioAudio || !url) return false;
   if (url === radioUrl && radioPanel && !radioPanel.hidden) {
     montreLeMorceau();
-    if (videoYoutube) montrePetitYoutube(videoYoutube);
     return true;
   }
   radioUrl = url;
@@ -1166,8 +1142,6 @@ function demarreRadio(url, videoYoutube) {
     if (lance) radioAudio.play().catch(() => {});
   }
   montreLeMorceau();
-  if (videoYoutube) montrePetitYoutube(videoYoutube);
-  else lisLeDirect().then((fiche) => montrePetitYoutube(fiche?.video));
   return true;
 }
 
@@ -1271,9 +1245,8 @@ async function suisLeDirect() {
   } else if (fiche?.chaine && surYouTube) {
     surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
   }
-  const videoId = fiche && /^[\w-]{11}$/.test(String(fiche.video || "")) ? String(fiche.video) : "";
   if (!fiche || enDirect === false) {
-    if (urlRadioValide(radio) && demarreRadio(radio.url, videoId)) {
+    if (urlRadioValide(radio) && demarreRadio(radio.url)) {
       if (liveMot) liveMot.textContent = t("radioOn");
       return;
     }
@@ -1329,9 +1302,8 @@ window.addEventListener("message", (event) => {
   }
   if (!youtubeFerme(data)) return;
   cacheYoutube();
-  Promise.all([lisRadio(), lisLeDirect()]).then(([radio, fiche]) => {
-    const id = fiche && /^[\w-]{11}$/.test(String(fiche.video || "")) ? String(fiche.video) : "";
-    if (urlRadioValide(radio)) demarreRadio(radio.url, id);
+  lisRadio().then((radio) => {
+    if (urlRadioValide(radio)) demarreRadio(radio.url);
   });
 });
 
