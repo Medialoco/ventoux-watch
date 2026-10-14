@@ -58,29 +58,10 @@
     .title { font-size: 1.12rem; font-weight: 650; }
     .licence { font-size: 0.82rem; color: #9aa0a8; }
     .licence a { color: #9dd3ba; }
-    .player {
+    audio {
       width: 100%;
-      max-width: 480px;
-      margin: 0 auto 14px;
+      margin-bottom: 14px;
     }
-    .player iframe {
-      display: block;
-      width: 100%;
-      height: 72px;
-      border: none;
-      border-radius: 12px;
-    }
-    .player-radivu-link {
-      font: 13px/1.5 system-ui, -apple-system, sans-serif;
-      margin: 6px 0 0;
-      text-align: center;
-    }
-    .player-radivu-link a {
-      color: #a855f7;
-      text-decoration: none;
-      border-bottom: none;
-    }
-    .player-radivu-link a:hover { color: #c084fc; }
     .links {
       margin-top: 18px;
       font-size: 13px;
@@ -94,6 +75,7 @@
     }
     .links a:hover { color: #c5ead8; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -106,20 +88,7 @@
         <p class="licence" id="licence" hidden></p>
       </div>
     </div>
-    <div class="player">
-      <iframe
-        src="https://radivu.com/embed/freetechnoradio?theme=light&amp;layout=bar"
-        width="100%"
-        height="72"
-        frameborder="0"
-        allow="autoplay; encrypted-media"
-        loading="lazy"
-        style="border:none;border-radius:12px;max-width:480px;"
-        title="#FREETECHNORADIO - Radivu"></iframe>
-      <p class="player-radivu-link">
-        <a href="https://radivu.com/listen/freetechnoradio" target="_blank" rel="noopener">#FREETECHNORADIO - listen live on Radivu</a>
-      </p>
-    </div>
+    <audio id="audio" controls playsinline></audio>
     <nav class="links" aria-label="Links">
       <a id="stream" href="https://freetechnoradio.benoit-prieur.fr/index.m3u8">index.m3u8 (VLC)</a><br>
       <a id="dogmazic" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" target="_blank" rel="noopener">Dogmazic playlist</a><br>
@@ -168,6 +137,21 @@
     }
     paintHash();
     window.addEventListener("resize", paintHash);
+
+    const audio = document.getElementById("audio");
+    const stream = location.origin + "/index.m3u8";
+    let hls = null;
+
+    function demarreHls() {
+      if (window.Hls && Hls.isSupported()) {
+        hls = new Hls();
+        hls.loadSource(stream);
+        hls.attachMedia(audio);
+      } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
+        audio.src = stream;
+      }
+    }
+    demarreHls();
 
     function pochette(nom) {
       if (!nom) return "";
