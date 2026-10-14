@@ -4,7 +4,9 @@
 
 Web radio. **Free music only** ([Dogmazic](https://play.dogmazic.net/)). Track selection, mix, voice, encode and publish on a **Raspberry Pi 5** in Los Angeles. **Associated YouTube feed**: Mont Serein webcam (1 frame/s, OpenCV MOG2, YOLO11s ONNX); Cannes backup when the pass HLS playlist closes.
 
-Watcher **v0.6.47**.
+**Listen (HLS)** : `https://freetechnoradio.benoit-prieur.fr/index.m3u8`
+
+Watcher **v0.6.48**.
 
 ## Listen
 
@@ -42,7 +44,7 @@ ssh ventoux 'bash -s' < scripts/pi_install.sh
 
 Deploy: `.venv/bin/python -m scripts.deploie` (watch) · `--flux` when `watcher/stream.py` or the radio server changes (≥ 1 h between `--flux`, or `--quand-meme`).
 
-The radio page reads `data/release.json` for the displayed version and links (repo, site): bump it in git without restarting the stream on the Pi.
+The radio page reads `data/release.json` for the displayed version, HLS URL (`stream`), player URL (`player`), and links (repo, site): bump it in git without restarting the stream on the Pi.
 
 ## Radio HTTPS
 

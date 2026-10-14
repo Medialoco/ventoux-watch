@@ -4,7 +4,9 @@
 
 Webradio. **Musique libre uniquement** ([Dogmazic](https://play.dogmazic.net/)). Sélection, mix, voix, encodage et publication sur un **Raspberry Pi 5** à Los Angeles. **Flux YouTube associé** : webcam du Mont Serein (1 image/s, OpenCV MOG2, YOLO11s ONNX) ; relais Cannes si la playlist HLS du col se ferme.
 
-Veilleur **v0.6.47**.
+**Écouter (HLS)** : `https://freetechnoradio.benoit-prieur.fr/index.m3u8`
+
+Veilleur **v0.6.48**.
 
 ## Écouter
 
@@ -42,7 +44,7 @@ ssh ventoux 'bash -s' < scripts/pi_install.sh
 
 Déploiement : `.venv/bin/python -m scripts.deploie` (veille) · `--flux` si `watcher/stream.py` ou le serveur radio change (≥ 1 h entre deux `--flux`, ou `--quand-meme`).
 
-La page radio lit `data/release.json` pour le numéro affiché et les liens (repo, site) : on peut le bumper dans git sans redémarrer le flux sur le Pi.
+La page radio lit `data/release.json` pour le numéro affiché, l’URL HLS (`stream`), la page joueur (`player`) et les liens (repo, site) : on peut le bumper dans git sans redémarrer le flux sur le Pi.
 
 ## Radio HTTPS
 

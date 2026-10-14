@@ -76,7 +76,8 @@ const COPY = {
     watchOut: "The picture is encoded and sent to YouTube. The radio does not depend on it.",
     watchRadioTitle: "Radio",
     watchRadio:
-      "HTTPS audio: data/radio.json and freetechnoradio.benoit-prieur.fr. Credits on stream and on now.json.",
+      "HLS (VLC, directories): https://freetechnoradio.benoit-prieur.fr/index.m3u8 — browser player on the same host. Credits on stream and now.json.",
+    watchRadioPlayer: "Player page",
     radioFallbackLead: "The station is on the air.",
     listen: "Dogmazic playlist",
     radio: "Audio stream",
@@ -319,7 +320,8 @@ const COPY = {
     watchOut: "L'image est encodée et envoyée à YouTube. La radio n'en dépend pas.",
     watchRadioTitle: "Radio",
     watchRadio:
-      "Audio HTTPS : data/radio.json et freetechnoradio.benoit-prieur.fr. Crédits sur le flux et dans now.json.",
+      "HLS (VLC, annuaires) : https://freetechnoradio.benoit-prieur.fr/index.m3u8 — page joueur sur le même hôte. Crédits sur le flux et dans now.json.",
+    watchRadioPlayer: "Page joueur",
     radioFallbackLead: "L'antenne est ouverte.",
     listen: "Playlist Dogmazic",
     radio: "Flux audio",

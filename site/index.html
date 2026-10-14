@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>#FREETECHNORADIO — web radio</title>
-  <meta name="description" content="#FREETECHNORADIO is a web radio on a Raspberry Pi 5: free music only (Dogmazic), mixed on device, with an associated YouTube picture from the Mont Serein webcam.">
+  <meta name="description" content="#FREETECHNORADIO — HLS https://freetechnoradio.benoit-prieur.fr/index.m3u8 — web radio on Raspberry Pi 5, free music (Dogmazic), Mont Serein picture on YouTube.">
   <link rel="canonical" href="https://medialoco.github.io/ventoux-watch/">
   <meta name="robots" content="index,follow">
   <meta property="og:type" content="website">
@@ -21,9 +21,16 @@
     "@context": "https://schema.org",
     "@type": "RadioStation",
     "name": "#FREETECHNORADIO",
-    "url": "https://medialoco.github.io/ventoux-watch/",
+    "url": "https://freetechnoradio.benoit-prieur.fr/",
     "description": "Web radio from a Raspberry Pi in Los Angeles. The mix stays on the air. The picture is the Mont Serein webcam, also sent to YouTube.",
+    "broadcastAffiliateOf": {
+      "@type": "BroadcastService",
+      "broadcastDisplayName": "#FREETECHNORADIO",
+      "broadcastServiceUrl": "https://freetechnoradio.benoit-prieur.fr/index.m3u8"
+    },
     "sameAs": [
+      "https://freetechnoradio.benoit-prieur.fr/index.m3u8",
+      "https://medialoco.github.io/ventoux-watch/",
       "https://www.youtube.com/channel/UCvN0sNcj5JM9tklIkAlGi7g",
       "https://benoit-prieur.fr/projects.html#freetechnoradio"
     ]
@@ -89,7 +96,9 @@
       <aside class="box" id="pipeline" aria-labelledby="pipeline-title">
         <h2 id="pipeline-title" data-i18n="pipeline">Station</h2>
         <p data-i18n="pipelineLead">#FREETECHNORADIO is a web radio on a Raspberry Pi 5 in Los Angeles: free music only (Dogmazic), mixed on the device, published as HLS and as an associated YouTube feed. The video is the Mont Serein webcam at 1 frame/s (MOG2, YOLO11s ONNX), with Cannes as backup when the pass playlist closes.</p>
-        <p data-i18n="watchRadio">HTTPS audio: data/radio.json and freetechnoradio.benoit-prieur.fr. Credits on stream and on now.json.</p>
+        <p data-i18n="watchRadio">HLS (VLC, directories): https://freetechnoradio.benoit-prieur.fr/index.m3u8 — browser player on the same host. Credits on stream and now.json.</p>
+        <p><a class="play" href="https://freetechnoradio.benoit-prieur.fr/index.m3u8" target="_blank" rel="noopener">index.m3u8</a>
+          · <a href="https://freetechnoradio.benoit-prieur.fr/" target="_blank" rel="noopener" data-i18n="watchRadioPlayer">Player page</a></p>
         <p><a href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" target="_blank" rel="noopener" data-i18n="listen">Dogmazic playlist</a></p>
         <p><a href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener" data-i18n="repoPrivate">Source and history of every change.</a></p>
       </aside>
@@ -180,7 +189,7 @@
         <p data-i18n="musicLead">Free music only, from Dogmazic. The Pi library is mirrored in a public Dogmazic playlist (sync: scripts/dogmazic_playlist.py --verifie on the Pi).</p>
         <p><a class="play ghost" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803"
              target="_blank" rel="noopener" data-i18n="listen">Dogmazic playlist</a>
-          · <a href="https://freetechnoradio.benoit-prieur.fr/" target="_blank" rel="noopener">freetechnoradio.benoit-prieur.fr</a></p>
+          · <a href="https://freetechnoradio.benoit-prieur.fr/index.m3u8" target="_blank" rel="noopener">index.m3u8</a></p>
       </aside>
     </div>
   </section>
@@ -224,6 +233,7 @@
     <p>
       <span class="sr" id="version"></span>
       <a href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener" data-i18n="repoPrivate">Source and history of every change.</a>
+      · <a href="https://freetechnoradio.benoit-prieur.fr/index.m3u8" target="_blank" rel="noopener">index.m3u8</a>
     </p>
   </footer>
   <script src="app.js"></script>

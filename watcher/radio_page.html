@@ -20,6 +20,11 @@
       margin: 0 auto;
       padding: 28px 20px 40px;
       text-align: center;
+      border: 1px solid color-mix(in srgb, #9dd3ba 40%, #2b2f36);
+      border-radius: 12px;
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, #9dd3ba 14%, transparent),
+        0 14px 42px rgba(0, 0, 0, 0.38);
     }
     canvas.hash {
       display: block;
@@ -112,7 +117,7 @@
       <div id="yt"></div>
     </div>
     <nav class="links" aria-label="Links">
-      <a href="/index.m3u8">index.m3u8</a><br>
+      <a id="stream" href="https://freetechnoradio.benoit-prieur.fr/index.m3u8">https://freetechnoradio.benoit-prieur.fr/index.m3u8</a><br>
       <a id="dogmazic" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" target="_blank" rel="noopener">Dogmazic playlist</a><br>
       <a id="site-doc" href="https://medialoco.github.io/ventoux-watch/" target="_blank" rel="noopener">About the station</a><br>
       <a id="repo" href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener">Source · v<span id="release-ver">0.6.48</span></a>
@@ -285,10 +290,15 @@
       const repo = document.getElementById("repo");
       const ver = document.getElementById("release-ver");
       const site = document.getElementById("site-doc");
+      const stream = document.getElementById("stream");
       try {
         const fiche = await fetch("/release.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
         if (!fiche) return;
         if (fiche.site && site) site.href = fiche.site;
+        if (fiche.stream && stream) {
+          stream.href = fiche.stream;
+          stream.textContent = fiche.stream;
+        }
         const cible = fiche.releases || fiche.repo;
         if (cible && repo) repo.href = cible;
         if (fiche.version && ver) ver.textContent = fiche.version;
