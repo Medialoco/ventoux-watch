@@ -102,7 +102,7 @@
 <body>
   <div class="wrap">
     <canvas class="hash" id="hash" aria-hidden="true"></canvas>
-    <p class="live" id="live-badge" hidden>YouTube · synced picture</p>
+    <p class="live" id="live-badge" hidden>YouTube · muted</p>
     <div class="main">
       <img class="cover" id="cover" alt="" width="148" height="148" hidden>
       <div class="meta">
@@ -136,9 +136,6 @@
       R: ["11110","10001","10001","11110","10100","10010","10001"],
       T: ["11111","00100","00100","00100","00100","00100","00100"],
     };
-    /** Audio in the HLS branch runs ahead of the YouTube picture (Pi, ~12.1 s). */
-    const EN_AVANCE = 12.1;
-
     function paintHash() {
       const cell = 3, gap = 1, step = cell + gap, stride = 6;
       const tile = document.createElement("canvas");
@@ -168,22 +165,7 @@
     const audio = document.getElementById("audio");
     const stream = location.origin + "/index.m3u8";
     let hls = null;
-    let audioCtx = null;
-    let delayNode = null;
     let ytPlayer = null;
-    let ytLive = false;
-
-    function brancheAudioRetarde() {
-      if (!ytLive || audioCtx || !window.AudioContext) return;
-      try {
-        audioCtx = new AudioContext();
-        const source = audioCtx.createMediaElementSource(audio);
-        delayNode = audioCtx.createDelay(EN_AVANCE + 1);
-        delayNode.delayTime.value = EN_AVANCE;
-        source.connect(delayNode);
-        delayNode.connect(audioCtx.destination);
-      } catch (_) { /* already wired or blocked */ }
-    }
 
     function demarreHls() {
       if (window.Hls && Hls.isSupported()) {
@@ -196,9 +178,10 @@
     }
     demarreHls();
     audio.addEventListener("play", () => {
-      brancheAudioRetarde();
-      audioCtx?.resume();
-      ytPlayer?.playVideo?.();
+      try {
+        ytPlayer?.mute?.();
+        ytPlayer?.playVideo?.();
+      } catch (_) {}
     });
 
     function pochette(nom) {
@@ -252,10 +235,8 @@
       if (!/^[\w-]{11}$/.test(id)) {
         wrap.hidden = true;
         badge.hidden = true;
-        ytLive = false;
         return;
       }
-      ytLive = true;
       wrap.hidden = false;
       badge.hidden = false;
       const tag = document.createElement("script");
@@ -266,7 +247,14 @@
           videoId: id,
           playerVars: { autoplay: 0, mute: 1, playsinline: 1, rel: 0, modestbranding: 1 },
           events: {
-            onReady: () => { if (!audio.paused) ytPlayer.playVideo(); },
+            onReady: (ev) => {
+              ev.target.mute();
+              ev.target.setVolume(0);
+              if (!audio.paused) ev.target.playVideo();
+            },
+            onStateChange: (ev) => {
+              if (ev.data === YT.PlayerState.PLAYING) ev.target.mute();
+            },
           },
         });
       };
