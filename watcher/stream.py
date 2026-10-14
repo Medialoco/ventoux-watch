@@ -7847,11 +7847,20 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     )
     radio_serveur: RadioServeur | None = None
     hls_playlist: Path | None = None
-    radio_public = (
-        (radio_cfg.get("public_url") or os.environ.get("VENTOUX_RADIO_PUBLIC_URL") or "")
-        .strip()
-        .rstrip("/")
-    )
+    def url_radio() -> str:
+        """Relit le fichier à chaque note : le tunnel peut changer l'URL sans tuer YouTube."""
+        env = racine / "config" / "radio_public.env"
+        if env.is_file():
+            for line in env.read_text(encoding="utf-8").splitlines():
+                if line.startswith("VENTOUX_RADIO_PUBLIC_URL="):
+                    return line.split("=", 1)[1].strip().rstrip("/")
+        return (
+            (radio_cfg.get("public_url") or os.environ.get("VENTOUX_RADIO_PUBLIC_URL") or "")
+            .strip()
+            .rstrip("/")
+        )
+
+    radio_public = url_radio()
     if radio_actif:
         hls_dir = racine / "data" / "radio"
         hls_dir.mkdir(parents=True, exist_ok=True)
@@ -7865,7 +7874,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 "public ne peut pas basculer sur l'audio quand YouTube tombe",
                 port,
             )
-        note_radio(racine, live=False, public_base=radio_public)
+        note_radio(racine, live=False, public_base=url_radio())
     muet = not cfg.get("stream_musique", True)
     musique = Musique(racine / "data" / "musique", racine, muet=muet)
     if muet:
@@ -8927,7 +8936,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 _ferme_sortie(sortie, son)
                 sortie = son = verseur = None
                 if radio_actif:
-                    note_radio(racine, live=False, public_base=radio_public)
+                    note_radio(racine, live=False, public_base=url_radio())
                 time.sleep(LACHE_DIRECT_S)
                 break
             if sortie is None:
@@ -8935,7 +8944,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                                       cfg["stream_bitrate"], cfg["stream_out_fps"],
                                       cfg["stream_preset"], hls_playlist)
                 if radio_actif:
-                    note_radio(racine, live=True, public_base=radio_public)
+                    note_radio(racine, live=True, public_base=url_radio())
                 assert sortie.stdin is not None
                 ouverte_a = _maintenant()
                 # Horloge neuve des deux côtés : la vidéo de cette sortie-ci
@@ -8993,7 +9002,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 _ferme_sortie(sortie, son)
                 sortie = son = verseur = None
                 if radio_actif:
-                    note_radio(racine, live=False, public_base=radio_public)
+                    note_radio(racine, live=False, public_base=url_radio())
                 cadence = None
                 continue
             if duree_s is not None and _maintenant() - debut >= duree_s:
@@ -9008,7 +9017,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             verseur.join(timeout=5)
         _ferme_sortie(sortie, son)
         if radio_actif:
-            note_radio(racine, live=False, public_base=radio_public)
+            note_radio(racine, live=False, public_base=url_radio())
         if radio_serveur is not None:
             radio_serveur.ferme()
     log.info("%d images diffusées", images)

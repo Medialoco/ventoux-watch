@@ -1,25 +1,26 @@
 #!/usr/bin/env bash
-# Tunnel nommé (token ou config cloudflared) si présent, sinon quick tunnel.
+# Connecteur nommé en arrière-plan (URL stable dès que le hostname existe),
+# et tunnel public au premier plan tant que radio.benoit-prieur.fr n'est pas routé.
 set -euo pipefail
 ROOT="/opt/ventoux-watch"
 CLOUDFLARED="${CLOUDFLARED:-/usr/local/bin/cloudflared}"
 TOKEN_FILE="${ROOT}/config/radio_tunnel.token"
 CONFIG="${ROOT}/config/cloudflared-radio.yml"
-PY="${ROOT}/.venv/bin/python"
-SYNC="${ROOT}/scripts/sync_radio_public_from_config.py"
+
+named_pid=""
+cleanup() {
+  if [[ -n "${named_pid}" ]]; then
+    kill "${named_pid}" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
 
 if [[ -f "$TOKEN_FILE" ]]; then
-  if [[ -x "$PY" && -f "$SYNC" ]]; then
-    "$PY" "$SYNC" || true
-  fi
-  exec "$CLOUDFLARED" tunnel --no-autoupdate run --token "$(tr -d ' \n\r' < "$TOKEN_FILE")"
-fi
-
-if [[ -f "$CONFIG" ]]; then
-  if [[ -x "$PY" && -f "$SYNC" ]]; then
-    "$PY" "$SYNC" || true
-  fi
-  exec "$CLOUDFLARED" tunnel --no-autoupdate --config "$CONFIG" run
+  "$CLOUDFLARED" tunnel --no-autoupdate run --token "$(tr -d ' \n\r' < "$TOKEN_FILE")" &
+  named_pid=$!
+elif [[ -f "$CONFIG" ]]; then
+  "$CLOUDFLARED" tunnel --no-autoupdate --config "$CONFIG" run &
+  named_pid=$!
 fi
 
 exec "${ROOT}/scripts/radio_tunnel_quick.sh"
