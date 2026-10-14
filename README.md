@@ -1,44 +1,28 @@
-# Mont Serein
+# #FREETECHNORADIO
 
 *[In English](README.en.md)*
 
-#FREETECHNORADIO
-
-Un Raspberry Pi 5, sur un bureau à Los Angeles, regarde la webcam du col du Mont Serein, à 1 389 m sur le mont Ventoux. Une image par seconde. OpenCV trouve ce qui a bougé, YOLO nomme la découpe, et le Pi reconstruit le cadre : la photographie, le rectangle, les encarts, la musique. La veille est le travail. Le flux est le spectacle.
-
-Trois modes, et chaque caméra est le relais de l’autre.
-
-Le Mont Serein. La playlist est ouverte, le cadre est le col. Cannes attend.
-
-Cannes. La playlist du Mont Serein est fermée (`#EXT-X-ENDLIST`, ou un dernier segment plus vieux que 120 s). Le cadre est le direct municipal du boulevard du Midi, vers les plages du Midi, ouvert à 60 s du bord. Un fil relit la playlist du Ventoux toutes les 60 s, hors des images. Dès qu’elle est de nouveau en direct, l’image suivante revient au col, sans relancer la sortie YouTube. Si l’entrée de Cannes s’arrête pendant que cette playlist est vivante, le cadre revient au col. Si les deux playlists sont fermées, la dernière image est tenue.
-
-Les deux. Tant que le Mont Serein est là, Cannes entre pendant 90 s, d’abord 75 s après l’ouverture, puis 900 s après la fin. Une fois, Cannes prend la place du col : la boîte de droite devient Cannes, le compteur reste en bas à droite, le médaillon est l’hôtel Le Splendid. La fois d’après, une rangée : Los Angeles, Mont Serein, Beaumont, Cannes, et le cartouche de droite pour Cannes. Les boîtes gardent leur largeur, les deux images sont plus étroites, chaque image garde son cadre. Les rapports restent sur Los Angeles et Beaumont. Le décodeur de Cannes ne tourne que pendant qu’elle est à l’écran. Dans la rangée, #FREETECHNORADIO est sous chaque image, et le fil entre les deux côtés est omis. Si l’image de Cannes n’est pas arrivée, le col garde toute la fenêtre.
-
-Cannes sert la sécurité en mer. Cette caméra n’a pas eu d’interruption depuis 2022. Le Mont Serein a eu deux interruptions longues cette semaine : le 6 octobre à partir de 08:49, heure de Paris (dernier segment 06:49:04 UTC), et le 8 octobre à partir de 09:16 (dernier segment 07:16:39 UTC), avec entre les deux des reprises qui n’ont pas tenu.
-
-Le Mont Serein a une grille de distances tirée d’OpenStreetMap, depuis le nœud [6410397171](https://www.openstreetmap.org/node/6410397171). Cannes est le nœud [14255983894](https://www.openstreetmap.org/node/14255983894), en 43,5467593, 6,9754344, cap 190°, sur un poteau du boulevard du Midi. La hauteur n’est pas sur ce nœud, et aucune grille n’a été calée : rien n’a été apparié entre l’image et la carte. Le cadre est découpé en route (un bout, en bas à droite), trottoir, plage, mer et ciel. La mer et la plage ne vont pas à YOLO. Un changement sur plus de 35 % du cadre est écarté. L’ours, le tapis, le sous-marin, la piste, l’éléphant et les bâtiments sont pensés pour le rond-point, la crête et la bergerie. Ils sont appliqués tels quels sur le cadre de Cannes, aux mêmes places, y compris pendant que la playlist du Mont Serein est fermée. La teinte, le soleil dessiné, le lampadaire, le pixel, le gris et l’onde suivent la même règle sur une image de Cannes vivante. Au retour du col, le même dessin reprend sa place sur son image. La vue 3D de la page ouvre ce même nœud, à côté de celle du Mont Serein.
-
-La veille voit beaucoup de mouvement. Le réseau n’est appelé que de temps en temps, et pas du tout la nuit quand la crête a disparu : le rectangle de mouvement reste, le nom serait brouillard. Une classe publiée compte dès qu’elle est nommée. L’acclamation verte, un good catch, attend 0,55. Sous chaque encart, trois digits montrent le rapport du jour fois cent, et le compte brut en petit. Los Angeles est à gauche, Beaumont-du-Ventoux à droite. Une classe compte des deux côtés. Chaque côté revient à 000 à son minuit, et les deux minuits ne tombent pas à la même heure.
+Webradio. **Musique libre uniquement** ([Dogmazic](https://play.dogmazic.net/)). Sélection, mix, voix, encodage et publication sur un **Raspberry Pi 5** à Los Angeles. **Flux YouTube associé** : webcam du Mont Serein (1 image/s, OpenCV MOG2, YOLO11s ONNX) ; relais Cannes si la playlist HLS du col se ferme.
 
 Veilleur **v0.6.47**.
 
-Le direct est sur [YouTube](https://www.youtube.com/watch?v=GLoxL408f_E) (le numéro courant est aussi dans `data/direct.json`). Le site est [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Les façons dont l’image change y sont écrites, chacune d’après le code qui tourne.
+## Écouter
 
-Le même mix que YouTube part aussi en HLS sur le Pi ; quand la plateforme tombe, le site lit `data/radio.json` et joue ce flux HTTPS, et #FREETECHNORADIO reste à l’antenne comme une radio, pas seulement comme un direct vidéo.
+| Rôle | URL / fichier |
+| --- | --- |
+| Audio (annuaires, VLC) | `https://freetechnoradio.benoit-prieur.fr/index.m3u8` |
+| Page joueur (navigateur) | [freetechnoradio.benoit-prieur.fr](https://freetechnoradio.benoit-prieur.fr/) (même chemin ; négociation `Accept: text/html`) |
+| Site | [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/) |
+| YouTube | id dans `data/direct.json` · [chaîne](https://www.youtube.com/channel/UCvN0sNcj5JM9tklIkAlGi7g) |
+| Playlist Dogmazic | `data/dogmazic_playlist.json` sur le Pi · sync : `scripts/dogmazic_playlist.py --verifie` |
 
-![Mont Serein, de nuit : rond-point, route, pente et balise du sommet](docs/mont-serein-nuit.png)
+ffmpeg envoie le **même mix** vers RTMP (YouTube) et HLS (`data/radio/`). Crédits : console sous l’image (horloge image), `now.json`, titres `#EXTINF` et page joueur. YouTube muet sur la page radio ; le son est le HLS.
 
-*24 septembre 2026, 23 h 41, heure de Paris. La photo a été prise à 14 h 41 à Los Angeles.*
+Caméra de curiosité, pas une alerte.
 
-La musique est libre, jour et nuit, avec la licence à l’écran pour chaque morceau. Elle vient de [Dogmazic](https://play.dogmazic.net/), et la playlist du flux est [publique](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803). Quatorze heures et treize minutes, cent cinquante-huit morceaux.
+## Développement
 
-Les tailles se lisent en mètres, à partir de la pose de la caméra et d’un modèle de terrain. Au-dessus de 5,5 m ce n’est pas une voiture, quoi qu’en dise le réseau. En dessous de deux mètres ce n’est pas un bus. Quand la mesure ne tient pas, elle est jetée. Zéro veut dire qu’on ne sait pas.
-
-C’est une caméra et une curiosité. Rien de ce qu’elle dit n’est une alerte, et rien de ce qu’elle dit n’est à prendre pour une consigne.
-
-## Faire tourner
-
-Sur le Mac :
+Mac :
 
 ```bash
 uv venv --python 3.12 .venv
@@ -48,34 +32,25 @@ uv pip install --python .venv/bin/python -r requirements-export.txt
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-`models/yolo11s.onnx` part avec le code. Le Pi n’installe pas PyTorch.
+`models/yolo11s.onnx` est versionné. Le Pi n’installe pas PyTorch.
 
-Sur le Pi, une seule commande, rejouable :
+Pi :
 
 ```bash
 ssh ventoux 'bash -s' < scripts/pi_install.sh
 ```
 
-### Radio HTTPS (quand YouTube tombe)
+Déploiement : `.venv/bin/python -m scripts.deploie` (veille) · `--flux` si `watcher/stream.py` ou le serveur radio change (≥ 1 h entre deux `--flux`, ou `--quand-meme`).
 
-Le même mix que YouTube part aussi en HLS sur le Pi (`data/radio/`). GitHub Pages ne peut pas jouer du HTTP seul : une URL HTTPS publique est publiée dans `data/radio.json` pour le secours audio du site. Chaque segment de la playlist porte l'artiste, le titre et la licence du morceau en cours (`now.json` à côté).
+## Radio HTTPS
 
-**Tunnel Cloudflare nommé.** Le connecteur `ventoux-radio` (`e785e845-e55e-4713-a774-17034d4c2bbe`) tourne déjà sur le Pi. Le site ne fige pas la playlist : il lit `data/radio.json`. L'hôte stable `https://radio.benoit-prieur.fr` (`radio.tunnel_hostname` dans `config.json`) attend encore une route dans le tableau de bord : **Public Hostname** `radio` sur `benoit-prieur.fr` → HTTP `127.0.0.1:8767`. Tant que cet enregistrement DNS n'existe pas, le Pi publie une URL HTTPS Cloudflare qui répond, dans `data/radio.json`.
+- Serveur : `watcher/radio_serveur.py`, port **8767**, segments `data/radio/`.
+- URL publique : `config/radio_public.env` ou `radio.public_url` → `data/radio.json`.
+- Hôte stable : **freetechnoradio.benoit-prieur.fr** (`radio.tunnel_hostname`), tunnel Cloudflare `ventoux-radio`, service `ventoux-radio-tunnel`.
+- Recréation tunnel : README historique dans git ; exemple `config/cloudflared-radio.yml.example`. Token dans `config/radio_tunnel.token` (hors git).
 
-Mise en place une fois, si le connecteur doit être recréé :
+## Ailleurs
 
-1. Ajouter le domaine sur [Cloudflare](https://dash.cloudflare.com) (`benoit-prieur.fr` : nameservers Cloudflare ou setup complet).
-2. [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → **Networks** → **Tunnels** → **Create a tunnel** (nom p.ex. `ventoux-radio`).
-3. **Public Hostname** : `radio.benoit-prieur.fr` → `http://127.0.0.1:8767` (même machine que `ventoux-stream`).
-4. Copier le **token** du connecteur sur le Pi (hors git) :
+[`infra.md`](infra.md) · [`incidents.md`](incidents.md) · [`plan.md`](plan.md)
 
-   ```bash
-   ssh ventoux 'install -m 600 /dev/stdin /opt/ventoux-watch/config/radio_tunnel.token' <<< 'COLLER_LE_TOKEN'
-   ```
-
-5. Dans `/opt/ventoux-watch/config/local.json`, ajouter `"radio": { "public_url": "https://radio.benoit-prieur.fr" }` (fusionner avec le reste).
-6. Redémarrer : `sudo systemctl restart ventoux-radio-tunnel ventoux-stream`, puis publier depuis le Pi pour mettre à jour `data/radio.json`.
-
-Sans token, `ventoux-radio-tunnel` repasse sur un tunnel **quick** trycloudflare.com (URL qui change au redémarrage). Tunnel géré à la main : voir `config/cloudflared-radio.yml.example`.
-
-Les secrets ne sont pas dans le dépôt. `config/local.json` se porte à la main, une fois, et il reste ignoré par git. OpenSky et Drive sont facultatifs. Le matériel, la carte, le disque et le chien de garde sont dans [`infra.md`](infra.md). Les pannes sont dans [`incidents.md`](incidents.md). La suite est dans [`plan.md`](plan.md).
+Secrets : `config/local.json` (ignoré par git).

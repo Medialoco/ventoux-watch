@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>#FREETECHNORADIO — web radio</title>
-  <meta name="description" content="#FREETECHNORADIO is a web radio from a Raspberry Pi in Los Angeles. The mix stays on the air. The picture is the Mont Serein webcam, also sent to YouTube.">
+  <meta name="description" content="#FREETECHNORADIO is a web radio on a Raspberry Pi 5: free music only (Dogmazic), mixed on device, with an associated YouTube picture from the Mont Serein webcam.">
   <link rel="canonical" href="https://medialoco.github.io/ventoux-watch/">
   <meta name="robots" content="index,follow">
   <meta property="og:type" content="website">
@@ -87,15 +87,9 @@
     <h2 class="sr" id="live-title" data-i18n="live">Web radio</h2>
     <div class="around">
       <aside class="box" id="pipeline" aria-labelledby="pipeline-title">
-        <h2 id="pipeline-title" data-i18n="pipeline">Pipeline</h2>
-        <p data-i18n="pipelineLead">1 frame/s from the webcam. MOG2 on a frame scaled to 640 px. A compact blob held 3 frames is cropped. YOLO11s, ONNX, names the crop. The rectangle goes back on the original frame. The frame is encoded to YouTube. When the Mont Serein playlist closes, that frame is the Cannes webcam.</p>
-        <p><strong>Raspberry Pi 5</strong> <span data-i18n="watchPi">4 cores, Los Angeles. It reads the frame, keeps the archive, mixes the music, draws the overlays, and pushes the frame. Temperature and load stay on its card.</span></p>
-        <p><strong>OpenCV</strong> <span data-i18n="watchMotion">MOG2. Frame scaled to 640 px. A change over 35% of the frame is treated as light and dropped. The red beacon on the summit is masked.</span></p>
-        <p><strong>YOLO11s</strong> <span data-i18n="watchClass">YOLO11s, ONNX, on the crop only. Car, person, bicycle, truck, bus.</span></p>
-        <p><strong data-i18n="watchEffectsTitle">Effects</strong> <span data-i18n="watchEffects">Drawn on the frame. The table below gives the period, the duration and the gate of each one.</span></p>
-        <p><strong data-i18n="watchMusicTitle">Music</strong> <span data-i18n="watchMusic">The Pi selects the track and ducks it under a voice. Under the picture: previous cover, current track, next two, artist, title, licence, equaliser.</span></p>
-        <p><strong data-i18n="watchRadioTitle">Radio</strong> <span data-i18n="watchRadio">The station is the mix, published as HTTPS audio. This page plays the stream named in data/radio.json whenever the picture is not on YouTube.</span></p>
-        <p><strong>YouTube</strong> <span data-i18n="watchOut">The picture is encoded and sent to YouTube. The radio does not depend on it.</span></p>
+        <h2 id="pipeline-title" data-i18n="pipeline">Station</h2>
+        <p data-i18n="pipelineLead">#FREETECHNORADIO is a web radio on a Raspberry Pi 5 in Los Angeles: free music only (Dogmazic), mixed on the device, published as HLS and as an associated YouTube feed. The video is the Mont Serein webcam at 1 frame/s (MOG2, YOLO11s ONNX), with Cannes as backup when the pass playlist closes.</p>
+        <p data-i18n="watchRadio">HTTPS audio: data/radio.json and freetechnoradio.benoit-prieur.fr. Credits on stream and on now.json.</p>
         <p><a href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener" data-i18n="repoPrivate">Source and history of every change.</a></p>
       </aside>
 
@@ -140,20 +134,6 @@
         </p>
       </div>
 
-      <aside class="box" id="rebuild" aria-labelledby="rebuild-title">
-        <h2 id="rebuild-title" data-i18n="rebuild">Rebuilt</h2>
-        <p data-i18n="rebuildLead">ffmpeg reads the webcam at 1 frame/s. MOG2 runs at 640 px. A compact blob held 3 frames is cropped. YOLO11s, ONNX, names the crop. The rectangle is drawn on the original frame. Overlays sit in the letterbox. The frame is encoded to YouTube.</p>
-      </aside>
-
-      <aside class="box" id="cannes" aria-labelledby="cannes-title">
-        <h2 id="cannes-title" data-i18n="cannesTitle">Three modes</h2>
-        <p data-i18n="cannesLead">Three modes, and each camera is the other's backup. Mont Serein: the playlist is open and the frame is the pass, with Cannes waiting. Cannes: the Mont Serein playlist is closed and the frame is the beach. Both: while the pass is up, Cannes joins the frame for a short turn. Cannes is a municipal camera used for safety at sea. It has not been interrupted since 2022. Mont Serein has had two long interruptions this week, from 08:49 Europe/Paris on 6 October (last segment 2026-10-06T06:49:04Z, #EXT-X-ENDLIST) and from 09:16 on 8 October (last segment 2026-10-08T07:16:39Z), with restarts in between that did not hold.</p>
-        <p data-i18n="cannesBackup">Cannes. That camera is the municipal live on Boulevard du Midi, aimed at Les plages du Midi. A side thread reads the Mont Serein playlist every 60 s, off the frame loop. End of list, or a last segment older than 120 s, replaces the picture with Cannes. Cannes is opened 60 s behind its live edge, then held at one second of film per second of clock. The line reads Backup webcam, Cannes. Waiting for Mont Serein. When the playlist is live again, the next frame closes Cannes and opens Mont Serein. The YouTube output is not restarted for that switch. If the Cannes input stops while the Mont Serein playlist is live, the next frame returns to the pass. If both playlists are closed, the last picture is held.</p>
-        <p data-i18n="cannesDuplex">Both. While Mont Serein is the picture, Cannes appears in turn, for 90 s. The first time is 75 s after the stream opens. The next starts 900 s after this one ends, and the two shapes alternate. One is the same page as Mont Serein, with the Cannes picture and the right card turned into Cannes: the counter stays at the bottom right, and the disc is the Hôtel Le Splendid. The other is one row, left to right: the Los Angeles card, the Mont Serein picture, the Beaumont card, the Cannes picture, and the right cartouche for Cannes. The cards keep the cartouche width, so the two pictures are narrower. Each picture keeps its whole frame, letterboxed in its column. The day ratios stay on Los Angeles and Beaumont. The Cannes decoder runs only while that picture is on screen, at 640×360, 180 s behind, and it stops when the picture leaves. It does not run during a flyover, a replay, or a frozen playlist. In the row, #FREETECHNORADIO sits under each picture, and the wire between the side cards is left out. If the Cannes picture has not arrived, Mont Serein keeps the whole window.</p>
-        <p data-i18n="cannesMotion">Mont Serein has a distance grid built from OpenStreetMap, from node/6410397171. A named box uses the metres that grid measures. Cannes is node/14255983894, at 43.5467593, 6.9754344, bearing 190°, on a pole on Boulevard du Midi. That node has no height, and this frame has no fitted distance grid: nothing has been matched between the picture and the map. The frame is cut into zones: a short piece of road at the bottom right, the sidewalk, the beach, the sea, and the sky. Motion on the sea or the beach is not sent to YOLO. A change over 35% of the frame is dropped, which is how a field of waves can hide a real passage. A rectangle is drawn on the camera it was measured on. It is not copied onto the other column.</p>
-        <p data-i18n="cannesEffects">Bear, carpet, submarine, piste, elephant and buildings were drawn for the roundabout, the crest and the sheepfold. On Cannes they are applied as they are, at the same places in the frame, including while the Mont Serein playlist is closed. The places stay those of the pass. Dancers are drawn there too. Bubbles and fish are drawn on every column that is on screen. Tint, the drawn sun, the lamp, and pixel, grey and wave follow the same rule on a live Cannes picture. When Mont Serein returns, the same drawing goes back on its picture.</p>
-      </aside>
-
       <div class="box numbers" id="numbers" aria-labelledby="numbers-title">
         <h2 id="numbers-title" data-i18n="numbers">On the stream</h2>
         <p data-i18n="numbersLead">One set piece at a time. A turn is taken only when the stage is free at the instant it starts; otherwise that whole turn is skipped. Periods are prime numbers. At night every period on that stage except the bear’s is divided by 3, and the start delay is divided by the same factor. Pixel, grey and wave are a separate draw, not on that stage. The bear keeps his own pace. Each row below is what is drawn, with its period, its duration and its gate, measured from the code that is running.</p>
@@ -196,9 +176,10 @@
 
       <aside class="box" id="music" aria-labelledby="music-title">
         <h2 id="music-title" data-i18n="musicTitle">Dogmazic</h2>
-        <p data-i18n="musicLead">Dogmazic is a free-music library. The artists keep the rights and choose a Creative Commons licence, so a stream can play the work in public as long as it names the author, the title, the licence and a place to find the file. Fourteen hours and thirteen minutes turn here, one hundred and fifty-eight tracks, all from that library. Four hours of that are the album Mont Serein 002, written for this project. The playlist is public.</p>
+        <p data-i18n="musicLead">Free music only, from Dogmazic. The Pi library is mirrored in a public Dogmazic playlist (sync: scripts/dogmazic_playlist.py --verifie on the Pi).</p>
         <p><a class="play ghost" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803"
-             target="_blank" rel="noopener" data-i18n="listen">Listen on Dogmazic</a></p>
+             target="_blank" rel="noopener" data-i18n="listen">Dogmazic playlist</a>
+          · <a href="https://freetechnoradio.benoit-prieur.fr/" target="_blank" rel="noopener">freetechnoradio.benoit-prieur.fr</a></p>
       </aside>
     </div>
   </section>

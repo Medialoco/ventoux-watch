@@ -1,44 +1,28 @@
-# Mont Serein
+# #FREETECHNORADIO
 
-*[Version française](README.md)*
+*[Français](README.md)*
 
-#FREETECHNORADIO
-
-A Raspberry Pi 5 on a desk in Los Angeles watches the webcam at the Mont Serein pass, 1,389 m up Mont Ventoux. One frame a second. OpenCV finds what moved, YOLO names the crop, and the Pi rebuilds the picture: the photograph, the rectangle, the overlays, the music. The watch is the work. The stream is the show.
-
-Three modes, and each camera is the other’s backup.
-
-Mont Serein. The playlist is open and the frame is the pass. Cannes waits.
-
-Cannes. The Mont Serein playlist is closed (`#EXT-X-ENDLIST`, or a last segment older than 120 s). The frame is the municipal live on Boulevard du Midi, aimed at Les plages du Midi, opened 60 s behind the live edge. A side thread reads the Ventoux playlist every 60 s, off the frame loop. When it is live again, the next frame returns to the pass without restarting the YouTube output. If the Cannes input stops while that playlist is live, the frame returns to the pass. If both playlists are closed, the last picture is held.
-
-Both. While Mont Serein is up, Cannes comes in for 90 s, first 75 s after open, then 900 s after the previous visit ends. Once, Cannes takes the place of the pass: the right card becomes Cannes, the counter stays at the bottom right, and the disc is the Hôtel Le Splendid. The next time, one row: Los Angeles, Mont Serein, Beaumont, Cannes, and the right cartouche for Cannes. The cards keep their width, the two pictures are narrower, and each picture keeps its frame. The ratios stay on Los Angeles and Beaumont. The Cannes decoder runs only while that picture is on screen. In the row, #FREETECHNORADIO sits under each picture, and the wire between the two sides is left out. If the Cannes picture has not arrived, the pass keeps the whole window.
-
-Cannes is a municipal camera used for safety at sea. It has not been interrupted since 2022. Mont Serein has had two long interruptions this week: from 08:49 Paris time on 6 October (last segment 06:49:04 UTC) and from 09:16 on 8 October (last segment 07:16:39 UTC), with restarts in between that did not hold.
-
-Mont Serein has a distance grid from OpenStreetMap, from node [6410397171](https://www.openstreetmap.org/node/6410397171). Cannes is node [14255983894](https://www.openstreetmap.org/node/14255983894), at 43.5467593, 6.9754344, bearing 190°, on a pole on Boulevard du Midi. The node has no height, and no distance grid has been fitted: nothing has been matched between the picture and the map. The frame is cut into road (a short piece, bottom right), sidewalk, beach, sea and sky. Sea and beach are not sent to YOLO. A change over 35% of the frame is dropped. Bear, carpet, submarine, piste, elephant and buildings were drawn for the roundabout, the crest and the sheepfold. They are applied as they are on the Cannes frame, at the same places, including while the Mont Serein playlist is closed. Tint, the drawn sun, the lamp, and pixel, grey and wave follow the same rule on a live Cannes picture. When the pass returns, the same drawing goes back on its picture. The page’s 3D view opens this same node, beside the Mont Serein one.
-
-The watch sees a lot of motion. The model is asked only from time to time, and not at all at night once the crest has gone: the motion rectangle stays, the name would be fog. A published class counts as soon as it is named. The green cheer, a good catch, waits for 0.55. Under each card, three digits show that day’s ratio times one hundred, with the raw count in small type. Los Angeles is on the left, Beaumont-du-Ventoux on the right. A class counts for both. Each side returns to 000 at its own midnight, and the two midnights are not the same hour.
+Web radio. **Free music only** ([Dogmazic](https://play.dogmazic.net/)). Track selection, mix, voice, encode and publish on a **Raspberry Pi 5** in Los Angeles. **Associated YouTube feed**: Mont Serein webcam (1 frame/s, OpenCV MOG2, YOLO11s ONNX); Cannes backup when the pass HLS playlist closes.
 
 Watcher **v0.6.47**.
 
-The live picture is on [YouTube](https://www.youtube.com/watch?v=GLoxL408f_E) (the current id is also in `data/direct.json`). The site is [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). The ways the picture changes are written there, each one from the code that is running.
+## Listen
 
-The same mix that feeds YouTube is also tee'd to HLS on the Pi; when the platform drops, the site reads `data/radio.json` and plays that HTTPS stream, so #FREETECHNORADIO stays on the air as a radio, not only a video live.
+| Role | URL / file |
+| --- | --- |
+| Audio (directories, VLC) | `https://freetechnoradio.benoit-prieur.fr/index.m3u8` |
+| Player page (browser) | [freetechnoradio.benoit-prieur.fr](https://freetechnoradio.benoit-prieur.fr/) (same path; `Accept: text/html` negotiation) |
+| Site | [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/) |
+| YouTube | id in `data/direct.json` · [channel](https://www.youtube.com/channel/UCvN0sNcj5JM9tklIkAlGi7g) |
+| Dogmazic playlist | `data/dogmazic_playlist.json` on the Pi · sync: `scripts/dogmazic_playlist.py --verifie` |
 
-![Mont Serein at night: roundabout, road, slope and the summit beacon](docs/mont-serein-nuit.png)
+ffmpeg **tees the same mix** to RTMP (YouTube) and HLS (`data/radio/`). Credits: on-stream console (image clock), `now.json`, `#EXTINF` titles and the player page. YouTube is muted on the radio page; audio is HLS.
 
-*24 September 2026, 23:41 Paris time. The photograph was taken at 14:41 in Los Angeles.*
+A camera and a curiosity, not an alert.
 
-The music is free, around the clock, with the licence on screen for every track. It comes from [Dogmazic](https://play.dogmazic.net/), and the stream’s playlist is [public](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803). Fourteen hours and thirteen minutes, one hundred and fifty-eight tracks.
+## Development
 
-Sizes are read in metres, from the camera’s pose and a terrain model. Above 5.5 m it is not a car, whatever the network says. Below two metres it is not a bus. When the measurement cannot be trusted, it is thrown away. Zero means we do not know.
-
-This is a camera and a curiosity. Nothing it says is an alarm, and nothing it says should be acted upon.
-
-## Running it
-
-On the Mac:
+Mac:
 
 ```bash
 uv venv --python 3.12 .venv
@@ -48,34 +32,25 @@ uv pip install --python .venv/bin/python -r requirements-export.txt
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-`models/yolo11s.onnx` ships with the code. The Pi does not install PyTorch.
+`models/yolo11s.onnx` is in the repo. The Pi never installs PyTorch.
 
-On the Pi, one command, safe to run again:
+Pi:
 
 ```bash
 ssh ventoux 'bash -s' < scripts/pi_install.sh
 ```
 
-### Radio HTTPS (when YouTube is down)
+Deploy: `.venv/bin/python -m scripts.deploie` (watch) · `--flux` when `watcher/stream.py` or the radio server changes (≥ 1 h between `--flux`, or `--quand-meme`).
 
-The same mix that feeds YouTube is also tee'd to HLS on the Pi (`data/radio/`). GitHub Pages cannot play plain HTTP, so a public HTTPS URL is published in `data/radio.json` for the site audio fallback. Each playlist segment carries the artist, the title and the licence of the track that is on (`now.json` beside it).
+## Radio HTTPS
 
-**Named Cloudflare tunnel.** Connector `ventoux-radio` (`e785e845-e55e-4713-a774-17034d4c2bbe`) already runs on the Pi. The site does not hard-code the playlist: it reads `data/radio.json`. The stable hostname `https://radio.benoit-prieur.fr` (`radio.tunnel_hostname` in `config.json`) still needs one dashboard route: **Public Hostname** `radio` on `benoit-prieur.fr` → HTTP `127.0.0.1:8767`. Until that DNS record exists, the Pi publishes a working Cloudflare HTTPS URL in `data/radio.json`.
+- Server: `watcher/radio_serveur.py`, port **8767**, segments in `data/radio/`.
+- Public URL: `config/radio_public.env` or `radio.public_url` → `data/radio.json`.
+- Stable host: **freetechnoradio.benoit-prieur.fr** (`radio.tunnel_hostname`), Cloudflare tunnel `ventoux-radio`, unit `ventoux-radio-tunnel`.
+- Tunnel setup: see git history and `config/cloudflared-radio.yml.example`. Token in `config/radio_tunnel.token` (not in git).
 
-One-time setup, if the connector has to be recreated:
+## Elsewhere
 
-1. Add the domain to [Cloudflare](https://dash.cloudflare.com) (DNS for `benoit-prieur.fr` can stay on OVH with Cloudflare nameservers, or use full setup).
-2. In [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → **Networks** → **Tunnels** → **Create a tunnel** (name e.g. `ventoux-radio`).
-3. **Public Hostname**: `radio.benoit-prieur.fr` → `http://127.0.0.1:8767` (same machine as `ventoux-stream`).
-4. Copy the **connector token** onto the Pi (not in git):
+[`infra.md`](infra.md) · [`incidents.md`](incidents.md) · [`plan.md`](plan.md)
 
-   ```bash
-   ssh ventoux 'install -m 600 /dev/stdin /opt/ventoux-watch/config/radio_tunnel.token' <<< 'PASTE_TOKEN'
-   ```
-
-5. In `/opt/ventoux-watch/config/local.json`, set `"radio": { "public_url": "https://radio.benoit-prieur.fr" }` (merge with existing keys).
-6. Restart: `sudo systemctl restart ventoux-radio-tunnel ventoux-stream`, then publish from the Pi so `data/radio.json` updates.
-
-Until the token exists, `ventoux-radio-tunnel` falls back to a **quick** trycloudflare.com URL (changes on restart). Locally managed tunnels can use `config/cloudflared-radio.yml.example` instead of a token.
-
-Secrets are not in the repository. `config/local.json` is copied by hand, once, and git ignores it. OpenSky and Drive are optional. The hardware, the card, the disk and the watchdog are in [`infra.md`](infra.md). Outages are in [`incidents.md`](incidents.md). Where this is going is in [`plan.md`](plan.md).
+Secrets: `config/local.json` (gitignored).

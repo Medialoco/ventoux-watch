@@ -111,23 +111,11 @@ pour rien ; l'environnement Python ; et le service systemd.
 Le modèle `models/yolo11n.onnx` voyage avec le code. Le Pi n'installe jamais
 PyTorch : l'export du modèle se fait sur le Mac.
 
-### Radio HLS (secours du site)
+### Radio HLS (#FREETECHNORADIO)
 
-Pendant la diffusion, ffmpeg envoie le même mix qu'à YouTube vers des segments
-HLS dans `data/radio/` ; `watcher/radio_serveur.py` les sert en HTTP sur le
-port 8767 (voir `config.json`, clé `radio`). Pour que GitHub Pages puisse
-écouter sans contenu mixte, une URL HTTPS publique est écrite dans
-`config/radio_public.env` (`VENTOUX_RADIO_PUBLIC_URL`) ou `radio.public_url`
-dans `config/local.json` ; le flux lit ce fichier via
-`EnvironmentFile` dans `deploy/ventoux-stream.service`.
+ffmpeg envoie le même mix qu'à YouTube vers `data/radio/`. `watcher/radio_serveur.py` sert la playlist, `now.json`, `direct.json`, `dogmazic.json` et une page HTML (navigateur) sur le port **8767** (`config.json` → `radio`).
 
-Le service `ventoux-radio-tunnel` exécute `scripts/radio_tunnel_run.sh` :
-tunnel **nommé** Cloudflare si `config/radio_tunnel.token` (recommandé, URL
-fixe) ou `config/cloudflared-radio.yml` existe ; sinon tunnel **quick**
-trycloudflare.com. L'hôte prévu est `radio.benoit-prieur.fr` (zone Cloudflare
-requise). Voir le README pour la création du tunnel dans Zero Trust. Avant le
-token, le quick tunnel peut encore alimenter `radio_public.env`. `data/radio.json`
-voyage avec le reste de la publication.
+URL HTTPS publique : `config/radio_public.env` ou `radio.public_url` → `data/radio.json`. Hôte stable : **freetechnoradio.benoit-prieur.fr** (tunnel `ventoux-radio`, service `ventoux-radio-tunnel`, script `scripts/radio_tunnel_run.sh`). Sans token : tunnel quick trycloudflare.com (URL volatile).
 
 ## Le stockage
 
