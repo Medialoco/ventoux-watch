@@ -42,6 +42,8 @@ ssh ventoux 'bash -s' < scripts/pi_install.sh
 
 Déploiement : `.venv/bin/python -m scripts.deploie` (veille) · `--flux` si `watcher/stream.py` ou le serveur radio change (≥ 1 h entre deux `--flux`, ou `--quand-meme`).
 
+La page radio lit `data/release.json` pour le numéro affiché et les liens (repo, site) : on peut le bumper dans git sans redémarrer le flux sur le Pi.
+
 ## Radio HTTPS
 
 - Serveur : `watcher/radio_serveur.py`, port **8767**, segments `data/radio/`.

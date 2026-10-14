@@ -68,22 +68,18 @@
     }
     .yt[hidden] { display: none; }
     .yt iframe { width: 100%; height: 100%; border: 0; }
-    .hint {
-      margin-top: 16px;
-      font-size: 12px;
+    .links {
+      margin-top: 18px;
+      font-size: 13px;
+      line-height: 1.85;
       color: #6b7280;
     }
-    .hint a { color: #9dd3ba; }
-    .dogmazic {
-      display: inline-block;
-      margin-top: 10px;
-      font-size: 13px;
+    .links a {
       color: #9dd3ba;
       text-decoration: none;
       border-bottom: 1px solid color-mix(in srgb, #9dd3ba 35%, transparent);
     }
-    .dogmazic:hover { color: #c5ead8; }
-    .dogmazic[hidden] { display: none; }
+    .links a:hover { color: #c5ead8; }
     .live {
       display: inline-block;
       margin-bottom: 10px;
@@ -115,10 +111,12 @@
     <div class="yt" id="yt-wrap" hidden>
       <div id="yt"></div>
     </div>
-    <p class="hint">
-      Playlist for players: <a href="/index.m3u8">index.m3u8</a><br>
-      <a class="dogmazic" id="dogmazic" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" target="_blank" rel="noopener">Dogmazic playlist</a>
-    </p>
+    <nav class="links" aria-label="Links">
+      <a href="/index.m3u8">index.m3u8</a><br>
+      <a id="dogmazic" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" target="_blank" rel="noopener">Dogmazic playlist</a><br>
+      <a id="site-doc" href="https://medialoco.github.io/ventoux-watch/" target="_blank" rel="noopener">About the station</a><br>
+      <a id="repo" href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener">Source · v<span id="release-ver">0.6.48</span></a>
+    </nav>
   </div>
   <script>
     const HASH = "#FREETECHNORADIO";
@@ -282,6 +280,21 @@
       } catch (_) { /* lien par défaut */ }
     }
     rafraichitDogmazic();
+
+    async function rafraichitRelease() {
+      const repo = document.getElementById("repo");
+      const ver = document.getElementById("release-ver");
+      const site = document.getElementById("site-doc");
+      try {
+        const fiche = await fetch("/release.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+        if (!fiche) return;
+        if (fiche.site && site) site.href = fiche.site;
+        const cible = fiche.releases || fiche.repo;
+        if (cible && repo) repo.href = cible;
+        if (fiche.version && ver) ver.textContent = fiche.version;
+      } catch (_) { /* valeurs par défaut dans le HTML */ }
+    }
+    rafraichitRelease();
   </script>
 </body>
 </html>

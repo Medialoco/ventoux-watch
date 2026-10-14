@@ -24,6 +24,7 @@ HLS_INDEX = "index.m3u8"
 NOW_JSON = "now.json"
 DIRECT_JSON = "data/direct.json"
 DOGMUSIC_JSON = "data/dogmazic_playlist.json"
+RELEASE_JSON = "data/release.json"
 RADIO_PAGE = Path(__file__).with_name("radio_page.html")
 SESSION_DATA = '#EXT-X-SESSION-DATA:DATA-ID="com.freetechnoradio.now",URI="now.json"'
 
@@ -190,8 +191,12 @@ class RadioServeur:
                 if chemin == HLS_INDEX and veut_page_html(accept):
                     self._page()
                     return
-                if chemin in ("direct.json", "dogmazic.json") and projet is not None:
-                    rel = DIRECT_JSON if chemin == "direct.json" else DOGMUSIC_JSON
+                if chemin in ("direct.json", "dogmazic.json", "release.json") and projet is not None:
+                    rel = {
+                        "direct.json": DIRECT_JSON,
+                        "dogmazic.json": DOGMUSIC_JSON,
+                        "release.json": RELEASE_JSON,
+                    }[chemin]
                     cible = (projet / rel).resolve()
                     if not str(cible).startswith(str(projet)) or not cible.is_file():
                         self.send_response(404)

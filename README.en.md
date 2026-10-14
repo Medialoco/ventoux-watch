@@ -42,6 +42,8 @@ ssh ventoux 'bash -s' < scripts/pi_install.sh
 
 Deploy: `.venv/bin/python -m scripts.deploie` (watch) · `--flux` when `watcher/stream.py` or the radio server changes (≥ 1 h between `--flux`, or `--quand-meme`).
 
+The radio page reads `data/release.json` for the displayed version and links (repo, site): bump it in git without restarting the stream on the Pi.
+
 ## Radio HTTPS
 
 - Server: `watcher/radio_serveur.py`, port **8767**, segments in `data/radio/`.
