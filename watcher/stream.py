@@ -6667,14 +6667,15 @@ HORIZON = -0.833
 
 
 DEPLOI_S = 6.0
+STATION_DEPLOI = "#FREETECHNORADIO"
 
 
 def pose_deploiement(image: np.ndarray, version: str, age: float) -> None:
-    """Le numéro qui vient d'arriver, une fois, au redémarrage du flux.
+    """La station et le numéro de build, une fois, au redémarrage du flux.
 
-    Un déploiement sans trace à l'écran, on ne sait pas s'il a pris. Le mot
-    et le numéro tiennent six secondes, comme un bonjour : assez pour le
-    lire, pas assez pour rester collé sur la montagne.
+    Un redémarrage sans trace à l'écran, on ne sait pas s'il a pris. Le nom
+    de la radio et la version tiennent six secondes : assez pour lire, pas
+    assez pour rester collés sur la montagne.
     """
     if age < 0 or age > DEPLOI_S or not version:
         return
@@ -6682,7 +6683,7 @@ def pose_deploiement(image: np.ndarray, version: str, age: float) -> None:
     hauteur, largeur = image.shape[:2]
     echelle = largeur / 1600
     calque = image.copy()
-    for i, (mot, taille) in enumerate((("DEPLOYED", 1.15), (f"v{version}", 1.8))):
+    for i, (mot, taille) in enumerate(((STATION_DEPLOI, 0.52), (f"v{version}", 1.8))):
         echelle_mot = taille * echelle
         epaisseur = max(2, int(4 * echelle))
         (large, haut), _ = cv2.getTextSize(mot, cv2.FONT_HERSHEY_DUPLEX, echelle_mot, epaisseur)
@@ -8885,8 +8886,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             pose_bonjour(toile, nom_du_lieu, quand - bonjour)
             pose_deploiement(toile, __version__, quand - ouvert)
             # La voix part avec le mot, une fois, dans les premières secondes.
-            # Elle dit « Deployed » ; le numéro, lui, reste écrit, parce qu'il
-            # change à chaque livraison et qu'une voix gravée ne peut pas le suivre.
+            # Elle annonce la radio (fichier deploi) ; le numéro reste écrit,
+            # parce qu'il change à chaque livraison et qu'une voix gravée ne
+            # peut pas le suivre.
             if (not deploie_dit and musique.deplois
                     and 0 <= quand - ouvert < 1.5 and not musique.parle()):
                 if musique.dis(musique.deplois[0]):

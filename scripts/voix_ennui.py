@@ -120,7 +120,7 @@ REPLIQUES = [
      "To my very good friend David Vincent or Vincent David or David Vincent, Je pense à toi."),
     # Le mot du redémarrage. La porteuse est ajoutée après, dans le fichier :
     # le modèle dit le mot clairement, le traitement le rend un peu électronique.
-    ("deploi", PLAT, "Deployed"),
+    ("deploi", PLAT, "Free techno radio"),
 ]
 
 
@@ -274,9 +274,9 @@ JEU = {
                "hour. Say the sentence in the language it is written, "
                "naturally, in one breath. Nothing before it, nothing after "
                "it. Never say the word dot.",
-    "deploi": "Say the single word Deployed, clear and even, like a machine "
-              "confirming that it has arrived. Flat, intelligible, about one "
-              "second. No exclamation. Never say the word dot.",
+    "deploi": "Say the phrase Free techno radio, clear and even, like a "
+              "station signing on. Flat, intelligible, about one second. No "
+              "exclamation. Never say the word dot.",
 }
 
 # Les voix, par rôle. « ash » est celle dont medialoco-tube se sert pour sa
