@@ -115,7 +115,7 @@ PyTorch : l'export du modèle se fait sur le Mac.
 
 ffmpeg envoie le même mix qu'à YouTube vers `data/radio/`. `watcher/radio_serveur.py` sert la playlist, `now.json`, `direct.json`, `dogmazic.json` et une page HTML (navigateur) sur le port **8767** (`config.json` → `radio`).
 
-**Flux annuaires / VLC :** `https://freetechnoradio.benoit-prieur.fr/index.m3u8` — page joueur sur le même hôte (négociation `Accept: text/html`).
+**Flux annuaires / VLC :** `https://freetechnoradio.benoit-prieur.fr/index.m3u8` — écoute dans le navigateur sur le même hôte (négociation `Accept: text/html`).
 
 URL HTTPS publique : `config/radio_public.env` ou `radio.public_url` → `data/radio.json`. Hôte stable : **freetechnoradio.benoit-prieur.fr** (tunnel `ventoux-radio`, service `ventoux-radio-tunnel`, script `scripts/radio_tunnel_run.sh`). Sans token : tunnel quick trycloudflare.com (URL volatile, à ne pas mettre dans la doc publique).
 

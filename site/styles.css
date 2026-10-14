@@ -404,6 +404,11 @@ h2 {
 
 .sequence a { color: var(--pine); }
 
+.box .stream-link {
+  color: var(--pine);
+  word-break: break-all;
+}
+
 /* History */
 
 .history-head {
@@ -1157,9 +1162,8 @@ html.in-frame .top {
   gap: 14px;
   padding: 18px 16px 16px;
   background: linear-gradient(165deg, #1a1f24 0%, #0d1014 100%);
-  border: 1px solid color-mix(in srgb, #9dd3ba 38%, var(--line));
+  border: 1px solid var(--line);
   border-radius: 10px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, #9dd3ba 12%, transparent);
 }
 
 .stage-brand {

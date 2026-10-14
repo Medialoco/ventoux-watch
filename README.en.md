@@ -13,7 +13,7 @@ Watcher **v0.6.48**.
 | Role | URL / file |
 | --- | --- |
 | Audio (directories, VLC) | `https://freetechnoradio.benoit-prieur.fr/index.m3u8` |
-| Player page (browser) | [freetechnoradio.benoit-prieur.fr](https://freetechnoradio.benoit-prieur.fr/) (same path; `Accept: text/html` negotiation) |
+| Browser listen page | [freetechnoradio.benoit-prieur.fr](https://freetechnoradio.benoit-prieur.fr/) (same URL; browsers get the player page via `Accept: text/html`) |
 | Site | [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/) |
 | YouTube | id in `data/direct.json` · [channel](https://www.youtube.com/channel/UCvN0sNcj5JM9tklIkAlGi7g) |
 | Dogmazic playlist | [play.dogmazic.net …4803](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803) · sync: `scripts/dogmazic_playlist.py --verifie` |

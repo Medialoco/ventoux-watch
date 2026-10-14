@@ -96,8 +96,10 @@
       <aside class="box" id="pipeline" aria-labelledby="pipeline-title">
         <h2 id="pipeline-title" data-i18n="pipeline">Station</h2>
         <p data-i18n="pipelineLead">#FREETECHNORADIO is a web radio on a Raspberry Pi 5 in Los Angeles: free music only (Dogmazic), mixed on the device, published as HLS and as an associated YouTube feed. The video is the Mont Serein webcam at 1 frame/s (MOG2, YOLO11s ONNX), with Cannes as backup when the pass playlist closes.</p>
-        <p data-i18n="watchRadio">HLS (VLC, directories): https://freetechnoradio.benoit-prieur.fr/index.m3u8. Credits on stream and now.json.</p>
-        <p><a class="play" href="https://freetechnoradio.benoit-prieur.fr/index.m3u8" target="_blank" rel="noopener" data-i18n="watchRadioListen">Listen (HLS)</a></p>
+        <p>
+          <span data-i18n="watchRadioLead">Stream for VLC and radio apps:</span>
+          <a class="stream-link" href="https://freetechnoradio.benoit-prieur.fr/index.m3u8" target="_blank" rel="noopener">freetechnoradio.benoit-prieur.fr/index.m3u8</a><span data-i18n="watchRadioTail"> Credits on stream and now.json.</span>
+        </p>
         <p><a href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" target="_blank" rel="noopener" data-i18n="listen">Dogmazic playlist</a></p>
         <p><a href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener" data-i18n="repoPrivate">Source and history of every change.</a></p>
       </aside>
@@ -187,8 +189,7 @@
         <h2 id="music-title" data-i18n="musicTitle">Dogmazic</h2>
         <p data-i18n="musicLead">Free music only, from Dogmazic. The Pi library is mirrored in a public Dogmazic playlist (sync: scripts/dogmazic_playlist.py --verifie on the Pi).</p>
         <p><a class="play ghost" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803"
-             target="_blank" rel="noopener" data-i18n="listen">Dogmazic playlist</a>
-          · <a href="https://freetechnoradio.benoit-prieur.fr/index.m3u8" target="_blank" rel="noopener">index.m3u8</a></p>
+             target="_blank" rel="noopener" data-i18n="listen">Dogmazic playlist</a></p>
       </aside>
     </div>
   </section>
@@ -232,7 +233,7 @@
     <p>
       <span class="sr" id="version"></span>
       <a href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener" data-i18n="repoPrivate">Source and history of every change.</a>
-      · <a href="https://freetechnoradio.benoit-prieur.fr/index.m3u8" target="_blank" rel="noopener">index.m3u8</a>
+      · <a href="https://freetechnoradio.benoit-prieur.fr/index.m3u8" target="_blank" rel="noopener" data-i18n="footerStream">HLS stream</a>
     </p>
   </footer>
   <script src="app.js"></script>
