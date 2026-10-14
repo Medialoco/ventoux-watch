@@ -14,7 +14,7 @@ Watcher **v0.6.47**.
 | Player page (browser) | [freetechnoradio.benoit-prieur.fr](https://freetechnoradio.benoit-prieur.fr/) (same path; `Accept: text/html` negotiation) |
 | Site | [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/) |
 | YouTube | id in `data/direct.json` · [channel](https://www.youtube.com/channel/UCvN0sNcj5JM9tklIkAlGi7g) |
-| Dogmazic playlist | `data/dogmazic_playlist.json` on the Pi · sync: `scripts/dogmazic_playlist.py --verifie` |
+| Dogmazic playlist | [play.dogmazic.net …4803](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803) · sync: `scripts/dogmazic_playlist.py --verifie` |
 
 ffmpeg **tees the same mix** to RTMP (YouTube) and HLS (`data/radio/`). Credits: on-stream console (image clock), `now.json`, `#EXTINF` titles and the player page. YouTube is muted on the radio page; audio is HLS.
 

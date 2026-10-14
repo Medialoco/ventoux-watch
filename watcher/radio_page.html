@@ -117,7 +117,7 @@
     </div>
     <p class="hint">
       Playlist for players: <a href="/index.m3u8">index.m3u8</a><br>
-      <a class="dogmazic" id="dogmazic" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" hidden>Dogmazic playlist</a>
+      <a class="dogmazic" id="dogmazic" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" target="_blank" rel="noopener">Dogmazic playlist</a>
     </p>
   </div>
   <script>
@@ -278,11 +278,8 @@
         lien.href = fiche.url;
         const n = fiche.items ?? fiche.installés;
         const note = fiche.à_jour === false ? " (updating…)" : "";
-        lien.textContent = n ? `Dogmazic playlist · ${n} tracks${note}` : "Dogmazic playlist";
-        lien.hidden = false;
-      } catch (_) {
-        lien.hidden = false;
-      }
+        if (n) lien.textContent = `Dogmazic playlist · ${n} tracks${note}`;
+      } catch (_) { /* lien par défaut */ }
     }
     rafraichitDogmazic();
   </script>
