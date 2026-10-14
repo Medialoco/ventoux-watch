@@ -76,7 +76,7 @@ const COPY = {
     watchOut: "The frame is encoded and sent to YouTube.",
     watchRadioTitle: "Radio",
     watchRadio:
-      "The same mix is tee'd to HLS on the Pi. A named Cloudflare tunnel serves it at https://radio.benoit-prieur.fr (see data/radio.json); when YouTube drops, this page plays that HTTPS stream so #FREETECHNORADIO stays on the air as a radio.",
+      "The same mix is tee'd to HLS on the Pi and published over HTTPS. When YouTube drops, this page plays the stream named in data/radio.json, so #FREETECHNORADIO stays on the air as a radio.",
     radioFallbackLead: "YouTube is down. The same mix as the broadcast is still on the air.",
     listen: "Listen on Dogmazic",
     radio: "Audio stream",
@@ -319,7 +319,7 @@ const COPY = {
     watchOut: "Le cadre est encodé et envoyé à YouTube.",
     watchRadioTitle: "Radio",
     watchRadio:
-      "Le même mix part aussi en HLS sur le Pi. Un tunnel Cloudflare nommé le sert sur https://radio.benoit-prieur.fr (voir data/radio.json) ; si YouTube tombe, cette page joue ce flux HTTPS et #FREETECHNORADIO reste à l'antenne comme une radio.",
+      "Le même mix part aussi en HLS sur le Pi et est publié en HTTPS. Si YouTube tombe, cette page joue le flux indiqué dans data/radio.json, et #FREETECHNORADIO reste à l'antenne comme une radio.",
     radioFallbackLead: "YouTube est en panne. Le même mix que l'antenne continue de partir.",
     listen: "Écouter sur Dogmazic",
     radio: "Flux audio",

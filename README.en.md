@@ -22,7 +22,7 @@ The watch sees a lot of motion. The model is asked only from time to time, and n
 
 Watcher **v0.6.47**.
 
-The live picture is on [YouTube](https://www.youtube.com/watch?v=oz6iTjKvdNE) (the current id is also in `data/direct.json`). The site is [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). The ways the picture changes are written there, each one from the code that is running.
+The live picture is on [YouTube](https://www.youtube.com/watch?v=OWL6VHliNIc) (the current id is also in `data/direct.json`). The site is [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). The ways the picture changes are written there, each one from the code that is running.
 
 The same mix that feeds YouTube is also tee'd to HLS on the Pi; when the platform drops, the site reads `data/radio.json` and plays that HTTPS stream, so #FREETECHNORADIO stays on the air as a radio, not only a video live.
 
@@ -60,7 +60,9 @@ ssh ventoux 'bash -s' < scripts/pi_install.sh
 
 The same mix that feeds YouTube is also tee'd to HLS on the Pi (`data/radio/`). GitHub Pages cannot play plain HTTP, so a public HTTPS URL is published in `data/radio.json` for the site audio fallback.
 
-**Named Cloudflare tunnel (stable URL).** The intended hostname is `https://radio.benoit-prieur.fr` (`radio.tunnel_hostname` in `config.json`). One-time setup:
+**Named Cloudflare tunnel.** Connector `ventoux-radio` (`e785e845-e55e-4713-a774-17034d4c2bbe`) already runs on the Pi. The site does not hard-code the playlist: it reads `data/radio.json`. The stable hostname `https://radio.benoit-prieur.fr` (`radio.tunnel_hostname` in `config.json`) still needs one dashboard route: **Public Hostname** `radio` on `benoit-prieur.fr` → HTTP `127.0.0.1:8767`. Until that DNS record exists, the Pi publishes a working Cloudflare HTTPS URL in `data/radio.json`.
+
+One-time setup, if the connector has to be recreated:
 
 1. Add the domain to [Cloudflare](https://dash.cloudflare.com) (DNS for `benoit-prieur.fr` can stay on OVH with Cloudflare nameservers, or use full setup).
 2. In [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → **Networks** → **Tunnels** → **Create a tunnel** (name e.g. `ventoux-radio`).

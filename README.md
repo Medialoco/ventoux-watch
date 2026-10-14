@@ -22,7 +22,7 @@ La veille voit beaucoup de mouvement. Le réseau n’est appelé que de temps en
 
 Veilleur **v0.6.47**.
 
-Le direct est sur [YouTube](https://www.youtube.com/watch?v=oz6iTjKvdNE) (le numéro courant est aussi dans `data/direct.json`). Le site est [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Les façons dont l’image change y sont écrites, chacune d’après le code qui tourne.
+Le direct est sur [YouTube](https://www.youtube.com/watch?v=OWL6VHliNIc) (le numéro courant est aussi dans `data/direct.json`). Le site est [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/). Les façons dont l’image change y sont écrites, chacune d’après le code qui tourne.
 
 Le même mix que YouTube part aussi en HLS sur le Pi ; quand la plateforme tombe, le site lit `data/radio.json` et joue ce flux HTTPS, et #FREETECHNORADIO reste à l’antenne comme une radio, pas seulement comme un direct vidéo.
 
@@ -60,7 +60,9 @@ ssh ventoux 'bash -s' < scripts/pi_install.sh
 
 Le même mix que YouTube part aussi en HLS sur le Pi (`data/radio/`). GitHub Pages ne peut pas jouer du HTTP seul : une URL HTTPS publique est publiée dans `data/radio.json` pour le secours audio du site.
 
-**Tunnel Cloudflare nommé (URL fixe).** L'hôte prévu est `https://radio.benoit-prieur.fr` (`radio.tunnel_hostname` dans `config.json`). Mise en place une fois :
+**Tunnel Cloudflare nommé.** Le connecteur `ventoux-radio` (`e785e845-e55e-4713-a774-17034d4c2bbe`) tourne déjà sur le Pi. Le site ne fige pas la playlist : il lit `data/radio.json`. L'hôte stable `https://radio.benoit-prieur.fr` (`radio.tunnel_hostname` dans `config.json`) attend encore une route dans le tableau de bord : **Public Hostname** `radio` sur `benoit-prieur.fr` → HTTP `127.0.0.1:8767`. Tant que cet enregistrement DNS n'existe pas, le Pi publie une URL HTTPS Cloudflare qui répond, dans `data/radio.json`.
+
+Mise en place une fois, si le connecteur doit être recréé :
 
 1. Ajouter le domaine sur [Cloudflare](https://dash.cloudflare.com) (`benoit-prieur.fr` : nameservers Cloudflare ou setup complet).
 2. [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → **Networks** → **Tunnels** → **Create a tunnel** (nom p.ex. `ventoux-radio`).
