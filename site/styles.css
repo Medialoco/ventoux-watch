@@ -1144,6 +1144,92 @@ html.in-frame .top {
   inset: 0;
 }
 
+.radio-player {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+  background: linear-gradient(165deg, #1a1f24 0%, #0d1014 100%);
+  color: var(--ink);
+  text-align: left;
+}
+
+.radio-player[hidden] {
+  display: none;
+}
+
+.radio-player-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 18px 22px;
+  width: min(520px, 100%);
+}
+
+.radio-cover {
+  width: 160px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: #0a0c0e;
+}
+
+.radio-cover[hidden] {
+  display: none;
+}
+
+.radio-player-meta {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.radio-panel-label {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.radio-artist,
+.radio-title,
+.radio-licence {
+  margin: 0 0 6px;
+  line-height: 1.35;
+}
+
+.radio-artist {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.radio-title {
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+
+.radio-licence {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.radio-artist[hidden],
+.radio-title[hidden],
+.radio-licence[hidden] {
+  display: none;
+}
+
+.radio-player audio {
+  width: min(420px, 100%);
+}
+
 .screen .stage-frame iframe,
 .screen .stage-frame video {
   width: 100%;
@@ -1157,38 +1243,6 @@ html.in-frame .top {
 
 .screen .stage-frame [hidden] { display: none; }
 
-.radio-fallback {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 24px;
-  background: linear-gradient(165deg, #1a1f24 0%, #0d1014 100%);
-  color: var(--ink);
-  text-align: center;
-}
-
-.radio-fallback-lead {
-  margin: 0;
-  max-width: 28em;
-  font-size: 0.95rem;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.radio-fallback audio {
-  width: min(420px, 100%);
-}
-
-.radio-credit {
-  margin: 0;
-  max-width: 36em;
-  font-size: 0.95rem;
-  line-height: 1.4;
-}
 
 /* Au-dessus des commandes du lecteur, pour qu'un doigt sur la tablette
    atteigne encore la barre. Le texte ne prend pas les touches. */

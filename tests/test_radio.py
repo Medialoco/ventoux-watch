@@ -59,11 +59,13 @@ class TestCreditRadio(unittest.TestCase):
                 "licence": "CC BY-SA 3.0",
                 "url": "https://play.dogmazic.net/song.php?action=show_song&song_id=1",
                 "url_licence": "https://creativecommons.org/licenses/by-sa/3.0/",
+                "pochette": "pochettes/naxar.jpg",
             })
             fiche = json.loads((dossier / "now.json").read_text(encoding="utf-8"))
             self.assertEqual(fiche["artiste"], "Naxar")
             self.assertEqual(fiche["titre"], "Night Sky")
             self.assertEqual(fiche["licence"], "CC BY-SA 3.0")
+            self.assertEqual(fiche["pochette"], "pochettes/naxar.jpg")
 
 
 class TestSortieHls(unittest.TestCase):

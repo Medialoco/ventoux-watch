@@ -71,6 +71,7 @@ def publie_morceau(dossier: Path, fiche: dict | None) -> None:
         "licence": str(fiche.get("licence") or "").strip(),
         "url": str(fiche.get("url") or "").strip(),
         "url_licence": str(fiche.get("url_licence") or "").strip(),
+        "pochette": str(fiche.get("pochette") or "").strip(),
     }
     fichier = dossier / NOW_JSON
     texte = json.dumps(corps, ensure_ascii=False, indent=2) + "\n"
@@ -111,8 +112,9 @@ def _playlist_habillée(racine: Path, brut: bytes) -> bytes:
 
 
 class RadioServeur:
-    def __init__(self, racine_hls: Path) -> None:
+    def __init__(self, racine_hls: Path, pochettes: Path | None = None) -> None:
         self.racine = racine_hls.resolve()
+        self.pochettes = pochettes.resolve() if pochettes else None
         self._serveur: ThreadingHTTPServer | None = None
         self._fil: threading.Thread | None = None
 
@@ -120,6 +122,7 @@ class RadioServeur:
         if self._serveur is not None:
             return
         racine = self.racine
+        dossier_pochettes = self.pochettes
 
         class Requete(BaseHTTPRequestHandler):
             def log_message(self, *_args) -> None:
@@ -139,8 +142,14 @@ class RadioServeur:
                 chemin = unquote(urlparse(self.path).path.lstrip("/"))
                 if chemin == "":
                     chemin = HLS_INDEX
-                cible = (racine / chemin).resolve()
-                if not str(cible).startswith(str(racine)) or not cible.is_file():
+                if chemin.startswith("pochettes/") and dossier_pochettes is not None:
+                    rel = chemin.split("/", 1)[1]
+                    cible = (dossier_pochettes / rel).resolve()
+                    autorisé = str(cible).startswith(str(dossier_pochettes))
+                else:
+                    cible = (racine / chemin).resolve()
+                    autorisé = str(cible).startswith(str(racine))
+                if not autorisé or not cible.is_file():
                     self.send_response(404)
                     self._cors()
                     self.end_headers()

@@ -102,14 +102,21 @@
       <div class="stage">
         <div class="live-hold">
           <div class="stage-frame">
+            <div id="radio-panel" class="radio-player" hidden>
+              <div class="radio-player-main">
+                <img id="radio-cover" class="radio-cover" alt="" width="160" height="160" hidden>
+                <div class="radio-player-meta">
+                  <p class="radio-panel-label" data-i18n="watchRadioTitle">Radio</p>
+                  <p class="radio-artist" id="radio-artist" hidden></p>
+                  <p class="radio-title" id="radio-title" hidden></p>
+                  <p class="radio-licence" id="radio-licence" hidden></p>
+                </div>
+              </div>
+              <audio id="radio-audio" controls playsinline></audio>
+            </div>
             <iframe id="direct" title="#FREETECHNORADIO" allowfullscreen
                     allow="autoplay; encrypted-media; picture-in-picture" hidden></iframe>
             <video id="player" controls autoplay muted playsinline hidden></video>
-            <div id="radio-fallback" class="radio-fallback" hidden>
-              <p class="radio-fallback-lead" data-i18n="radioFallbackLead">The station is on the air.</p>
-              <p id="radio-credit" class="radio-credit" hidden></p>
-              <audio id="radio-audio" controls playsinline></audio>
-            </div>
             <p id="degrade" class="degrade" hidden>
               <span>Degraded mode</span>
               Backup webcam, Cannes. Waiting for Mont Serein.

@@ -1066,10 +1066,19 @@ function chaineEnDirect(fiche, antenne) {
   return null;
 }
 
-const radioFallback = document.querySelector("#radio-fallback");
+const radioPanel = document.querySelector("#radio-panel");
+const radioCover = document.querySelector("#radio-cover");
+const radioArtist = document.querySelector("#radio-artist");
+const radioTitle = document.querySelector("#radio-title");
+const radioLicence = document.querySelector("#radio-licence");
 const radioAudio = document.querySelector("#radio-audio");
 let radioHls = null;
 let radioUrl = "";
+
+function urlRadioValide(radio) {
+  return radio?.live === true && typeof radio.url === "string"
+    && /^https:\/\/.+\.m3u8(\?.*)?$/i.test(radio.url);
+}
 
 function arreteRadio() {
   radioUrl = "";
@@ -1082,17 +1091,20 @@ function arreteRadio() {
     radioAudio.removeAttribute("src");
     radioAudio.load();
   }
-  if (radioFallback) radioFallback.hidden = true;
+  if (radioPanel) radioPanel.hidden = true;
   arreteLeCredit();
 }
 
 function demarreRadio(url) {
-  if (!radioAudio || !url) return;
-  if (url === radioUrl && !radioFallback?.hidden) return;
+  if (!radioAudio || !url) return false;
+  if (url === radioUrl && radioPanel && !radioPanel.hidden) {
+    montreLeMorceau();
+    return true;
+  }
   radioUrl = url;
-  abandonneYoutubeSansCamera();
+  cacheYoutube();
   hideCamera();
-  if (radioFallback) radioFallback.hidden = false;
+  if (radioPanel) radioPanel.hidden = false;
   if (radioHls) {
     radioHls.destroy();
     radioHls = null;
@@ -1109,22 +1121,16 @@ function demarreRadio(url) {
     radioAudio.src = url;
     if (lance) radioAudio.play().catch(() => {});
   }
-  if (liveMot) liveMot.textContent = t("radioOn");
   montreLeMorceau();
-}
-
-function versLaRadio(radio) {
-  const secoursAudio = radio?.live === true && typeof radio.url === "string" && /^https:\/\/.+\.m3u8(\?.*)?$/i.test(radio.url);
-  if (!secoursAudio) return false;
-  demarreRadio(radio.url);
   return true;
 }
 
-function creditRadio(fiche) {
-  if (!fiche) return "";
-  const morceau = [fiche.artiste, fiche.titre].filter(Boolean).join(" — ");
-  if (fiche.licence && morceau) return `${morceau} · ${fiche.licence}`;
-  return morceau || fiche.licence || "";
+function cacheYoutube() {
+  diffusion = "";
+  if (direct) {
+    direct.hidden = true;
+    direct.removeAttribute("src");
+  }
 }
 
 let creditRadioTimer = null;
@@ -1134,45 +1140,77 @@ function arreteLeCredit() {
     clearInterval(creditRadioTimer);
     creditRadioTimer = null;
   }
-  const ligne = document.querySelector("#radio-credit");
-  if (ligne) {
-    ligne.hidden = true;
-    ligne.textContent = "";
+  for (const el of [radioArtist, radioTitle, radioLicence, radioCover]) {
+    if (!el) continue;
+    if (el === radioCover) {
+      el.hidden = true;
+      el.removeAttribute("src");
+    } else {
+      el.hidden = true;
+      el.textContent = "";
+    }
   }
   if (navigator.mediaSession) navigator.mediaSession.metadata = null;
 }
 
+function pochetteRadio(base, nom) {
+  if (!nom) return "";
+  if (/^https?:\/\//i.test(nom)) return nom;
+  const racine = base.replace(/index\.m3u8(\?.*)?$/i, "");
+  const chemin = nom.replace(/^\/+/, "");
+  return chemin.startsWith("pochettes/") ? `${racine}${chemin}` : `${racine}pochettes/${chemin}`;
+}
+
+function peintMorceau(fiche) {
+  if (!fiche) {
+    arreteLeCredit();
+    return;
+  }
+  if (radioArtist) {
+    radioArtist.textContent = fiche.artiste || "";
+    radioArtist.hidden = !fiche.artiste;
+  }
+  if (radioTitle) {
+    radioTitle.textContent = fiche.titre || "";
+    radioTitle.hidden = !fiche.titre;
+  }
+  if (radioLicence) {
+    radioLicence.textContent = fiche.licence || "";
+    radioLicence.hidden = !fiche.licence;
+  }
+  if (radioCover) {
+    const src = pochetteRadio(radioUrl, fiche.pochette);
+    if (src) {
+      radioCover.src = src;
+      radioCover.hidden = false;
+    } else {
+      radioCover.hidden = true;
+      radioCover.removeAttribute("src");
+    }
+  }
+  if (navigator.mediaSession && window.MediaMetadata && (fiche.titre || fiche.artiste)) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: fiche.titre || "#FREETECHNORADIO",
+      artist: fiche.artiste || "#FREETECHNORADIO",
+      album: fiche.licence || "",
+      artwork: radioCover?.src ? [{ src: radioCover.src, sizes: "160x160", type: "image/jpeg" }] : [],
+    });
+  }
+}
+
 async function montreLeMorceau() {
-  const ligne = document.querySelector("#radio-credit");
-  if (!radioUrl || !ligne) return;
+  if (!radioUrl) return;
   const adresse = radioUrl.replace(/index\.m3u8(\?.*)?$/i, "now.json");
   if (adresse === radioUrl) return;
   try {
     const fiche = await fetch(adresse, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
-    const texte = creditRadio(fiche);
-    ligne.hidden = !texte;
-    ligne.textContent = texte;
-    if (texte && fiche && navigator.mediaSession && window.MediaMetadata) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: fiche.titre || texte,
-        artist: fiche.artiste || "#FREETECHNORADIO",
-        album: fiche.licence || "",
-      });
-    }
+    peintMorceau(fiche);
   } catch (_) { /* le flux joue même sans le crédit */ }
   if (!creditRadioTimer) creditRadioTimer = setInterval(montreLeMorceau, 15000);
 }
 
-function abandonneYoutubeSansCamera() {
-  diffusion = "";
-  if (direct) {
-    direct.hidden = true;
-    direct.removeAttribute("src");
-  }
-}
-
 function abandonneYoutube() {
-  abandonneYoutubeSansCamera();
+  cacheYoutube();
   arreteRadio();
   showCamera();
 }
@@ -1188,22 +1226,20 @@ async function suisLeDirect() {
     surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
   }
   if (!fiche || enDirect === false) {
-    if (await versLaRadio(radio)) return;
-    if (diffusion || !video.hidden || radioUrl) abandonneYoutube();
-    else showCamera();
+    if (urlRadioValide(radio) && demarreRadio(radio.url)) {
+      if (liveMot) liveMot.textContent = t("radioOn");
+      return;
+    }
+    abandonneYoutube();
     return;
   }
   arreteRadio();
   const numero = String(fiche.video || "");
   if (!/^[\w-]{11}$/.test(numero)) {
-    if (diffusion || !video.hidden) abandonneYoutube();
-    else showCamera();
+    abandonneYoutube();
     return;
   }
-  // Only when it has actually changed. Reassigning src reloads the player, and
-  // a check every few minutes would restart the stream under the viewer.
-  arreteRadio();
-  if (numero === diffusion && enDirect !== false) return;
+  if (numero === diffusion && !direct.hidden) return;
   diffusion = numero;
   const lance = new URLSearchParams(location.search).get("play") === "1";
   direct.src = `https://www.youtube.com/embed/${numero}?autoplay=1&mute=${lance ? 0 : 1}&playsinline=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
@@ -1245,7 +1281,10 @@ window.addEventListener("message", (event) => {
     try { data = JSON.parse(data); } catch (_) { return; }
   }
   if (!youtubeFerme(data)) return;
-  lisRadio().then((radio) => { versLaRadio(radio); });
+  cacheYoutube();
+  lisRadio().then((radio) => {
+    if (urlRadioValide(radio)) demarreRadio(radio.url);
+  });
 });
 
 if (direct) {
