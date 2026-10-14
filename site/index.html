@@ -69,8 +69,8 @@
         <p><strong>YOLO11s</strong> <span data-i18n="watchClass">YOLO11s, ONNX, on the crop only. Car, person, bicycle, truck, bus.</span></p>
         <p><strong data-i18n="watchEffectsTitle">Effects</strong> <span data-i18n="watchEffects">Drawn on the frame. The table below gives the period, the duration and the gate of each one.</span></p>
         <p><strong data-i18n="watchMusicTitle">Music</strong> <span data-i18n="watchMusic">The Pi selects the track and ducks it under a voice. Under the picture: previous cover, current track, next two, artist, title, licence, equaliser.</span></p>
-        <p><strong>YouTube</strong> <span data-i18n="watchOut">The frame is encoded and sent to YouTube.</span></p>
-        <p><strong data-i18n="watchRadioTitle">Radio</strong> <span data-i18n="watchRadio">The same mix is tee'd to HLS on the Pi and published over HTTPS. When YouTube drops, this page plays the stream named in data/radio.json, so #FREETECHNORADIO stays on the air as a radio.</span></p>
+        <p><strong data-i18n="watchRadioTitle">Radio</strong> <span data-i18n="watchRadio">The station is the mix, published as HTTPS audio. This page plays the stream named in data/radio.json whenever the picture is not on YouTube.</span></p>
+        <p><strong>YouTube</strong> <span data-i18n="watchOut">The picture is encoded and sent to YouTube. The radio does not depend on it.</span></p>
         <p><a href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener" data-i18n="repoPrivate">Source and history of every change.</a></p>
       </aside>
 
@@ -81,7 +81,7 @@
                     allow="autoplay; encrypted-media; picture-in-picture" hidden></iframe>
             <video id="player" controls autoplay muted playsinline hidden></video>
             <div id="radio-fallback" class="radio-fallback" hidden>
-              <p class="radio-fallback-lead" data-i18n="radioFallbackLead">YouTube is down. The same mix as the broadcast is still on the air.</p>
+              <p class="radio-fallback-lead" data-i18n="radioFallbackLead">The station is on the air.</p>
               <audio id="radio-audio" controls playsinline></audio>
             </div>
             <p id="degrade" class="degrade" hidden>
