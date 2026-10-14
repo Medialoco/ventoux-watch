@@ -655,7 +655,10 @@ function paintHash() {
   }
   const tile = hashTileCache.tile;
   document.querySelectorAll("canvas.hash-title").forEach((canvas) => {
-    const scale = Math.max(2, Math.min(3, Math.floor((canvas.parentElement?.clientWidth || 720) / tile.width)));
+    const stage = canvas.classList.contains("hash-title-stage");
+    const scale = stage
+      ? Math.max(4, Math.min(8, Math.floor((canvas.parentElement?.clientWidth || 720) / tile.width)))
+      : Math.max(2, Math.min(3, Math.floor((canvas.parentElement?.clientWidth || 720) / tile.width)));
     canvas.width = tile.width * scale;
     canvas.height = tile.height * scale;
     const ctx = canvas.getContext("2d");
@@ -967,6 +970,10 @@ const FALLBACK = "https://s1.vision-environnement.com/live/modules/timelapse/tim
 
 const video = document.querySelector("#player");
 const direct = document.querySelector("#direct");
+const directThumb = document.querySelector("#direct-thumb");
+const ytThumbWrap = document.querySelector("#yt-thumb-wrap");
+const liveHold = document.querySelector("#live-hold");
+const stageBrand = document.querySelector("#stage-brand");
 const surYouTube = document.querySelector("#sur-youtube");
 
 // The raw camera, kept as the way back. It is only ever shown if the broadcast
@@ -1017,6 +1024,7 @@ function hideCamera() {
 // with this page only moves when the page is published, so the page asks main
 // first and keeps that copy as a spare.
 let diffusion = "";
+let diffusionThumb = "";
 const DIRECT = [
   "https://raw.githubusercontent.com/Medialoco/ventoux-watch/main/data/direct.json",
   "data/direct.json",
@@ -1092,19 +1100,53 @@ function arreteRadio() {
     radioAudio.load();
   }
   if (radioPanel) radioPanel.hidden = true;
+  cachePetitYoutube();
+  layoutRadio(false);
   arreteLeCredit();
 }
 
-function demarreRadio(url) {
+function layoutRadio(on) {
+  if (on) {
+    liveHold?.classList.add("is-radio");
+    if (stageBrand) stageBrand.hidden = false;
+    paintHash();
+    return;
+  }
+  liveHold?.classList.remove("is-radio");
+  if (stageBrand) stageBrand.hidden = true;
+}
+
+function montrePetitYoutube(numero) {
+  if (!directThumb || !ytThumbWrap) return;
+  const id = String(numero || "");
+  if (!/^[\w-]{11}$/.test(id)) {
+    cachePetitYoutube();
+    return;
+  }
+  ytThumbWrap.hidden = false;
+  if (id === diffusionThumb && directThumb.src) return;
+  diffusionThumb = id;
+  directThumb.src = `https://www.youtube.com/embed/${id}?mute=1&playsinline=1&rel=0&modestbranding=1`;
+}
+
+function cachePetitYoutube() {
+  diffusionThumb = "";
+  if (directThumb) directThumb.removeAttribute("src");
+  if (ytThumbWrap) ytThumbWrap.hidden = true;
+}
+
+function demarreRadio(url, videoYoutube) {
   if (!radioAudio || !url) return false;
   if (url === radioUrl && radioPanel && !radioPanel.hidden) {
     montreLeMorceau();
+    if (videoYoutube) montrePetitYoutube(videoYoutube);
     return true;
   }
   radioUrl = url;
   cacheYoutube();
   hideCamera();
   if (radioPanel) radioPanel.hidden = false;
+  layoutRadio(true);
   if (radioHls) {
     radioHls.destroy();
     radioHls = null;
@@ -1122,6 +1164,8 @@ function demarreRadio(url) {
     if (lance) radioAudio.play().catch(() => {});
   }
   montreLeMorceau();
+  if (videoYoutube) montrePetitYoutube(videoYoutube);
+  else lisLeDirect().then((fiche) => montrePetitYoutube(fiche?.video));
   return true;
 }
 
@@ -1225,8 +1269,9 @@ async function suisLeDirect() {
   } else if (fiche?.chaine && surYouTube) {
     surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
   }
+  const videoId = fiche && /^[\w-]{11}$/.test(String(fiche.video || "")) ? String(fiche.video) : "";
   if (!fiche || enDirect === false) {
-    if (urlRadioValide(radio) && demarreRadio(radio.url)) {
+    if (urlRadioValide(radio) && demarreRadio(radio.url, videoId)) {
       if (liveMot) liveMot.textContent = t("radioOn");
       return;
     }
@@ -1282,8 +1327,9 @@ window.addEventListener("message", (event) => {
   }
   if (!youtubeFerme(data)) return;
   cacheYoutube();
-  lisRadio().then((radio) => {
-    if (urlRadioValide(radio)) demarreRadio(radio.url);
+  Promise.all([lisRadio(), lisLeDirect()]).then(([radio, fiche]) => {
+    const id = fiche && /^[\w-]{11}$/.test(String(fiche.video || "")) ? String(fiche.video) : "";
+    if (urlRadioValide(radio)) demarreRadio(radio.url, id);
   });
 });
 

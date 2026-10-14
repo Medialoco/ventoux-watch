@@ -100,8 +100,13 @@
       </aside>
 
       <div class="stage">
-        <div class="live-hold">
-          <div class="stage-frame">
+        <div class="live-hold" id="live-hold">
+          <div class="live-stack">
+            <p class="stage-brand hash-frame" id="stage-brand" hidden>
+              <span class="sr">#FREETECHNORADIO</span>
+              <canvas class="hash-title hash-title-stage" aria-hidden="true"></canvas>
+            </p>
+            <div class="stage-frame">
             <div id="radio-panel" class="radio-player" hidden>
               <div class="radio-player-main">
                 <img id="radio-cover" class="radio-cover" alt="" width="160" height="160" hidden>
@@ -121,6 +126,12 @@
               <span>Degraded mode</span>
               Backup webcam, Cannes. Waiting for Mont Serein.
             </p>
+            </div>
+            <div class="yt-thumb-wrap" id="yt-thumb-wrap" hidden>
+              <iframe id="direct-thumb" title="YouTube — Mont Serein"
+                      allow="autoplay; encrypted-media; picture-in-picture"
+                      loading="lazy"></iframe>
+            </div>
           </div>
         </div>
         <p class="chips" aria-label="Raspberry Pi 5">

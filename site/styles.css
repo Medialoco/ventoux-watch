@@ -1139,9 +1139,73 @@ html.in-frame .top {
   aspect-ratio: 16 / 9;
 }
 
+.live-hold.is-radio::before {
+  display: none;
+}
+
+.live-stack {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.live-hold.is-radio .live-stack {
+  position: relative;
+  inset: auto;
+  gap: 14px;
+  padding: 18px 16px 16px;
+  background: linear-gradient(165deg, #1a1f24 0%, #0d1014 100%);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.stage-brand {
+  margin: 0;
+  text-align: center;
+}
+
+.stage-brand canvas.hash-title-stage {
+  display: block;
+  height: 44px;
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
+  image-rendering: pixelated;
+}
+
+.yt-thumb-wrap {
+  width: min(300px, 100%);
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  background: #000;
+}
+
+.yt-thumb-wrap[hidden] {
+  display: none;
+}
+
+.yt-thumb-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
 .screen .stage-frame {
   position: absolute;
   inset: 0;
+}
+
+.live-hold.is-radio .stage-frame {
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
 }
 
 .radio-player {
@@ -1154,8 +1218,15 @@ html.in-frame .top {
   gap: 18px;
   padding: 24px;
   background: linear-gradient(165deg, #1a1f24 0%, #0d1014 100%);
-  color: var(--ink);
+  color: #e9eaec;
   text-align: left;
+}
+
+.live-hold.is-radio .radio-player {
+  position: relative;
+  inset: auto;
+  padding: 8px 0 0;
+  background: none;
 }
 
 .radio-player[hidden] {
