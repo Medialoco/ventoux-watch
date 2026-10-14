@@ -2,6 +2,147 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-14T05-19-41Z-motion-112",
+      "t": "2026-10-14T05:19:41Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-14T05-19-41Z-motion-112.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.4184,
+          "area_grow": 0.23,
+          "clipped": false,
+          "shade": 1.528,
+          "kept": 0.27,
+          "area_ratio": 0.001,
+          "duration_s": 8.8,
+          "frames": 6,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.634,
+          "seen_as": []
+        },
+        "box": [
+          0.9234,
+          0.6694,
+          0.0563,
+          0.0806
+        ]
+      },
+      "closeup": "data/closeups/2026-10-14T05-19-41Z-motion-112.jpg"
+    },
+    {
+      "id": "2026-10-14T05-19-11Z-cycle-111",
+      "t": "2026-10-14T05:19:11Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-14T05-19-11Z-cycle-111.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1171,
+          "area_grow": 0.98,
+          "clipped": false,
+          "shade": 0.859,
+          "kept": 0.333,
+          "area_ratio": 0.00082,
+          "duration_s": 2.6,
+          "frames": 2,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 1.781,
+          "seen_as": []
+        },
+        "box": [
+          0.8891,
+          0.8833,
+          0.0187,
+          0.0444
+        ],
+        "trace": [
+          [
+            1791955148.65,
+            0.8891,
+            0.8833,
+            0.0187,
+            0.0444
+          ],
+          [
+            1791955151.28,
+            0.7984,
+            0.975,
+            0.0328,
+            0.025
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-14T05-19-11Z-cycle-111.jpg"
+    },
+    {
+      "id": "2026-10-14T05-15-31Z-missed-110",
+      "t": "2026-10-14T05:15:31Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-14T05-15-31Z-missed-110.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3301,
+          "area_grow": 20.5,
+          "clipped": true,
+          "shade": 1.197,
+          "kept": 0.508,
+          "area_ratio": 0.0299,
+          "duration_s": 11.2,
+          "frames": 7,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.044,
+          "seen_as": [
+            "car 0.31 sur 3%"
+          ]
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.7375,
+          0.8861,
+          0.2625,
+          0.1139
+        ]
+      },
+      "closeup": "data/closeups/2026-10-14T05-15-31Z-missed-110.jpg"
+    },
+    {
       "id": "2026-10-14T05-11-17Z-motion-109",
       "t": "2026-10-14T05:11:17Z",
       "type": "motion",
