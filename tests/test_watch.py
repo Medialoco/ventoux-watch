@@ -4938,6 +4938,21 @@ class DiffusionTests(unittest.TestCase):
                     stream.veille_le_direct(CHAINE_TEST, coupe, racine)
                 self.assertFalse((racine / "data" / "direct.json").exists())
 
+    def test_a_live_the_feed_lists_late_is_published_when_it_does(self):
+        """Un direct qui vient d'ouvrir manque au flux RSS : on redemande."""
+        page = '{"videoDetails":{"videoId":"GLoxL408f_E"},"isLive":true}'
+        listes = iter([set(), {"GLoxL408f_E"}])
+        coupe = threading.Event()
+        with tempfile.TemporaryDirectory() as dossier:
+            racine = Path(dossier)
+            with mock.patch.object(stream, "page_du_direct", lambda _: page), \
+                    mock.patch.object(stream, "videos_de_la_chaine", lambda _: next(listes)), \
+                    mock.patch.object(coupe, "wait", side_effect=[False, True]):
+                stream.veille_le_direct(CHAINE_TEST, coupe, racine)
+            ecrit = json.loads((racine / "data" / "direct.json").read_text())
+        self.assertEqual(ecrit["video"], "GLoxL408f_E")
+        self.assertTrue(ecrit["live"])
+
     def test_an_unverified_new_live_retires_the_old_one(self):
         """Un numéro neuf pas encore reconnu : l'ancien direct n'est plus montré."""
         pages = iter(['{"videoDetails":{"videoId":"fIcRDu-v6ww"},"isLive":true}',

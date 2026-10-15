@@ -443,23 +443,25 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     connu = ""
     porte = False
     premier = True
-    # Les numéros que le flux RSS a reconnus, et ceux qu'il a désavoués :
-    # on ne lui redemande pas à chaque tour ce qu'il a déjà dit.
+    # Un numéro reconnu par le flux RSS l'est pour de bon. Un refus ne l'est
+    # pas : un direct qui vient d'ouvrir peut manquer au flux quelques
+    # minutes, on le lui redemande à chaque tour. Le second ensemble ne sert
+    # qu'à ne le dire qu'une fois dans le journal.
     siens: set[str] = set()
-    etrangers: set[str] = set()
+    signales: set[str] = set()
     while premier or not coupe.wait(VEILLE_DIRECT_S if connu else VEILLE_DIRECT_CHERCHE_S):
         premier = False
         vu, numero = lit_le_direct(page_du_direct(chaine))
         if racine is not None:
             try:
-                if vu is True and numero and numero not in siens and numero not in etrangers:
+                if vu is True and numero and numero not in siens:
                     liste = videos_de_la_chaine(chaine)
                     if liste is not None and numero in liste:
                         siens.add(numero)
-                    elif liste is not None:
-                        etrangers.add(numero)
-                        log.warning("La page du direct désigne %s, qui n'est pas "
-                                    "une vidéo de la chaîne : on ne le publie pas", numero)
+                    elif liste is not None and numero not in signales:
+                        signales.add(numero)
+                        log.warning("La page du direct désigne %s, que le flux de "
+                                    "la chaîne ne liste pas : on ne le publie pas", numero)
                 if vu is True and numero in siens:
                     note_le_direct(racine, chaine, numero, live=True)
                     connu = numero
