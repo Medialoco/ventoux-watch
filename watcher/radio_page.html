@@ -59,39 +59,64 @@
     .title { font-size: 1.12rem; font-weight: 650; }
     .licence { font-size: 0.82rem; color: #9aa0a8; }
     .licence a { color: #9dd3ba; }
-    audio {
-      width: 100%;
+    .lecteur {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      height: 56px;
       margin-bottom: 14px;
+      padding: 0 4px;
     }
-    #radivu {
+    #lire {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid color-mix(in srgb, #9dd3ba 55%, transparent);
+      background: rgba(8, 10, 14, 0.35);
+      color: #f2f4f5;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    #lire:hover, #lire:focus-visible {
+      border-color: #9dd3ba;
+      box-shadow: 0 0 14px rgba(157, 211, 186, 0.35);
+    }
+    #lire svg { width: 18px; height: 18px; fill: currentColor; }
+    .ligne {
       position: relative;
-      margin-bottom: 14px;
-    }
-    #radivu[hidden] { display: none; }
-    #radivu::before {
-      content: "";
-      position: absolute;
-      left: 66px;
-      right: 136px;
-      top: 50%;
+      flex: 1;
       height: 2px;
+      overflow: hidden;
       border-radius: 1px;
-      background: color-mix(in srgb, #9dd3ba 60%, transparent);
+      background: color-mix(in srgb, #9dd3ba 45%, transparent);
       box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
     }
-    /* Only the play button and the volume are kept: Radivu's own art and
-       title lag behind ours. contrast() sends its navy to black, and lighten
-       drops black, so the bar has no background of its own. */
-    #radivu iframe {
-      display: block;
-      width: 100%;
-      height: 72px;
-      border: 0;
-      clip-path: polygon(0 0, 58px 0, 58px 100%, calc(100% - 128px) 100%,
-        calc(100% - 128px) 0, 100% 0, 100% 100%, 0 100%);
-      filter: contrast(1.6);
-      mix-blend-mode: lighten;
+    .lecteur.joue .ligne::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 30%;
+      background: linear-gradient(90deg, transparent, #c5ead8, transparent);
+      animation: glisse 2.4s linear infinite;
     }
+    @keyframes glisse {
+      from { left: -30%; }
+      to { left: 100%; }
+    }
+    .volume {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #c9cdd2;
+    }
+    .volume svg { width: 18px; height: 18px; fill: currentColor; }
+    #volume { width: 84px; accent-color: #9dd3ba; cursor: pointer; }
     .links {
       margin-top: 18px;
       font-size: 13px;
@@ -192,7 +217,7 @@
       65% { --fx: -3px; --fy: -3px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      body.flotte .wrap, #bouton-direct .point { animation: none; }
+      body.flotte .wrap, #bouton-direct .point, .lecteur.joue .ligne::after { animation: none; }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
@@ -208,11 +233,21 @@
         <p class="licence" id="licence" hidden></p>
       </div>
     </div>
-    <audio id="audio" controls playsinline></audio>
-    <div id="radivu" hidden></div>
+    <audio id="audio" playsinline hidden></audio>
+    <div class="lecteur" id="lecteur">
+      <button type="button" id="lire" aria-label="Play">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path id="lire-icone" d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div class="ligne" aria-hidden="true"></div>
+      <label class="volume">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.47 4.47 0 0 0 2.5-4z"/></svg>
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" aria-label="Volume">
+      </label>
+    </div>
     <nav class="links" aria-label="Links">
       <a id="stream" href="https://freetechnoradio.benoit-prieur.fr/index.m3u8">index.m3u8 (VLC)</a><br>
       <a id="dogmazic" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" target="_blank" rel="noopener">Dogmazic playlist</a><br>
+      <a href="https://radivu.com/listen/freetechnoradio" target="_blank" rel="noopener">Radivu</a><br>
       <a id="site-doc" href="https://medialoco.github.io/ventoux-watch/" target="_blank" rel="noopener">About the station</a><br>
       <a id="repo" href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener">Source · v<span id="release-ver">0.6.48</span></a>
     </nav>
@@ -286,20 +321,40 @@
         audio.addEventListener("loadedmetadata", tenteLecture, { once: true });
       }
     }
-    // The aquarium of benoit-prieur.fr starts the music itself through
-    // play=1 and postMessage, which only our own <audio> can answer.
-    if (window.top === window) {
-      const radivu = document.getElementById("radivu");
-      const cadre = document.createElement("iframe");
-      cadre.src = "https://radivu.com/embed/freetechnoradio?theme=dark&layout=bar&accent=9dd3ba";
-      cadre.allow = "autoplay; encrypted-media";
-      cadre.title = "#FREETECHNORADIO - Radivu";
-      radivu.appendChild(cadre);
-      radivu.hidden = false;
-      audio.hidden = true;
-    } else {
-      demarreHls();
+    demarreHls();
+
+    const lecteur = document.getElementById("lecteur");
+    const lire = document.getElementById("lire");
+    const lireIcone = document.getElementById("lire-icone");
+    const volume = document.getElementById("volume");
+    try {
+      const v = parseFloat(localStorage.getItem("ftr-volume"));
+      if (v >= 0 && v <= 1) volume.value = String(v);
+    } catch (_) {}
+    audio.volume = Number(volume.value);
+    volume.addEventListener("input", () => {
+      audio.volume = Number(volume.value);
+      audio.muted = false;
+      try { localStorage.setItem("ftr-volume", volume.value); } catch (_) {}
+    });
+
+    function etatLecture() {
+      const joue = !audio.paused;
+      lecteur.classList.toggle("joue", joue);
+      lireIcone.setAttribute("d", joue ? "M6 5h4v14H6zM14 5h4v14h-4z" : "M8 5v14l11-7z");
+      lire.setAttribute("aria-label", joue ? "Pause" : "Play");
     }
+    audio.addEventListener("play", etatLecture);
+    audio.addEventListener("pause", etatLecture);
+    lire.addEventListener("click", () => {
+      if (!audio.paused) {
+        audio.pause();
+        return;
+      }
+      // A live stream resumes at the edge, not where it was paused.
+      if (hls && Number.isFinite(hls.liveSyncPosition)) audio.currentTime = hls.liveSyncPosition;
+      audio.play().catch(() => {});
+    });
 
     function pochette(nom) {
       if (!nom) return "";
@@ -462,7 +517,7 @@
 
       boite.addEventListener("pointerdown", (e) => {
         if (e.pointerType === "touch" || e.button !== 0) return;
-        if (e.target.closest("a, button, audio")) return;
+        if (e.target.closest("a, button, input, label")) return;
         cancelAnimationFrame(derive);
         vx = vy = 0;
         prise = { x: e.clientX - dx, y: e.clientY - dy, px: e.clientX, py: e.clientY, t: performance.now() };
