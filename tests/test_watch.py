@@ -4848,6 +4848,36 @@ class DiffusionTests(unittest.TestCase):
             stream.veille_le_direct("UCxxxx", coupe, lache=lache)
         self.assertFalse(lache.is_set())
 
+    def test_a_release_nobody_takes_stops_the_process(self):
+        """Le 15 octobre la boucle des images était bloquée : on s'arrête soi-même."""
+        pages = iter(['{"videoDetails":{"videoId":"mmf5x1r2rvQ"},"isLive":true}',
+                      "channelMetadataRenderer", "channelMetadataRenderer"])
+        coupe = threading.Event()
+        lache = threading.Event()
+        attentes = []
+        abandons = []
+
+        def patiente(duree):
+            attentes.append(duree)
+            return coupe.is_set()
+
+        def abandonne():
+            abandons.append(1)
+            coupe.set()
+
+        with tempfile.TemporaryDirectory() as dossier, \
+                mock.patch.object(stream, "page_du_direct", lambda _: next(pages)), \
+                mock.patch.object(stream, "videos_de_la_chaine", lambda _: {"mmf5x1r2rvQ"}), \
+                mock.patch.object(stream, "_abandonne", abandonne), \
+                mock.patch.object(coupe, "wait", patiente), \
+                self.assertLogs(stream.log, level="ERROR"):
+            stream.veille_le_direct(CHAINE_TEST, coupe, Path(dossier), lache=lache)
+        self.assertTrue(lache.is_set())
+        self.assertEqual(abandons, [1])
+        self.assertEqual(attentes[:3], [stream.VEILLE_DIRECT_S, stream.VEILLE_DIRECT_CHERCHE_S,
+                                        stream.LACHE_GARDE_S],
+                         "une absence vue, on revérifie vite ; la sortie lâchée, on surveille")
+
     def test_a_channel_we_cannot_read_is_never_declared_dead(self):
         """« Je ne sais pas » n'est pas « non ».
 

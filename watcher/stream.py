@@ -191,6 +191,15 @@ VEILLE_DIRECT_CHERCHE_S = 20.0
 # session morte : les octets repartent, la chaîne reste noire. Douze secondes
 # sans rien envoyer, puis un processus neuf, et YouTube peut en ouvrir une.
 LACHE_DIRECT_S = 12.0
+# La sortie est lâchée par la boucle des images, entre deux images. Le
+# 15 octobre cette boucle était bloquée sur un ffmpeg qui ne lisait plus,
+# et la chaîne est restée noire. Passé ce délai, le processus s'arrête de
+# lui-même et systemd le rouvre.
+LACHE_GARDE_S = 90.0
+
+
+def _abandonne() -> None:
+    os._exit(1)
 
 
 def page_du_direct(chaine: str) -> str | None:
@@ -449,7 +458,11 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     # qu'à ne le dire qu'une fois dans le journal.
     siens: set[str] = set()
     signales: set[str] = set()
-    while premier or not coupe.wait(VEILLE_DIRECT_S if connu else VEILLE_DIRECT_CHERCHE_S):
+    # Une absence vue, on revérifie au rythme rapide : au rythme lent, la
+    # chaîne restait noire vingt minutes avant qu'on le confirme.
+    depuis = 0.0
+    while premier or not coupe.wait(
+            VEILLE_DIRECT_S if connu and not absences else VEILLE_DIRECT_CHERCHE_S):
         premier = False
         vu, numero = lit_le_direct(page_du_direct(chaine))
         if racine is not None:
@@ -483,17 +496,24 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
             absences = 0
             continue
         absences += 1
+        if absences == 1:
+            depuis = time.monotonic()
         if absences == VEILLE_DIRECT_SEUIL:
-            log.error("Aucune diffusion en direct sur la chaîne depuis %.0f min "
+            log.error("Aucune diffusion en direct sur la chaîne depuis %.0f s "
                       "alors qu'on émet : les octets partent dans le vide. Il "
                       "faut rouvrir un direct dans YouTube Studio, la clé est "
-                      "déjà alimentée.", VEILLE_DIRECT_S * absences / 60)
+                      "déjà alimentée.", time.monotonic() - depuis)
             # Une fois, et seulement si ce processus a déjà porté un direct.
             # La page noire d'un démarrage n'est pas une coupure.
             if porte and lache is not None and not lache.is_set():
                 log.warning("On lâche la sortie %.0f s pour qu'une diffusion "
                             "neuve puisse s'attacher", LACHE_DIRECT_S)
                 lache.set()
+                if not coupe.wait(LACHE_GARDE_S):
+                    log.error("La boucle des images n'a pas lâché la sortie en "
+                              "%.0f s : on arrête le processus, systemd le rouvre",
+                              LACHE_GARDE_S)
+                    _abandonne()
 
 
 def identifications(chemin: Path, depuis: float) -> list[dict]:
