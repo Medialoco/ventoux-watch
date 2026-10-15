@@ -28,6 +28,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from watcher.stream import numero_de_la_page  # noqa: E402
+
 NAVIGATEUR = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
 INNERTUBE = "https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key="
 
@@ -46,8 +48,7 @@ def en_direct(chaine: str) -> str | None:
     page = _lis(f"https://www.youtube.com/channel/{chaine}/live")
     if "videoDetails" not in page or '"isLive":true' not in page:
         return None
-    trouve = re.search(r'"videoId":"([A-Za-z0-9_-]{11})"', page)
-    return trouve.group(1) if trouve else None
+    return numero_de_la_page(page) or None
 
 
 def _amorce(video: str) -> tuple[str, str, str]:

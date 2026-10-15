@@ -39,6 +39,7 @@ from watcher.store import Store, fold_events, small_jpeg
 from watcher import direct, main, stream
 
 ROOT = Path(__file__).resolve().parents[1]
+CHAINE_TEST = "UCvN0sNcj5JM9tklIkAlGi7g"
 
 
 def un_tour_de(nom: str, nuit: bool = False) -> float:
@@ -4881,11 +4882,12 @@ class DiffusionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as dossier:
             racine = Path(dossier)
             with mock.patch.object(stream, "page_du_direct", lambda _: page), \
+                    mock.patch.object(stream, "videos_de_la_chaine", lambda _: {"fIcRDu-v6ww"}), \
                     mock.patch.object(coupe, "wait", lambda _: True):
-                stream.veille_le_direct("UCxxxx", coupe, racine)
+                stream.veille_le_direct(CHAINE_TEST, coupe, racine)
             ecrit = json.loads((racine / "data" / "direct.json").read_text())
         self.assertEqual(ecrit["video"], "fIcRDu-v6ww")
-        self.assertEqual(ecrit["chaine"], "UCxxxx")
+        self.assertEqual(ecrit["chaine"], CHAINE_TEST)
         self.assertTrue(ecrit["live"])
 
     def test_when_the_channel_goes_dark_the_site_is_told(self):
@@ -4902,11 +4904,61 @@ class DiffusionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as dossier:
             racine = Path(dossier)
             with mock.patch.object(stream, "page_du_direct", page_suivante), \
+                    mock.patch.object(stream, "videos_de_la_chaine", lambda _: {"fIcRDu-v6ww"}), \
                     mock.patch.object(coupe, "wait", side_effect=[False, True]):
-                stream.veille_le_direct("UCxxxx", coupe, racine)
+                stream.veille_le_direct(CHAINE_TEST, coupe, racine)
             ecrit = json.loads((racine / "data" / "direct.json").read_text())
         self.assertFalse(ecrit["live"])
         self.assertEqual(ecrit["video"], "fIcRDu-v6ww")
+
+    def test_the_number_is_the_video_of_the_page_not_the_first_one(self):
+        """Le 15 octobre la page portait d'abord un film suggéré : « Twelfth Night »."""
+        page = ('{"videoId":"v1nXaNnu_M4"},{"videoId":"C842vFY5kRo"},'
+                '"currentVideoEndpoint":{"clickTrackingParams":"x","commandMetadata":'
+                '{"webCommandMetadata":{"url":"/watch?v=GLoxL408f_E",'
+                '"webPageType":"WEB_PAGE_TYPE_WATCH"}}},'
+                '"videoDetails":{"playerOverlayVideoDetailsRenderer":{}},"isLive":true')
+        self.assertEqual(stream.lit_le_direct(page), (True, "GLoxL408f_E"))
+        avec_parametre = page.replace("GLoxL408f_E", "GLoxL408f_E\\u0026pp=0gcJCRMB")
+        self.assertEqual(stream.lit_le_direct(avec_parametre), (True, "GLoxL408f_E"))
+        sans_marque = '{"videoId":"v1nXaNnu_M4"},"videoDetails":{},"isLive":true'
+        self.assertEqual(stream.lit_le_direct(sans_marque), (True, ""))
+
+    def test_a_video_that_is_not_ours_is_never_published(self):
+        """Le flux RSS de la chaîne ne la liste pas, ou ne répond pas : rien d'écrit."""
+        page = ('{"videoDetails":{"videoId":"v1nXaNnu_M4"},'
+                '"isLive":true,"microformat":{}}')
+        for liste in ({"GLoxL408f_E"}, None):
+            coupe = threading.Event()
+            with tempfile.TemporaryDirectory() as dossier:
+                racine = Path(dossier)
+                with mock.patch.object(stream, "page_du_direct", lambda _: page), \
+                        mock.patch.object(stream, "videos_de_la_chaine", lambda _, l=liste: l), \
+                        mock.patch.object(coupe, "wait", lambda _: True):
+                    stream.veille_le_direct(CHAINE_TEST, coupe, racine)
+                self.assertFalse((racine / "data" / "direct.json").exists())
+
+    def test_an_unverified_new_live_retires_the_old_one(self):
+        """Un numéro neuf pas encore reconnu : l'ancien direct n'est plus montré."""
+        pages = iter(['{"videoDetails":{"videoId":"fIcRDu-v6ww"},"isLive":true}',
+                      '{"videoDetails":{"videoId":"GLoxL408f_E"},"isLive":true}'])
+        coupe = threading.Event()
+        with tempfile.TemporaryDirectory() as dossier:
+            racine = Path(dossier)
+            with mock.patch.object(stream, "page_du_direct", lambda _: next(pages)), \
+                    mock.patch.object(stream, "videos_de_la_chaine", lambda _: {"fIcRDu-v6ww"}), \
+                    mock.patch.object(coupe, "wait", side_effect=[False, True]):
+                stream.veille_le_direct(CHAINE_TEST, coupe, racine)
+            ecrit = json.loads((racine / "data" / "direct.json").read_text())
+        self.assertEqual(ecrit["video"], "fIcRDu-v6ww")
+        self.assertFalse(ecrit["live"])
+
+    def test_a_malformed_number_is_refused_at_the_door(self):
+        with tempfile.TemporaryDirectory() as dossier:
+            with self.assertRaises(ValueError):
+                stream.note_le_direct(Path(dossier), CHAINE_TEST, '"><script>', live=True)
+            with self.assertRaises(ValueError):
+                stream.note_le_direct(Path(dossier), "UCxxxx", "fIcRDu-v6ww", live=True)
 
     def test_a_channel_that_is_dark_does_not_name_a_video(self):
         """Une chaine qui n'emet pas n'a pas de numero a donner.

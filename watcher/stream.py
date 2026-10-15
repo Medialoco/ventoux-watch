@@ -225,12 +225,60 @@ def lit_le_direct(page: str | None) -> tuple[bool | None, str]:
     """
     if not page:
         return None, ""
-    numero = re.search(r'"videoId":"([A-Za-z0-9_-]{11})"', page)
     if "videoDetails" in page and '"isLive":true' in page:
-        return True, numero.group(1) if numero else ""
+        return True, numero_de_la_page(page)
     if "channelMetadataRenderer" in page:
         return False, ""
     return None, ""
+
+
+NUMERO_VIDEO = re.compile(r"[A-Za-z0-9_-]{11}")
+NUMERO_CHAINE = re.compile(r"UC[A-Za-z0-9_-]{22}")
+
+
+def numero_de_la_page(page: str) -> str:
+    """Le numéro de la vidéo que la page montre, et pas un autre.
+
+    La page d'un direct porte des dizaines de « videoId » : les suggestions
+    de la colonne de droite, les publicités, les films de YouTube. Le premier
+    venu n'est pas le nôtre. Le 15 octobre il désignait « Twelfth Night »,
+    et le site l'a incrusté sous la radio. Seules trois marques désignent la
+    vidéo de la page elle-même ; sans aucune d'elles, on ne nomme rien.
+    """
+    endroit = page.find('"currentVideoEndpoint"')
+    if endroit >= 0:
+        trouve = re.search(r'"(?:url":"/watch\?v=|watchEndpoint":\{"videoId":")'
+                           r'([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])',
+                           page[endroit:endroit + 800])
+        if trouve:
+            return trouve.group(1)
+    for motif in (r'"videoDetails":\{"videoId":"([A-Za-z0-9_-]{11})"',
+                  r'<link rel="canonical" href="https://www\.youtube\.com/watch\?v=([A-Za-z0-9_-]{11})"'):
+        trouve = re.search(motif, page)
+        if trouve:
+            return trouve.group(1)
+    return ""
+
+
+def videos_de_la_chaine(chaine: str) -> set[str] | None:
+    """Les numéros que le flux RSS de la chaîne lui attribue, None si illisible.
+
+    C'est la preuve d'appartenance : la page /live peut changer de forme,
+    ce flux est tenu par YouTube et ne liste que les vidéos de la chaîne,
+    direct en cours compris.
+    """
+    if not NUMERO_CHAINE.fullmatch(chaine):
+        return None
+    url = f"https://www.youtube.com/feeds/videos.xml?channel_id={chaine}"
+    requete = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(requete, timeout=20) as reponse:
+            texte = reponse.read(2_000_000).decode("utf-8", "replace")
+    except Exception:
+        return None
+    if "<feed" not in texte:
+        return None
+    return set(re.findall(r"<yt:videoId>([A-Za-z0-9_-]{11})</yt:videoId>", texte))
 
 
 def _compte(label: str) -> int | None:
@@ -348,6 +396,8 @@ def note_le_direct(racine: Path, chaine: str, numero: str, *, live: bool) -> Non
     Écrit puis renommé : une page qui lit pendant qu'on écrit doit trouver
     l'ancien fichier entier plutôt que le nouveau à moitié.
     """
+    if not NUMERO_CHAINE.fullmatch(chaine) or not NUMERO_VIDEO.fullmatch(numero):
+        raise ValueError(f"numéro de direct refusé : {chaine!r} {numero!r}")
     fichier = racine / "data" / "direct.json"
     fichier.parent.mkdir(parents=True, exist_ok=True)
     texte = json.dumps({
@@ -393,17 +443,34 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     connu = ""
     porte = False
     premier = True
+    # Les numéros que le flux RSS a reconnus, et ceux qu'il a désavoués :
+    # on ne lui redemande pas à chaque tour ce qu'il a déjà dit.
+    siens: set[str] = set()
+    etrangers: set[str] = set()
     while premier or not coupe.wait(VEILLE_DIRECT_S if connu else VEILLE_DIRECT_CHERCHE_S):
         premier = False
         vu, numero = lit_le_direct(page_du_direct(chaine))
         if racine is not None:
             try:
-                if vu is True and numero:
+                if vu is True and numero and numero not in siens and numero not in etrangers:
+                    liste = videos_de_la_chaine(chaine)
+                    if liste is not None and numero in liste:
+                        siens.add(numero)
+                    elif liste is not None:
+                        etrangers.add(numero)
+                        log.warning("La page du direct désigne %s, qui n'est pas "
+                                    "une vidéo de la chaîne : on ne le publie pas", numero)
+                if vu is True and numero in siens:
                     note_le_direct(racine, chaine, numero, live=True)
                     connu = numero
-                elif vu is False and connu:
+                elif connu and (vu is False or (vu is True and numero != connu)):
+                    # Un direct neuf qu'on n'a pas encore pu vérifier : l'ancien
+                    # est fini, mieux vaut ne rien incruster que lui. On cherche
+                    # alors au rythme rapide.
                     note_le_direct(racine, chaine, connu, live=False)
-            except OSError as souci:
+                    if vu is True:
+                        connu = ""
+            except (OSError, ValueError) as souci:
                 log.warning("Numéro du direct non noté : %s", souci)
         if vu is None:
             continue

@@ -1242,7 +1242,7 @@ async function suisLeDirect() {
   const enDirect = chaineEnDirect(fiche, antenne);
   if (fiche?.video && /^[\w-]{11}$/.test(String(fiche.video)) && surYouTube) {
     surYouTube.href = `https://www.youtube.com/watch?v=${fiche.video}`;
-  } else if (fiche?.chaine && surYouTube) {
+  } else if (/^UC[\w-]{22}$/.test(String(fiche?.chaine || "")) && surYouTube) {
     surYouTube.href = `https://www.youtube.com/channel/${fiche.chaine}/live`;
   }
   if (!fiche || enDirect === false) {
