@@ -5984,32 +5984,20 @@ class LecteurTests(unittest.TestCase):
         self.assertIn(f"v{stream.__version__}", dits)
 
 
-class PenseeTests(unittest.TestCase):
-    """Une pensée par jour, à 7 h 15, heure de Paris."""
+class TableauTests(unittest.TestCase):
+    """Le tableau du site et ce que le direct dit vraiment."""
 
-    def test_the_thought_is_at_a_quarter_past_seven(self):
-        self.assertEqual(stream.PENSEE_HEURE_S, 7 * 3600 + 15 * 60)
-        source = inspect.getsource(stream.diffuse)
-        self.assertNotIn("BIG UP TO THE NORMANDY!", source)
-        self.assertNotIn("normandys", source)
-
-    def test_a_finished_day_stays_finished(self):
-        from datetime import date
-        import tempfile
-        with tempfile.TemporaryDirectory() as dossier:
-            racine = Path(dossier)
-            voix = racine / "data" / "voix"
-            voix.mkdir(parents=True)
-            (voix / "pensee.jour").write_text(
-                "2026-10-04 2 1791146230.370\n", encoding="utf-8")
-            jour, rang, etape, _feu = stream._pensee_lue(racine)
-        self.assertEqual(jour, date(2026, 10, 4))
-        self.assertEqual((rang, etape), (2, 2))
-
-    def test_the_dedication_is_on_the_table(self):
+    def test_friend_and_dijon_are_gone(self):
         page = (Path(__file__).resolve().parents[1] / "site" / "index.html").read_text()
-        self.assertIn("David Vincent", page)
-        self.assertIn("7:15", page)
+        source = inspect.getsource(stream.diffuse)
+        for trace in ("David Vincent", "DAVID VINCENT", "UNE COLLAB", "Dijon"):
+            self.assertNotIn(trace, page)
+            self.assertNotIn(trace, source)
+        self.assertFalse(hasattr(stream, "PENSEE_HEURE_S"))
+        self.assertFalse(hasattr(stream, "DIJON_HEURES"))
+
+    def test_the_table_says_what_runs(self):
+        page = (Path(__file__).resolve().parents[1] / "site" / "index.html").read_text()
         self.assertNotIn("BIG UP TO THE NORMANDY!", page)
         self.assertIn("The bear keeps his own pace", page)
         self.assertIn("freetechnoradio.tech/index.m3u8", page)
@@ -6022,10 +6010,6 @@ class PenseeTests(unittest.TestCase):
         self.assertIn("8191 s", page)
         self.assertIn(f"v{stream.__version__}", page)
         self.assertIn("#FREETECHNORADIO", page)
-        self.assertEqual(stream.DIJON_HEURES,
-                         (23 * 3600, 23 * 3600 + 15 * 60))
-        self.assertIn("UNE COLLAB", page)
-        self.assertIn("collaboration", page)
 
 
 class SalleTests(unittest.TestCase):

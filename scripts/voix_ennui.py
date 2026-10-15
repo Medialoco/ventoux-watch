@@ -113,11 +113,6 @@ REPLIQUES = [
     ("ours", PLAT, "Grrrrooaaarrr"),
     ("ours_cri", PLAT, "THIS IS MY HOME!"),
     ("ours_cri", PLAT, "This is my hoooome!"),
-    # Une pensée, dite une fois par jour à 7 h 15, heure de Paris.
-    # Le nom est dit dans les deux sens : on ne sait pas lequel est le sien,
-    # et c'est précisément ce qu'on lui dit.
-    ("pensee", PLAT,
-     "To my very good friend David Vincent or Vincent David or David Vincent, Je pense à toi."),
     # Le mot du redémarrage. La porteuse est ajoutée après, dans le fichier :
     # le modèle dit le mot clairement, le traitement le rend un peu électronique.
     ("deploi", PLAT, "Free techno radio"),
@@ -217,7 +212,7 @@ CADENCES = {"ennui": 120, "brouillard": 120, "matin": 160, "attrape": 180,
             "rediff": 160,
             # Un ours ne parle pas vite.
             "ours": 100, "ours_cri": 100,
-            "pensee": 150, "normandie": 160, "normandy": 160, "deploi": 150}
+            "normandie": 160, "normandy": 160, "deploi": 150}
 
 # La consigne de jeu, envoyée avec chaque phrase. C'est ce qu'on ne pouvait pas
 # faire avec les voix système : le ton s'y choisissait en changeant de personne,
@@ -252,11 +247,6 @@ JEU = {
             "furious about it at the same time. Roll the growl deep in the "
             "chest, then wail the words out like a creature who has lived on "
             "this mountain far longer than the road has.",
-    "pensee": "Warm, quiet, and sincere, like a letter read aloud to one "
-              "person. Say the name twice, first David Vincent, then Vincent "
-              "David, then David Vincent again, clearly, so both orders are "
-              "heard. Then the French sentence Je pense à toi, in French, "
-              "tender and unhurried. Never comic, never sung, never loud.",
     "normandie": "A big cheerful shout, proud and bright, like a radio drop "
                  "for home. Say Big-UP à la Normandie with four beats of joy "
                  "on the exclamation. French on Normandie. Never ominous, "

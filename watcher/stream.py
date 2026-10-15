@@ -1587,11 +1587,8 @@ class Musique:
         self.redifferes = repliques(self.racine / "data" / "voix", "rediff")
         self.grognements = repliques(self.racine / "data" / "voix", "ours")
         self.cris_dours = repliques(self.racine / "data" / "voix", "ours_cri")
-        # Tenues hors du tableau du site : une pensée, puis la Normandie.
-        self.pensees = repliques(self.racine / "data" / "voix", "pensee")
+        # Tenue hors du tableau du site.
         self.deplois = repliques(self.racine / "data" / "voix", "deploi")
-        self.dijons = repliques(self.racine / "data" / "voix", "dijon")
-        self.dijon23 = repliques(self.racine / "data" / "voix", "dijon23")
         try:
             self.fiches = json.loads((dossier / "credits.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -3488,41 +3485,6 @@ def ordre_de_rediffusion(gardees: list[dict], tirage: random.Random,
 # fois par an ; mais personne ne regarde une webcam du Ventoux en UTC.
 PARIS = ZoneInfo("Europe/Paris")
 
-# Une pensée par jour, à 7 h 15, heure de Paris. Le nom reste écrit
-# dix-sept secondes. Un redémarrage dans la fenêtre ne la redit pas :
-# le fichier du jour s'en souvient.
-PENSEE_HEURE_S = 7 * 3600 + 15 * 60
-PENSEE_APRES_S = 17.0
-PENSEE_GRACE_S = 240
-
-
-def _pensee_lue(racine: Path) -> tuple[date | None, int, int, float]:
-    """Date, rang, étape, instant du feu.
-
-    Une étape 2 ferme la journée : la pensée de 7 h 15 a été dite, ou
-    l'heure est passée. L'ancien fichier à trois champs se lit encore.
-    """
-    try:
-        morceaux = (racine / "data" / "voix" / "pensee.jour").read_text().split()
-        jour = date.fromisoformat(morceaux[0])
-        if len(morceaux) >= 4:
-            return jour, int(morceaux[1]), int(morceaux[2]), float(morceaux[3])
-        etape = int(morceaux[1])
-        feu = float(morceaux[2]) if len(morceaux) > 2 else 0.0
-        if etape >= 2:
-            return jour, 2, 2, feu
-        return jour, 0, etape, feu
-    except (OSError, ValueError, IndexError):
-        return None, 0, 0, 0.0
-
-
-def _pensee_ecrite(racine: Path, jour: date, rang: int, etape: int,
-                   feu: float) -> None:
-    try:
-        (racine / "data" / "voix" / "pensee.jour").write_text(
-            f"{jour.isoformat()} {rang} {etape} {feu:.3f}\n", encoding="utf-8")
-    except OSError:
-        pass
 # L'heure de la machine, de l'autre côté. Même format, même corps : les deux
 # encarts se répondent, neuf heures d'écart entre les deux.
 LOS_ANGELES = ZoneInfo("America/Los_Angeles")
@@ -5597,85 +5559,13 @@ def pose_annonce(image: np.ndarray, vue: tuple[int, int, int, int],
         y += int(round(26 * echelle))
 
 
-# La moutarde de Dijon, en BGR. Assez jaune pour se lire, assez brune pour
-# rester une moutarde et pas un soleil.
+# La moutarde, en BGR. Assez jaune pour se lire, assez brune pour rester une
+# moutarde et pas un soleil.
 MOUTARDE = (36, 164, 214)
-# 23 h, puis 23 h 15. L'ancien fichier qui ne portait que la date ferme
-# la journée : on ne la rejoue pas le soir où le format a changé.
-DIJON_HEURES = (23 * 3600, 23 * 3600 + 15 * 60)
-DIJON_GRACE_S = 240
-DIJON_TENUE_S = 14.0
 # Une fois, à 14 h 25, heure de Los Angeles. Le mème, puis le crédit.
 NEVER_HEURE = 14 * 3600 + 25 * 60
 NEVER_GRACE_S = 600
 NEVER_TENUE_S = 12.0
-
-
-def moutarde(image: np.ndarray, force: float) -> None:
-    """Pousse l'image vers la moutarde, sans lui ôter ses formes."""
-    if force <= 0.01:
-        return
-    plat = cv2.cvtColor(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
-    teinte = plat.astype(np.float32)
-    for voie, cible in enumerate(MOUTARDE):
-        teinte[:, :, voie] *= cible / 170.0
-    teinte = np.clip(teinte, 0, 255).astype(np.uint8)
-    cv2.addWeighted(teinte, force, image, 1.0 - force, 0.0, dst=image)
-
-
-def _dijon_lue(racine: Path) -> tuple[date | None, int]:
-    """La date, et le prochain créneau : 0, 1, ou 2 si la journée est close."""
-    try:
-        morceaux = (racine / "data" / "voix" / "dijon.jour").read_text().split()
-        jour = date.fromisoformat(morceaux[0])
-        if len(morceaux) == 1:
-            return jour, len(DIJON_HEURES)
-        return jour, int(morceaux[1])
-    except (OSError, ValueError, IndexError):
-        return None, 0
-
-
-def _dijon_ecrite(racine: Path, jour: date, rang: int) -> None:
-    try:
-        (racine / "data" / "voix" / "dijon.jour").write_text(
-            f"{jour.isoformat()} {rang}\n", encoding="utf-8")
-    except OSError:
-        pass
-
-
-def pose_dijon(image: np.ndarray, vue: tuple[int, int, int, int],
-               logo: np.ndarray | None, age: float, heure: str) -> None:
-    """Son logo, l'heure, et la ligne UNE COLLAB AVEC BUTTERBANE.
-
-    Quatorze secondes. La montagne prend la moutarde. Le logo reste le
-    sien : on ne le repeint pas.
-    """
-    if age < 0 or age > DIJON_TENUE_S:
-        return
-    force = min(1.0, age / 0.5, (DIJON_TENUE_S - age) / 0.7)
-    gx, gy, gw, gh = vue
-    if gw < 8 or gh < 8:
-        return
-    vive = image[gy:gy + gh, gx:gx + gw].copy()
-    moutarde(vive, 0.55 * force)
-    image[gy:gy + gh, gx:gx + gw] = vive
-    hauteur, largeur = image.shape[:2]
-    echelle = largeur / 1600
-    if logo is not None:
-        rayon = int(min(gw, gh) * 0.22)
-        pose_photo_ronde(image, logo, gx + gw // 2, gy + gh // 2, rayon,
-                         echelle, anneau=MOUTARDE)
-    taille_heure = 1.6 * echelle
-    trait_heure = max(2, int(5 * echelle))
-    (lh, hh), _ = cv2.getTextSize(heure, cv2.FONT_HERSHEY_DUPLEX,
-                                  taille_heure, trait_heure)
-    xh = gx + (gw - lh) // 2
-    yh = gy + int(gh * 0.16) + hh
-    cv2.putText(image, heure, (xh, yh), cv2.FONT_HERSHEY_DUPLEX, taille_heure,
-                (0, 0, 0), trait_heure + 3, cv2.LINE_AA)
-    cv2.putText(image, heure, (xh, yh), cv2.FONT_HERSHEY_DUPLEX, taille_heure,
-                MOUTARDE, trait_heure, cv2.LINE_AA)
-    pose_annonce(image, vue, ("UNE COLLAB", "AVEC BUTTERBANE"))
 
 
 def _never_lue(racine: Path) -> date | None:
@@ -8178,10 +8068,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     duplex_mode = ""
     prochain_duplex = origine + DUPLEX_PREMIER_S
     compagne = Compagne(cfg, CADENCE_CANNES)
-    pensee_jour, pensee_rang, pensee_etape, pensee_feu = _pensee_lue(racine)
-    dijon_jour, dijon_rang = _dijon_lue(racine)
-    dijon_feu = 0.0
-    dijon_heure = "23:00"
     never_jour = _never_lue(racine)
     never_feu = 0.0
     salle_feu = 0.0
@@ -8817,39 +8703,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # conditions ensemble, donc. Tenir un sous-titre plus longtemps que
             # la parole n'est pas mentir, c'est sous-titrer ; le retirer avant
             # la fin de la phrase, si.
-            # La pensée, à 7 h 15, heure de Paris, une fois. Le nom reste
-            # écrit dix-sept secondes.
-            ici = datetime.now(PARIS)
-            if pensee_jour != ici.date():
-                pensee_jour, pensee_rang, pensee_etape = ici.date(), 0, 0
-            seconde_jour = ici.hour * 3600 + ici.minute * 60 + ici.second
-            if pensee_etape < 2:
-                if seconde_jour >= PENSEE_HEURE_S + PENSEE_GRACE_S:
-                    pensee_etape = 2
-                    _pensee_ecrite(racine, ici.date(), 1, 2, pensee_feu)
-                elif (musique.pensees
-                        and PENSEE_HEURE_S <= seconde_jour < PENSEE_HEURE_S + PENSEE_GRACE_S
-                        and not musique.parle()):
-                    if musique.dis(musique.pensees[0]):
-                        pensee_feu = time.time()
-                        pensee_etape = 2
-                        _pensee_ecrite(racine, ici.date(), 1, 2, pensee_feu)
-                        log.info("Pensée dite à %s", ici.strftime("%H:%M:%S"))
-            if dijon_jour != ici.date():
-                dijon_jour, dijon_rang = ici.date(), 0
-            if dijon_rang < len(DIJON_HEURES):
-                vise = DIJON_HEURES[dijon_rang]
-                clips = (musique.dijon23, musique.dijons)[dijon_rang]
-                if seconde_jour >= vise + DIJON_GRACE_S:
-                    dijon_rang += 1
-                    _dijon_ecrite(racine, ici.date(), dijon_rang)
-                elif (vise <= seconde_jour and not musique.parle()
-                      and (not clips or musique.dis(clips[0]))):
-                    dijon_feu = time.time()
-                    dijon_heure = "23:00" if dijon_rang == 0 else "23:15"
-                    dijon_rang += 1
-                    _dijon_ecrite(racine, ici.date(), dijon_rang)
-                    log.info("Dijon dit à %s", ici.strftime("%H:%M:%S"))
             la = datetime.now(LOS_ANGELES)
             if never_jour != la.date():
                 seconde_la = la.hour * 3600 + la.minute * 60 + la.second
@@ -8861,8 +8714,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     log.info("Never give up à %s, heure de Los Angeles",
                              la.strftime("%H:%M:%S"))
             if (time.time() >= salle_prochain and not musique.parle()
-                    and not (never_feu and 0 <= time.time() - never_feu <= NEVER_TENUE_S)
-                    and not (dijon_feu and 0 <= time.time() - dijon_feu <= DIJON_TENUE_S)):
+                    and not (never_feu and 0 <= time.time() - never_feu <= NEVER_TENUE_S)):
                 abo, directs = salle.lit()
                 if abo is None and directs is None:
                     salle_prochain = time.time() + 15.0
@@ -8877,16 +8729,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     salle_prochain = time.time() + SALLE_PERIODE_S
             dit = musique.dit_quoi() if musique.parle() else ""
             age_never = time.time() - never_feu if never_feu else -1.0
-            age_dijon = time.time() - dijon_feu if dijon_feu else -1.0
             phrase_minuit = note_minuit(quand, minuit)
             if phrase_minuit:
                 pose_annonce(toile, cadrage, (phrase_minuit,))
             elif 0 <= age_never <= NEVER_TENUE_S:
                 pose_never(toile, cadrage, photo_never, photo_butterbane,
                            age_never)
-            elif 0 <= age_dijon <= DIJON_TENUE_S:
-                pose_dijon(toile, cadrage, photo_butterbane, age_dijon,
-                           dijon_heure)
             elif dit == "brouillard" or quand - gris_depuis <= BROUILLARD_TENUE_S:
                 # Sans voix enregistrée, le mot tient quand même trois
                 # secondes : il doit pouvoir dire le brouillard sur une machine
@@ -8894,9 +8742,6 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 pose_ennui(toile, mot_gris, quand - origine)
             elif dit == "ennui" or quand - dernier_ennui <= ENNUI_TENUE_S:
                 pose_ennui(toile, "BOOOOORING", quand - origine)
-            elif (pensee_feu and time.time() - pensee_feu < PENSEE_APRES_S
-                    and pensee_etape >= 1):
-                pose_annonce(toile, cadrage, ("DAVID VINCENT OR VINCENT DAVID",))
             pose_salle(toile, cadrage, salle_abonnes, salle_direct,
                        time.time() - salle_feu if salle_feu else -1.0,
                        salle_tenue)
