@@ -4848,6 +4848,28 @@ class DiffusionTests(unittest.TestCase):
             stream.veille_le_direct("UCxxxx", coupe, lache=lache)
         self.assertFalse(lache.is_set())
 
+    def test_a_pull_never_puts_back_a_dead_live(self):
+        """Le pull remet la version du dépôt : on rend la nôtre, pas plus."""
+        from watcher import publish
+        with tempfile.TemporaryDirectory() as dossier:
+            repo = Path(dossier)
+            git = lambda *a: subprocess.run(["git", *a], cwd=repo, check=True,
+                                            capture_output=True)
+            git("init", "-q")
+            (repo / "data").mkdir()
+            fichier = repo / "data" / "direct.json"
+            fichier.write_text("mort")
+            git("add", ".")
+            git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x")
+            fichier.write_text("neuf")
+            gardes = publish.garde_etat(repo)
+            fichier.write_text("mort")
+            publish.rend_etat(repo, gardes)
+            self.assertEqual(fichier.read_text(), "neuf")
+            fichier.write_text("plus neuf encore")
+            publish.rend_etat(repo, gardes)
+            self.assertEqual(fichier.read_text(), "plus neuf encore")
+
     def test_a_release_nobody_takes_stops_the_process(self):
         """Le 15 octobre la boucle des images était bloquée : on s'arrête soi-même."""
         pages = iter(['{"videoDetails":{"videoId":"mmf5x1r2rvQ"},"isLive":true}',

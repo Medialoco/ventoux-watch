@@ -78,7 +78,16 @@ def main(argv: list[str] | None = None) -> int:
     subprocess.run(["git", "push", "-q", "origin", "main"], cwd=ROOT, check=True)
     # autoStash parce que la veille réécrit view.jpg et learning.json en
     # permanence : sans elle le rebase refuse de partir une fois sur deux.
-    _ssh(f"cd {DEPOT} && git -c rebase.autoStash=true pull -q --rebase origin main")
+    # L'état de l'antenne est gardé à côté et remis là où le pull l'a écrasé :
+    # le 15 octobre, un déploiement a remis direct.json au direct mort.
+    from watcher.publish import ETAT_LOCAL
+    noms = " ".join(ETAT_LOCAL)
+    _ssh(f"cd {DEPOT} && rm -rf /tmp/ventoux-etat && mkdir -p /tmp/ventoux-etat && "
+         f"for f in {noms}; do [ -f $f ] && cp $f /tmp/ventoux-etat/$(basename $f); done; "
+         f"git -c rebase.autoStash=true pull -q --rebase origin main; r=$?; "
+         f"for f in {noms}; do g=/tmp/ventoux-etat/$(basename $f); "
+         f"[ -f $g ] && ! cmp -s $g $f && git show HEAD:$f 2>/dev/null | cmp -s - $f "
+         f"&& cp $g $f.tmp && mv $f.tmp $f; done; exit $r")
     print("Pi à", _ssh(f"cd {DEPOT} && git log --oneline -1"))
 
     _ssh("sudo systemctl restart ventoux-watch")

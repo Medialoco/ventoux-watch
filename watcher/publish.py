@@ -8,6 +8,45 @@ from pathlib import Path
 
 log = logging.getLogger("ventoux.publish")
 
+# L'état de l'antenne, que cette machine seule écrit. Un pull dont l'autostash
+# bute sur un conflit laisse la version du dépôt à la place : le 15 octobre,
+# direct.json est ainsi revenu au direct mort pendant que le neuf tournait.
+ETAT_LOCAL = ("data/direct.json", "data/antenne.json", "data/radio.json")
+
+
+def garde_etat(repo: Path) -> dict[str, bytes]:
+    gardes = {}
+    for nom in ETAT_LOCAL:
+        try:
+            gardes[nom] = (repo / nom).read_bytes()
+        except OSError:
+            pass
+    return gardes
+
+
+def rend_etat(repo: Path, gardes: dict[str, bytes]) -> None:
+    """Remet l'état gardé, seulement là où git l'a remplacé par le sien.
+
+    Un fichier qui ne vaut ni l'état gardé ni la version du dépôt a été
+    réécrit entre-temps par l'antenne : c'est lui le plus frais.
+    """
+    for nom, contenu in gardes.items():
+        fichier = repo / nom
+        try:
+            actuel = fichier.read_bytes()
+        except OSError:
+            actuel = None
+        if actuel == contenu:
+            continue
+        if actuel is not None:
+            depot = subprocess.run(["git", "show", f"HEAD:{nom}"], cwd=repo,
+                                   capture_output=True, check=False).stdout
+            if actuel != depot:
+                continue
+        passage = fichier.with_suffix(fichier.suffix + ".tmp")
+        passage.write_bytes(contenu)
+        passage.replace(fichier)
+
 
 def publish(repo: Path) -> bool:
     if not (repo / ".git").is_dir():
@@ -45,6 +84,7 @@ def publish(repo: Path) -> bool:
         "data/antenne.json",
         "data/radio.json",
     ]
+    gardes = garde_etat(repo)
     try:
         # --autostash : la veille écrit dans data/ en permanence, et un rebase
         # refuse de démarrer sur un arbre sale. Sans cela le rapatriement échoue
@@ -54,6 +94,7 @@ def publish(repo: Path) -> bool:
         _git(repo, "pull", "--rebase", "--autostash", "origin", "main")
     except subprocess.CalledProcessError as erreur:
         log.warning("Historique distant non rapatrié : %s", (erreur.stderr or "").strip()[:200])
+    rend_etat(repo, gardes)
     status = _git(repo, "status", "--porcelain", "--", *paths)
     if not status.strip():
         return False
