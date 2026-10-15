@@ -662,12 +662,15 @@ tr.wrong .event .sub { text-decoration: none; display: block; }
   max-width: 62em;
 }
 
-.relief .stage { position: relative; }
-
-#relief {
+.relief .stage {
   position: relative;
   width: min(100%, 620px);
   margin: 0 auto;
+}
+
+#relief {
+  position: relative;
+  width: 100%;
   aspect-ratio: 16 / 9;
   background: #1d2b3f;
   overflow: hidden;
@@ -699,7 +702,7 @@ tr.wrong .event .sub { text-decoration: none; display: block; }
   background: #000;
 }
 
-.relief .stage:fullscreen #relief { aspect-ratio: auto; }
+.relief .stage:fullscreen #relief { aspect-ratio: auto; width: auto; }
 
 .relief .wake {
   position: absolute;
