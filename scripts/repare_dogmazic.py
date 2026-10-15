@@ -33,7 +33,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 API = "https://play.dogmazic.net/server/json.server.php"
 API_VERSION = "6.0.0"
-NAVIGATEUR = "ventoux-watch/1.0 (+https://medialoco.github.io/ventoux-watch/)"
+NAVIGATEUR = "ventoux-watch/1.0 (+https://watch.freetechnoradio.tech/)"
 MAISON = "thepriben"
 PATIENCE_S = 300.0
 ALBUM = "Mont Serein 002"

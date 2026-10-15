@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CIBLE = ROOT / "assets" / "carte-pays.json"
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 NAVIGATEUR = ("ventoux-watch/1.0 "
-              "(+https://medialoco.github.io/ventoux-watch/)")
+              "(+https://watch.freetechnoradio.tech/)")
 # En degrés. Plus fin ne se verrait pas dans un encart de cent pixels, et
 # chaque point coûte un trait à dessiner soixante fois par seconde.
 FINESSE = 0.05

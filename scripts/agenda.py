@@ -35,7 +35,7 @@ CIBLE = ROOT / "data" / "agenda.json"
 SOURCE = "https://porteduventoux.com/agenda"
 CREDIT = "AGENDA PORTE DU VENTOUX"
 NAVIGATEUR = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-              "ventoux-watch/1.0 (+https://medialoco.github.io/ventoux-watch/)")
+              "ventoux-watch/1.0 (+https://watch.freetechnoradio.tech/)")
 # Le bandeau fait un tour complet en quelques minutes. Au-delà d'une
 # trentaine d'entrées il ne revient plus assez souvent pour qu'on tombe
 # dessus, et un agenda qu'on ne voit jamais ne sert à rien.

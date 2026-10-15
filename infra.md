@@ -179,7 +179,7 @@ revient, et le service est activé au démarrage.
 
 Le veilleur pousse `data/events.json`, `data/learning.json` et `data/thumbs/`
 sur GitHub, qui reconstruit le site par GitHub Pages :
-[medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/).
+[watch.freetechnoradio.tech](https://watch.freetechnoradio.tech/).
 
 Le rythme est à deux vitesses. Un **départ de feu part immédiatement** ; tout
 le reste est groupé et publié au plus toutes les **quinze minutes**

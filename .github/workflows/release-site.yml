@@ -61,6 +61,6 @@ jobs:
         run: |
           gh release create "site-v${{ steps.bump.outputs.version }}" \
             --title "Site v${{ steps.bump.outputs.version }}" \
-            --notes "Release du site GitHub Pages (medialoco.github.io/ventoux-watch). La veille sur le Pi garde son propre numéro v* dans events.json."
+            --notes "Release du site GitHub Pages (watch.freetechnoradio.tech). La veille sur le Pi garde son propre numéro v* dans events.json."
       - name: Publish Pages
         run: gh workflow run pages.yml

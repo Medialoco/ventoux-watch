@@ -27,7 +27,7 @@ SCENE = ROOT / "config" / "scene.json"
 NOMINATIM = "https://nominatim.openstreetmap.org/reverse"
 # Nominatim demande qu'on se nomme, et il a raison.
 NAVIGATEUR = ("ventoux-watch/1.0 "
-              "(+https://medialoco.github.io/ventoux-watch/)")
+              "(+https://watch.freetechnoradio.tech/)")
 # Le rang 10 est celui de la commune. Plus fin, on tombe sur le lieu-dit ;
 # plus large, sur l'intercommunalité.
 RANG = 10

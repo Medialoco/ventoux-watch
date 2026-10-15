@@ -42,7 +42,7 @@ LICENCE_URL = "https://creativecommons.org/licenses/by/4.0/"
 LICENCE_DOGMAZIC = 48
 
 OU = ("Musique écrite pour la veille du Mont Serein, "
-      "https://medialoco.github.io/ventoux-watch/")
+      "https://watch.freetechnoradio.tech/")
 
 
 def tempo_et_titre(nom: str) -> tuple[str, float, int]:

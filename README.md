@@ -14,7 +14,7 @@ Veilleur **v0.6.48**.
 | --- | --- |
 | Audio (annuaires, VLC) | `https://freetechnoradio.tech/index.m3u8` |
 | Écoute dans le navigateur | [freetechnoradio.tech](https://freetechnoradio.tech/) (même URL ; le navigateur reçoit la page joueur via `Accept: text/html`) |
-| Site | [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/) |
+| Site | [watch.freetechnoradio.tech](https://watch.freetechnoradio.tech/) |
 | YouTube | id dans `data/direct.json` · [chaîne](https://www.youtube.com/channel/UCvN0sNcj5JM9tklIkAlGi7g) |
 | Playlist Dogmazic | [play.dogmazic.net …4803](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803) · sync : `scripts/dogmazic_playlist.py --verifie` |
 

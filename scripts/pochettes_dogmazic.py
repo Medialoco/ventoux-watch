@@ -35,7 +35,7 @@ POCHETTES = MUSIQUE / "pochettes"
 CREDITS = MUSIQUE / "credits.json"
 API = "https://play.dogmazic.net/server/json.server.php"
 API_VERSION = "6.0.0"
-NAVIGATEUR = "ventoux-watch/1.0 (+https://medialoco.github.io/ventoux-watch/)"
+NAVIGATEUR = "ventoux-watch/1.0 (+https://watch.freetechnoradio.tech/)"
 COTE = 256
 # Le numéro du morceau est dans son nom de fichier : c'est celui de Dogmazic.
 NUMERO = re.compile(r"dogmazic-0*(\d+)\.mp3$")
