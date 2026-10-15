@@ -330,8 +330,11 @@
     const fondDirect = document.getElementById("fond-direct");
     const boutonDirect = document.getElementById("bouton-direct");
     let videoDirect = "";
-    let avecDirect = false;
-    try { avecDirect = localStorage.getItem("ftr-fond-direct") === "1"; } catch (_) {}
+    let avecDirect = window.top === window;
+    try {
+      const choix = localStorage.getItem("ftr-fond-direct");
+      if (choix !== null) avecDirect = choix === "1";
+    } catch (_) {}
 
     function poseDirect() {
       const on = avecDirect && !!videoDirect;
