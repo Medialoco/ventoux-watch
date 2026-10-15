@@ -74,6 +74,48 @@
       border-bottom: 1px solid color-mix(in srgb, #9dd3ba 35%, transparent);
     }
     .links a:hover { color: #c5ead8; }
+    #fond-direct {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+      background: #000;
+    }
+    #fond-direct[hidden] { display: none; }
+    #fond-direct iframe {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100vw, 177.78vh);
+      height: max(100vh, 56.25vw);
+      transform: translate(-50%, -50%);
+      border: 0;
+    }
+    body.avec-direct { background: transparent; }
+    body.avec-direct .wrap {
+      background: transparent;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    }
+    #bouton-direct {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      z-index: 1;
+      padding: 3px 9px;
+      font: 600 11px/1.4 ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: 0.06em;
+      color: #9aa0a8;
+      background: rgba(13, 16, 20, 0.45);
+      border: 1px solid rgba(157, 211, 186, 0.25);
+      border-radius: 999px;
+      cursor: pointer;
+      opacity: 0.55;
+      transition: opacity 0.2s;
+    }
+    #bouton-direct:hover, #bouton-direct:focus-visible { opacity: 1; }
+    #bouton-direct[hidden] { display: none; }
+    body.avec-direct #bouton-direct { color: #9dd3ba; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
 </head>
@@ -96,6 +138,8 @@
       <a id="repo" href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener">Source · v<span id="release-ver">0.6.48</span></a>
     </nav>
   </div>
+  <div id="fond-direct" hidden aria-hidden="true"></div>
+  <button type="button" id="bouton-direct" hidden aria-pressed="false">LIVE</button>
   <script>
     const HASH = "#FREETECHNORADIO";
     const GLYPHS = {
@@ -238,6 +282,52 @@
       } catch (_) { /* valeurs par défaut dans le HTML */ }
     }
     rafraichitRelease();
+
+    const fondDirect = document.getElementById("fond-direct");
+    const boutonDirect = document.getElementById("bouton-direct");
+    let videoDirect = "";
+    let avecDirect = false;
+    try { avecDirect = localStorage.getItem("ftr-fond-direct") === "1"; } catch (_) {}
+
+    function poseDirect() {
+      const on = avecDirect && !!videoDirect;
+      document.body.classList.toggle("avec-direct", on);
+      boutonDirect.setAttribute("aria-pressed", on ? "true" : "false");
+      boutonDirect.title = on ? "Hide the YouTube live" : "Show the YouTube live behind";
+      if (!on) {
+        fondDirect.hidden = true;
+        fondDirect.innerHTML = "";
+        return;
+      }
+      const cadre = fondDirect.querySelector("iframe");
+      if (cadre && cadre.dataset.video === videoDirect) return;
+      fondDirect.innerHTML = "";
+      const neuf = document.createElement("iframe");
+      neuf.dataset.video = videoDirect;
+      neuf.allow = "autoplay; encrypted-media";
+      neuf.title = "YouTube live";
+      neuf.src = `https://www.youtube.com/embed/${videoDirect}?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1`;
+      fondDirect.appendChild(neuf);
+      fondDirect.hidden = false;
+    }
+
+    boutonDirect.addEventListener("click", () => {
+      avecDirect = !avecDirect;
+      try { localStorage.setItem("ftr-fond-direct", avecDirect ? "1" : "0"); } catch (_) {}
+      poseDirect();
+    });
+
+    async function rafraichitDirect() {
+      try {
+        const fiche = await fetch("/direct.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+        const numero = fiche && fiche.live !== false ? String(fiche.video || "") : "";
+        videoDirect = /^[\w-]{11}$/.test(numero) ? numero : "";
+      } catch (_) { /* on garde l'état précédent */ }
+      boutonDirect.hidden = !videoDirect;
+      poseDirect();
+    }
+    rafraichitDirect();
+    setInterval(rafraichitDirect, 60000);
   </script>
 </body>
 </html>
