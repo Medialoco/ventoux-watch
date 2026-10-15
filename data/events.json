@@ -2,6 +2,140 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-15T16-14-52Z-fire-39",
+      "t": "2026-10-15T16:14:52Z",
+      "type": "fire",
+      "label": "Départ de feu",
+      "zone": "slope",
+      "confidence": 0.433,
+      "thumb": "data/thumbs/2026-10-15T16-14-52Z-fire-39.jpg",
+      "clip_url": "",
+      "detail": {
+        "warm_ratio": 0.433,
+        "smoke_ratio": 0.128,
+        "rise": 0.0,
+        "grow": 1.03,
+        "width_m": 19.4,
+        "surface": "",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0008,
+          "area_grow": 1.03,
+          "clipped": false,
+          "shade": 0.869,
+          "kept": 0.556,
+          "area_ratio": 0.00231,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 19.4,
+          "height_m": 7.1,
+          "width_named_m": 0.9,
+          "height_named_m": 0.8,
+          "rise_ms": 0.0,
+          "drift_rate": 0.011,
+          "seen_as": [
+            "dog 0.66 sur 0%"
+          ]
+        },
+        "box": [
+          0.4984,
+          0.5306,
+          0.0594,
+          0.0389
+        ],
+        "trace": [
+          [
+            1792080887.86,
+            0.4984,
+            0.5306,
+            0.0578,
+            0.0389
+          ],
+          [
+            1792080888.86,
+            0.4984,
+            0.5306,
+            0.0594,
+            0.0389
+          ],
+          [
+            1792080889.86,
+            0.4984,
+            0.5306,
+            0.0578,
+            0.0389
+          ],
+          [
+            1792080890.86,
+            0.4984,
+            0.5306,
+            0.0594,
+            0.0389
+          ],
+          [
+            1792080891.86,
+            0.4984,
+            0.5306,
+            0.0594,
+            0.0361
+          ],
+          [
+            1792080892.86,
+            0.4984,
+            0.5306,
+            0.0594,
+            0.0389
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-15T16-14-52Z-fire-39.jpg"
+    },
+    {
+      "id": "2026-10-15T16-08-33Z-missed-38",
+      "t": "2026-10-15T16:08:33Z",
+      "type": "missed",
+      "label": "Voiture garée",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-15T16-08-33Z-missed-38.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur une aire de stationnement, et ça n'a pas bougé.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.104,
+          "kept": 0.667,
+          "area_ratio": 0.00042,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 2.2,
+          "height_m": 1.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "parked",
+        "box": [
+          0.0969,
+          0.7528,
+          0.0187,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-10-15T16-08-33Z-missed-38.jpg"
+    },
+    {
       "id": "2026-10-15T16-04-04Z-missed-37",
       "t": "2026-10-15T16:04:04Z",
       "type": "missed",
