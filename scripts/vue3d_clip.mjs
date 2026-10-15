@@ -63,6 +63,19 @@ async function filme({ secondes, fps, sortie }) {
   veille(navigateur);
   try {
     const page = await navigateur.newPage();
+    // Le stream attend un rendu en plein soleil et l'assombrit lui-même la
+    // nuit ; la scène, elle, s'éclaire selon l'heure qu'il est. Filmé le soir,
+    // le survol sortait de nuit. L'horloge de la page est donc fixée à midi,
+    // heure de Paris, le jour du tournage.
+    const midi = new Date(new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Paris" }) + "T10:00:00Z").valueOf();
+    await page.evaluateOnNewDocument((fige) => {
+      const Vraie = Date;
+      class Figee extends Vraie {
+        constructor(...valeurs) { super(...(valeurs.length ? valeurs : [fige])); }
+        static now() { return fige; }
+      }
+      globalThis.Date = Figee;
+    }, midi);
     await page.setViewport({ width: LARGEUR, height: HAUTEUR, deviceScaleFactor: 1 });
     await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.waitForSelector("#relief canvas", { timeout: 60000 });
@@ -76,7 +89,8 @@ async function filme({ secondes, fps, sortie }) {
       document.body.prepend(scene);
       for (const noeud of [...document.body.children]) if (noeud !== scene) noeud.remove();
       Object.assign(document.body.style, { margin: "0", background: "#000", overflow: "hidden" });
-      for (const bouton of scene.querySelectorAll("button")) bouton.style.display = "none";
+      // Le crédit OpenStreetMap aussi : le stream pose le sien sur le survol.
+      for (const bouton of scene.querySelectorAll("button, a")) bouton.style.display = "none";
       const hote = document.getElementById("relief");
       Object.assign(hote.style, { width: l + "px", maxWidth: "none", margin: "0" });
       window.dispatchEvent(new Event("resize"));
