@@ -2,6 +2,133 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-15T05-35-49Z-missed-8",
+      "t": "2026-10-15T05:35:49Z",
+      "type": "missed",
+      "label": "Décor connu",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-15T05-35-49Z-missed-8.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "cabane est fixé au sol. C'est une lumière qui a bougé, pas lui.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0478,
+          "area_grow": 0.45,
+          "clipped": false,
+          "shade": 0.743,
+          "kept": 1.0,
+          "area_ratio": 0.00052,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 3.3,
+          "height_m": 2.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.455,
+          "seen_as": []
+        },
+        "refused": "landmark",
+        "box": [
+          0.3328,
+          0.7,
+          0.0297,
+          0.0389
+        ]
+      },
+      "closeup": "data/closeups/2026-10-15T05-35-49Z-missed-8.jpg"
+    },
+    {
+      "id": "2026-10-15T05-35-45Z-motion-7",
+      "t": "2026-10-15T05:35:45Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-15T05-35-45Z-motion-7.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.233,
+          "area_grow": 0.01,
+          "clipped": false,
+          "shade": 0.816,
+          "kept": 0.787,
+          "area_ratio": 0.00069,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 13.6,
+          "height_m": 3.7,
+          "width_named_m": 2.8,
+          "height_named_m": 5.6,
+          "rise_ms": 0.0,
+          "drift_rate": 0.357,
+          "seen_as": [
+            "person 0.27 sur 0%"
+          ]
+        },
+        "box": [
+          0.0625,
+          0.7528,
+          0.4875,
+          0.2361
+        ]
+      },
+      "closeup": "data/closeups/2026-10-15T05-35-45Z-motion-7.jpg"
+    },
+    {
+      "id": "2026-10-15T05-11-14Z-missed-6",
+      "t": "2026-10-15T05:11:14Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-15T05-11-14Z-missed-6.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1241,
+          "area_grow": 6.08,
+          "clipped": false,
+          "shade": 1.063,
+          "kept": 0.832,
+          "area_ratio": 0.02156,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.106,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.1922,
+          0.25,
+          0.1437,
+          0.15
+        ]
+      },
+      "closeup": "data/closeups/2026-10-15T05-11-14Z-missed-6.jpg"
+    },
+    {
       "id": "2026-10-15T05-01-22Z-cycle-5",
       "t": "2026-10-15T05:01:22Z",
       "type": "cycle",
