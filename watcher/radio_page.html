@@ -140,15 +140,27 @@
 
     const audio = document.getElementById("audio");
     const stream = location.origin + "/index.m3u8";
+    const lance = new URLSearchParams(location.search).get("play") === "1";
     let hls = null;
+
+    function tenteLecture() {
+      if (!lance) return;
+      audio.play().catch(() => {});
+    }
+
+    window.addEventListener("message", (ev) => {
+      if (ev.data && ev.data.type === "benprieur-radio-play") audio.play().catch(() => {});
+    });
 
     function demarreHls() {
       if (window.Hls && Hls.isSupported()) {
         hls = new Hls();
         hls.loadSource(stream);
         hls.attachMedia(audio);
+        hls.on(Hls.Events.MANIFEST_PARSED, tenteLecture);
       } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
         audio.src = stream;
+        audio.addEventListener("loadedmetadata", tenteLecture, { once: true });
       }
     }
     demarreHls();
