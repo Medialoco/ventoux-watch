@@ -16,6 +16,7 @@
       -webkit-font-smoothing: antialiased;
     }
     .wrap {
+      position: relative;
       max-width: 520px;
       margin: 0 auto;
       padding: 28px 20px 40px;
@@ -98,24 +99,67 @@
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
     }
     #bouton-direct {
-      position: fixed;
-      right: 12px;
-      bottom: 12px;
-      z-index: 1;
-      padding: 3px 9px;
-      font: 600 11px/1.4 ui-sans-serif, system-ui, sans-serif;
-      letter-spacing: 0.06em;
-      color: #9aa0a8;
-      background: rgba(13, 16, 20, 0.45);
-      border: 1px solid rgba(157, 211, 186, 0.25);
+      position: absolute;
+      right: 22px;
+      bottom: 0;
+      transform: translateY(50%);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px 5px 10px;
+      font: 700 11px/1 ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: 0.12em;
+      color: #f2f4f5;
+      text-shadow: none;
+      background: #12161b;
+      border: 1px solid color-mix(in srgb, #9dd3ba 40%, #2b2f36);
       border-radius: 999px;
       cursor: pointer;
-      opacity: 0.55;
-      transition: opacity 0.2s;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s, background 0.2s;
     }
-    #bouton-direct:hover, #bouton-direct:focus-visible { opacity: 1; }
+    #bouton-direct:hover, #bouton-direct:focus-visible {
+      border-color: #ff3b30;
+      box-shadow: 0 0 16px rgba(255, 59, 48, 0.4);
+      transform: translateY(50%) scale(1.06);
+    }
     #bouton-direct[hidden] { display: none; }
-    body.avec-direct #bouton-direct { color: #9dd3ba; }
+    #bouton-direct .point {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff3b30;
+      box-shadow: 0 0 6px #ff3b30;
+      animation: pouls 1.6s ease-in-out infinite;
+    }
+    @keyframes pouls {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+    body.avec-direct #bouton-direct { background: #ff3b30; border-color: #ff3b30; color: #fff; }
+    body.avec-direct #bouton-direct .point { background: #fff; box-shadow: 0 0 6px #fff; }
+
+    body.flotte { padding: 36px 16px; }
+    body.flotte .wrap {
+      translate: var(--dx, 0px) var(--dy, 0px);
+      animation: flotte 11s ease-in-out infinite;
+      cursor: grab;
+      touch-action: pan-y;
+    }
+    body.flotte .wrap.tenue {
+      cursor: grabbing;
+      user-select: none;
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, #9dd3ba 24%, transparent),
+        0 26px 64px rgba(0, 0, 0, 0.5);
+    }
+    @keyframes flotte {
+      0%, 100% { transform: translate(0, 0); }
+      30% { transform: translate(4px, -8px); }
+      65% { transform: translate(-3px, -3px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body.flotte .wrap, #bouton-direct .point { animation: none; }
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
 </head>
@@ -137,9 +181,9 @@
       <a id="site-doc" href="https://medialoco.github.io/ventoux-watch/" target="_blank" rel="noopener">About the station</a><br>
       <a id="repo" href="https://github.com/Medialoco/ventoux-watch" target="_blank" rel="noopener">Source · v<span id="release-ver">0.6.48</span></a>
     </nav>
+    <button type="button" id="bouton-direct" hidden aria-pressed="false"><span class="point" aria-hidden="true"></span>LIVE</button>
   </div>
   <div id="fond-direct" hidden aria-hidden="true"></div>
-  <button type="button" id="bouton-direct" hidden aria-pressed="false">LIVE</button>
   <script>
     const HASH = "#FREETECHNORADIO";
     const GLYPHS = {
@@ -328,6 +372,74 @@
     }
     rafraichitDirect();
     setInterval(rafraichitDirect, 60000);
+
+    // Inside the aquarium of benoit-prieur.fr the page is a small iframe:
+    // a box that drifts there would only be cut by the frame.
+    if (window.top === window) {
+      const boite = document.querySelector(".wrap");
+      const calme = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      document.body.classList.add("flotte");
+      let dx = 0, dy = 0, vx = 0, vy = 0, prise = null, derive = 0;
+      let posX = 0, posY = 0;
+
+      const pose = () => {
+        posX = dx; posY = dy;
+        boite.style.setProperty("--dx", `${dx}px`);
+        boite.style.setProperty("--dy", `${dy}px`);
+      };
+      const borne = (v, a, b) => Math.min(Math.max(v, Math.min(a, b)), Math.max(a, b));
+      const bornes = () => {
+        const r = boite.getBoundingClientRect();
+        const x0 = r.left - posX, y0 = r.top - posY, m = 8;
+        return [m - x0, innerWidth - m - r.width - x0, m - y0, innerHeight - m - r.height - y0];
+      };
+      const range = () => {
+        const [x1, x2, y1, y2] = bornes();
+        const nx = borne(dx, x1, x2), ny = borne(dy, y1, y2);
+        const rebond = prise ? 0 : -0.5;
+        if (nx !== dx) vx *= rebond;
+        if (ny !== dy) vy *= rebond;
+        dx = nx; dy = ny;
+        pose();
+      };
+      const glisse = () => {
+        vx *= 0.95; vy *= 0.95;
+        dx += vx; dy += vy;
+        range();
+        derive = Math.hypot(vx, vy) > 0.1 ? requestAnimationFrame(glisse) : 0;
+      };
+
+      boite.addEventListener("pointerdown", (e) => {
+        if (e.pointerType === "touch" || e.button !== 0) return;
+        if (e.target.closest("a, button, audio")) return;
+        cancelAnimationFrame(derive);
+        vx = vy = 0;
+        prise = { x: e.clientX - dx, y: e.clientY - dy, px: e.clientX, py: e.clientY, t: performance.now() };
+        boite.setPointerCapture(e.pointerId);
+        boite.classList.add("tenue");
+        e.preventDefault();
+      });
+      boite.addEventListener("pointermove", (e) => {
+        if (!prise) return;
+        const t = performance.now(), dt = Math.max(1, t - prise.t);
+        vx = vx * 0.6 + ((e.clientX - prise.px) / dt) * 16 * 0.4;
+        vy = vy * 0.6 + ((e.clientY - prise.py) / dt) * 16 * 0.4;
+        Object.assign(prise, { px: e.clientX, py: e.clientY, t });
+        dx = e.clientX - prise.x;
+        dy = e.clientY - prise.y;
+        range();
+      });
+      const lache = () => {
+        if (!prise) return;
+        if (calme || performance.now() - prise.t > 80) vx = vy = 0;
+        prise = null;
+        boite.classList.remove("tenue");
+        if (vx || vy) derive = requestAnimationFrame(glisse);
+      };
+      boite.addEventListener("pointerup", lache);
+      boite.addEventListener("pointercancel", lache);
+      window.addEventListener("resize", range);
+    }
   </script>
 </body>
 </html>
