@@ -1,6 +1,7 @@
 # Copier vers config/cloudflared-radio.yml sur le Pi (hors git).
 # Après : cloudflared tunnel login (une fois), puis :
 #   cloudflared tunnel create ventoux-radio
+#   cloudflared tunnel route dns ventoux-radio freetechnoradio.tech
 #   cloudflared tunnel route dns ventoux-radio freetechnoradio.benoit-prieur.fr
 # Remplacer TUNNEL_ID et le chemin credentials-file ci-dessous.
 
@@ -8,6 +9,8 @@ tunnel: ventoux-radio
 credentials-file: /opt/ventoux-watch/config/.cloudflared/TUNNEL_ID.json
 
 ingress:
+  - hostname: freetechnoradio.tech
+    service: http://127.0.0.1:8767
   - hostname: freetechnoradio.benoit-prieur.fr
     service: http://127.0.0.1:8767
   - service: http_status:404

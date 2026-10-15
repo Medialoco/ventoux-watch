@@ -6012,7 +6012,7 @@ class PenseeTests(unittest.TestCase):
         self.assertIn("7:15", page)
         self.assertNotIn("BIG UP TO THE NORMANDY!", page)
         self.assertIn("The bear keeps his own pace", page)
-        self.assertIn("freetechnoradio.benoit-prieur.fr/index.m3u8", page)
+        self.assertIn("freetechnoradio.tech/index.m3u8", page)
         self.assertNotIn("Thanks OpenCV!", page)
         self.assertNotIn("Thanks YOLO11!", page)
         self.assertNotIn("Thanks Raspberry!", page)

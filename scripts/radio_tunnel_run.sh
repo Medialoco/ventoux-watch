@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Connecteur nommé en arrière-plan (URL stable dès que le hostname existe),
-# et tunnel public au premier plan tant que freetechnoradio.benoit-prieur.fr n'est pas routé.
+# et tunnel public au premier plan tant que freetechnoradio.tech n'est pas routé.
 set -euo pipefail
 ROOT="/opt/ventoux-watch"
 CLOUDFLARED="${CLOUDFLARED:-/usr/local/bin/cloudflared}"

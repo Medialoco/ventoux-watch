@@ -4,7 +4,7 @@
 
 Web radio. **Free music only** ([Dogmazic](https://play.dogmazic.net/)). Track selection, mix, voice, encode and publish on a **Raspberry Pi 5** in Los Angeles. **Associated YouTube feed**: Mont Serein webcam (1 frame/s, OpenCV MOG2, YOLO11s ONNX); Cannes backup when the pass HLS playlist closes.
 
-**Listen (HLS)** : `https://freetechnoradio.benoit-prieur.fr/index.m3u8`
+**Listen (HLS)** : `https://freetechnoradio.tech/index.m3u8`
 
 Watcher **v0.6.48**.
 
@@ -12,8 +12,8 @@ Watcher **v0.6.48**.
 
 | Role | URL / file |
 | --- | --- |
-| Audio (directories, VLC) | `https://freetechnoradio.benoit-prieur.fr/index.m3u8` |
-| Browser listen page | [freetechnoradio.benoit-prieur.fr](https://freetechnoradio.benoit-prieur.fr/) (same URL; browsers get the player page via `Accept: text/html`) |
+| Audio (directories, VLC) | `https://freetechnoradio.tech/index.m3u8` |
+| Browser listen page | [freetechnoradio.tech](https://freetechnoradio.tech/) (same URL; browsers get the player page via `Accept: text/html`) |
 | Site | [medialoco.github.io/ventoux-watch](https://medialoco.github.io/ventoux-watch/) |
 | YouTube | id in `data/direct.json` · [channel](https://www.youtube.com/channel/UCvN0sNcj5JM9tklIkAlGi7g) |
 | Dogmazic playlist | [play.dogmazic.net …4803](https://play.dogmazic.net/playlist.php?action=show_playlist&playlist_id=4803) · sync: `scripts/dogmazic_playlist.py --verifie` |
@@ -50,7 +50,7 @@ The radio page reads `data/release.json` for the displayed version, HLS URL (`st
 
 - Server: `watcher/radio_serveur.py`, port **8767**, segments in `data/radio/`.
 - Public URL: `config/radio_public.env` or `radio.public_url` → `data/radio.json`.
-- Stable host: **freetechnoradio.benoit-prieur.fr** (`radio.tunnel_hostname`), Cloudflare tunnel `ventoux-radio`, unit `ventoux-radio-tunnel`.
+- Stable host: **freetechnoradio.tech** (`radio.tunnel_hostname`); the former host freetechnoradio.benoit-prieur.fr is served by the same tunnel, Cloudflare tunnel `ventoux-radio`, unit `ventoux-radio-tunnel`.
 - Tunnel setup: see git history and `config/cloudflared-radio.yml.example`. Token in `config/radio_tunnel.token` (not in git).
 
 ## Elsewhere
