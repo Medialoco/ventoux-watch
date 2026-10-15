@@ -63,6 +63,20 @@
       width: 100%;
       margin-bottom: 14px;
     }
+    #radivu {
+      margin-bottom: 14px;
+      border-radius: 12px;
+      background: rgba(8, 10, 14, 0.45);
+    }
+    #radivu[hidden] { display: none; }
+    #radivu iframe {
+      display: block;
+      width: 100%;
+      height: 72px;
+      border: 0;
+      border-radius: 12px;
+      mix-blend-mode: lighten;
+    }
     .links {
       margin-top: 18px;
       font-size: 13px;
@@ -139,8 +153,13 @@
     body.avec-direct #bouton-direct .point { background: #fff; box-shadow: 0 0 6px #fff; }
 
     body.flotte { padding: 36px 16px; }
+    @property --fx { syntax: "<length>"; inherits: false; initial-value: 0px; }
+    @property --fy { syntax: "<length>"; inherits: false; initial-value: 0px; }
+    /* left/top rather than transform: a transform would isolate the box, and
+       the Radivu bar could no longer blend with the live behind it. */
     body.flotte .wrap {
-      translate: var(--dx, 0px) var(--dy, 0px);
+      left: calc(var(--dx, 0px) + var(--fx));
+      top: calc(var(--dy, 0px) + var(--fy));
       animation: flotte 11s ease-in-out infinite;
       cursor: grab;
       touch-action: pan-y;
@@ -153,9 +172,9 @@
         0 26px 64px rgba(0, 0, 0, 0.5);
     }
     @keyframes flotte {
-      0%, 100% { transform: translate(0, 0); }
-      30% { transform: translate(4px, -8px); }
-      65% { transform: translate(-3px, -3px); }
+      0%, 100% { --fx: 0px; --fy: 0px; }
+      30% { --fx: 4px; --fy: -8px; }
+      65% { --fx: -3px; --fy: -3px; }
     }
     @media (prefers-reduced-motion: reduce) {
       body.flotte .wrap, #bouton-direct .point { animation: none; }
@@ -175,6 +194,7 @@
       </div>
     </div>
     <audio id="audio" controls playsinline></audio>
+    <div id="radivu" hidden></div>
     <nav class="links" aria-label="Links">
       <a id="stream" href="https://freetechnoradio.benoit-prieur.fr/index.m3u8">index.m3u8 (VLC)</a><br>
       <a id="dogmazic" href="https://play.dogmazic.net/playlist.php?action=show_playlist&amp;playlist_id=4803" target="_blank" rel="noopener">Dogmazic playlist</a><br>
@@ -251,7 +271,20 @@
         audio.addEventListener("loadedmetadata", tenteLecture, { once: true });
       }
     }
-    demarreHls();
+    // The aquarium of benoit-prieur.fr starts the music itself through
+    // play=1 and postMessage, which only our own <audio> can answer.
+    if (window.top === window) {
+      const radivu = document.getElementById("radivu");
+      const cadre = document.createElement("iframe");
+      cadre.src = "https://radivu.com/embed/freetechnoradio?theme=dark&layout=bar&accent=9dd3ba";
+      cadre.allow = "autoplay; encrypted-media";
+      cadre.title = "#FREETECHNORADIO - Radivu";
+      radivu.appendChild(cadre);
+      radivu.hidden = false;
+      audio.hidden = true;
+    } else {
+      demarreHls();
+    }
 
     function pochette(nom) {
       if (!nom) return "";
