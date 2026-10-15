@@ -3337,11 +3337,29 @@ class DiffusionTests(unittest.TestCase):
             self.assertGreaterEqual(len(debuts), 3)
             self.assertAlmostEqual(debuts[0], 0.0, delta=1.0)
             for i in range(1, len(debuts)):
-                self.assertAlmostEqual(debuts[i] - debuts[i - 1], 3600.0, delta=1.0)
+                self.assertAlmostEqual(debuts[i] - debuts[i - 1],
+                                       stream.HEURE_RADIO_S, delta=1.0)
             self.assertEqual({bout["f"] for bout in suite},
                              {"a.mp3", "b.mp3", "ventoux-whatmoves.mp3"})
             hors = [bout for bout in suite if bout["f"] != "ventoux-whatmoves.mp3"]
             self.assertGreaterEqual(sum(b["d"] for b in hors), 5000.0)
+        self.assertEqual(stream.HEURE_RADIO_S, 2700.0)
+
+    def test_the_album_is_dosed_and_alchimix_pushed(self):
+        """Un tiers de Mont Serein 002 par tour, AlchimiX une fois et demie."""
+        auteurs = {f"ventoux-002-{i:02d}.mp3": "thepriben" for i in range(1, 17)}
+        auteurs.update({f"alc-{i}.mp3": "alchimix" for i in range(8)})
+        auteurs.update({f"x-{i}.mp3": f"x{i}" for i in range(20)})
+        pistes = [Path(nom) for nom in auteurs]
+        vus = set()
+        for graine in range(6):
+            tour = stream._dose(pistes, auteurs, random.Random(graine))
+            album = [p.name for p in tour if p.name.startswith("ventoux-002-")]
+            self.assertEqual(len(album), 6)
+            vus.update(album)
+            self.assertEqual(sum(p.name.startswith("alc-") for p in tour), 12)
+            self.assertEqual(sum(p.name.startswith("x-") for p in tour), 20)
+        self.assertGreater(len(vus), 12)
 
     def test_karaoke_turns_sung_words_green_and_stays_quiet_before(self):
         """La ligne s'allume mot à mot, et le silence d'avant ne porte rien."""

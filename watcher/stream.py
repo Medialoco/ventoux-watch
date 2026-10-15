@@ -1390,9 +1390,41 @@ def _espace(suite: list[Path], auteurs: dict[str, str],
     return ordre
 
 
-# Une fois par heure, pas une fois par hasard. La période se compte du début
-# d'un passage au début du suivant : le morceau est dans l'heure.
-HEURE_RADIO_S = 3600.0
+# À heure fixe, pas par hasard : toutes les trois quarts d'heure. La période se
+# compte du début d'un passage au début du suivant.
+HEURE_RADIO_S = 2700.0
+
+# La part d'un tour que reçoit un groupe de morceaux. À 1, chacun passe une
+# fois par tour. En dessous, seule cette part du groupe passe, tirée à chaque
+# tour : d'un tour à l'autre ce ne sont pas les mêmes, et l'album entier finit
+# par passer. Au-dessus, une partie du groupe passe deux fois.
+#
+# L'album Mont Serein 002, seize sets de quinze minutes, prenait un quart de
+# l'antenne à lui seul.
+PRESENCE_FICHIERS = {"ventoux-002-": 0.35}
+PRESENCE_AUTEURS = {"alchimix": 1.5}
+
+
+def _presence(piste: Path, auteurs: dict[str, str]) -> float:
+    for debut, part in PRESENCE_FICHIERS.items():
+        if piste.name.startswith(debut):
+            return part
+    return PRESENCE_AUTEURS.get(auteurs.get(piste.name, ""), 1.0)
+
+
+def _dose(pistes: list[Path], auteurs: dict[str, str],
+          tirage: random.Random) -> list[Path]:
+    """Les morceaux d'un tour, chaque groupe à sa part."""
+    groupes: dict[float, list[Path]] = {}
+    for piste in pistes:
+        groupes.setdefault(_presence(piste, auteurs), []).append(piste)
+    tour: list[Path] = []
+    for part, groupe in groupes.items():
+        voulu = max(1, round(part * len(groupe)))
+        entiers, reste = divmod(voulu, len(groupe))
+        tour.extend(groupe * entiers)
+        tour.extend(tirage.sample(groupe, reste))
+    return tour
 
 
 def _credits_musique(dossier: Path) -> dict:
@@ -1501,7 +1533,8 @@ def batir_session(dossier: Path, heures: float = SESSION_H, graine: int | None =
     # secondes) n'était tout simplement pas dans la file.
     premier_tour = True
     while total < heures * 3600 or premier_tour:
-        tour = _espace(_entrelace(premier, second, tirage), auteurs)
+        tour = _espace(_entrelace(_dose(premier, auteurs, tirage),
+                                  _dose(second, auteurs, tirage), tirage), auteurs)
         if not tour:
             break
         for piste in tour:
