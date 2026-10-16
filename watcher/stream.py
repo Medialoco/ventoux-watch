@@ -3964,7 +3964,6 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
     ne les pose déjà pas. Pas sur un Short : il n'y a nulle part où aller,
     et le milieu appartient encore à la montagne.
     """
-    return
     if energie < DANSE_ARRET:
         return
     hauteur, largeur = image.shape[:2]
@@ -3994,8 +3993,10 @@ def pose_danseurs(image: np.ndarray, seconde: float, energie: float,
     # pas une décoration qu'on pose dessus.
     dehors = (gauche / 2, (gauche + large_vue + largeur) / 2)
     place = min(gauche, largeur - gauche - large_vue) >= taille * 0.5
-    sortie = promenade(seconde) if place else 0.0
-    ensemble = rendez_vous(seconde) if place and sortie == 0.0 else 0.0
+    # Plus de sortie dans la bande : seuls dans le noir, bras levés, les deux
+    # pantins se lisaient comme deux mineurs à la pioche au fond d'un tunnel.
+    sortie = 0.0
+    ensemble = rendez_vous(seconde) if place else 0.0
     # La cadence suit l'énergie : mou quand c'est calme, pressé quand ça tape.
     phase = seconde * DANSE_PAS_S * min(1.6, 0.5 + energie * 4)
     calque = image.copy()
@@ -8620,6 +8621,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                     nom = next((str(vu.get("label") or "") for vu in nommes
                                 if vu.get("sur") and vu.get("label")), "")
                     journal.sujet(quand, nom or "Mouvement")
+            # Pas pendant un survol : le relief en trois dimensions est un autre
+            # sujet que la montagne en direct, et deux pantins dansant dessus
+            # diraient que c'est le même plan filmé autrement.
+            # Commun à toutes les webcams. Les danseurs n'appartiennent pas
+            # au rond-point : ils restent quand l'image est celle de Cannes.
+            if survol is None:
+                pose_danseurs(toile, quand - origine, musique.pouls(), vue=cadrage)
             # Propres au Mont Serein. Ils connaissent le rond-point et la
             # crête, et ils jouent sur le cadre entier dès que c'est Cannes
             # qui l'occupe : les quatre-vingt-dix secondes prévues, et tout

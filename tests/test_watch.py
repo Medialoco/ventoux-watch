@@ -2298,7 +2298,7 @@ class FogTests(unittest.TestCase):
         self.assertIn("Backup webcam,", diffuse)
         commun, propre = diffuse.split("Commun à toutes les webcams", 1)[1].split(
             "Propres au Mont Serein", 1)
-        self.assertNotIn("pose_danseurs", commun)
+        self.assertIn("pose_danseurs", commun)
         self.assertNotIn("pose_ours", commun)
         self.assertIn("pose_ours", propre)
         self.assertIn("pose_piste", propre)
@@ -5155,8 +5155,9 @@ class DiffusionTests(unittest.TestCase):
         stream.pose_danseurs(entre, 3.0, (stream.DANSE_ARRET + stream.DANSE_SEUIL) / 2)
         fort = fond.copy()
         stream.pose_danseurs(fort, 3.0, stream.DANSE_SEUIL + 0.2)
-        self.assertTrue(np.array_equal(entre, fond))
-        self.assertTrue(np.array_equal(fort, fond))
+        ecart = lambda im: float(np.abs(im.astype(int) - fond).mean())
+        self.assertGreater(ecart(entre), 0.0)
+        self.assertGreater(ecart(fort), ecart(entre))
 
     def test_the_dancers_stay_in_the_corners_of_the_view(self):
         """Le milieu de l'image appartient à la montagne, pas aux pantins."""
@@ -6707,7 +6708,6 @@ class DescriptionDeChaine(unittest.TestCase):
         self.assertNotIn("fire", texte)
 
 
-@unittest.skip("Les pantins du bas ne sont plus dessinés sur le direct.")
 class PantinsAilleurs(unittest.TestCase):
     """Les deux danseurs, quand ils sortent du cadre de l'antenne."""
 
@@ -7277,9 +7277,8 @@ class UneNuitNEstPasUnSeulArtiste(unittest.TestCase):
         self.assertEqual(len(_espace(pistes, auteurs)), 4)
 
 
-@unittest.skip("Les pantins du bas ne sont plus dessinés sur le direct.")
 class LaPromenadeDesPantins(unittest.TestCase):
-    """Ils glissent dans la bande noire, y dansent, et reviennent."""
+    """Ils dansent dans la vue et ne descendent plus dans la bande noire."""
 
     VUE = (264, 55, 1392, 783)          # la fenêtre réelle d'une toile 1920×1080
 
@@ -7311,13 +7310,16 @@ class LaPromenadeDesPantins(unittest.TestCase):
         self.assertGreater(chez_eux[0], gauche)
         self.assertLess(chez_eux[1], gauche + large)
 
-    def test_at_the_far_point_they_stand_in_the_black_band(self):
-        """Dehors, c'est la bande — pas le bord de l'image."""
-        gauche, cime, large, haute = self.VUE
-        sortis = self._ou(stream.PROMENADE_GLISSE_S + 1)
-        self.assertLess(sortis[0], gauche, "le gauche n'a pas quitté la vue")
-        self.assertGreater(sortis[1], gauche + large,
-                           "le droit n'a pas quitté la vue")
+    def test_they_never_go_down_into_the_black_band(self):
+        """Seuls dans le noir, ils avaient l'air de deux mineurs dans un tunnel."""
+        gauche, _, large, _ = self.VUE
+        for seconde in np.arange(0, stream.PROMENADE_PERIODE_S, 1.5):
+            toile = np.zeros((1080, 1920, 3), np.uint8)
+            stream.pose_danseurs(toile, float(seconde), 1.0, voile=1.0,
+                                 vue=self.VUE)
+            colonnes = np.where(toile.max(axis=(0, 2)) > 0)[0]
+            self.assertGreaterEqual(colonnes.min(), gauche, seconde)
+            self.assertLess(colonnes.max(), gauche + large, seconde)
 
     def test_nobody_is_cut_by_the_edge_of_the_picture(self):
         """Une main coupée par le bord se lit comme un bogue."""
