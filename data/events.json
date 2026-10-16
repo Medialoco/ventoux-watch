@@ -2,6 +2,236 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-16T13-46-42Z-motion-175",
+      "t": "2026-10-16T13:46:42Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-16T13-46-42Z-motion-175.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0809,
+          "area_grow": 0.33,
+          "clipped": false,
+          "shade": 0.921,
+          "kept": 0.653,
+          "area_ratio": 0.00059,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 2.7,
+          "height_m": 1.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.12,
+          "drift_rate": 0.134,
+          "seen_as": []
+        },
+        "box": [
+          0.5469,
+          0.8639,
+          0.0906,
+          0.0806
+        ]
+      },
+      "closeup": "data/closeups/2026-10-16T13-46-42Z-motion-175.jpg"
+    },
+    {
+      "id": "2026-10-16T13-33-29Z-missed-174",
+      "t": "2026-10-16T13:33:29Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-16T13-33-29Z-missed-174.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 22 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0028,
+          "area_grow": 1.18,
+          "clipped": false,
+          "shade": 1.099,
+          "kept": 0.0,
+          "area_ratio": 0.0009,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 22.0,
+          "height_m": 17.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.55,
+          "drift_rate": 0.005,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.95,
+          0.1556,
+          0.025,
+          0.0361
+        ]
+      },
+      "closeup": "data/closeups/2026-10-16T13-33-29Z-missed-174.jpg"
+    },
+    {
+      "id": "2026-10-16T13-29-27Z-vehicle-173",
+      "t": "2026-10-16T13:29:27Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.561,
+      "thumb": "data/thumbs/2026-10-16T13-29-27Z-vehicle-173.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 5.0,
+        "height_m": 1.4,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1703,
+          "area_grow": 0.09,
+          "clipped": true,
+          "shade": 0.939,
+          "kept": 0.292,
+          "area_ratio": 0.0016,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 5.0,
+          "height_m": 1.4,
+          "width_named_m": 2.8,
+          "height_named_m": 8.7,
+          "rise_ms": 0.0,
+          "drift_rate": 0.793,
+          "seen_as": [
+            "person 0.58 sur 0%",
+            "car 0.56 sur 90%",
+            "person 0.55 sur 0%",
+            "person 0.37 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.249,
+          0.8979,
+          0.2373,
+          0.1021
+        ],
+        "trace": [
+          [
+            1792157366.01,
+            0.2703,
+            0.9056,
+            0.1922,
+            0.0944
+          ],
+          [
+            1792157367.01,
+            0.4969,
+            0.9778,
+            0.0719,
+            0.0222
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-16T13-29-27Z-vehicle-173.jpg"
+    },
+    {
+      "id": "2026-10-16T13-29-26Z-missed-172",
+      "t": "2026-10-16T13:29:26Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-16T13-29-26Z-missed-172.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2158,
+          "area_grow": 0.06,
+          "clipped": true,
+          "shade": 0.923,
+          "kept": 0.354,
+          "area_ratio": 0.00065,
+          "duration_s": 10.0,
+          "frames": 11,
+          "width_m": 8.4,
+          "height_m": 1.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.05,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.1391,
+          0.9,
+          0.3,
+          0.1
+        ]
+      },
+      "closeup": "data/closeups/2026-10-16T13-29-26Z-missed-172.jpg"
+    },
+    {
+      "id": "2026-10-16T13-29-08Z-motion-171",
+      "t": "2026-10-16T13:29:08Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-16T13-29-08Z-motion-171.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2829,
+          "area_grow": 5.92,
+          "clipped": true,
+          "shade": 1.275,
+          "kept": 0.269,
+          "area_ratio": 0.00679,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 4.6,
+          "height_m": 0.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.04,
+          "drift_rate": 0.342,
+          "seen_as": []
+        },
+        "box": [
+          0.6484,
+          0.9583,
+          0.1641,
+          0.0417
+        ]
+      },
+      "closeup": "data/closeups/2026-10-16T13-29-08Z-motion-171.jpg"
+    },
+    {
       "id": "2026-10-16T13-18-12Z-motion-170",
       "t": "2026-10-16T13:18:12Z",
       "type": "motion",
