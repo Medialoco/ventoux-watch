@@ -2,6 +2,139 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-16T11-19-20Z-vehicle-138",
+      "t": "2026-10-16T11:19:20Z",
+      "type": "vehicle",
+      "label": "Camion",
+      "zone": "roundabout",
+      "confidence": 0.902,
+      "thumb": "data/thumbs/2026-10-16T11-19-20Z-vehicle-138.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 11.5,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0833,
+          "area_grow": 25.03,
+          "clipped": false,
+          "shade": 0.996,
+          "kept": 0.544,
+          "area_ratio": 0.03389,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 11.5,
+          "height_m": 4.4,
+          "width_named_m": 7.3,
+          "height_named_m": 4.3,
+          "rise_ms": 0.67,
+          "drift_rate": 0.021,
+          "seen_as": [
+            "bus 0.90 sur 56%",
+            "car 0.60 sur 0%",
+            "person 0.36 sur 0%",
+            "car 0.36 sur 2%"
+          ]
+        },
+        "surface": "island",
+        "box": [
+          0.174,
+          0.6435,
+          0.2187,
+          0.2287
+        ],
+        "trace": [
+          [
+            1792149555.55,
+            0.1953,
+            0.7944,
+            0.0375,
+            0.0361
+          ],
+          [
+            1792149556.55,
+            0.1953,
+            0.7944,
+            0.0375,
+            0.0361
+          ],
+          [
+            1792149557.55,
+            0.1953,
+            0.7944,
+            0.0375,
+            0.0361
+          ],
+          [
+            1792149558.55,
+            0.1812,
+            0.7861,
+            0.0609,
+            0.0444
+          ],
+          [
+            1792149559.55,
+            0.1422,
+            0.6722,
+            0.2812,
+            0.1889
+          ],
+          [
+            1792149560.55,
+            0.1062,
+            0.65,
+            0.2141,
+            0.1583
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-16T11-19-20Z-vehicle-138.jpg"
+    },
+    {
+      "id": "2026-10-16T11-19-19Z-missed-139",
+      "t": "2026-10-16T11:19:19Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-16T11-19-19Z-missed-139.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2769,
+          "area_grow": 0.32,
+          "clipped": false,
+          "shade": 0.904,
+          "kept": 0.462,
+          "area_ratio": 0.02375,
+          "duration_s": 4.0,
+          "frames": 5,
+          "width_m": 8.7,
+          "height_m": 4.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.241,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.25,
+          0.7,
+          0.2938,
+          0.25
+        ]
+      },
+      "closeup": "data/closeups/2026-10-16T11-19-19Z-missed-139.jpg"
+    },
+    {
       "id": "2026-10-16T11-15-04Z-person-134",
       "t": "2026-10-16T11:15:04Z",
       "type": "person",
