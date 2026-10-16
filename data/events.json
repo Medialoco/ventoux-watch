@@ -2,6 +2,145 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-16T14-22-46Z-vehicle-201",
+      "t": "2026-10-16T14:22:46Z",
+      "type": "vehicle",
+      "label": "Voiture rouge",
+      "zone": "other",
+      "confidence": 0.902,
+      "thumb": "data/thumbs/2026-10-16T14-22-46Z-vehicle-201.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 5.5,
+        "height_m": 1.7,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2374,
+          "area_grow": 0.11,
+          "clipped": false,
+          "shade": 0.816,
+          "kept": 0.373,
+          "area_ratio": 0.00229,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 5.5,
+          "height_m": 1.7,
+          "width_named_m": 2.9,
+          "height_named_m": 1.5,
+          "rise_ms": 0.31,
+          "drift_rate": 0.172,
+          "seen_as": [
+            "car 0.90 sur 48%",
+            "person 0.39 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4261,
+          0.8458,
+          0.1327,
+          0.1233
+        ],
+        "trace": [
+          [
+            1792160560.49,
+            0.3703,
+            0.8583,
+            0.1953,
+            0.1056
+          ],
+          [
+            1792160561.49,
+            0.3703,
+            0.8583,
+            0.1953,
+            0.1056
+          ],
+          [
+            1792160562.49,
+            0.3703,
+            0.8583,
+            0.1953,
+            0.1056
+          ],
+          [
+            1792160563.49,
+            0.3703,
+            0.8583,
+            0.1953,
+            0.1056
+          ],
+          [
+            1792160564.49,
+            0.2562,
+            0.7417,
+            0.0344,
+            0.0667
+          ],
+          [
+            1792160565.49,
+            0.2562,
+            0.7417,
+            0.0344,
+            0.0667
+          ],
+          [
+            1792160566.49,
+            0.2562,
+            0.7417,
+            0.0344,
+            0.0667
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-16T14-22-46Z-vehicle-201.jpg"
+    },
+    {
+      "id": "2026-10-16T14-17-15Z-missed-200",
+      "t": "2026-10-16T14:17:15Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-16T14-17-15Z-missed-200.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 39 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0275,
+          "area_grow": 0.47,
+          "clipped": false,
+          "shade": 0.88,
+          "kept": 0.357,
+          "area_ratio": 0.00046,
+          "duration_s": 5.0,
+          "frames": 5,
+          "width_m": 1.4,
+          "height_m": 0.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.087,
+          "seen_as": []
+        },
+        "refused": "tarmac",
+        "box": [
+          0.4609,
+          0.8861,
+          0.0437,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-10-16T14-17-15Z-missed-200.jpg"
+    },
+    {
       "id": "2026-10-16T14-14-57Z-vehicle-199",
       "t": "2026-10-16T14:14:57Z",
       "type": "vehicle",
