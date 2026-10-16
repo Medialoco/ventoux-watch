@@ -2,6 +2,89 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-16T17-43-49Z-missed-267",
+      "t": "2026-10-16T17:43:49Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-16T17-43-49Z-missed-267.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1975,
+          "area_grow": 34.0,
+          "clipped": false,
+          "shade": 0.647,
+          "kept": 0.353,
+          "area_ratio": 0.05312,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 845.9,
+          "height_m": 443.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.036,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.3328,
+          0.0083,
+          0.3219,
+          0.3
+        ]
+      },
+      "closeup": "data/closeups/2026-10-16T17-43-49Z-missed-267.jpg"
+    },
+    {
+      "id": "2026-10-16T17-23-32Z-motion-266",
+      "t": "2026-10-16T17:23:32Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-16T17-23-32Z-motion-266.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "ciel dégagé",
+        "context": "au crépuscule, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0419,
+          "area_grow": 0.78,
+          "clipped": false,
+          "shade": 0.743,
+          "kept": 0.25,
+          "area_ratio": 0.00055,
+          "duration_s": 7.0,
+          "frames": 8,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.05,
+          "seen_as": []
+        },
+        "box": [
+          0.0031,
+          0.3694,
+          0.0266,
+          0.0583
+        ]
+      },
+      "closeup": "data/closeups/2026-10-16T17-23-32Z-motion-266.jpg"
+    },
+    {
       "id": "2026-10-16T17-15-44Z-motion-265",
       "t": "2026-10-16T17:15:44Z",
       "type": "motion",
