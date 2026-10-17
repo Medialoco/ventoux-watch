@@ -2,6 +2,137 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-17T06-40-14Z-fire-20",
+      "t": "2026-10-17T06:40:14Z",
+      "type": "fire",
+      "label": "Départ de feu",
+      "zone": "slope",
+      "confidence": 0.788,
+      "thumb": "data/thumbs/2026-10-17T06-40-14Z-fire-20.jpg",
+      "clip_url": "",
+      "detail": {
+        "warm_ratio": 0.457,
+        "smoke_ratio": 0.986,
+        "rise": 0.0,
+        "grow": 1.88,
+        "width_m": 83.3,
+        "surface": "forest",
+        "period": "day",
+        "weather": "nuageux",
+        "context": "de jour, nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0172,
+          "area_grow": 1.88,
+          "clipped": false,
+          "shade": 1.105,
+          "kept": 0.242,
+          "area_ratio": 0.00286,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 83.3,
+          "height_m": 28.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "box": [
+          0.6531,
+          0.225,
+          0.0688,
+          0.0417
+        ],
+        "trace": [
+          [
+            1792219209.42,
+            0.6531,
+            0.2278,
+            0.0391,
+            0.0389
+          ],
+          [
+            1792219210.42,
+            0.6531,
+            0.2278,
+            0.0406,
+            0.0389
+          ],
+          [
+            1792219211.42,
+            0.6531,
+            0.225,
+            0.0688,
+            0.0417
+          ],
+          [
+            1792219212.42,
+            0.6531,
+            0.2278,
+            0.0688,
+            0.0389
+          ],
+          [
+            1792219213.42,
+            0.6531,
+            0.2278,
+            0.0719,
+            0.0389
+          ],
+          [
+            1792219214.42,
+            0.6531,
+            0.2278,
+            0.0734,
+            0.0389
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-17T06-40-14Z-fire-20.jpg"
+    },
+    {
+      "id": "2026-10-17T06-38-34Z-motion-19",
+      "t": "2026-10-17T06:38:34Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-17T06-38-34Z-motion-19.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "nuageux",
+        "context": "de jour, nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.193,
+          "area_grow": 0.96,
+          "clipped": false,
+          "shade": 1.049,
+          "kept": 0.154,
+          "area_ratio": 0.00059,
+          "duration_s": 24.0,
+          "frames": 25,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.061,
+          "seen_as": []
+        },
+        "box": [
+          0.0469,
+          0.3389,
+          0.1313,
+          0.0667
+        ]
+      },
+      "closeup": "data/closeups/2026-10-17T06-38-34Z-motion-19.jpg"
+    },
+    {
       "id": "2026-10-17T05-58-40Z-vehicle-18",
       "t": "2026-10-17T05:58:40Z",
       "type": "vehicle",
