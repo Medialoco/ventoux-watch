@@ -2,6 +2,89 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-17T16-06-34Z-missed-370",
+      "t": "2026-10-17T16:06:34Z",
+      "type": "missed",
+      "label": "machine",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-17T16-06-34Z-missed-370.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Le haut de la tache ne monte qu'à 0.4 m/s. La fumée d'un feu qui vient de prendre s'élève plusieurs fois plus vite : elle est portée par sa propre chaleur.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0096,
+          "area_grow": 2.5,
+          "clipped": false,
+          "shade": 0.699,
+          "kept": 0.833,
+          "area_ratio": 0.00117,
+          "duration_s": 16.0,
+          "frames": 17,
+          "width_m": 15.4,
+          "height_m": 18.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.38,
+          "drift_rate": 0.004,
+          "seen_as": []
+        },
+        "refused": "machine",
+        "box": [
+          0.2094,
+          0.5139,
+          0.0234,
+          0.05
+        ]
+      },
+      "closeup": "data/closeups/2026-10-17T16-06-34Z-missed-370.jpg"
+    },
+    {
+      "id": "2026-10-17T16-05-49Z-motion-369",
+      "t": "2026-10-17T16:05:49Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-17T16-05-49Z-motion-369.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.02,
+          "area_grow": 0.28,
+          "clipped": false,
+          "shade": 0.98,
+          "kept": 0.125,
+          "area_ratio": 0.00042,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.337,
+          "seen_as": []
+        },
+        "box": [
+          0.0187,
+          0.3833,
+          0.0281,
+          0.0528
+        ]
+      },
+      "closeup": "data/closeups/2026-10-17T16-05-49Z-motion-369.jpg"
+    },
+    {
       "id": "2026-10-17T16-00-36Z-motion-368",
       "t": "2026-10-17T16:00:36Z",
       "type": "motion",
