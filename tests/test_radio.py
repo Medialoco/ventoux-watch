@@ -114,6 +114,66 @@ class TestPageRadio(unittest.TestCase):
                 srv.ferme()
 
 
+class TestParolesEnDirect(unittest.TestCase):
+    """Les paroles de #WhatMoves sur la page, et seulement les siennes."""
+
+    def _dossier(self, tmp: str) -> Path:
+        dossier = Path(tmp) / "data" / "paroles"
+        dossier.mkdir(parents=True)
+        (dossier / "chanson.json").write_text(
+            json.dumps({"lignes": [[30.0, 32.5, "What moves, matters."]]}),
+            encoding="utf-8")
+        return dossier
+
+    def test_a_song_with_lyrics_gives_its_lines_and_position(self) -> None:
+        from watcher.radio_serveur import paroles_du_moment
+
+        with tempfile.TemporaryDirectory() as tmp:
+            prog = {"en_cours": {"titre": "#WhatMoves", "paroles": "chanson.json"},
+                    "ecoule": 31.234}
+            corps = paroles_du_moment(prog, self._dossier(tmp))
+        self.assertEqual(corps["titre"], "#WhatMoves")
+        self.assertEqual(corps["ecoule"], 31.23)
+        self.assertEqual(corps["lignes"][0][2], "What moves, matters.")
+
+    def test_other_songs_and_odd_names_give_nothing(self) -> None:
+        from watcher.radio_serveur import paroles_du_moment
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dossier = self._dossier(tmp)
+            for prog in (None, {"en_cours": {"titre": "Night Sky"}, "ecoule": 4.0},
+                         {"en_cours": {"paroles": "../paroles/chanson.json"}}):
+                self.assertEqual(paroles_du_moment(prog, dossier), {"lignes": []})
+
+    def test_the_server_answers_with_the_live_position(self) -> None:
+        import urllib.error
+        import urllib.request
+
+        from watcher.radio_serveur import RadioServeur
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self._dossier(tmp)
+            srv = RadioServeur(Path(tmp) / "data" / "radio", racine_watch=Path(tmp))
+            srv.programme = lambda: {"en_cours": {"paroles": "chanson.json"}, "ecoule": 40.0}
+            srv.demarre(28768)
+            try:
+                corps = json.loads(urllib.request.urlopen(
+                    "http://127.0.0.1:28768/paroles.json", timeout=2).read())
+            except urllib.error.URLError as err:
+                self.skipTest(f"port 28768 indisponible : {err}")
+            finally:
+                srv.ferme()
+        self.assertEqual(corps["ecoule"], 40.0)
+        self.assertEqual(len(corps["lignes"]), 1)
+
+    def test_the_page_draws_them_behind_the_player_delay(self) -> None:
+        page = (Path(__file__).resolve().parents[1] / "watcher" / "radio_page.html").read_text(
+            encoding="utf-8")
+        self.assertIn('fetch("/paroles.json"', page)
+        self.assertIn("hls.latency", page)
+        self.assertIn('id="paroles"', page)
+
+
 class TestSortieHls(unittest.TestCase):
     def test_sortie_includes_hls_when_playlist_set(self) -> None:
         from watcher import stream

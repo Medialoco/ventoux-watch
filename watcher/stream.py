@@ -7871,6 +7871,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     morceau_radio: tuple[str, str, str] | None = None
     muet = not cfg.get("stream_musique", True)
     musique = Musique(racine / "data" / "musique", racine, muet=muet)
+    if radio_serveur is not None and not muet:
+        radio_serveur.programme = musique.programme
     if muet:
         log.warning("Musique coupée : le flux part en silence")
     if musique.session is None:

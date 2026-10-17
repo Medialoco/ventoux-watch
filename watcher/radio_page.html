@@ -117,6 +117,17 @@
     }
     .volume svg { width: 18px; height: 18px; fill: currentColor; }
     #volume { width: 84px; accent-color: #9dd3ba; cursor: pointer; }
+    .paroles {
+      min-height: 4.4em;
+      margin: 0 4px 14px;
+      font-size: 1.02rem;
+      line-height: 1.4;
+    }
+    .paroles[hidden] { display: none; }
+    .paroles p { margin: 0; }
+    .paroles .vers { font-weight: 600; color: #f2f4f5; }
+    .paroles .vers .chante { color: #9dd3ba; }
+    .paroles .apres { margin-top: 6px; font-size: 0.86rem; color: #6b7280; }
     .links {
       margin-top: 18px;
       font-size: 13px;
@@ -232,6 +243,10 @@
         <p class="title" id="title" hidden></p>
         <p class="licence" id="licence" hidden></p>
       </div>
+    </div>
+    <div class="paroles" id="paroles" hidden aria-live="off">
+      <p class="vers" id="vers"></p>
+      <p class="apres" id="vers-suivant"></p>
     </div>
     <audio id="audio" playsinline hidden></audio>
     <div class="lecteur" id="lecteur">
@@ -400,6 +415,94 @@
     }
     rafraichitCredit();
     setInterval(rafraichitCredit, 15000);
+
+    // The Pi says where the mix is; what the listener hears is that, minus how
+    // far the player sits behind the live edge, minus the segment still being
+    // written on the Pi.
+    const SEGMENT_EN_COURS_S = 1.5;
+    const TENUE_S = 2.4;
+    let paroles = { lignes: [], ecoule: 0, lu: 0 };
+
+    function retardLecteur() {
+      if (audio.paused) return 0;
+      if (hls && Number.isFinite(hls.latency)) return hls.latency + SEGMENT_EN_COURS_S;
+      const s = audio.seekable;
+      if (s && s.length) return Math.max(0, s.end(s.length - 1) - audio.currentTime) + SEGMENT_EN_COURS_S;
+      return 0;
+    }
+
+    function ligneALire(lignes, t) {
+      let precedente = null, suivante = null;
+      for (const l of lignes) {
+        const [t0, t1, phrase] = l;
+        if (t0 <= t && t < t1) {
+          suivante = lignes[lignes.indexOf(l) + 1] || null;
+          return { phrase, t0, t1, suivante };
+        }
+        if (t1 <= t) precedente = l;
+        else if (!suivante && t0 > t) suivante = l;
+      }
+      if (precedente) {
+        const [t0, t1, phrase] = precedente;
+        const tenue = Math.max(t1, t0 + TENUE_S);
+        const plafond = suivante ? suivante[0] : tenue;
+        if (t < Math.min(tenue, plafond)) return { phrase, t0, t1: tenue, suivante };
+      }
+      return { phrase: "", suivante };
+    }
+
+    function versEnKaraoke(phrase, t0, t1, t) {
+      const mots = phrase.split(/\s+/).filter(Boolean);
+      const poids = mots.map((m) => Math.max(m.replace(/[.,;:!?"']/g, "").length, 1));
+      const total = poids.reduce((a, b) => a + b, 0) || 1;
+      const duree = Math.max(0.05, t1 - t0);
+      let curseur = t0;
+      return mots.map((mot, i) => {
+        const span = document.createElement("span");
+        span.textContent = mot + (i < mots.length - 1 ? " " : "");
+        if (t >= curseur) span.className = "chante";
+        curseur += duree * poids[i] / total;
+        return span;
+      });
+    }
+
+    const blocParoles = document.getElementById("paroles");
+    const vers = document.getElementById("vers");
+    const versSuivant = document.getElementById("vers-suivant");
+    let dernierVers = "";
+
+    function peintParoles() {
+      if (!paroles.lignes.length) {
+        blocParoles.hidden = true;
+        return;
+      }
+      const t = paroles.ecoule + (performance.now() - paroles.lu) / 1000 - retardLecteur();
+      const fin = paroles.lignes[paroles.lignes.length - 1][1];
+      if (t > fin + 6) {
+        blocParoles.hidden = true;
+        return;
+      }
+      blocParoles.hidden = false;
+      const { phrase, t0, t1, suivante } = ligneALire(paroles.lignes, t);
+      vers.replaceChildren(...(phrase ? versEnKaraoke(phrase, t0, t1, t) : []));
+      const apres = suivante && suivante[0] - t < 12 ? suivante[2] : "";
+      if (apres !== dernierVers) {
+        versSuivant.textContent = apres;
+        dernierVers = apres;
+      }
+    }
+
+    async function rafraichitParoles() {
+      try {
+        const avant = performance.now();
+        const lu = await fetch("/paroles.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null));
+        const lignes = lu && Array.isArray(lu.lignes) ? lu.lignes.filter((l) => Array.isArray(l) && l.length >= 3) : [];
+        paroles = { lignes, ecoule: Number(lu && lu.ecoule) || 0, lu: (avant + performance.now()) / 2 };
+      } catch (_) {}
+    }
+    rafraichitParoles();
+    setInterval(rafraichitParoles, 15000);
+    setInterval(peintParoles, 200);
 
     async function rafraichitDogmazic() {
       const lien = document.getElementById("dogmazic");

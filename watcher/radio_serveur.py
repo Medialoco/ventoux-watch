@@ -15,6 +15,7 @@ import threading
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Callable
 from urllib.parse import unquote, urlparse
 
 log = logging.getLogger("ventoux.radio")
@@ -116,6 +117,30 @@ def habille_playlist(texte: str, titre: str) -> str:
     return "\n".join(lignes) + "\n"
 
 
+def paroles_du_moment(programme: dict | None, dossier_paroles: Path) -> dict:
+    """Les lignes du morceau en cours et où en est le mélange, à l'instant.
+
+    Vide pour un morceau sans paroles. La position est celle du son versé à
+    l'encodeur : la page retire elle-même le retard de son lecteur.
+    """
+    fiche = (programme or {}).get("en_cours") or {}
+    nom = str(fiche.get("paroles") or "")
+    if not nom or Path(nom).name != nom:
+        return {"lignes": []}
+    try:
+        brut = json.loads((dossier_paroles / nom).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"lignes": []}
+    lignes = brut.get("lignes") if isinstance(brut, dict) else brut
+    if not isinstance(lignes, list):
+        return {"lignes": []}
+    return {
+        "titre": str(fiche.get("titre") or ""),
+        "ecoule": round(float((programme or {}).get("ecoule") or 0.0), 2),
+        "lignes": lignes,
+    }
+
+
 def _playlist_habillée(racine: Path, brut: bytes) -> bytes:
     try:
         fiche = json.loads((racine / NOW_JSON).read_text(encoding="utf-8"))
@@ -139,6 +164,7 @@ class RadioServeur:
         self.racine_watch = racine_watch.resolve() if racine_watch else None
         self._serveur: ThreadingHTTPServer | None = None
         self._fil: threading.Thread | None = None
+        self.programme: Callable[[], dict] | None = None
 
     def demarre(self, port: int) -> None:
         if self._serveur is not None:
@@ -146,6 +172,7 @@ class RadioServeur:
         racine = self.racine
         dossier_pochettes = self.pochettes
         projet = self.racine_watch
+        radio = self
 
         class Requete(BaseHTTPRequestHandler):
             def log_message(self, *_args) -> None:
@@ -190,6 +217,16 @@ class RadioServeur:
                     return
                 if chemin == HLS_INDEX and veut_page_html(accept):
                     self._page()
+                    return
+                if chemin == "paroles.json":
+                    try:
+                        prog = radio.programme() if radio.programme else None
+                    except Exception:  # noqa: BLE001
+                        prog = None
+                    corps = paroles_du_moment(
+                        prog, (projet or racine) / "data" / "paroles")
+                    self._envoie(200, "application/json; charset=utf-8",
+                                 json.dumps(corps, ensure_ascii=False).encode("utf-8"))
                     return
                 if chemin in ("direct.json", "dogmazic.json", "release.json") and projet is not None:
                     rel = {
