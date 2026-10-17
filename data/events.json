@@ -2,6 +2,163 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-17T05-58-40Z-vehicle-18",
+      "t": "2026-10-17T05:58:40Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.589,
+      "thumb": "data/thumbs/2026-10-17T05-58-40Z-vehicle-18.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.1218,
+          "area_grow": 0.26,
+          "clipped": false,
+          "shade": 1.013,
+          "kept": 0.167,
+          "area_ratio": 0.00063,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 5.9,
+          "height_m": 5.2,
+          "width_named_m": 5.7,
+          "height_named_m": 3.9,
+          "rise_ms": 1.89,
+          "drift_rate": 0.834,
+          "seen_as": [
+            "bus 0.59 sur 71%",
+            "person 0.35 sur 0%"
+          ]
+        },
+        "box": [
+          0.1369,
+          0.6741,
+          0.0487,
+          0.0593
+        ],
+        "trace": [
+          [
+            1792216717.4,
+            0.1437,
+            0.6778,
+            0.0391,
+            0.0611
+          ],
+          [
+            1792216718.4,
+            0.1078,
+            0.65,
+            0.0297,
+            0.0472
+          ],
+          [
+            1792216719.4,
+            0.0813,
+            0.6306,
+            0.025,
+            0.0389
+          ],
+          [
+            1792216720.4,
+            0.0625,
+            0.6111,
+            0.0187,
+            0.0333
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-17T05-58-40Z-vehicle-18.jpg"
+    },
+    {
+      "id": "2026-10-17T05-58-04Z-missed-17",
+      "t": "2026-10-17T05:58:04Z",
+      "type": "missed",
+      "label": "Nuage",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-17T05-58-04Z-missed-17.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 181 m de large d'emblée. Un feu qui commence est petit ; ce qui arrive déjà large est un nuage.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2363,
+          "area_grow": 2.1,
+          "clipped": false,
+          "shade": 1.014,
+          "kept": 0.418,
+          "area_ratio": 0.00096,
+          "duration_s": 10.0,
+          "frames": 11,
+          "width_m": 180.9,
+          "height_m": 35.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 1.49,
+          "drift_rate": 0.165,
+          "seen_as": []
+        },
+        "refused": "cloud",
+        "box": [
+          0.7,
+          0.1833,
+          0.1516,
+          0.0528
+        ]
+      },
+      "closeup": "data/closeups/2026-10-17T05-58-04Z-missed-17.jpg"
+    },
+    {
+      "id": "2026-10-17T05-57-01Z-missed-16",
+      "t": "2026-10-17T05:57:01Z",
+      "type": "missed",
+      "label": "Lueur du soir",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-17T05-57-01Z-missed-16.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La pente rougit au crépuscule. Ce n'est pas retenu comme un incendie.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.049,
+          "area_grow": 1.62,
+          "clipped": false,
+          "shade": 1.096,
+          "kept": 0.221,
+          "area_ratio": 0.00739,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 84.2,
+          "height_m": 56.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.083,
+          "seen_as": []
+        },
+        "refused": "sunset",
+        "box": [
+          0.8484,
+          0.1028,
+          0.0844,
+          0.1
+        ]
+      },
+      "closeup": "data/closeups/2026-10-17T05-57-01Z-missed-16.jpg"
+    },
+    {
       "id": "2026-10-17T05-56-02Z-missed-15",
       "t": "2026-10-17T05:56:02Z",
       "type": "missed",
