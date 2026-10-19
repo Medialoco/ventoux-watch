@@ -422,7 +422,8 @@ def note_le_direct(racine: Path, chaine: str, numero: str, *, live: bool) -> Non
 
 def veille_le_direct(chaine: str, coupe: threading.Event,
                      racine: Path | None = None,
-                     lache: threading.Event | None = None) -> None:
+                     lache: threading.Event | None = None,
+                     silence: threading.Event | None = None) -> None:
     """Dire quand on pousse des octets dans le vide, et sous quel numéro on émet.
 
     Une diffusion terminée par YouTube ne se voit pas d'ici : l'arrivée continue
@@ -490,10 +491,25 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
         if vu is None:
             continue
         if vu:
-            if absences >= VEILLE_DIRECT_SEUIL:
+            revenu = absences >= VEILLE_DIRECT_SEUIL
+            if revenu:
                 log.info("La diffusion est de nouveau visible sur la chaîne")
             porte = True
             absences = 0
+            # On poussait déjà, dans le vide ou vers l'arrivée d'avant. Une
+            # diffusion neuve ne s'attache pas à cette connexion-là : il faut
+            # la rouvrir, et tout de suite, sans le trou qui sert à faire
+            # oublier une arrivée morte.
+            if revenu and lache is not None and not lache.is_set():
+                if silence is not None:
+                    silence.clear()
+                log.warning("Le direct est revenu : on rouvre la sortie pour qu'il s'y attache")
+                lache.set()
+                if not coupe.wait(LACHE_GARDE_S) and lache.is_set():
+                    log.error("La boucle des images n'a pas lâché la sortie en "
+                              "%.0f s : on arrête le processus, systemd le rouvre",
+                              LACHE_GARDE_S)
+                    _abandonne()
             continue
         absences += 1
         if absences == 1:
@@ -508,8 +524,13 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
             if porte and lache is not None and not lache.is_set():
                 log.warning("On lâche la sortie %.0f s pour qu'une diffusion "
                             "neuve puisse s'attacher", LACHE_DIRECT_S)
+                if silence is not None:
+                    silence.set()
                 lache.set()
-                if not coupe.wait(LACHE_GARDE_S):
+                # La boucle des images efface l'événement quand elle a fermé
+                # la sortie. S'il est encore là au bout du délai, elle est
+                # bloquée, comme le 15 octobre, et on s'arrête.
+                if not coupe.wait(LACHE_GARDE_S) and lache.is_set():
                     log.error("La boucle des images n'a pas lâché la sortie en "
                               "%.0f s : on arrête le processus, systemd le rouvre",
                               LACHE_GARDE_S)
@@ -7925,12 +7946,15 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     coupe = threading.Event()
     coupe_son = threading.Event()
     lache = threading.Event()
+    silence = threading.Event()
     ouverte_a = 0.0
     chaine = cfg.get("youtube_chaine")
     salle = Salle()
     if chaine and cible.startswith("rtmp"):
-        threading.Thread(target=veille_le_direct, args=(chaine, coupe, racine, lache),
-                         daemon=True).start()
+        threading.Thread(
+            target=veille_le_direct,
+            args=(chaine, coupe, racine, lache, silence),
+            daemon=True).start()
         threading.Thread(target=veille_salle, args=(chaine, coupe, salle),
                          daemon=True).start()
     debut = _maintenant()
@@ -8895,12 +8919,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             journal.voit(toile, quand)
             journal.relache(quand)
             if lache.is_set():
-                # Le direct public a disparu alors qu'on en portait un. Fermer
-                # ffmpeg et attendre est le trou qui laisse YouTube oublier
-                # l'arrivée morte. Le processus s'arrête ensuite : systemd le
-                # rouvre, une fois, sans qu'on martèle.
-                log.warning("Sortie lâchée %.0f s : le direct n'est plus sur la chaîne",
-                            LACHE_DIRECT_S)
+                # Fermer ffmpeg et le rouvrir, sans arrêter le processus : la
+                # radio est servie par ce même processus, et un arrêt la coupait
+                # avec le direct. Le trou de douze secondes n'est là que pour
+                # faire oublier une arrivée morte. Quand le direct revient, on
+                # rouvre tout de suite pour que la diffusion neuve s'y attache.
+                pause = LACHE_DIRECT_S if silence.is_set() else 0.0
+                log.warning("Sortie lâchée %.0f s : on la rouvre sans quitter", pause)
                 coupe_son.set()
                 if verseur is not None:
                     verseur.join(timeout=5)
@@ -8908,8 +8933,12 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 sortie = son = verseur = None
                 if radio_actif:
                     note_radio(racine, live=False, public_base=url_radio())
-                time.sleep(LACHE_DIRECT_S)
-                break
+                if pause:
+                    time.sleep(pause)
+                silence.clear()
+                lache.clear()
+                cadence = None
+                continue
             if sortie is None:
                 sortie, son = _sortie(cible, largeur, hauteur, cfg["stream_fps"],
                                       cfg["stream_bitrate"], cfg["stream_out_fps"],
