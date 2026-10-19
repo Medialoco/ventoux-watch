@@ -2,6 +2,91 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-19T15-09-50Z-motion-297",
+      "t": "2026-10-19T15:09:50Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-19T15-09-50Z-motion-297.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0606,
+          "area_grow": 0.22,
+          "clipped": false,
+          "shade": 0.453,
+          "kept": 0.486,
+          "area_ratio": 0.00062,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 27.3,
+          "height_m": 40.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.991,
+          "seen_as": []
+        },
+        "box": [
+          0.0844,
+          0.4778,
+          0.0328,
+          0.0861
+        ]
+      },
+      "closeup": "data/closeups/2026-10-19T15-09-50Z-motion-297.jpg"
+    },
+    {
+      "id": "2026-10-19T15-08-01Z-missed-296",
+      "t": "2026-10-19T15:08:01Z",
+      "type": "missed",
+      "label": "Lueur dans la météo",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-19T15-08-01Z-missed-296.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La tache chaude reste ambiguë par ce temps.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0462,
+          "area_grow": 88.79,
+          "clipped": false,
+          "shade": 0.817,
+          "kept": 0.619,
+          "area_ratio": 0.07322,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 125.5,
+          "height_m": 36.4,
+          "width_named_m": 0.4,
+          "height_named_m": 0.9,
+          "rise_ms": 1.67,
+          "drift_rate": 0.101,
+          "seen_as": [
+            "person 0.32 sur 0%"
+          ]
+        },
+        "refused": "weather_glow",
+        "box": [
+          0.5344,
+          0.3028,
+          0.3766,
+          0.1944
+        ]
+      },
+      "closeup": "data/closeups/2026-10-19T15-08-01Z-missed-296.jpg"
+    },
+    {
       "id": "2026-10-19T15-04-37Z-motion-295",
       "t": "2026-10-19T15:04:37Z",
       "type": "motion",
