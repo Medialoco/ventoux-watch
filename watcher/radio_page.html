@@ -159,10 +159,25 @@
       border: 0;
     }
     body.avec-direct { background: transparent; }
-    body.avec-direct .wrap {
+    body.avec-direct .wrap,
+    body.flotte.avec-direct .wrap {
+      position: fixed;
+      left: auto;
+      top: auto;
+      right: 18px;
+      bottom: 18px;
+      width: max-content;
+      max-width: none;
+      margin: 0;
+      padding: 0;
       background: transparent;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+      border: none;
+      box-shadow: none;
+      text-shadow: none;
+      animation: none;
+      cursor: default;
     }
+    body.avec-direct .wrap > :not(#bouton-direct) { display: none; }
     #bouton-direct {
       position: absolute;
       right: 22px;
@@ -200,8 +215,27 @@
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.4; transform: scale(0.7); }
     }
-    body.avec-direct #bouton-direct { background: #ff3b30; border-color: #ff3b30; color: #fff; }
-    body.avec-direct #bouton-direct .point { background: #fff; box-shadow: 0 0 6px #fff; }
+    body.avec-direct #bouton-direct {
+      position: static;
+      transform: none;
+      gap: 8px;
+      padding: 14px 16px 14px 14px;
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      color: #f2f4f5;
+      background: rgba(13, 16, 20, 0.78);
+      border: 1px solid color-mix(in srgb, #9dd3ba 40%, #2b2f36);
+      border-radius: 12px;
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, #9dd3ba 14%, transparent),
+        0 14px 32px rgba(0, 0, 0, 0.45);
+    }
+    body.avec-direct #bouton-direct:hover,
+    body.avec-direct #bouton-direct:focus-visible {
+      transform: none;
+      border-color: #ff3b30;
+      box-shadow: 0 0 16px rgba(255, 59, 48, 0.35);
+    }
 
     body.flotte { padding: 36px 16px; }
     @property --fx { syntax: "<length>"; inherits: false; initial-value: 0px; }
@@ -546,7 +580,7 @@
       const on = avecDirect && !!videoDirect;
       document.body.classList.toggle("avec-direct", on);
       boutonDirect.setAttribute("aria-pressed", on ? "true" : "false");
-      boutonDirect.title = on ? "Hide the YouTube live" : "Show the YouTube live behind";
+      boutonDirect.title = on ? "Show the radio" : "Show the YouTube live behind";
       if (!on) {
         fondDirect.hidden = true;
         fondDirect.innerHTML = "";
