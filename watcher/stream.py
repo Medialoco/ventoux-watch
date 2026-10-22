@@ -8939,7 +8939,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             pose_bloc_musique(toile, prog, racine / "data" / "musique",
                               musique.pouls(), quand - origine,
                               forme=effet_du_moment(quand - origine)[0])
-            pose_paroles(toile, prog, racine)
+            # Les paroles écrites restent sur la page de la radio. Sur
+            # l'image envoyée à YouTube, elles couvraient la montagne.
             # Et le flash par-dessus tout le reste, parce qu'une prise prime
             # sur les encarts. Jamais par-dessus la montagne : il s'arrête au
             # bord de la fenêtre, où il est le plus vif.
