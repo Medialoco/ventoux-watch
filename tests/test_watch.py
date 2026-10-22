@@ -4866,6 +4866,32 @@ class DiffusionTests(unittest.TestCase):
             stream.veille_le_direct("UCxxxx", coupe, lache=lache)
         self.assertFalse(lache.is_set())
 
+    def test_a_stuck_write_gets_the_encoder_killed(self):
+        """YouTube ferme l'arrivée, l'écriture reste coincée : on tue ffmpeg.
+
+        Le 21 octobre le signal a été posé et jamais lu, parce que la boucle
+        était bloquée dans le tuyau. Tuer ffmpeg fait échouer cette écriture.
+        """
+        pages = iter([
+            '{"videoDetails":{"videoId":"mmf5x1r2rvQ"},"isLive":true}',
+            "channelMetadataRenderer",
+            "channelMetadataRenderer",
+        ])
+        coupe = threading.Event()
+        lache = threading.Event()
+        process = mock.Mock()
+        process.poll.return_value = None
+
+        def patiente(_):
+            if lache.is_set():
+                coupe.set()
+            return coupe.is_set()
+
+        with mock.patch.object(stream, "page_du_direct", lambda _: next(pages)), \
+                mock.patch.object(coupe, "wait", patiente):
+            stream.veille_le_direct("UCxxxx", coupe, lache=lache, sortie_tenue=[process])
+        process.kill.assert_called_once()
+
     def test_a_pull_never_puts_back_a_dead_live(self):
         """Le pull remet la version du dépôt : on rend la nôtre, pas plus."""
         from watcher import publish
