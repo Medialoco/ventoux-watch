@@ -5021,18 +5021,32 @@ class DiffusionTests(unittest.TestCase):
         self.assertEqual(stream.lit_le_direct(sans_marque), (True, ""))
 
     def test_a_video_that_is_not_ours_is_never_published(self):
-        """Le flux RSS de la chaîne ne la liste pas, ou ne répond pas : rien d'écrit."""
+        """Le flux RSS répond et ne la liste pas : on ne la publie pas."""
         page = ('{"videoDetails":{"videoId":"v1nXaNnu_M4"},'
                 '"isLive":true,"microformat":{}}')
-        for liste in ({"GLoxL408f_E"}, None):
-            coupe = threading.Event()
-            with tempfile.TemporaryDirectory() as dossier:
-                racine = Path(dossier)
-                with mock.patch.object(stream, "page_du_direct", lambda _: page), \
-                        mock.patch.object(stream, "videos_de_la_chaine", lambda _, l=liste: l), \
-                        mock.patch.object(coupe, "wait", lambda _: True):
-                    stream.veille_le_direct(CHAINE_TEST, coupe, racine)
-                self.assertFalse((racine / "data" / "direct.json").exists())
+        coupe = threading.Event()
+        with tempfile.TemporaryDirectory() as dossier:
+            racine = Path(dossier)
+            with mock.patch.object(stream, "page_du_direct", lambda _: page), \
+                    mock.patch.object(stream, "videos_de_la_chaine", lambda _: {"GLoxL408f_E"}), \
+                    mock.patch.object(coupe, "wait", lambda _: True):
+                stream.veille_le_direct(CHAINE_TEST, coupe, racine)
+            self.assertFalse((racine / "data" / "direct.json").exists())
+
+    def test_a_live_is_published_when_the_feed_is_down(self):
+        """Le flux de la chaîne répond 404. La page du direct a quand même le numéro."""
+        page = ('{"videoDetails":{"videoId":"lq86u5mVTUw"},'
+                '"isLive":true,"microformat":{}}')
+        coupe = threading.Event()
+        with tempfile.TemporaryDirectory() as dossier:
+            racine = Path(dossier)
+            with mock.patch.object(stream, "page_du_direct", lambda _: page), \
+                    mock.patch.object(stream, "videos_de_la_chaine", lambda _: None), \
+                    mock.patch.object(coupe, "wait", lambda _: True):
+                stream.veille_le_direct(CHAINE_TEST, coupe, racine)
+            ecrit = json.loads((racine / "data" / "direct.json").read_text())
+        self.assertEqual(ecrit["video"], "lq86u5mVTUw")
+        self.assertTrue(ecrit["live"])
 
     def test_a_live_the_feed_lists_late_is_published_when_it_does(self):
         """Un direct qui vient d'ouvrir manque au flux RSS : on redemande."""

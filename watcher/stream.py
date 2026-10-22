@@ -486,9 +486,13 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
             try:
                 if vu is True and numero and numero not in siens:
                     liste = videos_de_la_chaine(chaine)
-                    if liste is not None and numero in liste:
+                    # Le flux RSS de cette chaîne répond 404 tant qu'elle n'a
+                    # pas de vidéo archivée. La page du direct, elle, donne le
+                    # numéro. On ne refuse que quand le flux répond et que le
+                    # numéro n'y est pas : c'est le film suggéré du 15 octobre.
+                    if liste is None or numero in liste:
                         siens.add(numero)
-                    elif liste is not None and numero not in signales:
+                    elif numero not in signales:
                         signales.add(numero)
                         log.warning("La page du direct désigne %s, que le flux de "
                                     "la chaîne ne liste pas : on ne le publie pas", numero)
