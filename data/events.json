@@ -2,6 +2,171 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-23T12-14-54Z-motion-221",
+      "t": "2026-10-23T12:14:54Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-23T12-14-54Z-motion-221.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2571,
+          "area_grow": 0.1,
+          "clipped": false,
+          "shade": 1.423,
+          "kept": 0.39,
+          "area_ratio": 0.00074,
+          "duration_s": 14.5,
+          "frames": 9,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.054,
+          "seen_as": []
+        },
+        "box": [
+          0.6031,
+          0.5694,
+          0.1328,
+          0.0583
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T12-14-54Z-motion-221.jpg"
+    },
+    {
+      "id": "2026-10-23T12-10-25Z-vehicle-220",
+      "t": "2026-10-23T12:10:25Z",
+      "type": "vehicle",
+      "label": "Voiture et piéton",
+      "zone": "road",
+      "confidence": 0.583,
+      "thumb": "data/thumbs/2026-10-23T12-10-25Z-vehicle-220.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "couvert",
+        "context": "de jour, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3286,
+          "area_grow": 0.17,
+          "clipped": false,
+          "shade": 1.518,
+          "kept": 0.406,
+          "area_ratio": 0.00026,
+          "duration_s": 26.6,
+          "frames": 11,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.296,
+          "seen_as": [
+            "person 0.71 sur 94%",
+            "truck 0.58 sur 64%",
+            "car 0.54 sur 17%",
+            "truck 0.37 sur 0%"
+          ]
+        },
+        "box": [
+          0.7818,
+          0.6892,
+          0.1333,
+          0.1576
+        ],
+        "trace": [
+          [
+            1792757398.75,
+            0.9031,
+            0.7167,
+            0.0234,
+            0.0667
+          ],
+          [
+            1792757400.17,
+            0.8594,
+            0.7861,
+            0.0109,
+            0.0417
+          ],
+          [
+            1792757402.25,
+            0.8031,
+            0.7694,
+            0.0281,
+            0.0944
+          ],
+          [
+            1792757404.73,
+            0.7328,
+            0.8972,
+            0.0203,
+            0.0361
+          ],
+          [
+            1792757406.58,
+            0.6266,
+            0.9889,
+            0.0063,
+            0.0111
+          ],
+          [
+            1792757408.53,
+            0.5578,
+            0.9611,
+            0.0344,
+            0.0389
+          ],
+          [
+            1792757410.26,
+            0.5578,
+            0.9611,
+            0.0344,
+            0.0389
+          ],
+          [
+            1792757412.71,
+            0.5578,
+            0.9611,
+            0.0344,
+            0.0389
+          ],
+          [
+            1792757419.96,
+            0.5578,
+            0.9611,
+            0.0344,
+            0.0389
+          ],
+          [
+            1792757422.5,
+            0.5578,
+            0.9611,
+            0.0344,
+            0.0389
+          ],
+          [
+            1792757425.34,
+            0.6844,
+            0.9833,
+            0.0156,
+            0.0167
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T12-10-25Z-vehicle-220.jpg"
+    },
+    {
       "id": "2026-10-23T11-59-12Z-motion-219",
       "t": "2026-10-23T11:59:12Z",
       "type": "motion",
