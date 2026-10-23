@@ -2,6 +2,814 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-23T07-42-43Z-vehicle-65",
+      "t": "2026-10-23T07:42:43Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.906,
+      "thumb": "data/thumbs/2026-10-23T07-42-43Z-vehicle-65.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0467,
+          "area_grow": 3.33,
+          "clipped": true,
+          "shade": 1.495,
+          "kept": 0.147,
+          "area_ratio": 0.01972,
+          "duration_s": 9.2,
+          "frames": 2,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.066,
+          "seen_as": [
+            "car 0.91 sur 89%",
+            "car 0.88 sur 0%",
+            "car 0.87 sur 0%",
+            "car 0.81 sur 0%"
+          ]
+        },
+        "box": [
+          0.8629,
+          0.7712,
+          0.1371,
+          0.2288
+        ],
+        "trace": [
+          [
+            1792741354.56,
+            0.8797,
+            0.9139,
+            0.0688,
+            0.0861
+          ],
+          [
+            1792741363.78,
+            0.8797,
+            0.8361,
+            0.1203,
+            0.1639
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T07-42-43Z-vehicle-65.jpg"
+    },
+    {
+      "id": "2026-10-23T07-40-45Z-person-62",
+      "t": "2026-10-23T07:40:45Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "road",
+      "confidence": 0.66,
+      "thumb": "data/thumbs/2026-10-23T07-40-45Z-person-62.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0868,
+          "area_grow": 0.36,
+          "clipped": false,
+          "shade": 0.664,
+          "kept": 0.25,
+          "area_ratio": 0.00087,
+          "duration_s": 7.4,
+          "frames": 5,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.219,
+          "seen_as": [
+            "person 0.66 sur 38%",
+            "person 0.43 sur 0%",
+            "car 0.31 sur 0%",
+            "bus 0.30 sur 0%"
+          ]
+        },
+        "box": [
+          0.7993,
+          0.6706,
+          0.0207,
+          0.0913
+        ],
+        "trace": [
+          [
+            1792741238.44,
+            0.7984,
+            0.6778,
+            0.0359,
+            0.0667
+          ],
+          [
+            1792741240.03,
+            0.7797,
+            0.6889,
+            0.0406,
+            0.0667
+          ],
+          [
+            1792741242.34,
+            0.7625,
+            0.7,
+            0.0219,
+            0.0611
+          ],
+          [
+            1792741243.95,
+            0.7484,
+            0.7139,
+            0.0172,
+            0.0556
+          ],
+          [
+            1792741245.88,
+            0.7297,
+            0.7194,
+            0.0156,
+            0.0556
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T07-40-45Z-person-62.jpg"
+    },
+    {
+      "id": "2026-10-23T07-40-45Z-cycle-63",
+      "t": "2026-10-23T07:40:45Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-23T07-40-45Z-cycle-63.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.15,
+          "area_grow": 0.81,
+          "clipped": false,
+          "shade": 0.528,
+          "kept": 0.222,
+          "area_ratio": 0.00095,
+          "duration_s": 7.4,
+          "frames": 5,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.027,
+          "seen_as": []
+        },
+        "box": [
+          0.7859,
+          0.6944,
+          0.0203,
+          0.0667
+        ],
+        "trace": [
+          [
+            1792741238.44,
+            0.7391,
+            0.5778,
+            0.0422,
+            0.0278
+          ],
+          [
+            1792741240.03,
+            0.8328,
+            0.675,
+            0.0172,
+            0.0389
+          ],
+          [
+            1792741242.34,
+            0.7859,
+            0.6944,
+            0.0203,
+            0.0667
+          ],
+          [
+            1792741243.95,
+            0.7672,
+            0.7028,
+            0.0203,
+            0.0583
+          ],
+          [
+            1792741245.88,
+            0.75,
+            0.7139,
+            0.0172,
+            0.0556
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T07-40-45Z-cycle-63.jpg"
+    },
+    {
+      "id": "2026-10-23T07-40-45Z-cycle-64",
+      "t": "2026-10-23T07:40:45Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-23T07-40-45Z-cycle-64.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1226,
+          "area_grow": 1.22,
+          "clipped": false,
+          "shade": 0.621,
+          "kept": 0.267,
+          "area_ratio": 0.00091,
+          "duration_s": 5.8,
+          "frames": 4,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.758,
+          "seen_as": []
+        },
+        "box": [
+          0.8562,
+          0.6556,
+          0.0187,
+          0.0556
+        ],
+        "trace": [
+          [
+            1792741240.03,
+            0.7703,
+            0.5833,
+            0.0297,
+            0.025
+          ],
+          [
+            1792741242.34,
+            0.8,
+            0.5917,
+            0.0281,
+            0.0222
+          ],
+          [
+            1792741243.95,
+            0.8562,
+            0.6556,
+            0.0187,
+            0.0556
+          ],
+          [
+            1792741245.88,
+            0.8609,
+            0.6583,
+            0.0172,
+            0.0528
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T07-40-45Z-cycle-64.jpg"
+    },
+    {
+      "id": "2026-10-23T07-36-16Z-cycle-61",
+      "t": "2026-10-23T07:36:16Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-23T07-36-16Z-cycle-61.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1705,
+          "area_grow": 1.56,
+          "clipped": false,
+          "shade": 0.94,
+          "kept": 0.0,
+          "area_ratio": 0.00091,
+          "duration_s": 11.2,
+          "frames": 5,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.519,
+          "seen_as": []
+        },
+        "box": [
+          0.8859,
+          0.8694,
+          0.0234,
+          0.0389
+        ],
+        "trace": [
+          [
+            1792740965.03,
+            0.7531,
+            0.7694,
+            0.0234,
+            0.025
+          ],
+          [
+            1792740968.6,
+            0.7531,
+            0.7694,
+            0.0234,
+            0.025
+          ],
+          [
+            1792740970.92,
+            0.7531,
+            0.7694,
+            0.0234,
+            0.025
+          ],
+          [
+            1792740973.31,
+            0.7531,
+            0.7694,
+            0.0234,
+            0.0222
+          ],
+          [
+            1792740976.21,
+            0.8859,
+            0.8694,
+            0.0234,
+            0.0389
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T07-36-16Z-cycle-61.jpg"
+    },
+    {
+      "id": "2026-10-23T07-35-50Z-cycle-60",
+      "t": "2026-10-23T07:35:50Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-23T07-35-50Z-cycle-60.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0858,
+          "area_grow": 1.29,
+          "clipped": false,
+          "shade": 0.641,
+          "kept": 0.067,
+          "area_ratio": 0.00115,
+          "duration_s": 42.8,
+          "frames": 19,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.081,
+          "seen_as": []
+        },
+        "box": [
+          0.8781,
+          0.6361,
+          0.0187,
+          0.0611
+        ],
+        "trace": [
+          [
+            1792740907.26,
+            0.8094,
+            0.6944,
+            0.0187,
+            0.0472
+          ],
+          [
+            1792740908.95,
+            0.8141,
+            0.6944,
+            0.0156,
+            0.0417
+          ],
+          [
+            1792740913.28,
+            0.8156,
+            0.6917,
+            0.0141,
+            0.0417
+          ],
+          [
+            1792740914.91,
+            0.8141,
+            0.6917,
+            0.0156,
+            0.0444
+          ],
+          [
+            1792740917.02,
+            0.8094,
+            0.6944,
+            0.0172,
+            0.0472
+          ],
+          [
+            1792740919.86,
+            0.8094,
+            0.6889,
+            0.0187,
+            0.0528
+          ],
+          [
+            1792740921.32,
+            0.8094,
+            0.6889,
+            0.0187,
+            0.0528
+          ],
+          [
+            1792740923.62,
+            0.8094,
+            0.6889,
+            0.0187,
+            0.0528
+          ],
+          [
+            1792740925.34,
+            0.8094,
+            0.6889,
+            0.0187,
+            0.0528
+          ],
+          [
+            1792740928.31,
+            0.8094,
+            0.6889,
+            0.0187,
+            0.0528
+          ],
+          [
+            1792740929.76,
+            0.8125,
+            0.6889,
+            0.0156,
+            0.0528
+          ],
+          [
+            1792740931.81,
+            0.8125,
+            0.6889,
+            0.0156,
+            0.0472
+          ],
+          [
+            1792740933.42,
+            0.8125,
+            0.6972,
+            0.0156,
+            0.0389
+          ],
+          [
+            1792740935.81,
+            0.8125,
+            0.6972,
+            0.0141,
+            0.0389
+          ],
+          [
+            1792740940.66,
+            0.8187,
+            0.6694,
+            0.0172,
+            0.0528
+          ],
+          [
+            1792740943.04,
+            0.8375,
+            0.6611,
+            0.0172,
+            0.05
+          ],
+          [
+            1792740945.36,
+            0.8547,
+            0.6611,
+            0.0156,
+            0.0528
+          ],
+          [
+            1792740947.18,
+            0.8703,
+            0.65,
+            0.0156,
+            0.05
+          ],
+          [
+            1792740950.08,
+            0.8781,
+            0.6361,
+            0.0187,
+            0.0611
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T07-35-50Z-cycle-60.jpg"
+    },
+    {
+      "id": "2026-10-23T07-34-01Z-vehicle-56",
+      "t": "2026-10-23T07:34:10Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.887,
+      "thumb": "data/thumbs/2026-10-23T07-34-01Z-vehicle-56.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.3405,
+          "area_grow": 33.88,
+          "clipped": false,
+          "shade": 1.422,
+          "kept": 0.267,
+          "area_ratio": 0.0225,
+          "duration_s": 22.3,
+          "frames": 10,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.102,
+          "seen_as": [
+            "car 0.89 sur 93%",
+            "car 0.85 sur 0%",
+            "car 0.73 sur 16%",
+            "car 0.63 sur 0%"
+          ]
+        },
+        "box": [
+          0.781,
+          0.6896,
+          0.1353,
+          0.1541
+        ],
+        "trace": [
+          [
+            1792740828.07,
+            0.8922,
+            0.6361,
+            0.0141,
+            0.0472
+          ],
+          [
+            1792740830.73,
+            0.9031,
+            0.6306,
+            0.0156,
+            0.0472
+          ],
+          [
+            1792740832.24,
+            0.9156,
+            0.6222,
+            0.0125,
+            0.0472
+          ],
+          [
+            1792740833.94,
+            0.9266,
+            0.6167,
+            0.0125,
+            0.0472
+          ],
+          [
+            1792740835.26,
+            0.9391,
+            0.6167,
+            0.0109,
+            0.0389
+          ],
+          [
+            1792740837.62,
+            0.7969,
+            0.7056,
+            0.1062,
+            0.1278
+          ],
+          [
+            1792740839.67,
+            0.7969,
+            0.7056,
+            0.1062,
+            0.1278
+          ],
+          [
+            1792740841.17,
+            0.5578,
+            0.8444,
+            0.1484,
+            0.1556
+          ],
+          [
+            1792740847.89,
+            0.7609,
+            0.9778,
+            0.0469,
+            0.0222
+          ],
+          [
+            1792740850.39,
+            0.6062,
+            0.8222,
+            0.1266,
+            0.1778
+          ]
+        ],
+        "count": 4,
+        "since": "2026-10-23T07:34:01Z"
+      },
+      "closeup": "data/closeups/2026-10-23T07-34-01Z-vehicle-56.jpg"
+    },
+    {
+      "id": "2026-10-23T07-33-21Z-cycle-55",
+      "t": "2026-10-23T07:33:21Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-23T07-33-21Z-cycle-55.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1022,
+          "area_grow": 0.74,
+          "clipped": false,
+          "shade": 0.471,
+          "kept": 0.214,
+          "area_ratio": 0.0011,
+          "duration_s": 6.4,
+          "frames": 4,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.804,
+          "seen_as": []
+        },
+        "box": [
+          0.6672,
+          0.7333,
+          0.0172,
+          0.0861
+        ],
+        "trace": [
+          [
+            1792740795.27,
+            0.6672,
+            0.7333,
+            0.0172,
+            0.0861
+          ],
+          [
+            1792740797.39,
+            0.6984,
+            0.7222,
+            0.0187,
+            0.0778
+          ],
+          [
+            1792740798.98,
+            0.7312,
+            0.7083,
+            0.0156,
+            0.0694
+          ],
+          [
+            1792740801.69,
+            0.7578,
+            0.6972,
+            0.0172,
+            0.0639
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T07-33-21Z-cycle-55.jpg"
+    },
+    {
+      "id": "2026-10-23T07-30-50Z-cycle-54",
+      "t": "2026-10-23T07:30:50Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-23T07-30-50Z-cycle-54.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1419,
+          "area_grow": 0.68,
+          "clipped": false,
+          "shade": 0.684,
+          "kept": 0.0,
+          "area_ratio": 0.00059,
+          "duration_s": 10.3,
+          "frames": 5,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.814,
+          "seen_as": []
+        },
+        "box": [
+          0.7406,
+          0.725,
+          0.0141,
+          0.0694
+        ],
+        "trace": [
+          [
+            1792740639.76,
+            0.6469,
+            0.8,
+            0.0156,
+            0.0556
+          ],
+          [
+            1792740642.61,
+            0.6797,
+            0.7778,
+            0.0156,
+            0.0556
+          ],
+          [
+            1792740644.97,
+            0.7109,
+            0.7611,
+            0.0172,
+            0.0472
+          ],
+          [
+            1792740647.79,
+            0.7406,
+            0.725,
+            0.0141,
+            0.0694
+          ],
+          [
+            1792740650.09,
+            0.7672,
+            0.7306,
+            0.0141,
+            0.0417
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T07-30-50Z-cycle-54.jpg"
+    },
+    {
       "id": "2026-10-23T07-29-18Z-cycle-52",
       "t": "2026-10-23T07:29:18Z",
       "type": "cycle",
@@ -53,7 +861,9 @@
             0.0375,
             0.0861
           ]
-        ]
+        ],
+        "count": 2,
+        "since": "2026-10-23T07:29:18Z"
       },
       "closeup": "data/closeups/2026-10-23T07-29-18Z-cycle-52.jpg"
     },
