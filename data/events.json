@@ -2,6 +2,156 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-23T16-34-52Z-vehicle-352",
+      "t": "2026-10-23T16:34:52Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.747,
+      "thumb": "data/thumbs/2026-10-23T16-34-52Z-vehicle-352.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.5,
+        "height_m": 1.9,
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.4576,
+          "area_grow": 0.11,
+          "clipped": false,
+          "shade": 0.742,
+          "kept": 0.333,
+          "area_ratio": 0.0019,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 3.5,
+          "height_m": 1.9,
+          "width_named_m": 3.4,
+          "height_named_m": 1.8,
+          "rise_ms": 0.94,
+          "drift_rate": 1.07,
+          "seen_as": [
+            "car 0.75 sur 90%",
+            "person 0.32 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4739,
+          0.8462,
+          0.1673,
+          0.1529
+        ],
+        "trace": [
+          [
+            1792773289.02,
+            0.4922,
+            0.8639,
+            0.1344,
+            0.1278
+          ],
+          [
+            1792773290.02,
+            0.3156,
+            0.7778,
+            0.0859,
+            0.0944
+          ],
+          [
+            1792773291.02,
+            0.2078,
+            0.7139,
+            0.05,
+            0.0667
+          ],
+          [
+            1792773292.02,
+            0.1453,
+            0.6722,
+            0.0359,
+            0.0528
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T16-34-52Z-vehicle-352.jpg"
+    },
+    {
+      "id": "2026-10-23T16-32-18Z-person-351",
+      "t": "2026-10-23T16:32:18Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "roundabout",
+      "confidence": 0.859,
+      "thumb": "data/thumbs/2026-10-23T16-32-18Z-person-351.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.037,
+          "area_grow": 0.48,
+          "clipped": false,
+          "shade": 0.798,
+          "kept": 0.238,
+          "area_ratio": 0.00066,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 0.7,
+          "height_m": 1.6,
+          "width_named_m": 0.6,
+          "height_named_m": 1.6,
+          "rise_ms": 0.08,
+          "drift_rate": 0.569,
+          "seen_as": [
+            "person 0.86 sur 83%",
+            "person 0.27 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.3514,
+          0.7846,
+          0.0207,
+          0.0984
+        ],
+        "trace": [
+          [
+            1792773135.02,
+            0.35,
+            0.8056,
+            0.0172,
+            0.0806
+          ],
+          [
+            1792773136.02,
+            0.3531,
+            0.7972,
+            0.0187,
+            0.0778
+          ],
+          [
+            1792773137.02,
+            0.3375,
+            0.7972,
+            0.0187,
+            0.0556
+          ],
+          [
+            1792773138.02,
+            0.325,
+            0.7944,
+            0.0125,
+            0.0528
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-23T16-32-18Z-person-351.jpg"
+    },
+    {
       "id": "2026-10-23T16-27-26Z-missed-350",
       "t": "2026-10-23T16:27:26Z",
       "type": "missed",
