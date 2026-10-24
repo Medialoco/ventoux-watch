@@ -2,6 +2,112 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-24T21-35-01Z-cycle-879",
+      "t": "2026-10-24T21:35:01Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-24T21-35-01Z-cycle-879.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0866,
+          "area_grow": 1.74,
+          "clipped": false,
+          "shade": 0.805,
+          "kept": 0.667,
+          "area_ratio": 0.00091,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.225,
+          "seen_as": []
+        },
+        "surface": "sky",
+        "box": [
+          0.0234,
+          0.5,
+          0.0187,
+          0.0278
+        ],
+        "trace": [
+          [
+            1792877699.94,
+            0.0234,
+            0.5,
+            0.0187,
+            0.0278
+          ],
+          [
+            1792877700.94,
+            0.0,
+            0.4139,
+            0.0297,
+            0.0306
+          ],
+          [
+            1792877701.94,
+            0.0,
+            0.4139,
+            0.0297,
+            0.0306
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-24T21-35-01Z-cycle-879.jpg"
+    },
+    {
+      "id": "2026-10-24T21-29-28Z-missed-878",
+      "t": "2026-10-24T21:29:28Z",
+      "type": "missed",
+      "label": "Décor connu",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-24T21-29-28Z-missed-878.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "cabane est fixé au sol. C'est une lumière qui a bougé, pas lui.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.83,
+          "kept": 0.967,
+          "area_ratio": 0.0027,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 8.2,
+          "height_m": 9.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "landmark",
+        "box": [
+          0.3453,
+          0.5778,
+          0.0359,
+          0.075
+        ]
+      },
+      "closeup": "data/closeups/2026-10-24T21-29-28Z-missed-878.jpg"
+    },
+    {
       "id": "2026-10-24T21-24-07Z-missed-877",
       "t": "2026-10-24T21:24:07Z",
       "type": "missed",
