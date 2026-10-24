@@ -2,6 +2,137 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-24T10-00-10Z-motion-577",
+      "t": "2026-10-24T10:00:10Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-24T10-00-10Z-motion-577.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "couvert",
+        "context": "de jour, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2718,
+          "area_grow": 0.17,
+          "clipped": false,
+          "shade": 1.303,
+          "kept": 0.409,
+          "area_ratio": 0.00059,
+          "duration_s": 5.5,
+          "frames": 6,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.541,
+          "seen_as": []
+        },
+        "box": [
+          0.7406,
+          0.5944,
+          0.0719,
+          0.0472
+        ]
+      },
+      "closeup": "data/closeups/2026-10-24T10-00-10Z-motion-577.jpg"
+    },
+    {
+      "id": "2026-10-24T09-54-15Z-missed-576",
+      "t": "2026-10-24T09:54:15Z",
+      "type": "missed",
+      "label": "Décor de l'îlot",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-24T09-54-15Z-missed-576.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur l'îlot central du rond-point, et ça n'a pas bougé. Les pierres et les figures y sont plantées.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.917,
+          "kept": 0.452,
+          "area_ratio": 0.0062,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 3.3,
+          "height_m": 1.8,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "island",
+        "box": [
+          0.2906,
+          0.7694,
+          0.0797,
+          0.0778
+        ]
+      },
+      "closeup": "data/closeups/2026-10-24T09-54-15Z-missed-576.jpg"
+    },
+    {
+      "id": "2026-10-24T09-43-14Z-person-573",
+      "t": "2026-10-24T09:43:23Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "roundabout",
+      "confidence": 0.853,
+      "thumb": "data/thumbs/2026-10-24T09-43-14Z-person-573.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.785,
+          "kept": 0.32,
+          "area_ratio": 0.00409,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 1.3,
+          "height_m": 2.3,
+          "width_named_m": 0.7,
+          "height_named_m": 1.9,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "person 0.85 sur 42%",
+            "person 0.84 sur 0%",
+            "person 0.82 sur 14%",
+            "person 0.56 sur 12%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.064,
+          0.8122,
+          0.024,
+          0.1173
+        ],
+        "count": 2,
+        "since": "2026-10-24T09:43:14Z"
+      },
+      "closeup": "data/closeups/2026-10-24T09-43-14Z-person-573.jpg"
+    },
+    {
       "id": "2026-10-24T09-43-15Z-person-574",
       "t": "2026-10-24T09:43:15Z",
       "type": "person",
@@ -202,54 +333,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-24T09-43-15Z-person-574.jpg"
-    },
-    {
-      "id": "2026-10-24T09-43-14Z-person-573",
-      "t": "2026-10-24T09:43:23Z",
-      "type": "person",
-      "label": "Piéton",
-      "zone": "roundabout",
-      "confidence": 0.853,
-      "thumb": "data/thumbs/2026-10-24T09-43-14Z-person-573.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "day",
-        "weather": "ciel dégagé",
-        "context": "de jour, ciel dégagé",
-        "autonomous": true,
-        "measured": {
-          "travel": 0.0,
-          "area_grow": 1.0,
-          "clipped": false,
-          "shade": 0.785,
-          "kept": 0.32,
-          "area_ratio": 0.00409,
-          "duration_s": 0.0,
-          "frames": 1,
-          "width_m": 1.3,
-          "height_m": 2.3,
-          "width_named_m": 0.7,
-          "height_named_m": 1.9,
-          "rise_ms": 0.0,
-          "drift_rate": 0.0,
-          "seen_as": [
-            "person 0.85 sur 42%",
-            "person 0.84 sur 0%",
-            "person 0.82 sur 14%",
-            "person 0.56 sur 12%"
-          ]
-        },
-        "surface": "roundabout",
-        "box": [
-          0.064,
-          0.8122,
-          0.024,
-          0.1173
-        ],
-        "count": 2,
-        "since": "2026-10-24T09:43:14Z"
-      },
-      "closeup": "data/closeups/2026-10-24T09-43-14Z-person-573.jpg"
     },
     {
       "id": "2026-10-24T09-42-41Z-vehicle-572",
