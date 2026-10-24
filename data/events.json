@@ -2,6 +2,133 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-24T21-43-13Z-missed-882",
+      "t": "2026-10-24T21:43:13Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-24T21-43-13Z-missed-882.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 92 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1389,
+          "area_grow": 74.0,
+          "clipped": false,
+          "shade": 0.839,
+          "kept": 0.953,
+          "area_ratio": 0.03469,
+          "duration_s": 11.0,
+          "frames": 12,
+          "width_m": 91.7,
+          "height_m": 59.5,
+          "width_named_m": 0.3,
+          "height_named_m": 1.2,
+          "rise_ms": 2.78,
+          "drift_rate": 0.043,
+          "seen_as": [
+            "person 0.34 sur 0%"
+          ]
+        },
+        "refused": "oversized",
+        "box": [
+          0.1938,
+          0.3861,
+          0.1734,
+          0.2
+        ]
+      },
+      "closeup": "data/closeups/2026-10-24T21-43-13Z-missed-882.jpg"
+    },
+    {
+      "id": "2026-10-24T21-43-08Z-missed-881",
+      "t": "2026-10-24T21:43:08Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-24T21-43-08Z-missed-881.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 48 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0014,
+          "area_grow": 0.91,
+          "clipped": false,
+          "shade": 0.966,
+          "kept": 1.0,
+          "area_ratio": 0.00043,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 0.4,
+          "height_m": 0.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.003,
+          "seen_as": []
+        },
+        "refused": "tarmac",
+        "box": [
+          0.5344,
+          0.9472,
+          0.0156,
+          0.0306
+        ]
+      },
+      "closeup": "data/closeups/2026-10-24T21-43-08Z-missed-881.jpg"
+    },
+    {
+      "id": "2026-10-24T21-43-05Z-motion-880",
+      "t": "2026-10-24T21:43:05Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-24T21-43-05Z-motion-880.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1738,
+          "area_grow": 0.82,
+          "clipped": false,
+          "shade": 0.798,
+          "kept": 0.889,
+          "area_ratio": 0.00069,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 2.2,
+          "height_m": 1.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 3.06,
+          "drift_rate": 0.004,
+          "seen_as": []
+        },
+        "box": [
+          0.7984,
+          0.6528,
+          0.0234,
+          0.0361
+        ]
+      },
+      "closeup": "data/closeups/2026-10-24T21-43-05Z-motion-880.jpg"
+    },
+    {
       "id": "2026-10-24T21-35-01Z-cycle-879",
       "t": "2026-10-24T21:35:01Z",
       "type": "cycle",
