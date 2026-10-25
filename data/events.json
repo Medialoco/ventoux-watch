@@ -2,6 +2,48 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-25T18-39-55Z-missed-1282",
+      "t": "2026-10-25T18:39:55Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-25T18-39-55Z-missed-1282.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0188,
+          "area_grow": 0.39,
+          "clipped": false,
+          "shade": 1.305,
+          "kept": 0.25,
+          "area_ratio": 0.00013,
+          "duration_s": 4.0,
+          "frames": 5,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.065,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.0609,
+          0.2389,
+          0.0156,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-10-25T18-39-55Z-missed-1282.jpg"
+    },
+    {
       "id": "2026-10-25T16-51-37Z-missed-1281",
       "t": "2026-10-25T16:51:37Z",
       "type": "missed",
@@ -637183,173 +637225,6 @@
           0.0422,
           0.0667
         ],
-        "autonomous": null
-      }
-    },
-    {
-      "id": "2026-09-25T18-28-24Z-person-1",
-      "t": "2026-09-25T18:28:24Z",
-      "type": "vehicle",
-      "label": "Voiture",
-      "zone": "other",
-      "confidence": 0.563,
-      "thumb": "data/thumbs/2026-09-25T18-28-24Z-person-1.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "night",
-        "weather": "ciel dégagé",
-        "context": "de nuit, ciel dégagé",
-        "box": [
-          0.3667,
-          0.8204,
-          0.0833,
-          0.0556
-        ],
-        "correction": "Voiture",
-        "reading": "Voiture, indiqué à la main.",
-        "autonomous": null
-      },
-      "review": "accepted"
-    },
-    {
-      "id": "2026-09-25T17-54-36Z-person-4",
-      "t": "2026-09-25T17:54:36Z",
-      "type": "vehicle",
-      "label": "Camionnette blanche",
-      "zone": "roundabout",
-      "confidence": 0.424,
-      "thumb": "data/thumbs/2026-09-25T17-54-36Z-person-4.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "twilight",
-        "weather": "ciel dégagé",
-        "context": "au crépuscule, ciel dégagé",
-        "box": [
-          0.3812,
-          0.8213,
-          0.0896,
-          0.0648
-        ],
-        "correction": "Camionnette blanche",
-        "reading": "Camionnette blanche, indiqué à la main.",
-        "autonomous": null
-      },
-      "review": "accepted"
-    },
-    {
-      "id": "2026-09-25T17-53-09Z-vehicle-3",
-      "t": "2026-09-25T17:53:09Z",
-      "type": "vehicle",
-      "label": "Voiture avec carriole",
-      "zone": "other",
-      "confidence": 0.662,
-      "thumb": "data/thumbs/2026-09-25T17-53-09Z-vehicle-3.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "twilight",
-        "weather": "ciel dégagé",
-        "context": "au crépuscule, ciel dégagé",
-        "box": [
-          0.3917,
-          0.8222,
-          0.1271,
-          0.0667
-        ],
-        "correction": "Voiture avec carriole",
-        "reading": "Voiture avec carriole, indiqué à la main.",
-        "autonomous": null
-      },
-      "review": "accepted"
-    },
-    {
-      "id": "2026-09-25T17-50-59Z-person-2",
-      "t": "2026-09-25T17:50:59Z",
-      "type": "vehicle",
-      "label": "Voiture",
-      "zone": "roundabout",
-      "confidence": 0.407,
-      "thumb": "data/thumbs/2026-09-25T17-50-59Z-person-2.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "twilight",
-        "weather": "ciel dégagé",
-        "context": "au crépuscule, ciel dégagé",
-        "box": [
-          0.2594,
-          0.7611,
-          0.0609,
-          0.0667
-        ],
-        "correction": "Voiture",
-        "reading": "Voiture, indiqué à la main.",
-        "autonomous": null
-      },
-      "review": "accepted"
-    },
-    {
-      "id": "2026-09-25T17-46-41Z-vehicle-1",
-      "t": "2026-09-25T17:46:41Z",
-      "type": "vehicle",
-      "label": "Véhicule",
-      "zone": "other",
-      "confidence": 0.767,
-      "thumb": "data/thumbs/2026-09-25T17-46-41Z-vehicle-1.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "twilight",
-        "weather": "ciel dégagé",
-        "context": "au crépuscule, ciel dégagé",
-        "box": [
-          0.3172,
-          0.8056,
-          0.1766,
-          0.1
-        ],
-        "autonomous": null
-      }
-    },
-    {
-      "id": "2026-09-25T17-18-11Z-vehicle-1",
-      "t": "2026-09-25T17:18:11Z",
-      "type": "vehicle",
-      "label": "Véhicule",
-      "zone": "roundabout",
-      "confidence": 0.853,
-      "thumb": "data/thumbs/2026-09-25T17-18-11Z-vehicle-1.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "twilight",
-        "weather": "ciel dégagé",
-        "context": "au crépuscule, ciel dégagé",
-        "box": [
-          0.0,
-          0.8028,
-          0.1484,
-          0.1972
-        ],
-        "autonomous": null
-      }
-    },
-    {
-      "id": "2026-09-25T17-16-37Z-vehicle-87",
-      "t": "2026-09-25T17:16:37Z",
-      "type": "vehicle",
-      "label": "Véhicule",
-      "zone": "other",
-      "confidence": 0.751,
-      "thumb": "data/thumbs/2026-09-25T17-16-37Z-vehicle-87.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "twilight",
-        "weather": "ciel dégagé",
-        "context": "au crépuscule, ciel dégagé",
-        "box": [
-          0.7063,
-          0.9194,
-          0.1875,
-          0.0806
-        ],
-        "count": 4,
         "autonomous": null
       }
     }
