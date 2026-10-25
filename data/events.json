@@ -2,6 +2,98 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-25T13-41-56Z-fire-1173",
+      "t": "2026-10-25T13:41:56Z",
+      "type": "fire",
+      "label": "Départ de feu",
+      "zone": "road",
+      "confidence": 0.513,
+      "thumb": "data/thumbs/2026-10-25T13-41-56Z-fire-1173.jpg",
+      "clip_url": "",
+      "detail": {
+        "warm_ratio": 0.0,
+        "smoke_ratio": 0.641,
+        "rise": 0.225,
+        "grow": 24.0,
+        "width_m": 30.0,
+        "surface": "forest",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1656,
+          "area_grow": 24.0,
+          "clipped": false,
+          "shade": 1.366,
+          "kept": 0.618,
+          "area_ratio": 0.01167,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 30.0,
+          "height_m": 39.1,
+          "width_named_m": 4.2,
+          "height_named_m": 4.9,
+          "rise_ms": 10.55,
+          "drift_rate": 0.107,
+          "seen_as": [
+            "car 0.75 sur 0%"
+          ]
+        },
+        "box": [
+          0.1047,
+          0.4528,
+          0.0719,
+          0.1667
+        ],
+        "trace": [
+          [
+            1792935711.62,
+            0.0813,
+            0.675,
+            0.0219,
+            0.0222
+          ],
+          [
+            1792935712.62,
+            0.1047,
+            0.4528,
+            0.0703,
+            0.1528
+          ],
+          [
+            1792935713.62,
+            0.1047,
+            0.4528,
+            0.0719,
+            0.1667
+          ],
+          [
+            1792935714.62,
+            0.1031,
+            0.45,
+            0.0719,
+            0.1556
+          ],
+          [
+            1792935715.62,
+            0.1031,
+            0.45,
+            0.0734,
+            0.1556
+          ],
+          [
+            1792935716.62,
+            0.1031,
+            0.45,
+            0.075,
+            0.1556
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-25T13-41-56Z-fire-1173.jpg"
+    },
+    {
       "id": "2026-10-25T13-38-32Z-missed-1172",
       "t": "2026-10-25T13:38:32Z",
       "type": "missed",
