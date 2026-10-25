@@ -2,6 +2,89 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-25T16-45-09Z-motion-1278",
+      "t": "2026-10-25T16:45:09Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-25T16-45-09Z-motion-1278.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0197,
+          "area_grow": 0.21,
+          "clipped": false,
+          "shade": 1.744,
+          "kept": 0.333,
+          "area_ratio": 0.00013,
+          "duration_s": 10.0,
+          "frames": 10,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.047,
+          "seen_as": []
+        },
+        "box": [
+          0.0203,
+          0.2833,
+          0.0281,
+          0.0417
+        ]
+      },
+      "closeup": "data/closeups/2026-10-25T16-45-09Z-motion-1278.jpg"
+    },
+    {
+      "id": "2026-10-25T16-42-24Z-missed-1277",
+      "t": "2026-10-25T16:42:24Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-25T16-42-24Z-missed-1277.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0487,
+          "area_grow": 798.19,
+          "clipped": true,
+          "shade": 0.79,
+          "kept": 0.292,
+          "area_ratio": 0.16629,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.058,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.1281,
+          0.0,
+          0.6047,
+          0.275
+        ]
+      },
+      "closeup": "data/closeups/2026-10-25T16-42-24Z-missed-1277.jpg"
+    },
+    {
       "id": "2026-10-25T16-40-24Z-missed-1276",
       "t": "2026-10-25T16:40:24Z",
       "type": "missed",
