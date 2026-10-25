@@ -2,6 +2,119 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-25T15-14-18Z-vehicle-1232",
+      "t": "2026-10-25T15:14:18Z",
+      "type": "vehicle",
+      "label": "Voiture bleue",
+      "zone": "road",
+      "confidence": 0.693,
+      "thumb": "data/thumbs/2026-10-25T15-14-18Z-vehicle-1232.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0778,
+          "area_grow": 3.0,
+          "clipped": false,
+          "shade": 0.931,
+          "kept": 0.2,
+          "area_ratio": 0.00172,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 5.8,
+          "height_m": 7.1,
+          "width_named_m": 5.2,
+          "height_named_m": 5.7,
+          "rise_ms": 0.0,
+          "drift_rate": 0.455,
+          "seen_as": [
+            "truck 0.69 sur 66%"
+          ]
+        },
+        "box": [
+          0.0674,
+          0.6516,
+          0.0313,
+          0.0616
+        ],
+        "trace": [
+          [
+            1792941255.65,
+            0.0422,
+            0.5972,
+            0.0172,
+            0.0333
+          ],
+          [
+            1792941256.65,
+            0.05,
+            0.6139,
+            0.0203,
+            0.0389
+          ],
+          [
+            1792941257.65,
+            0.0609,
+            0.6306,
+            0.0234,
+            0.0472
+          ],
+          [
+            1792941258.65,
+            0.0719,
+            0.6528,
+            0.0281,
+            0.0611
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-25T15-14-18Z-vehicle-1232.jpg"
+    },
+    {
+      "id": "2026-10-25T15-12-35Z-motion-1231",
+      "t": "2026-10-25T15:12:35Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-25T15-12-35Z-motion-1231.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0312,
+          "area_grow": 0.88,
+          "clipped": true,
+          "shade": 1.812,
+          "kept": 0.625,
+          "area_ratio": 0.00043,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 17.0,
+          "height_m": 8.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.214,
+          "seen_as": []
+        },
+        "box": [
+          0.9734,
+          0.2389,
+          0.0266,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-10-25T15-12-35Z-motion-1231.jpg"
+    },
+    {
       "id": "2026-10-25T15-03-48Z-vehicle-1230",
       "t": "2026-10-25T15:03:48Z",
       "type": "vehicle",
