@@ -2,61 +2,46 @@
   "version": "0.6.48",
   "events": [
     {
-      "id": "2026-10-24T23-19-18Z-cycle-908",
-      "t": "2026-10-24T23:19:18Z",
-      "type": "cycle",
-      "label": "Vélo",
-      "zone": "other",
-      "confidence": 0.5,
-      "thumb": "data/thumbs/2026-10-24T23-19-18Z-cycle-908.jpg",
+      "id": "2026-10-24T23-37-00Z-missed-911",
+      "t": "2026-10-24T23:37:00Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-24T23-37-00Z-missed-911.jpg",
       "clip_url": "",
       "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
         "period": "night",
-        "weather": "couvert",
-        "context": "de nuit, couvert",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
         "autonomous": false,
         "measured": {
-          "travel": 0.1126,
-          "area_grow": 2.83,
+          "travel": 0.0234,
+          "area_grow": 1.76,
           "clipped": false,
-          "shade": 1.083,
-          "kept": 1.0,
-          "area_ratio": 0.00118,
-          "duration_s": 1.0,
-          "frames": 2,
-          "width_m": 1.6,
-          "height_m": 1.5,
+          "shade": 1.531,
+          "kept": 0.8,
+          "area_ratio": 0.00109,
+          "duration_s": 5.0,
+          "frames": 5,
+          "width_m": 27.8,
+          "height_m": 21.6,
           "width_named_m": 0.0,
           "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 3.232,
+          "rise_ms": 2.47,
+          "drift_rate": 0.046,
           "seen_as": []
         },
-        "surface": "roundabout",
+        "refused": "fog",
         "box": [
-          0.475,
-          0.7333,
-          0.0266,
-          0.0444
-        ],
-        "trace": [
-          [
-            1792883957.94,
-            0.5547,
-            0.6611,
-            0.0187,
-            0.0222
-          ],
-          [
-            1792883958.94,
-            0.475,
-            0.7333,
-            0.0266,
-            0.0444
-          ]
+          0.6078,
+          0.3111,
+          0.0281,
+          0.0389
         ]
       },
-      "closeup": "data/closeups/2026-10-24T23-19-18Z-cycle-908.jpg"
+      "closeup": "data/closeups/2026-10-24T23-37-00Z-missed-911.jpg"
     },
     {
       "id": "2026-10-24T23-19-18Z-motion-909",
@@ -116,6 +101,63 @@
         "since": "2026-10-24T23:19:18Z"
       },
       "closeup": "data/closeups/2026-10-24T23-19-18Z-motion-909.jpg"
+    },
+    {
+      "id": "2026-10-24T23-19-18Z-cycle-908",
+      "t": "2026-10-24T23:19:18Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-24T23-19-18Z-cycle-908.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1126,
+          "area_grow": 2.83,
+          "clipped": false,
+          "shade": 1.083,
+          "kept": 1.0,
+          "area_ratio": 0.00118,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 1.6,
+          "height_m": 1.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 3.232,
+          "seen_as": []
+        },
+        "surface": "roundabout",
+        "box": [
+          0.475,
+          0.7333,
+          0.0266,
+          0.0444
+        ],
+        "trace": [
+          [
+            1792883957.94,
+            0.5547,
+            0.6611,
+            0.0187,
+            0.0222
+          ],
+          [
+            1792883958.94,
+            0.475,
+            0.7333,
+            0.0266,
+            0.0444
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-24T23-19-18Z-cycle-908.jpg"
     },
     {
       "id": "2026-10-24T23-11-00Z-cycle-907",
