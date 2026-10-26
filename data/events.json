@@ -2,6 +2,48 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-26T07-20-25Z-missed-1333",
+      "t": "2026-10-26T07:20:25Z",
+      "type": "missed",
+      "label": "Nuage",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-26T07-20-25Z-missed-1333.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Une masse pâle monte, mais elle est dans le ciel. Rien n'y brûle.",
+        "period": "day",
+        "weather": "nuageux",
+        "context": "de jour, nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.007,
+          "area_grow": 2.04,
+          "clipped": false,
+          "shade": 1.144,
+          "kept": 0.0,
+          "area_ratio": 0.0009,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 40.9,
+          "height_m": 33.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 2.89,
+          "drift_rate": 0.015,
+          "seen_as": []
+        },
+        "refused": "cloud",
+        "box": [
+          0.7328,
+          0.1667,
+          0.0266,
+          0.0389
+        ]
+      },
+      "closeup": "data/closeups/2026-10-26T07-20-25Z-missed-1333.jpg"
+    },
+    {
       "id": "2026-10-26T06-32-48Z-missed-1332",
       "t": "2026-10-26T06:32:48Z",
       "type": "missed",
@@ -639168,77 +639210,6 @@
           0.8333,
           0.0609,
           0.1111
-        ],
-        "autonomous": null
-      }
-    },
-    {
-      "id": "2026-09-26T07-14-55Z-person-19",
-      "t": "2026-09-26T07:14:55Z",
-      "type": "car",
-      "label": "Voiture",
-      "zone": "other",
-      "confidence": 0.493,
-      "thumb": "data/thumbs/2026-09-26T07-14-55Z-person-19.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "day",
-        "weather": "ciel dégagé",
-        "context": "de jour, ciel dégagé",
-        "box": [
-          0.8125,
-          0.9722,
-          0.0484,
-          0.0278
-        ],
-        "count": 3,
-        "correction": "Voiture",
-        "reading": "Voiture, indiqué à la main.",
-        "autonomous": null
-      },
-      "review": "accepted"
-    },
-    {
-      "id": "2026-09-26T06-50-38Z-person-5",
-      "t": "2026-09-26T06:50:38Z",
-      "type": "vehicle",
-      "label": "Véhicule",
-      "zone": "other",
-      "confidence": 0.851,
-      "thumb": "data/thumbs/2026-09-26T06-50-38Z-person-5.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "day",
-        "weather": "ciel dégagé",
-        "context": "de jour, ciel dégagé",
-        "box": [
-          0.5094,
-          0.8833,
-          0.1656,
-          0.1167
-        ],
-        "count": 4,
-        "autonomous": null
-      }
-    },
-    {
-      "id": "2026-09-26T06-39-31Z-vehicle-15",
-      "t": "2026-09-26T06:39:31Z",
-      "type": "vehicle",
-      "label": "Véhicule",
-      "zone": "other",
-      "confidence": 0.758,
-      "thumb": "data/thumbs/2026-09-26T06-39-31Z-vehicle-15.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "day",
-        "weather": "ciel dégagé",
-        "context": "de jour, ciel dégagé",
-        "box": [
-          0.5453,
-          0.8833,
-          0.1547,
-          0.1167
         ],
         "autonomous": null
       }
