@@ -2,6 +2,241 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-26T14-50-29Z-person-1699",
+      "t": "2026-10-26T14:50:29Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "road",
+      "confidence": 0.739,
+      "thumb": "data/thumbs/2026-10-26T14-50-29Z-person-1699.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0098,
+          "area_grow": 1.25,
+          "clipped": false,
+          "shade": 0.901,
+          "kept": 0.214,
+          "area_ratio": 0.00239,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 2.4,
+          "height_m": 3.7,
+          "width_named_m": 0.9,
+          "height_named_m": 3.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.001,
+          "seen_as": [
+            "person 0.84 sur 0%",
+            "person 0.74 sur 41%",
+            "person 0.65 sur 34%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.0779,
+          0.7234,
+          0.016,
+          0.0996
+        ],
+        "trace": [
+          [
+            1793026226.63,
+            0.0656,
+            0.7278,
+            0.0266,
+            0.0722
+          ],
+          [
+            1793026227.63,
+            0.0656,
+            0.7333,
+            0.0297,
+            0.0806
+          ],
+          [
+            1793026228.63,
+            0.0656,
+            0.7333,
+            0.0297,
+            0.0806
+          ],
+          [
+            1793026229.63,
+            0.0656,
+            0.7333,
+            0.0297,
+            0.0806
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-26T14-50-29Z-person-1699.jpg"
+    },
+    {
+      "id": "2026-10-26T14-50-23Z-person-1698",
+      "t": "2026-10-26T14:50:23Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "road",
+      "confidence": 0.737,
+      "thumb": "data/thumbs/2026-10-26T14-50-23Z-person-1698.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0358,
+          "area_grow": 1.7,
+          "clipped": false,
+          "shade": 0.912,
+          "kept": 0.32,
+          "area_ratio": 0.002,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 6.3,
+          "height_m": 5.8,
+          "width_named_m": 1.8,
+          "height_named_m": 5.2,
+          "rise_ms": 0.0,
+          "drift_rate": 0.136,
+          "seen_as": [
+            "person 0.74 sur 27%",
+            "person 0.72 sur 14%",
+            "car 0.35 sur 0%"
+          ]
+        },
+        "box": [
+          0.0772,
+          0.6675,
+          0.0133,
+          0.0687
+        ],
+        "trace": [
+          [
+            1793026220.63,
+            0.0516,
+            0.6583,
+            0.0281,
+            0.0417
+          ],
+          [
+            1793026221.63,
+            0.0547,
+            0.6667,
+            0.0297,
+            0.0417
+          ],
+          [
+            1793026222.63,
+            0.0563,
+            0.6722,
+            0.0359,
+            0.0583
+          ],
+          [
+            1793026223.63,
+            0.0563,
+            0.6861,
+            0.0359,
+            0.0556
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-26T14-50-23Z-person-1698.jpg"
+    },
+    {
+      "id": "2026-10-26T14-49-00Z-motion-1697",
+      "t": "2026-10-26T14:49:00Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-26T14-49-00Z-motion-1697.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3158,
+          "area_grow": 0.12,
+          "clipped": false,
+          "shade": 0.888,
+          "kept": 0.365,
+          "area_ratio": 0.00056,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 2.8,
+          "height_m": 2.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.86,
+          "drift_rate": 0.888,
+          "seen_as": []
+        },
+        "box": [
+          0.2734,
+          0.7528,
+          0.0594,
+          0.0778
+        ]
+      },
+      "closeup": "data/closeups/2026-10-26T14-49-00Z-motion-1697.jpg"
+    },
+    {
+      "id": "2026-10-26T14-48-53Z-vehicle-1696",
+      "t": "2026-10-26T14:48:53Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.55,
+      "thumb": "data/thumbs/2026-10-26T14-48-53Z-vehicle-1696.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.9,
+        "height_m": 1.0,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 0.973,
+          "kept": 0.305,
+          "area_ratio": 0.00766,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 3.9,
+          "height_m": 1.0,
+          "width_named_m": 4.4,
+          "height_named_m": 0.9,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.55 sur 94%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.7684,
+          0.9339,
+          0.1887,
+          0.0661
+        ]
+      },
+      "closeup": "data/closeups/2026-10-26T14-48-53Z-vehicle-1696.jpg"
+    },
+    {
       "id": "2026-10-26T14-38-09Z-person-1695",
       "t": "2026-10-26T14:38:09Z",
       "type": "person",
@@ -663080,146 +663315,6 @@
           0.8194,
           0.1187,
           0.0917
-        ],
-        "count": 4,
-        "autonomous": null
-      }
-    },
-    {
-      "id": "2026-09-26T14-50-10Z-person-215",
-      "t": "2026-09-26T14:50:10Z",
-      "type": "car",
-      "label": "Voiture",
-      "zone": "road",
-      "confidence": 0.506,
-      "thumb": "data/thumbs/2026-09-26T14-50-10Z-person-215.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "day",
-        "weather": "peu nuageux",
-        "context": "de jour, peu nuageux",
-        "box": [
-          0.1547,
-          0.7028,
-          0.0672,
-          0.0583
-        ],
-        "correction": "Voiture",
-        "reading": "Voiture, indiqué à la main.",
-        "autonomous": null
-      },
-      "review": "accepted"
-    },
-    {
-      "id": "2026-09-26T14-48-18Z-vehicle-1",
-      "t": "2026-09-26T14:48:18Z",
-      "type": "vehicle",
-      "label": "Voiture orange",
-      "zone": "road",
-      "confidence": 0.54,
-      "thumb": "data/thumbs/2026-09-26T14-48-18Z-vehicle-1.jpg",
-      "clip_url": "",
-      "detail": {
-        "width_m": 2.9,
-        "period": "day",
-        "weather": "peu nuageux",
-        "context": "de jour, peu nuageux",
-        "measured": {
-          "travel": 0.066,
-          "area_ratio": 0.00073,
-          "duration_s": 2.3,
-          "frames": 5
-        },
-        "surface": "road",
-        "box": [
-          0.1125,
-          0.7333,
-          0.0391,
-          0.075
-        ],
-        "autonomous": null
-      }
-    },
-    {
-      "id": "2026-09-26T14-46-45Z-vehicle-3",
-      "t": "2026-09-26T14:46:45Z",
-      "type": "vehicle",
-      "label": "Voiture",
-      "zone": "road",
-      "confidence": 0.929,
-      "thumb": "data/thumbs/2026-09-26T14-46-45Z-vehicle-3.jpg",
-      "clip_url": "",
-      "detail": {
-        "width_m": 5.0,
-        "period": "day",
-        "weather": "peu nuageux",
-        "context": "de jour, peu nuageux",
-        "measured": {
-          "travel": 0.3071,
-          "area_ratio": 0.0246,
-          "duration_s": 33.9,
-          "frames": 24
-        },
-        "surface": "roundabout",
-        "box": [
-          0.1297,
-          0.8333,
-          0.1703,
-          0.1444
-        ],
-        "count": 3,
-        "autonomous": null
-      },
-      "closeup": "data/closeups/2026-09-26T14-46-45Z-vehicle-3.jpg"
-    },
-    {
-      "id": "2026-09-26T14-44-18Z-vehicle-2",
-      "t": "2026-09-26T14:44:18Z",
-      "type": "vehicle",
-      "label": "Voiture",
-      "zone": "road",
-      "confidence": 0.858,
-      "thumb": "data/thumbs/2026-09-26T14-44-18Z-vehicle-2.jpg",
-      "clip_url": "",
-      "detail": {
-        "width_m": 5.2,
-        "period": "day",
-        "weather": "peu nuageux",
-        "context": "de jour, peu nuageux",
-        "measured": {
-          "travel": 0.3792,
-          "area_ratio": 0.01963,
-          "duration_s": 17.9,
-          "frames": 12
-        },
-        "surface": "roundabout",
-        "box": [
-          0.1313,
-          0.8944,
-          0.1859,
-          0.1056
-        ],
-        "autonomous": null
-      }
-    },
-    {
-      "id": "2026-09-26T14-41-28Z-vehicle-210",
-      "t": "2026-09-26T14:41:28Z",
-      "type": "person",
-      "label": "Piéton",
-      "zone": "roundabout",
-      "confidence": 0.669,
-      "thumb": "data/thumbs/2026-09-26T14-41-28Z-vehicle-210.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "day",
-        "weather": "peu nuageux",
-        "context": "de jour, peu nuageux",
-        "box": [
-          0.3266,
-          0.7778,
-          0.1109,
-          0.0861
         ],
         "count": 4,
         "autonomous": null
