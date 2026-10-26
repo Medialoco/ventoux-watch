@@ -2,6 +2,48 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-26T04-52-38Z-missed-1308",
+      "t": "2026-10-26T04:52:38Z",
+      "type": "missed",
+      "label": "Brume",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-26T04-52-38Z-missed-1308.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête est noyée, on y voit mal. Une lueur chaude qui gonfle ne suffit pas ici, il faut un panache qui monte.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1213,
+          "area_grow": 1.07,
+          "clipped": false,
+          "shade": 1.55,
+          "kept": 0.0,
+          "area_ratio": 0.00014,
+          "duration_s": 1549.4,
+          "frames": 5,
+          "width_m": 16.1,
+          "height_m": 8.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.001,
+          "seen_as": []
+        },
+        "refused": "haze",
+        "box": [
+          0.8609,
+          0.1639,
+          0.0125,
+          0.0111
+        ]
+      },
+      "closeup": "data/closeups/2026-10-26T04-52-38Z-missed-1308.jpg"
+    },
+    {
       "id": "2026-10-26T03-07-49Z-motion-1307",
       "t": "2026-10-26T03:07:49Z",
       "type": "motion",
@@ -638198,63 +638240,6 @@
         "autonomous": null
       },
       "review": "accepted"
-    },
-    {
-      "id": "2026-09-26T04-32-00Z-person-12",
-      "t": "2026-09-26T04:32:00Z",
-      "type": "car",
-      "label": "Voiture blanche",
-      "zone": "other",
-      "confidence": 0.555,
-      "thumb": "data/thumbs/2026-09-26T04-32-00Z-person-12.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "night",
-        "weather": "ciel dégagé",
-        "context": "de nuit, ciel dégagé",
-        "box": [
-          0.125,
-          0.8,
-          0.0292,
-          0.037
-        ],
-        "count": 3,
-        "drawn": [
-          50,
-          206,
-          84,
-          236
-        ],
-        "correction": "Voiture blanche",
-        "reading": "Voiture blanche, indiqué à la main.",
-        "autonomous": null
-      },
-      "closeup": "data/closeups/2026-09-26T04-32-00Z-person-12.jpg",
-      "review": "accepted"
-    },
-    {
-      "id": "2026-09-26T04-25-02Z-vehicle-1",
-      "t": "2026-09-26T04:25:02Z",
-      "type": "vehicle",
-      "label": "Voiture et piéton",
-      "zone": "roundabout",
-      "confidence": 0.613,
-      "thumb": "data/thumbs/2026-09-26T04-25-02Z-vehicle-1.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "night",
-        "weather": "ciel dégagé",
-        "context": "de nuit, ciel dégagé",
-        "box": [
-          0.0,
-          0.5194,
-          0.5875,
-          0.4806
-        ],
-        "count": 7,
-        "autonomous": null
-      },
-      "closeup": "data/closeups/2026-09-26T04-25-02Z-vehicle-1.jpg"
     }
   ]
 }
