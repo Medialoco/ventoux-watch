@@ -2,6 +2,89 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-26T05-11-52Z-missed-1314",
+      "t": "2026-10-26T05:11:52Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-26T05-11-52Z-missed-1314.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2897,
+          "area_grow": 14.18,
+          "clipped": true,
+          "shade": 1.202,
+          "kept": 0.817,
+          "area_ratio": 0.02586,
+          "duration_s": 13.0,
+          "frames": 13,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.009,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.0,
+          0.3583,
+          0.2516,
+          0.1028
+        ]
+      },
+      "closeup": "data/closeups/2026-10-26T05-11-52Z-missed-1314.jpg"
+    },
+    {
+      "id": "2026-10-26T05-11-48Z-motion-1313",
+      "t": "2026-10-26T05:11:48Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-26T05-11-48Z-motion-1313.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.053,
+          "area_grow": 0.21,
+          "clipped": false,
+          "shade": 1.226,
+          "kept": 0.56,
+          "area_ratio": 0.00067,
+          "duration_s": 9.0,
+          "frames": 10,
+          "width_m": 16.2,
+          "height_m": 33.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.056,
+          "seen_as": []
+        },
+        "box": [
+          0.0406,
+          0.4861,
+          0.0312,
+          0.1167
+        ]
+      },
+      "closeup": "data/closeups/2026-10-26T05-11-48Z-motion-1313.jpg"
+    },
+    {
       "id": "2026-10-26T04-55-38Z-missed-1312",
       "t": "2026-10-26T04:55:38Z",
       "type": "missed",
@@ -638345,68 +638428,6 @@
         "autonomous": null
       },
       "closeup": "data/closeups/2026-09-26T05-48-39Z-vehicle-1.jpg"
-    },
-    {
-      "id": "2026-09-26T05-10-56Z-vehicle-14",
-      "t": "2026-09-26T05:10:56Z",
-      "type": "vehicle",
-      "label": "Camion",
-      "zone": "other",
-      "confidence": 0.874,
-      "thumb": "data/thumbs/2026-09-26T05-10-56Z-vehicle-14.jpg",
-      "clip_url": "",
-      "detail": {
-        "width_m": 5.5,
-        "period": "twilight",
-        "weather": "ciel dégagé",
-        "context": "au crépuscule, ciel dégagé",
-        "measured": {
-          "travel": 0.0563,
-          "area_ratio": 0.03984,
-          "duration_s": 0.3,
-          "frames": 2
-        },
-        "surface": "roundabout",
-        "box": [
-          0.4328,
-          0.8056,
-          0.2109,
-          0.1889
-        ],
-        "autonomous": null
-      },
-      "closeup": "data/closeups/2026-09-26T05-10-56Z-vehicle-14.jpg"
-    },
-    {
-      "id": "2026-09-26T05-00-45Z-vehicle-13",
-      "t": "2026-09-26T05:00:45Z",
-      "type": "car",
-      "label": "Voiture",
-      "zone": "other",
-      "confidence": 0.459,
-      "thumb": "data/thumbs/2026-09-26T05-00-45Z-vehicle-13.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "twilight",
-        "weather": "ciel dégagé",
-        "context": "au crépuscule, ciel dégagé",
-        "box": [
-          0.6391,
-          0.9333,
-          0.0822,
-          0.0259
-        ],
-        "drawn": [
-          289,
-          242,
-          364,
-          269
-        ],
-        "correction": "Voiture",
-        "reading": "Voiture, indiqué à la main.",
-        "autonomous": null
-      },
-      "review": "accepted"
     }
   ]
 }
