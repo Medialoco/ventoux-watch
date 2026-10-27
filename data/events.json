@@ -2,6 +2,141 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-27T06-20-48Z-person-1806",
+      "t": "2026-10-27T06:20:48Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "road",
+      "confidence": 0.7,
+      "thumb": "data/thumbs/2026-10-27T06-20-48Z-person-1806.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "twilight",
+        "weather": "ciel dégagé",
+        "context": "au crépuscule, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.014,
+          "area_grow": 1.07,
+          "clipped": false,
+          "shade": 0.805,
+          "kept": 0.0,
+          "area_ratio": 0.00056,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 2.2,
+          "height_m": 4.3,
+          "width_named_m": 1.2,
+          "height_named_m": 3.5,
+          "rise_ms": 0.0,
+          "drift_rate": 0.142,
+          "seen_as": [
+            "person 0.70 sur 43%",
+            "car 0.27 sur 0%"
+          ]
+        },
+        "box": [
+          0.0803,
+          0.6829,
+          0.0087,
+          0.0462
+        ],
+        "trace": [
+          [
+            1793082045.8,
+            0.0719,
+            0.6778,
+            0.0125,
+            0.0417
+          ],
+          [
+            1793082046.8,
+            0.0766,
+            0.6806,
+            0.0109,
+            0.0389
+          ],
+          [
+            1793082047.8,
+            0.0781,
+            0.6833,
+            0.0125,
+            0.0361
+          ],
+          [
+            1793082048.8,
+            0.0781,
+            0.6889,
+            0.0125,
+            0.0444
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-27T06-20-48Z-person-1806.jpg"
+    },
+    {
+      "id": "2026-10-27T06-17-25Z-vehicle-1805",
+      "t": "2026-10-27T06:17:25Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "roundabout",
+      "confidence": 0.902,
+      "thumb": "data/thumbs/2026-10-27T06-17-25Z-vehicle-1805.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.3,
+        "height_m": 2.0,
+        "period": "twilight",
+        "weather": "ciel dégagé",
+        "context": "au crépuscule, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.1817,
+          "area_grow": 1.49,
+          "clipped": true,
+          "shade": 1.109,
+          "kept": 0.417,
+          "area_ratio": 0.01914,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 4.3,
+          "height_m": 2.0,
+          "width_named_m": 4.2,
+          "height_named_m": 1.7,
+          "rise_ms": 0.0,
+          "drift_rate": 0.779,
+          "seen_as": [
+            "car 0.90 sur 87%",
+            "person 0.33 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.1165,
+          0.8715,
+          0.192,
+          0.1285
+        ],
+        "trace": [
+          [
+            1793081844.8,
+            0.0,
+            0.7944,
+            0.0828,
+            0.1556
+          ],
+          [
+            1793081845.8,
+            0.1344,
+            0.875,
+            0.1531,
+            0.125
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-27T06-17-25Z-vehicle-1805.jpg"
+    },
+    {
       "id": "2026-10-27T06-11-31Z-missed-1804",
       "t": "2026-10-27T06:11:31Z",
       "type": "missed",
