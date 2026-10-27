@@ -2,6 +2,131 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-27T04-08-24Z-missed-1788",
+      "t": "2026-10-27T04:08:24Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-27T04-08-24Z-missed-1788.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 23 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1311,
+          "area_grow": 0.02,
+          "clipped": true,
+          "shade": 2.263,
+          "kept": 0.296,
+          "area_ratio": 8e-05,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 22.6,
+          "height_m": 50.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 26.93,
+          "drift_rate": 0.124,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.9672,
+          0.1139,
+          0.0328,
+          0.1306
+        ]
+      },
+      "closeup": "data/closeups/2026-10-27T04-08-24Z-missed-1788.jpg"
+    },
+    {
+      "id": "2026-10-27T01-12-30Z-missed-1787",
+      "t": "2026-10-27T01:12:30Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-27T01-12-30Z-missed-1787.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2988,
+          "area_grow": 0.25,
+          "clipped": false,
+          "shade": 1.102,
+          "kept": 0.969,
+          "area_ratio": 0.00057,
+          "duration_s": 12.0,
+          "frames": 13,
+          "width_m": 15.2,
+          "height_m": 7.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.378,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.0484,
+          0.6306,
+          0.0516,
+          0.0444
+        ]
+      },
+      "closeup": "data/closeups/2026-10-27T01-12-30Z-missed-1787.jpg"
+    },
+    {
+      "id": "2026-10-27T01-12-24Z-motion-1786",
+      "t": "2026-10-27T01:12:24Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-27T01-12-24Z-motion-1786.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2046,
+          "area_grow": 0.26,
+          "clipped": false,
+          "shade": 1.101,
+          "kept": 0.917,
+          "area_ratio": 0.00053,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 15.2,
+          "height_m": 6.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.971,
+          "seen_as": []
+        },
+        "box": [
+          0.0484,
+          0.6306,
+          0.0516,
+          0.0389
+        ]
+      },
+      "closeup": "data/closeups/2026-10-27T01-12-24Z-motion-1786.jpg"
+    },
+    {
       "id": "2026-10-26T23-49-46Z-vehicle-1785",
       "t": "2026-10-26T23:49:46Z",
       "type": "vehicle",
@@ -665740,44 +665865,6 @@
         ],
         "autonomous": true
       }
-    },
-    {
-      "id": "2026-09-27T02-57-18Z-vehicle-1",
-      "t": "2026-09-27T02:57:18Z",
-      "type": "vehicle",
-      "label": "Voiture",
-      "zone": "other",
-      "confidence": 0.571,
-      "thumb": "data/thumbs/2026-09-27T02-57-18Z-vehicle-1.jpg",
-      "clip_url": "",
-      "detail": {
-        "width_m": 7.9,
-        "period": "night",
-        "weather": "ciel dégagé",
-        "context": "de nuit, ciel dégagé",
-        "measured": {
-          "travel": 0.1276,
-          "area_ratio": 0.03612,
-          "duration_s": 0.3,
-          "frames": 3,
-          "width_m": 7.9,
-          "height_m": 3.1,
-          "seen_as": [
-            "person 0.57",
-            "car 0.57",
-            "person 0.46"
-          ]
-        },
-        "surface": "island",
-        "box": [
-          0.2062,
-          0.7333,
-          0.2281,
-          0.1583
-        ],
-        "autonomous": false
-      },
-      "closeup": "data/closeups/2026-09-27T02-57-18Z-vehicle-1.jpg"
     }
   ]
 }
