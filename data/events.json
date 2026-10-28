@@ -2,6 +2,159 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-28T01-27-37Z-missed-2458",
+      "t": "2026-10-28T01:27:37Z",
+      "type": "missed",
+      "label": "Voiture garée",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-28T01-27-37Z-missed-2458.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur une aire de stationnement, et ça n'a pas bougé.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.147,
+          "kept": 0.908,
+          "area_ratio": 0.36303,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 48.2,
+          "height_m": 12.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "parked",
+        "box": [
+          0.0,
+          0.3861,
+          0.8891,
+          0.4083
+        ]
+      },
+      "closeup": "data/closeups/2026-10-28T01-27-37Z-missed-2458.jpg"
+    },
+    {
+      "id": "2026-10-28T01-25-21Z-cycle-2457",
+      "t": "2026-10-28T01:25:21Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-28T01-25-21Z-cycle-2457.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0456,
+          "area_grow": 0.94,
+          "clipped": false,
+          "shade": 1.111,
+          "kept": 1.0,
+          "area_ratio": 0.00085,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 4.9,
+          "height_m": 6.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 1.9,
+          "drift_rate": 0.206,
+          "seen_as": []
+        },
+        "box": [
+          0.2188,
+          0.6361,
+          0.0203,
+          0.0444
+        ],
+        "trace": [
+          [
+            1793150718.59,
+            0.2188,
+            0.6361,
+            0.0203,
+            0.0444
+          ],
+          [
+            1793150719.59,
+            0.2281,
+            0.5944,
+            0.0219,
+            0.0389
+          ],
+          [
+            1793150720.59,
+            0.2281,
+            0.5944,
+            0.0219,
+            0.0389
+          ],
+          [
+            1793150721.59,
+            0.2281,
+            0.5944,
+            0.0219,
+            0.0389
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-28T01-25-21Z-cycle-2457.jpg"
+    },
+    {
+      "id": "2026-10-28T01-25-20Z-motion-2456",
+      "t": "2026-10-28T01:25:20Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-28T01-25-20Z-motion-2456.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2333,
+          "area_grow": 2.3,
+          "clipped": false,
+          "shade": 1.316,
+          "kept": 0.708,
+          "area_ratio": 0.01196,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 10.1,
+          "height_m": 10.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 4.0,
+          "drift_rate": 1.619,
+          "seen_as": []
+        },
+        "box": [
+          0.8281,
+          0.4917,
+          0.0813,
+          0.1472
+        ]
+      },
+      "closeup": "data/closeups/2026-10-28T01-25-20Z-motion-2456.jpg"
+    },
+    {
       "id": "2026-10-28T01-02-38Z-cycle-2455",
       "t": "2026-10-28T01:02:38Z",
       "type": "cycle",
