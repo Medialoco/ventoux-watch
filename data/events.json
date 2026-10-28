@@ -2,6 +2,47 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-28T17-28-55Z-motion-2993",
+      "t": "2026-10-28T17:28:55Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-28T17-28-55Z-motion-2993.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.4246,
+          "area_grow": 0.78,
+          "clipped": false,
+          "shade": 1.719,
+          "kept": 0.767,
+          "area_ratio": 0.00052,
+          "duration_s": 10.0,
+          "frames": 11,
+          "width_m": 20.4,
+          "height_m": 17.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 6.52,
+          "drift_rate": 0.928,
+          "seen_as": []
+        },
+        "box": [
+          0.0234,
+          0.5389,
+          0.0391,
+          0.0611
+        ]
+      },
+      "closeup": "data/closeups/2026-10-28T17-28-55Z-motion-2993.jpg"
+    },
+    {
       "id": "2026-10-28T17-28-07Z-cycle-2992",
       "t": "2026-10-28T17:28:07Z",
       "type": "cycle",
@@ -744991,46 +745032,6 @@
       },
       "closeup": "data/closeups/2026-09-29T00-51-28Z-motion-1.jpg",
       "review": "rejected"
-    },
-    {
-      "id": "2026-09-28T17-28-46Z-vehicle-1",
-      "t": "2026-09-28T17:28:46Z",
-      "type": "vehicle",
-      "label": "Voiture",
-      "zone": "other",
-      "confidence": 0.753,
-      "thumb": "data/thumbs/2026-09-28T17-28-46Z-vehicle-1.jpg",
-      "clip_url": "",
-      "detail": {
-        "width_m": 5.2,
-        "height_m": 1.8,
-        "period": "twilight",
-        "weather": "couvert",
-        "context": "au crépuscule, couvert",
-        "measured": {
-          "travel": 0.0991,
-          "area_ratio": 0.01417,
-          "duration_s": 0.0,
-          "frames": 2,
-          "width_m": 5.2,
-          "height_m": 1.8,
-          "rise_ms": 92.09,
-          "drift_rate": 11.527,
-          "seen_as": [
-            "truck 0.75"
-          ]
-        },
-        "surface": "roundabout",
-        "box": [
-          0.3682,
-          0.8119,
-          0.1047,
-          0.0948
-        ],
-        "count": 2,
-        "since": "2026-09-28T17:28:46Z",
-        "autonomous": true
-      }
     }
   ]
 }
