@@ -2,6 +2,266 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-28T05-24-21Z-motion-2504",
+      "t": "2026-10-28T05:24:21Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-28T05-24-21Z-motion-2504.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.5029,
+          "area_grow": 0.08,
+          "clipped": true,
+          "shade": 0.873,
+          "kept": 0.254,
+          "area_ratio": 0.00228,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 4.8,
+          "height_m": 2.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.948,
+          "seen_as": []
+        },
+        "box": [
+          0.0906,
+          0.825,
+          0.1641,
+          0.175
+        ]
+      },
+      "closeup": "data/closeups/2026-10-28T05-24-21Z-motion-2504.jpg"
+    },
+    {
+      "id": "2026-10-28T05-23-33Z-missed-2503",
+      "t": "2026-10-28T05:23:33Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-28T05-23-33Z-missed-2503.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 216 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.313,
+          "area_grow": 0.21,
+          "clipped": false,
+          "shade": 1.121,
+          "kept": 0.509,
+          "area_ratio": 0.00014,
+          "duration_s": 18.0,
+          "frames": 17,
+          "width_m": 216.2,
+          "height_m": 44.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.113,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.7719,
+          0.125,
+          0.1531,
+          0.0556
+        ]
+      },
+      "closeup": "data/closeups/2026-10-28T05-23-33Z-missed-2503.jpg"
+    },
+    {
+      "id": "2026-10-28T05-18-17Z-motion-2502",
+      "t": "2026-10-28T05:18:17Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-28T05-18-17Z-motion-2502.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1615,
+          "area_grow": 2.08,
+          "clipped": false,
+          "shade": 1.218,
+          "kept": 0.1,
+          "area_ratio": 0.0009,
+          "duration_s": 24.0,
+          "frames": 24,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.168,
+          "seen_as": []
+        },
+        "box": [
+          0.2,
+          0.3583,
+          0.0359,
+          0.05
+        ]
+      },
+      "closeup": "data/closeups/2026-10-28T05-18-17Z-motion-2502.jpg"
+    },
+    {
+      "id": "2026-10-28T05-17-38Z-cycle-2501",
+      "t": "2026-10-28T05:17:38Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-28T05-17-38Z-cycle-2501.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1102,
+          "area_grow": 3.23,
+          "clipped": false,
+          "shade": 0.94,
+          "kept": 0.16,
+          "area_ratio": 0.00182,
+          "duration_s": 12.0,
+          "frames": 13,
+          "width_m": 6.6,
+          "height_m": 6.9,
+          "width_named_m": 1.6,
+          "height_named_m": 4.6,
+          "rise_ms": 0.0,
+          "drift_rate": 0.153,
+          "seen_as": [
+            "person 0.40 sur 0%"
+          ]
+        },
+        "surface": "path",
+        "box": [
+          0.0641,
+          0.6472,
+          0.0312,
+          0.0583
+        ],
+        "trace": [
+          [
+            1793164646.29,
+            0.0203,
+            0.5639,
+            0.0203,
+            0.0278
+          ],
+          [
+            1793164647.29,
+            0.0281,
+            0.575,
+            0.0172,
+            0.0389
+          ],
+          [
+            1793164648.29,
+            0.0328,
+            0.5861,
+            0.0219,
+            0.0306
+          ],
+          [
+            1793164649.29,
+            0.0406,
+            0.6028,
+            0.025,
+            0.0361
+          ],
+          [
+            1793164650.29,
+            0.0516,
+            0.6222,
+            0.0266,
+            0.0417
+          ],
+          [
+            1793164651.29,
+            0.0625,
+            0.6444,
+            0.0312,
+            0.0556
+          ],
+          [
+            1793164652.29,
+            0.0641,
+            0.6472,
+            0.0312,
+            0.0583
+          ],
+          [
+            1793164653.29,
+            0.0641,
+            0.6472,
+            0.0312,
+            0.0583
+          ],
+          [
+            1793164654.29,
+            0.0641,
+            0.6472,
+            0.0312,
+            0.0583
+          ],
+          [
+            1793164655.29,
+            0.0641,
+            0.6472,
+            0.0312,
+            0.0583
+          ],
+          [
+            1793164656.29,
+            0.0641,
+            0.6472,
+            0.0312,
+            0.0583
+          ],
+          [
+            1793164657.29,
+            0.0641,
+            0.6472,
+            0.0312,
+            0.0583
+          ],
+          [
+            1793164658.29,
+            0.0641,
+            0.6472,
+            0.0312,
+            0.0583
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-28T05-17-38Z-cycle-2501.jpg"
+    },
+    {
       "id": "2026-10-28T05-12-42Z-motion-2500",
       "t": "2026-10-28T05:12:42Z",
       "type": "motion",
