@@ -2,6 +2,47 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-29T20-25-03Z-motion-3607",
+      "t": "2026-10-29T20:25:03Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-29T20-25-03Z-motion-3607.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0801,
+          "area_grow": 0.08,
+          "clipped": true,
+          "shade": 1.079,
+          "kept": 0.832,
+          "area_ratio": 0.00062,
+          "duration_s": 13.0,
+          "frames": 14,
+          "width_m": 32.2,
+          "height_m": 18.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.5,
+          "drift_rate": 0.044,
+          "seen_as": []
+        },
+        "box": [
+          0.0,
+          0.5667,
+          0.125,
+          0.1306
+        ]
+      },
+      "closeup": "data/closeups/2026-10-29T20-25-03Z-motion-3607.jpg"
+    },
+    {
       "id": "2026-10-29T20-04-02Z-missed-3603",
       "t": "2026-10-29T20:04:02Z",
       "type": "missed",
@@ -774954,48 +774995,6 @@
         ]
       },
       "closeup": "data/closeups/2026-09-29T20-46-17Z-missed-4.jpg"
-    },
-    {
-      "id": "2026-09-29T20-13-27Z-missed-3",
-      "t": "2026-09-29T20:13:27Z",
-      "type": "missed",
-      "label": "Brouillard",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-09-29T20-13-27Z-missed-3.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0227,
-          "area_grow": 1.92,
-          "clipped": false,
-          "shade": 1.302,
-          "kept": 0.0,
-          "area_ratio": 0.00021,
-          "duration_s": 10.7,
-          "frames": 14,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.114,
-          "seen_as": []
-        },
-        "refused": "fog",
-        "box": [
-          0.325,
-          0.0528,
-          0.0172,
-          0.0167
-        ]
-      },
-      "closeup": "data/closeups/2026-09-29T20-13-27Z-missed-3.jpg"
     }
   ]
 }
