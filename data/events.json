@@ -2,6 +2,48 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-29T02-05-37Z-missed-3009",
+      "t": "2026-10-29T02:05:37Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "sidewalk",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-29T02-05-37Z-missed-3009.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1704,
+          "area_grow": 0.05,
+          "clipped": false,
+          "shade": 1.108,
+          "kept": 0.648,
+          "area_ratio": 0.00046,
+          "duration_s": 0.1,
+          "frames": 2,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 13.633,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.4578,
+          0.7389,
+          0.1172,
+          0.075
+        ]
+      },
+      "closeup": "data/closeups/2026-10-29T02-05-37Z-missed-3009.jpg"
+    },
+    {
       "id": "2026-10-28T21-47-32Z-vehicle-3007",
       "t": "2026-10-28T21:47:32Z",
       "type": "vehicle",
@@ -746366,42 +746408,6 @@
         ]
       },
       "closeup": "data/closeups/2026-09-29T02-32-27Z-motion-1.jpg"
-    },
-    {
-      "id": "2026-09-29T00-51-28Z-motion-1",
-      "t": "2026-09-29T00:51:28Z",
-      "type": "motion",
-      "label": "Mouvement sur la route",
-      "zone": "road",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-09-29T00-51-28Z-motion-1.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "night",
-        "weather": "couvert",
-        "context": "de nuit, couvert",
-        "measured": {
-          "travel": 0.0328,
-          "area_ratio": 0.00043,
-          "duration_s": 13.7,
-          "frames": 14,
-          "width_m": 5.8,
-          "height_m": 2.9,
-          "rise_ms": 0.0,
-          "drift_rate": 0.008,
-          "seen_as": []
-        },
-        "box": [
-          0.3172,
-          0.8056,
-          0.2203,
-          0.1944
-        ],
-        "autonomous": false
-      },
-      "closeup": "data/closeups/2026-09-29T00-51-28Z-motion-1.jpg",
-      "review": "rejected"
     }
   ]
 }
