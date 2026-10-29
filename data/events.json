@@ -2,6 +2,89 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-29T04-12-02Z-motion-3014",
+      "t": "2026-10-29T04:12:02Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-29T04-12-02Z-motion-3014.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0454,
+          "area_grow": 2.32,
+          "clipped": false,
+          "shade": 1.073,
+          "kept": 0.963,
+          "area_ratio": 0.00199,
+          "duration_s": 11.0,
+          "frames": 12,
+          "width_m": 29.8,
+          "height_m": 19.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.57,
+          "drift_rate": 0.036,
+          "seen_as": []
+        },
+        "box": [
+          0.2703,
+          0.5306,
+          0.1031,
+          0.1167
+        ]
+      },
+      "closeup": "data/closeups/2026-10-29T04-12-02Z-motion-3014.jpg"
+    },
+    {
+      "id": "2026-10-29T04-11-43Z-missed-3013",
+      "t": "2026-10-29T04:11:43Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-29T04-11-43Z-missed-3013.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2954,
+          "area_grow": 3.14,
+          "clipped": false,
+          "shade": 1.091,
+          "kept": 0.84,
+          "area_ratio": 0.00165,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 9.3,
+          "height_m": 10.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.796,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.4969,
+          0.525,
+          0.0312,
+          0.0611
+        ]
+      },
+      "closeup": "data/closeups/2026-10-29T04-11-43Z-missed-3013.jpg"
+    },
+    {
       "id": "2026-10-29T04-06-16Z-motion-3011",
       "t": "2026-10-29T04:06:16Z",
       "type": "motion",
@@ -746206,90 +746289,6 @@
         ]
       },
       "closeup": "data/closeups/2026-09-29T04-37-54Z-missed-9.jpg"
-    },
-    {
-      "id": "2026-09-29T04-11-14Z-missed-6",
-      "t": "2026-09-29T04:11:14Z",
-      "type": "missed",
-      "label": "Tache trop large",
-      "zone": "other",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-09-29T04-11-14Z-missed-6.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Environ 21 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
-        "period": "night",
-        "weather": "couvert",
-        "context": "de nuit, couvert",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.07,
-          "area_grow": 0.78,
-          "clipped": false,
-          "shade": 1.144,
-          "kept": 0.65,
-          "area_ratio": 0.00086,
-          "duration_s": 14.5,
-          "frames": 13,
-          "width_m": 21.0,
-          "height_m": 34.7,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.028,
-          "seen_as": []
-        },
-        "refused": "oversized",
-        "box": [
-          0.0391,
-          0.4861,
-          0.0406,
-          0.1194
-        ]
-      },
-      "closeup": "data/closeups/2026-09-29T04-11-14Z-missed-6.jpg"
-    },
-    {
-      "id": "2026-09-29T04-11-00Z-missed-5",
-      "t": "2026-09-29T04:11:00Z",
-      "type": "missed",
-      "label": "Décor connu",
-      "zone": "other",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-09-29T04-11-00Z-missed-5.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "bâtiment n'a pas bougé. Une lumière est passée dessus.",
-        "period": "night",
-        "weather": "couvert",
-        "context": "de nuit, couvert",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0,
-          "area_grow": 1.0,
-          "clipped": false,
-          "shade": 1.168,
-          "kept": 0.867,
-          "area_ratio": 0.00124,
-          "duration_s": 0.0,
-          "frames": 1,
-          "width_m": 17.8,
-          "height_m": 10.5,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.0,
-          "seen_as": []
-        },
-        "refused": "landmark",
-        "box": [
-          0.0406,
-          0.5694,
-          0.0344,
-          0.0361
-        ]
-      },
-      "closeup": "data/closeups/2026-09-29T04-11-00Z-missed-5.jpg"
     }
   ]
 }
