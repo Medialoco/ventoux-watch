@@ -2,6 +2,74 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-30T02-24-00Z-cycle-3614",
+      "t": "2026-10-30T02:24:00Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-30T02-24-00Z-cycle-3614.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0717,
+          "area_grow": 3.15,
+          "clipped": false,
+          "shade": 0.923,
+          "kept": 0.143,
+          "area_ratio": 0.00302,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 4.6,
+          "height_m": 5.5,
+          "width_named_m": 4.4,
+          "height_named_m": 5.3,
+          "rise_ms": 0.0,
+          "drift_rate": 0.266,
+          "seen_as": [
+            "truck 0.26 sur 89%"
+          ]
+        },
+        "surface": "parking",
+        "box": [
+          0.075,
+          0.6889,
+          0.0375,
+          0.0806
+        ],
+        "trace": [
+          [
+            1793327038.0,
+            0.0625,
+            0.6417,
+            0.0266,
+            0.0361
+          ],
+          [
+            1793327039.0,
+            0.0703,
+            0.6639,
+            0.0312,
+            0.05
+          ],
+          [
+            1793327040.0,
+            0.075,
+            0.6889,
+            0.0375,
+            0.0806
+          ]
+        ],
+        "count": 2,
+        "since": "2026-10-30T02:24:00Z"
+      },
+      "closeup": "data/closeups/2026-10-30T02-24-00Z-cycle-3614.jpg"
+    },
+    {
       "id": "2026-10-30T02-06-00Z-missed-3612",
       "t": "2026-10-30T02:06:00Z",
       "type": "missed",
