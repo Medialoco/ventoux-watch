@@ -2,6 +2,48 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-30T19-21-02Z-missed-3945",
+      "t": "2026-10-30T19:21:02Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-30T19-21-02Z-missed-3945.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2245,
+          "area_grow": 2.25,
+          "clipped": false,
+          "shade": 1.175,
+          "kept": 0.5,
+          "area_ratio": 0.00047,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 1.709,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.1141,
+          0.3278,
+          0.0187,
+          0.025
+        ]
+      },
+      "closeup": "data/closeups/2026-10-30T19-21-02Z-missed-3945.jpg"
+    },
+    {
       "id": "2026-10-30T18-19-30Z-missed-3944",
       "t": "2026-10-30T18:19:30Z",
       "type": "missed",
@@ -781828,90 +781870,6 @@
         ]
       },
       "closeup": "data/closeups/2026-09-30T19-29-27Z-missed-340.jpg"
-    },
-    {
-      "id": "2026-09-30T19-02-31Z-missed-339",
-      "t": "2026-09-30T19:02:31Z",
-      "type": "missed",
-      "label": "Brouillard",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-09-30T19-02-31Z-missed-339.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0866,
-          "area_grow": 0.12,
-          "clipped": false,
-          "shade": 1.798,
-          "kept": 0.556,
-          "area_ratio": 0.0001,
-          "duration_s": 8.7,
-          "frames": 8,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.023,
-          "seen_as": []
-        },
-        "refused": "fog",
-        "box": [
-          0.1234,
-          0.1333,
-          0.0219,
-          0.0389
-        ]
-      },
-      "closeup": "data/closeups/2026-09-30T19-02-31Z-missed-339.jpg"
-    },
-    {
-      "id": "2026-09-30T18-29-12Z-missed-338",
-      "t": "2026-09-30T18:29:12Z",
-      "type": "missed",
-      "label": "Toujours au même endroit",
-      "zone": "other",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-09-30T18-29-12Z-missed-338.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Cet endroit a bougé plusieurs fois sans événement nouveau. Le cadrage le reconnaît maintenant.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.1314,
-          "area_grow": 0.16,
-          "clipped": false,
-          "shade": 1.184,
-          "kept": 0.456,
-          "area_ratio": 0.0007,
-          "duration_s": 15.6,
-          "frames": 13,
-          "width_m": 5.3,
-          "height_m": 2.3,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.023,
-          "seen_as": []
-        },
-        "refused": "repeated_spot",
-        "box": [
-          0.6328,
-          0.6972,
-          0.1297,
-          0.1
-        ]
-      },
-      "closeup": "data/closeups/2026-09-30T18-29-12Z-missed-338.jpg"
     }
   ]
 }
