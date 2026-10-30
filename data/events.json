@@ -2,6 +2,92 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-30T03-34-34Z-vehicle-3634",
+      "t": "2026-10-30T03:34:34Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.652,
+      "thumb": "data/thumbs/2026-10-30T03-34-34Z-vehicle-3634.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.0,
+        "height_m": 1.0,
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 1.107,
+          "kept": 0.486,
+          "area_ratio": 0.00831,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 4.0,
+          "height_m": 1.0,
+          "width_named_m": 3.7,
+          "height_named_m": 1.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.65 sur 77%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.8283,
+          0.9359,
+          0.1507,
+          0.0641
+        ]
+      },
+      "closeup": "data/closeups/2026-10-30T03-34-34Z-vehicle-3634.jpg"
+    },
+    {
+      "id": "2026-10-30T03-32-59Z-motion-3633",
+      "t": "2026-10-30T03:32:59Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-30T03-32-59Z-motion-3633.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.4711,
+          "area_grow": 0.87,
+          "clipped": false,
+          "shade": 0.975,
+          "kept": 0.371,
+          "area_ratio": 0.00046,
+          "duration_s": 19.0,
+          "frames": 20,
+          "width_m": 3.6,
+          "height_m": 3.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.099,
+          "seen_as": []
+        },
+        "box": [
+          0.125,
+          0.7833,
+          0.1219,
+          0.2
+        ]
+      },
+      "closeup": "data/closeups/2026-10-30T03-32-59Z-motion-3633.jpg"
+    },
+    {
       "id": "2026-10-30T03-21-03Z-vehicle-3632",
       "t": "2026-10-30T03:21:03Z",
       "type": "vehicle",
