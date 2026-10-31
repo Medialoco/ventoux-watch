@@ -2,6 +2,311 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-10-31T11-11-25Z-motion-4003",
+      "t": "2026-10-31T11:11:25Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-31T11-11-25Z-motion-4003.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1168,
+          "area_grow": 0.66,
+          "clipped": false,
+          "shade": 1.344,
+          "kept": 1.0,
+          "area_ratio": 0.00043,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 9.4,
+          "height_m": 6.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 2.88,
+          "drift_rate": 0.86,
+          "seen_as": []
+        },
+        "box": [
+          0.2281,
+          0.5972,
+          0.0234,
+          0.0278
+        ]
+      },
+      "closeup": "data/closeups/2026-10-31T11-11-25Z-motion-4003.jpg"
+    },
+    {
+      "id": "2026-10-31T11-11-02Z-missed-4002",
+      "t": "2026-10-31T11:11:02Z",
+      "type": "missed",
+      "label": "Décor connu",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-31T11-11-02Z-missed-4002.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "cabane est fixé au sol. C'est une lumière qui a bougé, pas lui.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0016,
+          "area_grow": 0.93,
+          "clipped": false,
+          "shade": 1.282,
+          "kept": 1.0,
+          "area_ratio": 0.00152,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 6.7,
+          "height_m": 3.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.011,
+          "seen_as": []
+        },
+        "refused": "landmark",
+        "box": [
+          0.3438,
+          0.6556,
+          0.0422,
+          0.0389
+        ]
+      },
+      "closeup": "data/closeups/2026-10-31T11-11-02Z-missed-4002.jpg"
+    },
+    {
+      "id": "2026-10-31T11-10-55Z-cycle-4001",
+      "t": "2026-10-31T11:10:55Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "roundabout",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-10-31T11-10-55Z-cycle-4001.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 1.3,
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2485,
+          "area_grow": 1.01,
+          "clipped": false,
+          "shade": 0.729,
+          "kept": 0.086,
+          "area_ratio": 0.0007,
+          "duration_s": 10.0,
+          "frames": 11,
+          "width_m": 1.3,
+          "height_m": 2.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.424,
+          "seen_as": []
+        },
+        "surface": "island",
+        "box": [
+          0.1094,
+          0.7972,
+          0.0328,
+          0.0861
+        ],
+        "trace": [
+          [
+            1793445045.01,
+            0.0813,
+            0.7583,
+            0.0156,
+            0.0444
+          ],
+          [
+            1793445046.01,
+            0.0891,
+            0.7667,
+            0.0156,
+            0.0694
+          ],
+          [
+            1793445047.01,
+            0.0859,
+            0.7778,
+            0.0297,
+            0.0611
+          ],
+          [
+            1793445048.01,
+            0.0984,
+            0.7806,
+            0.0281,
+            0.075
+          ],
+          [
+            1793445049.01,
+            0.1094,
+            0.7972,
+            0.0328,
+            0.0861
+          ],
+          [
+            1793445050.01,
+            0.1234,
+            0.8083,
+            0.0281,
+            0.0778
+          ],
+          [
+            1793445051.01,
+            0.1328,
+            0.8278,
+            0.0297,
+            0.0833
+          ],
+          [
+            1793445052.01,
+            0.2156,
+            0.9167,
+            0.05,
+            0.0833
+          ],
+          [
+            1793445053.01,
+            0.2156,
+            0.9306,
+            0.0312,
+            0.0694
+          ],
+          [
+            1793445054.01,
+            0.2172,
+            0.9556,
+            0.0297,
+            0.0444
+          ],
+          [
+            1793445055.01,
+            0.2125,
+            0.975,
+            0.0281,
+            0.025
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-31T11-10-55Z-cycle-4001.jpg"
+    },
+    {
+      "id": "2026-10-31T11-10-46Z-person-4000",
+      "t": "2026-10-31T11:10:46Z",
+      "type": "person",
+      "label": "Piéton",
+      "zone": "roundabout",
+      "confidence": 0.812,
+      "thumb": "data/thumbs/2026-10-31T11-10-46Z-person-4000.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0099,
+          "area_grow": 1.18,
+          "clipped": false,
+          "shade": 0.738,
+          "kept": 0.2,
+          "area_ratio": 0.00086,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 0.9,
+          "height_m": 2.3,
+          "width_named_m": 0.7,
+          "height_named_m": 2.4,
+          "rise_ms": 0.0,
+          "drift_rate": 0.417,
+          "seen_as": [
+            "person 0.81 sur 89%",
+            "person 0.72 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.0732,
+          0.7525,
+          0.016,
+          0.096
+        ],
+        "trace": [
+          [
+            1793445045.01,
+            0.0688,
+            0.7611,
+            0.0125,
+            0.0583
+          ],
+          [
+            1793445046.01,
+            0.075,
+            0.7667,
+            0.0141,
+            0.0611
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-10-31T11-10-46Z-person-4000.jpg"
+    },
+    {
+      "id": "2026-10-31T11-05-45Z-motion-3999",
+      "t": "2026-10-31T11:05:45Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-10-31T11-05-45Z-motion-3999.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "peu nuageux",
+        "context": "de jour, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0278,
+          "area_grow": 0.84,
+          "clipped": false,
+          "shade": 1.347,
+          "kept": 1.0,
+          "area_ratio": 0.00043,
+          "duration_s": 8.0,
+          "frames": 7,
+          "width_m": 12.1,
+          "height_m": 8.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.97,
+          "drift_rate": 0.011,
+          "seen_as": []
+        },
+        "box": [
+          0.2234,
+          0.5639,
+          0.0219,
+          0.0278
+        ]
+      },
+      "closeup": "data/closeups/2026-10-31T11-05-45Z-motion-3999.jpg"
+    },
+    {
       "id": "2026-10-31T11-05-42Z-fire-3998",
       "t": "2026-10-31T11:05:42Z",
       "type": "fire",
@@ -779905,89 +780210,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-01T11-20-18Z-missed-74.jpg"
-    },
-    {
-      "id": "2026-10-01T11-10-46Z-missed-72",
-      "t": "2026-10-01T11:10:46Z",
-      "type": "missed",
-      "label": "Véhicule non nommé",
-      "zone": "road",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-01T11-10-46Z-missed-72.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "day",
-        "weather": "brouillard",
-        "context": "de jour, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.4045,
-          "area_grow": 28.2,
-          "clipped": true,
-          "shade": 1.046,
-          "kept": 0.359,
-          "area_ratio": 0.01346,
-          "duration_s": 7.8,
-          "frames": 11,
-          "width_m": 4.1,
-          "height_m": 1.4,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.198,
-          "seen_as": []
-        },
-        "refused": "unnamed_vehicle",
-        "box": [
-          0.2031,
-          0.9083,
-          0.1469,
-          0.0917
-        ]
-      },
-      "closeup": "data/closeups/2026-10-01T11-10-46Z-missed-72.jpg"
-    },
-    {
-      "id": "2026-10-01T11-10-32Z-motion-71",
-      "t": "2026-10-01T11:10:32Z",
-      "type": "motion",
-      "label": "Mouvement sur la route",
-      "zone": "road",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-01T11-10-32Z-motion-71.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "day",
-        "weather": "brouillard",
-        "context": "de jour, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.5544,
-          "area_grow": 1.77,
-          "clipped": true,
-          "shade": 1.0,
-          "kept": 0.356,
-          "area_ratio": 0.00074,
-          "duration_s": 14.5,
-          "frames": 16,
-          "width_m": 4.1,
-          "height_m": 2.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.185,
-          "seen_as": []
-        },
-        "box": [
-          0.1953,
-          0.875,
-          0.1484,
-          0.125
-        ]
-      },
-      "closeup": "data/closeups/2026-10-01T11-10-32Z-motion-71.jpg"
     }
   ]
 }
