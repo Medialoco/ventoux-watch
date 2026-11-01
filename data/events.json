@@ -2,6 +2,48 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-01T17-14-34Z-missed-4684",
+      "t": "2026-11-01T17:14:34Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-01T17-14-34Z-missed-4684.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 78 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0289,
+          "area_grow": 3.26,
+          "clipped": true,
+          "shade": 0.667,
+          "kept": 0.378,
+          "area_ratio": 0.00651,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 78.3,
+          "height_m": 32.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.52,
+          "drift_rate": 0.123,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.9062,
+          0.1417,
+          0.0938,
+          0.0694
+        ]
+      },
+      "closeup": "data/closeups/2026-11-01T17-14-34Z-missed-4684.jpg"
+    },
+    {
       "id": "2026-11-01T16-56-57Z-person-4683",
       "t": "2026-11-01T16:56:57Z",
       "type": "person",
@@ -816810,95 +816852,6 @@
         "since": "2026-10-02T17:19:42Z"
       },
       "closeup": "data/closeups/2026-10-02T17-19-42Z-vehicle-10.jpg"
-    },
-    {
-      "id": "2026-10-02T17-07-15Z-vehicle-9",
-      "t": "2026-10-02T17:07:15Z",
-      "type": "vehicle",
-      "label": "Voiture",
-      "zone": "other",
-      "confidence": 0.815,
-      "thumb": "data/thumbs/2026-10-02T17-07-15Z-vehicle-9.jpg",
-      "clip_url": "",
-      "detail": {
-        "width_m": 3.0,
-        "period": "twilight",
-        "weather": "peu nuageux",
-        "context": "au crépuscule, peu nuageux",
-        "autonomous": true,
-        "measured": {
-          "travel": 0.26,
-          "area_grow": 16.06,
-          "clipped": false,
-          "shade": 0.908,
-          "kept": 0.294,
-          "area_ratio": 0.00836,
-          "duration_s": 9.1,
-          "frames": 11,
-          "width_m": 3.0,
-          "height_m": 2.6,
-          "width_named_m": 2.7,
-          "height_named_m": 2.6,
-          "rise_ms": 0.0,
-          "drift_rate": 0.159,
-          "seen_as": [
-            "truck 0.81 sur 67%"
-          ]
-        },
-        "surface": "island",
-        "box": [
-          0.0863,
-          0.7483,
-          0.0727,
-          0.1256
-        ]
-      },
-      "closeup": "data/closeups/2026-10-02T17-07-15Z-vehicle-9.jpg"
-    },
-    {
-      "id": "2026-10-02T17-03-09Z-vehicle-8",
-      "t": "2026-10-02T17:03:09Z",
-      "type": "vehicle",
-      "label": "Voiture",
-      "zone": "other",
-      "confidence": 0.867,
-      "thumb": "data/thumbs/2026-10-02T17-03-09Z-vehicle-8.jpg",
-      "clip_url": "",
-      "detail": {
-        "width_m": 3.5,
-        "height_m": 1.4,
-        "period": "twilight",
-        "weather": "peu nuageux",
-        "context": "au crépuscule, peu nuageux",
-        "autonomous": true,
-        "measured": {
-          "travel": 0.0,
-          "area_grow": 1.0,
-          "clipped": true,
-          "shade": 0.921,
-          "kept": 0.292,
-          "area_ratio": 0.01291,
-          "duration_s": 0.0,
-          "frames": 1,
-          "width_m": 3.5,
-          "height_m": 1.4,
-          "width_named_m": 3.4,
-          "height_named_m": 1.3,
-          "rise_ms": 0.0,
-          "drift_rate": 0.0,
-          "seen_as": [
-            "truck 0.87 sur 87%"
-          ]
-        },
-        "surface": "roundabout",
-        "box": [
-          0.5165,
-          0.8969,
-          0.1633,
-          0.1031
-        ]
-      },
-      "closeup": "data/closeups/2026-10-02T17-03-09Z-vehicle-8.jpg"
     }
   ]
 }
