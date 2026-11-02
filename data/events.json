@@ -2,6 +2,116 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-02T14-01-40Z-vehicle-4795",
+      "t": "2026-11-02T14:01:40Z",
+      "type": "vehicle",
+      "label": "Camion jaune",
+      "zone": "roundabout",
+      "confidence": 0.481,
+      "thumb": "data/thumbs/2026-11-02T14-01-40Z-vehicle-4795.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 6.4,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.1832,
+          "area_grow": 0.12,
+          "clipped": true,
+          "shade": 0.845,
+          "kept": 0.384,
+          "area_ratio": 0.00099,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 6.4,
+          "height_m": 2.9,
+          "width_named_m": 4.4,
+          "height_named_m": 2.8,
+          "rise_ms": 0.0,
+          "drift_rate": 0.254,
+          "seen_as": [
+            "truck 0.48 sur 66%",
+            "person 0.31 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.0481,
+          0.8052,
+          0.1887,
+          0.1948
+        ],
+        "trace": [
+          [
+            1793628098.01,
+            0.0,
+            0.7694,
+            0.0594,
+            0.1417
+          ],
+          [
+            1793628099.01,
+            0.0,
+            0.8278,
+            0.2172,
+            0.1722
+          ],
+          [
+            1793628100.01,
+            0.1031,
+            0.9833,
+            0.0594,
+            0.0167
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-02T14-01-40Z-vehicle-4795.jpg"
+    },
+    {
+      "id": "2026-11-02T14-00-57Z-missed-4794",
+      "t": "2026-11-02T14:00:57Z",
+      "type": "missed",
+      "label": "Décor de l'îlot",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-02T14-00-57Z-missed-4794.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Sur l'îlot central du rond-point, et ça n'a pas bougé. Les pierres et les figures y sont plantées.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.627,
+          "kept": 0.4,
+          "area_ratio": 0.00046,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 1.2,
+          "height_m": 0.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.02,
+          "seen_as": []
+        },
+        "refused": "island",
+        "box": [
+          0.2141,
+          0.8889,
+          0.0328,
+          0.0139
+        ]
+      },
+      "closeup": "data/closeups/2026-11-02T14-00-57Z-missed-4794.jpg"
+    },
+    {
       "id": "2026-11-02T14-00-23Z-motion-4793",
       "t": "2026-11-02T14:00:23Z",
       "type": "motion",
