@@ -2,6 +2,333 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-04T06-11-59Z-vehicle-5395",
+      "t": "2026-11-04T06:11:59Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.757,
+      "thumb": "data/thumbs/2026-11-04T06-11-59Z-vehicle-5395.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.5,
+        "height_m": 1.7,
+        "period": "twilight",
+        "weather": "pluie",
+        "context": "au crépuscule, pluie",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2155,
+          "area_grow": 0.08,
+          "clipped": true,
+          "shade": 0.981,
+          "kept": 0.262,
+          "area_ratio": 0.00118,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 3.5,
+          "height_m": 1.7,
+          "width_named_m": 3.4,
+          "height_named_m": 1.7,
+          "rise_ms": 0.29,
+          "drift_rate": 0.587,
+          "seen_as": [
+            "truck 0.76 sur 96%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.5213,
+          0.8651,
+          0.1673,
+          0.1349
+        ],
+        "trace": [
+          [
+            1793772717.64,
+            0.7391,
+            0.9111,
+            0.1609,
+            0.0889
+          ],
+          [
+            1793772718.64,
+            0.5375,
+            0.8833,
+            0.1344,
+            0.1167
+          ],
+          [
+            1793772719.64,
+            0.6,
+            0.8722,
+            0.025,
+            0.0472
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-04T06-11-59Z-vehicle-5395.jpg"
+    },
+    {
+      "id": "2026-11-04T06-07-50Z-motion-5394",
+      "t": "2026-11-04T06:07:50Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-04T06-07-50Z-motion-5394.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "pluie",
+        "context": "au crépuscule, pluie",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.089,
+          "area_grow": 0.16,
+          "clipped": false,
+          "shade": 1.457,
+          "kept": 0.701,
+          "area_ratio": 0.00063,
+          "duration_s": 22.0,
+          "frames": 23,
+          "width_m": 15.6,
+          "height_m": 22.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.043,
+          "seen_as": []
+        },
+        "box": [
+          0.8938,
+          0.3111,
+          0.0484,
+          0.125
+        ]
+      },
+      "closeup": "data/closeups/2026-11-04T06-07-50Z-motion-5394.jpg"
+    },
+    {
+      "id": "2026-11-04T06-05-36Z-vehicle-5393",
+      "t": "2026-11-04T06:05:36Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.867,
+      "thumb": "data/thumbs/2026-11-04T06-05-36Z-vehicle-5393.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "twilight",
+        "weather": "pluie",
+        "context": "au crépuscule, pluie",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.1532,
+          "area_grow": 10.42,
+          "clipped": false,
+          "shade": 0.721,
+          "kept": 0.267,
+          "area_ratio": 0.00448,
+          "duration_s": 11.0,
+          "frames": 11,
+          "width_m": 7.2,
+          "height_m": 4.0,
+          "width_named_m": 6.8,
+          "height_named_m": 3.7,
+          "rise_ms": 0.0,
+          "drift_rate": 0.025,
+          "seen_as": [
+            "car 0.87 sur 87%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.0228,
+          0.7146,
+          0.082,
+          0.0782
+        ],
+        "trace": [
+          [
+            1793772325.64,
+            0.0328,
+            0.5917,
+            0.0172,
+            0.025
+          ],
+          [
+            1793772327.64,
+            0.0531,
+            0.6194,
+            0.0172,
+            0.0278
+          ],
+          [
+            1793772328.64,
+            0.0641,
+            0.6361,
+            0.0203,
+            0.0306
+          ],
+          [
+            1793772329.64,
+            0.0734,
+            0.6528,
+            0.0266,
+            0.0361
+          ],
+          [
+            1793772330.64,
+            0.0813,
+            0.6694,
+            0.0281,
+            0.0444
+          ],
+          [
+            1793772331.64,
+            0.0797,
+            0.6833,
+            0.0406,
+            0.0528
+          ],
+          [
+            1793772332.64,
+            0.0906,
+            0.6972,
+            0.0359,
+            0.0528
+          ],
+          [
+            1793772333.64,
+            0.0938,
+            0.7028,
+            0.0375,
+            0.0611
+          ],
+          [
+            1793772334.64,
+            0.0938,
+            0.7111,
+            0.0359,
+            0.0611
+          ],
+          [
+            1793772335.64,
+            0.075,
+            0.7167,
+            0.0547,
+            0.0694
+          ],
+          [
+            1793772336.64,
+            0.0312,
+            0.7222,
+            0.0672,
+            0.0667
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-04T06-05-36Z-vehicle-5393.jpg"
+    },
+    {
+      "id": "2026-11-04T06-02-45Z-vehicle-5392",
+      "t": "2026-11-04T06:02:45Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.923,
+      "thumb": "data/thumbs/2026-11-04T06-02-45Z-vehicle-5392.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 3.3,
+        "height_m": 1.6,
+        "period": "twilight",
+        "weather": "pluie",
+        "context": "au crépuscule, pluie",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2998,
+          "area_grow": 0.13,
+          "clipped": false,
+          "shade": 0.763,
+          "kept": 0.37,
+          "area_ratio": 0.00182,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 3.3,
+          "height_m": 1.6,
+          "width_named_m": 3.2,
+          "height_named_m": 1.6,
+          "rise_ms": 0.23,
+          "drift_rate": 0.417,
+          "seen_as": [
+            "car 0.92 sur 85%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4651,
+          0.8626,
+          0.148,
+          0.1304
+        ],
+        "trace": [
+          [
+            1793772159.64,
+            0.4781,
+            0.875,
+            0.125,
+            0.1111
+          ],
+          [
+            1793772160.64,
+            0.4078,
+            0.8361,
+            0.1266,
+            0.0972
+          ],
+          [
+            1793772161.64,
+            0.3453,
+            0.8028,
+            0.0969,
+            0.0833
+          ],
+          [
+            1793772162.64,
+            0.2797,
+            0.775,
+            0.0813,
+            0.0722
+          ],
+          [
+            1793772163.64,
+            0.2469,
+            0.7833,
+            0.0437,
+            0.0417
+          ],
+          [
+            1793772164.64,
+            0.2469,
+            0.7833,
+            0.0437,
+            0.0417
+          ],
+          [
+            1793772165.64,
+            0.2469,
+            0.7833,
+            0.0437,
+            0.0417
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-04T06-02-45Z-vehicle-5392.jpg"
+    },
+    {
       "id": "2026-11-04T05-51-02Z-cycle-5391",
       "t": "2026-11-04T05:51:02Z",
       "type": "cycle",
