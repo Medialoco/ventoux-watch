@@ -1576,6 +1576,10 @@ html.in-frame .top {
   position: relative;
 }
 
+.effects img.thumb-soleil {
+  object-position: center 34%;
+}
+
 .effects tr:hover img,
 .effects tr:focus-within img {
   transform: scale(5);
@@ -1591,6 +1595,9 @@ html.in-frame .top {
 }
 
 .sun-layer-note {
+  display: flex;
+  gap: 12px;
+  align-items: center;
   margin: 14px 0 0;
   padding: 10px 12px;
   max-width: 72ch;
@@ -1602,6 +1609,14 @@ html.in-frame .top {
   border-left: 3px solid var(--pine);
   border-radius: 6px;
   box-shadow: 0 1px 0 var(--shade);
+}
+
+.sun-layer-note img {
+  width: 96px;
+  height: auto;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  background: #111;
 }
 
 :root[data-theme="dark"] .sun-layer-note {
