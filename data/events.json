@@ -2,6 +2,243 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-05T12-36-47Z-vehicle-5774",
+      "t": "2026-11-05T12:36:47Z",
+      "type": "vehicle",
+      "label": "Voiture blanche",
+      "zone": "roundabout",
+      "confidence": 0.674,
+      "thumb": "data/thumbs/2026-11-05T12-36-47Z-vehicle-5774.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2454,
+          "area_grow": 0.08,
+          "clipped": false,
+          "shade": 1.128,
+          "kept": 0.333,
+          "area_ratio": 0.00096,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 4.9,
+          "height_m": 3.4,
+          "width_named_m": 5.5,
+          "height_named_m": 3.4,
+          "rise_ms": 0.62,
+          "drift_rate": 0.487,
+          "seen_as": [
+            "bus 0.67 sur 85%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.2067,
+          0.6883,
+          0.12,
+          0.1327
+        ],
+        "trace": [
+          [
+            1793882202.62,
+            0.2203,
+            0.7,
+            0.0953,
+            0.1194
+          ],
+          [
+            1793882203.62,
+            0.1578,
+            0.6694,
+            0.0703,
+            0.1
+          ],
+          [
+            1793882204.62,
+            0.1187,
+            0.6444,
+            0.0484,
+            0.0806
+          ],
+          [
+            1793882205.62,
+            0.0922,
+            0.6222,
+            0.0391,
+            0.0667
+          ],
+          [
+            1793882206.62,
+            0.0734,
+            0.6056,
+            0.0344,
+            0.0583
+          ],
+          [
+            1793882207.62,
+            0.0594,
+            0.5917,
+            0.0203,
+            0.0472
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-05T12-36-47Z-vehicle-5774.jpg"
+    },
+    {
+      "id": "2026-11-05T12-32-04Z-missed-5773",
+      "t": "2026-11-05T12:32:04Z",
+      "type": "missed",
+      "label": "Décor connu",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-05T12-32-04Z-missed-5773.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "statue n'a pas bougé. Une lumière est passée dessus.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.838,
+          "kept": 0.0,
+          "area_ratio": 0.00043,
+          "duration_s": 4.0,
+          "frames": 5,
+          "width_m": 1.2,
+          "height_m": 0.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "landmark",
+        "box": [
+          0.5703,
+          0.75,
+          0.0219,
+          0.0194
+        ]
+      },
+      "closeup": "data/closeups/2026-11-05T12-32-04Z-missed-5773.jpg"
+    },
+    {
+      "id": "2026-11-05T12-32-01Z-motion-5772",
+      "t": "2026-11-05T12:32:01Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-05T12-32-01Z-motion-5772.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0156,
+          "area_grow": 0.53,
+          "clipped": false,
+          "shade": 1.115,
+          "kept": 0.0,
+          "area_ratio": 0.0003,
+          "duration_s": 5.0,
+          "frames": 5,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.069,
+          "seen_as": []
+        },
+        "box": [
+          0.0172,
+          0.2889,
+          0.0187,
+          0.0306
+        ]
+      },
+      "closeup": "data/closeups/2026-11-05T12-32-01Z-motion-5772.jpg"
+    },
+    {
+      "id": "2026-11-05T12-28-28Z-vehicle-5771",
+      "t": "2026-11-05T12:28:28Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "roundabout",
+      "confidence": 0.594,
+      "thumb": "data/thumbs/2026-11-05T12-28-28Z-vehicle-5771.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 5.1,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2426,
+          "area_grow": 1.17,
+          "clipped": true,
+          "shade": 1.049,
+          "kept": 0.394,
+          "area_ratio": 0.00969,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 5.1,
+          "height_m": 2.7,
+          "width_named_m": 4.7,
+          "height_named_m": 2.6,
+          "rise_ms": 0.0,
+          "drift_rate": 0.694,
+          "seen_as": [
+            "car 0.59 sur 90%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.0106,
+          0.8147,
+          0.2027,
+          0.1853
+        ],
+        "trace": [
+          [
+            1793881706.62,
+            0.0,
+            0.8083,
+            0.0563,
+            0.1472
+          ],
+          [
+            1793881707.62,
+            0.0203,
+            0.8389,
+            0.1719,
+            0.1611
+          ],
+          [
+            1793881708.62,
+            0.1828,
+            0.9333,
+            0.1453,
+            0.0667
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-05T12-28-28Z-vehicle-5771.jpg"
+    },
+    {
       "id": "2026-11-05T12-26-06Z-person-5770",
       "t": "2026-11-05T12:26:06Z",
       "type": "person",
