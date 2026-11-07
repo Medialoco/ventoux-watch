@@ -2,6 +2,220 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-07T05-20-49Z-missed-335",
+      "t": "2026-11-07T05:20:49Z",
+      "type": "missed",
+      "label": "Motif sur la chaussée",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-07T05-20-49Z-missed-335.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 52 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0795,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.072,
+          "kept": 0.733,
+          "area_ratio": 0.00061,
+          "duration_s": 14.0,
+          "frames": 13,
+          "width_m": 0.9,
+          "height_m": 0.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.183,
+          "seen_as": []
+        },
+        "refused": "tarmac",
+        "box": [
+          0.425,
+          0.9389,
+          0.0328,
+          0.0333
+        ]
+      },
+      "closeup": "data/closeups/2026-11-07T05-20-49Z-missed-335.jpg"
+    },
+    {
+      "id": "2026-11-07T05-20-47Z-missed-334",
+      "t": "2026-11-07T05:20:47Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "roundabout",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-07T05-20-47Z-missed-334.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0778,
+          "area_grow": 0.75,
+          "clipped": false,
+          "shade": 1.092,
+          "kept": 0.7,
+          "area_ratio": 0.00043,
+          "duration_s": 11.0,
+          "frames": 11,
+          "width_m": 2.5,
+          "height_m": 2.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.13,
+          "drift_rate": 0.162,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.2578,
+          0.7222,
+          0.0375,
+          0.0583
+        ]
+      },
+      "closeup": "data/closeups/2026-11-07T05-20-47Z-missed-334.jpg"
+    },
+    {
+      "id": "2026-11-07T05-20-43Z-motion-333",
+      "t": "2026-11-07T05:20:56Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-07T05-20-43Z-motion-333.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0388,
+          "area_grow": 1.3,
+          "clipped": false,
+          "shade": 1.348,
+          "kept": 0.875,
+          "area_ratio": 0.00107,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 8.2,
+          "height_m": 15.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 3.26,
+          "drift_rate": 2.233,
+          "seen_as": []
+        },
+        "box": [
+          0.0406,
+          0.5444,
+          0.0156,
+          0.0528
+        ],
+        "trace": [
+          [
+            1794028855.82,
+            0.0406,
+            0.5444,
+            0.0156,
+            0.0528
+          ],
+          [
+            1794028856.82,
+            0.0,
+            0.5333,
+            0.0297,
+            0.0361
+          ]
+        ],
+        "count": 2,
+        "since": "2026-11-07T05:20:43Z"
+      },
+      "closeup": "data/closeups/2026-11-07T05-20-43Z-motion-333.jpg"
+    },
+    {
+      "id": "2026-11-07T05-20-39Z-cycle-332",
+      "t": "2026-11-07T05:20:39Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "roundabout",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-07T05-20-39Z-cycle-332.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 1.3,
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0719,
+          "area_grow": 0.61,
+          "clipped": false,
+          "shade": 1.075,
+          "kept": 0.595,
+          "area_ratio": 0.00072,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 1.3,
+          "height_m": 1.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.756,
+          "seen_as": []
+        },
+        "surface": "roundabout",
+        "box": [
+          0.3063,
+          0.8139,
+          0.0375,
+          0.0861
+        ],
+        "trace": [
+          [
+            1794028836.82,
+            0.3125,
+            0.8556,
+            0.0266,
+            0.0444
+          ],
+          [
+            1794028837.82,
+            0.3078,
+            0.8556,
+            0.0359,
+            0.0472
+          ],
+          [
+            1794028838.82,
+            0.3063,
+            0.8139,
+            0.0375,
+            0.0861
+          ],
+          [
+            1794028839.82,
+            0.3859,
+            0.8639,
+            0.0234,
+            0.0306
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-07T05-20-39Z-cycle-332.jpg"
+    },
+    {
       "id": "2026-11-07T03-05-04Z-missed-331",
       "t": "2026-11-07T03:05:04Z",
       "type": "missed",
@@ -800407,427 +800621,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-08T06-17-04Z-missed-13.jpg"
-    },
-    {
-      "id": "2026-10-08T04-46-08Z-missed-12",
-      "t": "2026-10-08T04:46:08Z",
-      "type": "missed",
-      "label": "Brouillard",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-08T04-46-08Z-missed-12.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0,
-          "area_grow": 1.0,
-          "clipped": false,
-          "shade": 1.225,
-          "kept": 0.0,
-          "area_ratio": 0.00016,
-          "duration_s": 2.0,
-          "frames": 3,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.0,
-          "seen_as": []
-        },
-        "refused": "fog",
-        "box": [
-          0.3359,
-          0.05,
-          0.0094,
-          0.0167
-        ]
-      },
-      "closeup": "data/closeups/2026-10-08T04-46-08Z-missed-12.jpg"
-    },
-    {
-      "id": "2026-10-08T04-38-27Z-missed-10",
-      "t": "2026-10-08T04:38:27Z",
-      "type": "missed",
-      "label": "Motif sur la chaussée",
-      "zone": "other",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-08T04-38-27Z-missed-10.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Environ 46 cm de haut au sol. C'est le revêtement qui prend la lumière, pas un véhicule.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0758,
-          "area_grow": 8.21,
-          "clipped": false,
-          "shade": 0.866,
-          "kept": 1.0,
-          "area_ratio": 0.00417,
-          "duration_s": 6.0,
-          "frames": 7,
-          "width_m": 0.7,
-          "height_m": 0.5,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.463,
-          "seen_as": []
-        },
-        "refused": "tarmac",
-        "box": [
-          0.6937,
-          0.8917,
-          0.0203,
-          0.025
-        ]
-      },
-      "closeup": "data/closeups/2026-10-08T04-38-27Z-missed-10.jpg"
-    },
-    {
-      "id": "2026-10-08T04-38-27Z-missed-11",
-      "t": "2026-10-08T04:38:27Z",
-      "type": "missed",
-      "label": "Décor connu",
-      "zone": "other",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-08T04-38-27Z-missed-11.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "cabane est fixé au sol. C'est une lumière qui a bougé, pas lui.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.1149,
-          "area_grow": 0.24,
-          "clipped": false,
-          "shade": 0.933,
-          "kept": 1.0,
-          "area_ratio": 0.00068,
-          "duration_s": 6.0,
-          "frames": 7,
-          "width_m": 15.7,
-          "height_m": 8.8,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.149,
-          "seen_as": []
-        },
-        "refused": "landmark",
-        "box": [
-          0.2797,
-          0.5917,
-          0.0531,
-          0.0528
-        ]
-      },
-      "closeup": "data/closeups/2026-10-08T04-38-27Z-missed-11.jpg"
-    },
-    {
-      "id": "2026-10-08T04-38-23Z-motion-9",
-      "t": "2026-10-08T04:38:23Z",
-      "type": "motion",
-      "label": "Mouvement détecté",
-      "zone": "other",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-08T04-38-23Z-motion-9.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0281,
-          "area_grow": 0.3,
-          "clipped": false,
-          "shade": 1.592,
-          "kept": 0.571,
-          "area_ratio": 0.00135,
-          "duration_s": 1.0,
-          "frames": 2,
-          "width_m": 57.2,
-          "height_m": 60.9,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.304,
-          "seen_as": []
-        },
-        "box": [
-          0.0578,
-          0.4528,
-          0.0484,
-          0.0917
-        ]
-      },
-      "closeup": "data/closeups/2026-10-08T04-38-23Z-motion-9.jpg"
-    },
-    {
-      "id": "2026-10-08T04-37-52Z-missed-8",
-      "t": "2026-10-08T04:37:52Z",
-      "type": "missed",
-      "label": "Masse dans le ciel",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-08T04-37-52Z-missed-8.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
-        "period": "night",
-        "weather": "pluie",
-        "context": "de nuit, pluie",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.1965,
-          "area_grow": 110.25,
-          "clipped": false,
-          "shade": 1.468,
-          "kept": 0.525,
-          "area_ratio": 0.02297,
-          "duration_s": 6.0,
-          "frames": 7,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.065,
-          "seen_as": []
-        },
-        "refused": "sky_mass",
-        "box": [
-          0.0688,
-          0.1556,
-          0.1688,
-          0.1417
-        ]
-      },
-      "closeup": "data/closeups/2026-10-08T04-37-52Z-missed-8.jpg"
-    },
-    {
-      "id": "2026-10-08T04-37-30Z-missed-7",
-      "t": "2026-10-08T04:37:30Z",
-      "type": "missed",
-      "label": "Brume",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-08T04-37-30Z-missed-7.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête est noyée, on y voit mal. Une lueur chaude qui gonfle ne suffit pas ici, il faut un panache qui monte.",
-        "period": "night",
-        "weather": "pluie",
-        "context": "de nuit, pluie",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0738,
-          "area_grow": 0.14,
-          "clipped": false,
-          "shade": 1.544,
-          "kept": 0.167,
-          "area_ratio": 8e-05,
-          "duration_s": 5.0,
-          "frames": 6,
-          "width_m": 16.4,
-          "height_m": 21.3,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 4.58,
-          "drift_rate": 0.61,
-          "seen_as": []
-        },
-        "refused": "haze",
-        "box": [
-          0.9812,
-          0.1056,
-          0.0156,
-          0.0361
-        ]
-      },
-      "closeup": "data/closeups/2026-10-08T04-37-30Z-missed-7.jpg"
-    },
-    {
-      "id": "2026-10-08T04-30-45Z-missed-6",
-      "t": "2026-10-08T04:30:45Z",
-      "type": "missed",
-      "label": "Véhicule non nommé",
-      "zone": "road",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-08T04-30-45Z-missed-6.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0111,
-          "area_grow": 0.66,
-          "clipped": false,
-          "shade": 0.709,
-          "kept": 0.614,
-          "area_ratio": 0.00703,
-          "duration_s": 4.0,
-          "frames": 5,
-          "width_m": 25.4,
-          "height_m": 17.3,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.021,
-          "seen_as": []
-        },
-        "refused": "unnamed_vehicle",
-        "box": [
-          0.1578,
-          0.5417,
-          0.1031,
-          0.125
-        ]
-      },
-      "closeup": "data/closeups/2026-10-08T04-30-45Z-missed-6.jpg"
-    },
-    {
-      "id": "2026-10-08T04-30-37Z-missed-5",
-      "t": "2026-10-08T04:30:37Z",
-      "type": "missed",
-      "label": "Tache trop large",
-      "zone": "other",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-08T04-30-37Z-missed-5.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Environ 140 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.3408,
-          "area_grow": 148.69,
-          "clipped": false,
-          "shade": 0.565,
-          "kept": 0.432,
-          "area_ratio": 0.06195,
-          "duration_s": 5.0,
-          "frames": 6,
-          "width_m": 140.1,
-          "height_m": 56.6,
-          "width_named_m": 0.8,
-          "height_named_m": 1.8,
-          "rise_ms": 11.9,
-          "drift_rate": 0.254,
-          "seen_as": [
-            "person 0.43 sur 0%",
-            "person 0.30 sur 0%"
-          ]
-        },
-        "refused": "oversized",
-        "box": [
-          0.3656,
-          0.2889,
-          0.3016,
-          0.2167
-        ]
-      },
-      "closeup": "data/closeups/2026-10-08T04-30-37Z-missed-5.jpg"
-    },
-    {
-      "id": "2026-10-08T04-30-34Z-motion-4",
-      "t": "2026-10-08T04:30:34Z",
-      "type": "motion",
-      "label": "Mouvement détecté",
-      "zone": "other",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-08T04-30-34Z-motion-4.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0762,
-          "area_grow": 1.79,
-          "clipped": false,
-          "shade": 0.658,
-          "kept": 0.556,
-          "area_ratio": 0.00091,
-          "duration_s": 3.0,
-          "frames": 4,
-          "width_m": 9.1,
-          "height_m": 9.8,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.383,
-          "seen_as": []
-        },
-        "box": [
-          0.1594,
-          0.5778,
-          0.0219,
-          0.0417
-        ]
-      },
-      "closeup": "data/closeups/2026-10-08T04-30-34Z-motion-4.jpg"
-    },
-    {
-      "id": "2026-10-08T04-10-46Z-missed-3",
-      "t": "2026-10-08T04:10:46Z",
-      "type": "missed",
-      "label": "Brouillard",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-08T04-10-46Z-missed-3.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.3966,
-          "area_grow": 1.8,
-          "clipped": false,
-          "shade": 1.462,
-          "kept": 1.0,
-          "area_ratio": 0.00059,
-          "duration_s": 13.0,
-          "frames": 12,
-          "width_m": 17.5,
-          "height_m": 29.2,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.337,
-          "seen_as": []
-        },
-        "refused": "fog",
-        "box": [
-          0.4406,
-          0.3778,
-          0.0141,
-          0.0417
-        ]
-      },
-      "closeup": "data/closeups/2026-10-08T04-10-46Z-missed-3.jpg"
     }
   ]
 }
