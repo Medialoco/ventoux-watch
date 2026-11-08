@@ -2,6 +2,171 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-08T13-11-34Z-fire-1046",
+      "t": "2026-11-08T13:11:34Z",
+      "type": "fire",
+      "label": "Départ de feu",
+      "zone": "slope",
+      "confidence": 0.309,
+      "thumb": "data/thumbs/2026-11-08T13-11-34Z-fire-1046.jpg",
+      "clip_url": "",
+      "detail": {
+        "warm_ratio": 0.0,
+        "smoke_ratio": 0.386,
+        "rise": 0.0222,
+        "grow": 5.7,
+        "width_m": 20.2,
+        "surface": "forest",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0103,
+          "area_grow": 5.7,
+          "clipped": true,
+          "shade": 1.413,
+          "kept": 0.771,
+          "area_ratio": 0.00277,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 20.2,
+          "height_m": 15.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 1.12,
+          "drift_rate": 0.045,
+          "seen_as": []
+        },
+        "box": [
+          0.9531,
+          0.2972,
+          0.0453,
+          0.0611
+        ],
+        "trace": [
+          [
+            1794143489.02,
+            0.9531,
+            0.3194,
+            0.025,
+            0.0194
+          ],
+          [
+            1794143490.02,
+            0.9484,
+            0.3139,
+            0.0297,
+            0.0222
+          ],
+          [
+            1794143491.02,
+            0.9812,
+            0.3167,
+            0.0187,
+            0.025
+          ],
+          [
+            1794143492.02,
+            0.9563,
+            0.3194,
+            0.0234,
+            0.0222
+          ],
+          [
+            1794143493.02,
+            0.9547,
+            0.3194,
+            0.025,
+            0.0222
+          ],
+          [
+            1794143494.02,
+            0.9531,
+            0.2972,
+            0.0453,
+            0.0611
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-08T13-11-34Z-fire-1046.jpg"
+    },
+    {
+      "id": "2026-11-08T13-10-04Z-vehicle-1045",
+      "t": "2026-11-08T13:10:04Z",
+      "type": "vehicle",
+      "label": "Voiture blanche",
+      "zone": "other",
+      "confidence": 0.697,
+      "thumb": "data/thumbs/2026-11-08T13-10-04Z-vehicle-1045.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.3,
+        "height_m": 1.8,
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.3296,
+          "area_grow": 2.82,
+          "clipped": true,
+          "shade": 0.977,
+          "kept": 0.255,
+          "area_ratio": 0.02024,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 4.3,
+          "height_m": 1.8,
+          "width_named_m": 4.2,
+          "height_named_m": 1.8,
+          "rise_ms": 0.21,
+          "drift_rate": 0.561,
+          "seen_as": [
+            "truck 0.70 sur 94%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.5249,
+          0.8621,
+          0.206,
+          0.1379
+        ],
+        "trace": [
+          [
+            1794143401.02,
+            0.9109,
+            0.9194,
+            0.0891,
+            0.0806
+          ],
+          [
+            1794143402.02,
+            0.6391,
+            0.9028,
+            0.1812,
+            0.0972
+          ],
+          [
+            1794143403.02,
+            0.5437,
+            0.8778,
+            0.1656,
+            0.1222
+          ],
+          [
+            1794143404.02,
+            0.5437,
+            0.8778,
+            0.1656,
+            0.1222
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-08T13-10-04Z-vehicle-1045.jpg"
+    },
+    {
       "id": "2026-11-08T13-05-18Z-vehicle-1044",
       "t": "2026-11-08T13:05:18Z",
       "type": "vehicle",
