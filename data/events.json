@@ -2,6 +2,90 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-08T05-16-09Z-missed-894",
+      "t": "2026-11-08T05:16:09Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-08T05-16-09Z-missed-894.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 27 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0993,
+          "area_grow": 1.56,
+          "clipped": false,
+          "shade": 1.635,
+          "kept": 1.0,
+          "area_ratio": 0.00073,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 27.2,
+          "height_m": 10.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.515,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.8578,
+          0.2306,
+          0.0328,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-11-08T05-16-09Z-missed-894.jpg"
+    },
+    {
+      "id": "2026-11-08T05-10-06Z-missed-893",
+      "t": "2026-11-08T05:10:06Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-08T05-10-06Z-missed-893.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "couvert",
+        "context": "de nuit, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0692,
+          "area_grow": 276.0,
+          "clipped": true,
+          "shade": 1.323,
+          "kept": 0.181,
+          "area_ratio": 0.02995,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.025,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.4453,
+          0.0,
+          0.1797,
+          0.1667
+        ]
+      },
+      "closeup": "data/closeups/2026-11-08T05-10-06Z-missed-893.jpg"
+    },
+    {
       "id": "2026-11-08T05-02-06Z-missed-892",
       "t": "2026-11-08T05:02:06Z",
       "type": "missed",
