@@ -2,6 +2,48 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-10T19-18-44Z-missed-1831",
+      "t": "2026-11-10T19:18:44Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-10T19-18-44Z-missed-1831.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.4858,
+          "area_grow": 1018.5,
+          "clipped": true,
+          "shade": 1.32,
+          "kept": 0.6,
+          "area_ratio": 0.17682,
+          "duration_s": 12.4,
+          "frames": 8,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.055,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.3937,
+          0.7083,
+          0.6062,
+          0.2917
+        ]
+      },
+      "closeup": "data/closeups/2026-11-10T19-18-44Z-missed-1831.jpg"
+    },
+    {
       "id": "2026-11-10T19-09-24Z-missed-1830",
       "t": "2026-11-10T19:09:24Z",
       "type": "missed",
@@ -807680,48 +807722,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-11T22-29-56Z-missed-12.jpg"
-    },
-    {
-      "id": "2026-10-11T19-10-39Z-missed-11",
-      "t": "2026-10-11T19:10:39Z",
-      "type": "missed",
-      "label": "Brouillard",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-11T19-10-39Z-missed-11.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.1534,
-          "area_grow": 0.88,
-          "clipped": false,
-          "shade": 1.656,
-          "kept": 0.0,
-          "area_ratio": 0.00015,
-          "duration_s": 6.0,
-          "frames": 7,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 1.339,
-          "seen_as": []
-        },
-        "refused": "fog",
-        "box": [
-          0.775,
-          0.1167,
-          0.0172,
-          0.0278
-        ]
-      },
-      "closeup": "data/closeups/2026-10-11T19-10-39Z-missed-11.jpg"
     }
   ]
 }
