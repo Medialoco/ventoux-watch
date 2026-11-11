@@ -2,6 +2,48 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-11T18-02-29Z-missed-2272",
+      "t": "2026-11-11T18:02:29Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-11T18-02-29Z-missed-2272.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.4211,
+          "area_grow": 0.67,
+          "clipped": false,
+          "shade": 1.199,
+          "kept": 0.88,
+          "area_ratio": 9e-05,
+          "duration_s": 3.9,
+          "frames": 4,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.971,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.8922,
+          0.6278,
+          0.0625,
+          0.0556
+        ]
+      },
+      "closeup": "data/closeups/2026-11-11T18-02-29Z-missed-2272.jpg"
+    },
+    {
       "id": "2026-11-11T17-02-41Z-cycle-2271",
       "t": "2026-11-11T17:02:41Z",
       "type": "cycle",
@@ -824699,47 +824741,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-12T18-09-38Z-missed-265.jpg"
-    },
-    {
-      "id": "2026-10-12T17-08-46Z-motion-264",
-      "t": "2026-10-12T17:08:46Z",
-      "type": "motion",
-      "label": "Mouvement détecté",
-      "zone": "roundabout",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-12T17-08-46Z-motion-264.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "twilight",
-        "weather": "ciel dégagé",
-        "context": "au crépuscule, ciel dégagé",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.105,
-          "area_grow": 1.41,
-          "clipped": false,
-          "shade": 0.924,
-          "kept": 0.8,
-          "area_ratio": 0.00078,
-          "duration_s": 3.0,
-          "frames": 3,
-          "width_m": 3.3,
-          "height_m": 1.7,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.957,
-          "seen_as": []
-        },
-        "box": [
-          0.1125,
-          0.7556,
-          0.0359,
-          0.0333
-        ]
-      },
-      "closeup": "data/closeups/2026-10-12T17-08-46Z-motion-264.jpg"
     }
   ]
 }
