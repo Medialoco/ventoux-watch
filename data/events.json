@@ -2,6 +2,92 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-12T14-19-57Z-motion-2465",
+      "t": "2026-11-12T14:19:57Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-12T14-19-57Z-motion-2465.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.5464,
+          "area_grow": 0.02,
+          "clipped": false,
+          "shade": 1.136,
+          "kept": 0.312,
+          "area_ratio": 9e-05,
+          "duration_s": 30.2,
+          "frames": 23,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.052,
+          "seen_as": []
+        },
+        "box": [
+          0.2313,
+          0.7778,
+          0.2891,
+          0.1806
+        ]
+      },
+      "closeup": "data/closeups/2026-11-12T14-19-57Z-motion-2465.jpg"
+    },
+    {
+      "id": "2026-11-12T14-17-31Z-vehicle-2464",
+      "t": "2026-11-12T14:17:31Z",
+      "type": "vehicle",
+      "label": "Voiture grise",
+      "zone": "road",
+      "confidence": 0.827,
+      "thumb": "data/thumbs/2026-11-12T14-17-31Z-vehicle-2464.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 0.489,
+          "kept": 0.161,
+          "area_ratio": 0.01919,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.83 sur 73%",
+            "car 0.79 sur 0%",
+            "car 0.72 sur 0%",
+            "car 0.71 sur 2%"
+          ]
+        },
+        "box": [
+          0.8819,
+          0.7421,
+          0.1181,
+          0.2074
+        ]
+      },
+      "closeup": "data/closeups/2026-11-12T14-17-31Z-vehicle-2464.jpg"
+    },
+    {
       "id": "2026-11-12T14-14-52Z-motion-2463",
       "t": "2026-11-12T14:14:52Z",
       "type": "motion",
