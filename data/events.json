@@ -2,6 +2,110 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-14T05-49-19Z-cycle-3029",
+      "t": "2026-11-14T05:49:19Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-14T05-49-19Z-cycle-3029.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1521,
+          "area_grow": 1.6,
+          "clipped": false,
+          "shade": 1.486,
+          "kept": 0.667,
+          "area_ratio": 0.00079,
+          "duration_s": 3.3,
+          "frames": 3,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 1.34,
+          "seen_as": []
+        },
+        "box": [
+          0.7734,
+          0.6389,
+          0.0219,
+          0.0361
+        ],
+        "trace": [
+          [
+            1794635355.77,
+            0.6672,
+            0.5361,
+            0.0297,
+            0.0167
+          ],
+          [
+            1794635357.79,
+            0.7438,
+            0.6694,
+            0.0203,
+            0.025
+          ],
+          [
+            1794635359.05,
+            0.7734,
+            0.6389,
+            0.0219,
+            0.0361
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-14T05-49-19Z-cycle-3029.jpg"
+    },
+    {
+      "id": "2026-11-14T05-49-15Z-motion-3028",
+      "t": "2026-11-14T05:49:15Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-14T05-49-15Z-motion-3028.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2556,
+          "area_grow": 0.11,
+          "clipped": false,
+          "shade": 1.954,
+          "kept": 0.538,
+          "area_ratio": 0.00015,
+          "duration_s": 11.6,
+          "frames": 9,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.2,
+          "seen_as": []
+        },
+        "box": [
+          0.6984,
+          0.5194,
+          0.0844,
+          0.0222
+        ]
+      },
+      "closeup": "data/closeups/2026-11-14T05-49-15Z-motion-3028.jpg"
+    },
+    {
       "id": "2026-11-14T05-11-51Z-missed-3027",
       "t": "2026-11-14T05:11:51Z",
       "type": "missed",
@@ -826925,91 +827029,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-15T06-00-02Z-vehicle-9.jpg"
-    },
-    {
-      "id": "2026-10-15T05-35-49Z-missed-8",
-      "t": "2026-10-15T05:35:49Z",
-      "type": "missed",
-      "label": "Décor connu",
-      "zone": "road",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-15T05-35-49Z-missed-8.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "cabane est fixé au sol. C'est une lumière qui a bougé, pas lui.",
-        "period": "twilight",
-        "weather": "peu nuageux",
-        "context": "au crépuscule, peu nuageux",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0478,
-          "area_grow": 0.45,
-          "clipped": false,
-          "shade": 0.743,
-          "kept": 1.0,
-          "area_ratio": 0.00052,
-          "duration_s": 2.0,
-          "frames": 3,
-          "width_m": 3.3,
-          "height_m": 2.4,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.455,
-          "seen_as": []
-        },
-        "refused": "landmark",
-        "box": [
-          0.3328,
-          0.7,
-          0.0297,
-          0.0389
-        ]
-      },
-      "closeup": "data/closeups/2026-10-15T05-35-49Z-missed-8.jpg"
-    },
-    {
-      "id": "2026-10-15T05-35-45Z-motion-7",
-      "t": "2026-10-15T05:35:45Z",
-      "type": "motion",
-      "label": "Mouvement détecté",
-      "zone": "roundabout",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-15T05-35-45Z-motion-7.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "twilight",
-        "weather": "peu nuageux",
-        "context": "au crépuscule, peu nuageux",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.233,
-          "area_grow": 0.01,
-          "clipped": false,
-          "shade": 0.816,
-          "kept": 0.787,
-          "area_ratio": 0.00069,
-          "duration_s": 1.0,
-          "frames": 2,
-          "width_m": 13.6,
-          "height_m": 3.7,
-          "width_named_m": 2.8,
-          "height_named_m": 5.6,
-          "rise_ms": 0.0,
-          "drift_rate": 0.357,
-          "seen_as": [
-            "person 0.27 sur 0%"
-          ]
-        },
-        "box": [
-          0.0625,
-          0.7528,
-          0.4875,
-          0.2361
-        ]
-      },
-      "closeup": "data/closeups/2026-10-15T05-35-45Z-motion-7.jpg"
     }
   ]
 }
