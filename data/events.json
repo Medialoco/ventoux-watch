@@ -2,6 +2,160 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-14T06-24-24Z-cycle-3035",
+      "t": "2026-11-14T06:24:24Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-14T06-24-24Z-cycle-3035.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3106,
+          "area_grow": 4.5,
+          "clipped": false,
+          "shade": 1.554,
+          "kept": 0.167,
+          "area_ratio": 0.00211,
+          "duration_s": 14.5,
+          "frames": 10,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.221,
+          "seen_as": []
+        },
+        "box": [
+          0.7859,
+          0.6389,
+          0.0141,
+          0.0333
+        ],
+        "trace": [
+          [
+            1794637450.15,
+            0.7859,
+            0.6389,
+            0.0141,
+            0.0333
+          ],
+          [
+            1794637452.9,
+            0.9812,
+            0.6528,
+            0.0109,
+            0.0167
+          ],
+          [
+            1794637455.0,
+            0.9266,
+            0.6306,
+            0.0734,
+            0.0472
+          ],
+          [
+            1794637456.3,
+            0.9891,
+            0.8139,
+            0.0109,
+            0.0278
+          ],
+          [
+            1794637457.52,
+            0.9422,
+            0.7833,
+            0.0578,
+            0.1028
+          ],
+          [
+            1794637458.77,
+            0.8047,
+            0.7333,
+            0.1953,
+            0.1917
+          ],
+          [
+            1794637460.01,
+            0.6734,
+            0.7583,
+            0.3266,
+            0.2417
+          ],
+          [
+            1794637461.28,
+            0.5156,
+            0.8139,
+            0.4844,
+            0.1861
+          ],
+          [
+            1794637463.34,
+            0.5062,
+            0.9083,
+            0.3063,
+            0.0917
+          ],
+          [
+            1794637464.65,
+            0.7312,
+            0.925,
+            0.0281,
+            0.075
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-14T06-24-24Z-cycle-3035.jpg"
+    },
+    {
+      "id": "2026-11-14T06-21-05Z-missed-3034",
+      "t": "2026-11-14T06:21:05Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-14T06-21-05Z-missed-3034.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.4964,
+          "area_grow": 93.7,
+          "clipped": true,
+          "shade": 1.089,
+          "kept": 0.876,
+          "area_ratio": 0.02196,
+          "duration_s": 18.9,
+          "frames": 13,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.122,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.5078,
+          0.8778,
+          0.1797,
+          0.1222
+        ]
+      },
+      "closeup": "data/closeups/2026-11-14T06-21-05Z-missed-3034.jpg"
+    },
+    {
       "id": "2026-11-14T06-15-32Z-person-3033",
       "t": "2026-11-14T06:15:32Z",
       "type": "person",
