@@ -2,6 +2,76 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-15T17-33-32Z-cycle-3955",
+      "t": "2026-11-15T17:33:32Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-15T17-33-32Z-cycle-3955.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1076,
+          "area_grow": 0.99,
+          "clipped": false,
+          "shade": 0.916,
+          "kept": 0.6,
+          "area_ratio": 0.00067,
+          "duration_s": 4.6,
+          "frames": 4,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 1.285,
+          "seen_as": []
+        },
+        "box": [
+          0.8781,
+          0.6361,
+          0.0156,
+          0.0556
+        ],
+        "trace": [
+          [
+            1794764007.73,
+            0.9297,
+            0.6278,
+            0.0187,
+            0.0361
+          ],
+          [
+            1794764009.12,
+            0.9125,
+            0.675,
+            0.0203,
+            0.0306
+          ],
+          [
+            1794764010.43,
+            0.8781,
+            0.6361,
+            0.0156,
+            0.0556
+          ],
+          [
+            1794764012.29,
+            0.8375,
+            0.6806,
+            0.0172,
+            0.0389
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-15T17-33-32Z-cycle-3955.jpg"
+    },
+    {
       "id": "2026-11-15T17-16-09Z-missed-3954",
       "t": "2026-11-15T17:16:09Z",
       "type": "missed",
@@ -852985,47 +853055,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-16T17-43-49Z-missed-267.jpg"
-    },
-    {
-      "id": "2026-10-16T17-23-32Z-motion-266",
-      "t": "2026-10-16T17:23:32Z",
-      "type": "motion",
-      "label": "Mouvement détecté",
-      "zone": "other",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-16T17-23-32Z-motion-266.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "twilight",
-        "weather": "ciel dégagé",
-        "context": "au crépuscule, ciel dégagé",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0419,
-          "area_grow": 0.78,
-          "clipped": false,
-          "shade": 0.743,
-          "kept": 0.25,
-          "area_ratio": 0.00055,
-          "duration_s": 7.0,
-          "frames": 8,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.05,
-          "seen_as": []
-        },
-        "box": [
-          0.0031,
-          0.3694,
-          0.0266,
-          0.0583
-        ]
-      },
-      "closeup": "data/closeups/2026-10-16T17-23-32Z-motion-266.jpg"
     }
   ]
 }
