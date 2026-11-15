@@ -2,6 +2,49 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-15T07-10-15Z-motion-3402",
+      "t": "2026-11-15T07:10:15Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-15T07-10-15Z-motion-3402.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "pluie",
+        "context": "au crépuscule, pluie",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.5233,
+          "area_grow": 1.2,
+          "clipped": false,
+          "shade": 1.287,
+          "kept": 0.145,
+          "area_ratio": 0.00065,
+          "duration_s": 33.7,
+          "frames": 25,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.079,
+          "seen_as": [
+            "truck 0.53 sur 0%"
+          ]
+        },
+        "box": [
+          0.3531,
+          0.6028,
+          0.1578,
+          0.0917
+        ]
+      },
+      "closeup": "data/closeups/2026-11-15T07-10-15Z-motion-3402.jpg"
+    },
+    {
       "id": "2026-11-15T06-56-31Z-cycle-3401",
       "t": "2026-11-15T06:56:31Z",
       "type": "cycle",
@@ -820273,115 +820316,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-16T07-10-50Z-vehicle-49.jpg"
-    },
-    {
-      "id": "2026-10-16T07-05-42Z-vehicle-48",
-      "t": "2026-10-16T07:05:42Z",
-      "type": "vehicle",
-      "label": "Voiture bleue",
-      "zone": "road",
-      "confidence": 0.529,
-      "thumb": "data/thumbs/2026-10-16T07-05-42Z-vehicle-48.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "day",
-        "weather": "ciel dégagé",
-        "context": "de jour, ciel dégagé",
-        "autonomous": true,
-        "measured": {
-          "travel": 0.3446,
-          "area_grow": 42.06,
-          "clipped": false,
-          "shade": 0.957,
-          "kept": 0.344,
-          "area_ratio": 0.01972,
-          "duration_s": 8.0,
-          "frames": 9,
-          "width_m": 3.4,
-          "height_m": 3.1,
-          "width_named_m": 2.6,
-          "height_named_m": 2.8,
-          "rise_ms": 0.0,
-          "drift_rate": 0.354,
-          "seen_as": [
-            "bus 0.53 sur 63%",
-            "car 0.28 sur 4%"
-          ]
-        },
-        "surface": "roundabout",
-        "box": [
-          0.0841,
-          0.7368,
-          0.0593,
-          0.1126
-        ],
-        "trace": [
-          [
-            1792134334.65,
-            0.0391,
-            0.5889,
-            0.0141,
-            0.0333
-          ],
-          [
-            1792134335.65,
-            0.0469,
-            0.6028,
-            0.0172,
-            0.0333
-          ],
-          [
-            1792134336.65,
-            0.05,
-            0.6139,
-            0.0234,
-            0.0389
-          ],
-          [
-            1792134337.65,
-            0.0656,
-            0.6306,
-            0.0234,
-            0.0444
-          ],
-          [
-            1792134338.65,
-            0.075,
-            0.65,
-            0.0328,
-            0.0556
-          ],
-          [
-            1792134339.65,
-            0.0859,
-            0.675,
-            0.0359,
-            0.0583
-          ],
-          [
-            1792134340.65,
-            0.0828,
-            0.7028,
-            0.0484,
-            0.0722
-          ],
-          [
-            1792134341.65,
-            0.0844,
-            0.7472,
-            0.0625,
-            0.1028
-          ],
-          [
-            1792134342.65,
-            0.1313,
-            0.8361,
-            0.1203,
-            0.1639
-          ]
-        ]
-      },
-      "closeup": "data/closeups/2026-10-16T07-05-42Z-vehicle-48.jpg"
     }
   ]
 }
