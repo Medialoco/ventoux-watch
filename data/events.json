@@ -2,6 +2,130 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-15T07-47-01Z-motion-3409",
+      "t": "2026-11-15T07:47:01Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-15T07-47-01Z-motion-3409.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "couvert",
+        "context": "de jour, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3167,
+          "area_grow": 3.33,
+          "clipped": false,
+          "shade": 1.491,
+          "kept": 0.407,
+          "area_ratio": 0.00365,
+          "duration_s": 15.5,
+          "frames": 12,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.188,
+          "seen_as": []
+        },
+        "box": [
+          0.5672,
+          0.5556,
+          0.1141,
+          0.0417
+        ]
+      },
+      "closeup": "data/closeups/2026-11-15T07-47-01Z-motion-3409.jpg"
+    },
+    {
+      "id": "2026-11-15T07-41-23Z-motion-3408",
+      "t": "2026-11-15T07:41:23Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-15T07-41-23Z-motion-3408.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "couvert",
+        "context": "de jour, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3874,
+          "area_grow": 0.23,
+          "clipped": false,
+          "shade": 1.131,
+          "kept": 0.255,
+          "area_ratio": 0.00011,
+          "duration_s": 32.2,
+          "frames": 20,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.047,
+          "seen_as": []
+        },
+        "box": [
+          0.4062,
+          0.5417,
+          0.2391,
+          0.0889
+        ]
+      },
+      "closeup": "data/closeups/2026-11-15T07-41-23Z-motion-3408.jpg"
+    },
+    {
+      "id": "2026-11-15T07-40-33Z-missed-3407",
+      "t": "2026-11-15T07:40:33Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-15T07-40-33Z-missed-3407.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "day",
+        "weather": "couvert",
+        "context": "de jour, couvert",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2772,
+          "area_grow": 101.9,
+          "clipped": true,
+          "shade": 1.584,
+          "kept": 0.248,
+          "area_ratio": 0.02123,
+          "duration_s": 5.8,
+          "frames": 4,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.028,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.8953,
+          0.7944,
+          0.1047,
+          0.2028
+        ]
+      },
+      "closeup": "data/closeups/2026-11-15T07-40-33Z-missed-3407.jpg"
+    },
+    {
       "id": "2026-11-15T07-35-58Z-motion-3406",
       "t": "2026-11-15T07:35:58Z",
       "type": "motion",
