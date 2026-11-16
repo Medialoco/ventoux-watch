@@ -2,6 +2,48 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-16T22-49-31Z-missed-4168",
+      "t": "2026-11-16T22:49:31Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-16T22-49-31Z-missed-4168.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1015,
+          "area_grow": 169.77,
+          "clipped": false,
+          "shade": 1.217,
+          "kept": 0.716,
+          "area_ratio": 0.07,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 30.9,
+          "height_m": 7.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.46,
+          "drift_rate": 0.04,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.4172,
+          0.55,
+          0.4,
+          0.175
+        ]
+      },
+      "closeup": "data/closeups/2026-11-16T22-49-31Z-missed-4168.jpg"
+    },
+    {
       "id": "2026-11-16T20-45-00Z-missed-4167",
       "t": "2026-11-16T20:45:00Z",
       "type": "missed",
@@ -841106,48 +841148,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-17T23-25-15Z-missed-1.jpg"
-    },
-    {
-      "id": "2026-10-17T21-39-12Z-missed-404",
-      "t": "2026-10-17T21:39:12Z",
-      "type": "missed",
-      "label": "Brouillard",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-17T21-39-12Z-missed-404.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0,
-          "area_grow": 1.0,
-          "clipped": false,
-          "shade": 1.519,
-          "kept": 0.0,
-          "area_ratio": 0.0001,
-          "duration_s": 2.0,
-          "frames": 3,
-          "width_m": 13.5,
-          "height_m": 9.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.0,
-          "seen_as": []
-        },
-        "refused": "fog",
-        "box": [
-          0.9328,
-          0.1028,
-          0.0094,
-          0.0111
-        ]
-      },
-      "closeup": "data/closeups/2026-10-17T21-39-12Z-missed-404.jpg"
     }
   ]
 }
