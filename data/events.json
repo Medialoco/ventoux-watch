@@ -2,6 +2,105 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-16T11-00-09Z-motion-4109",
+      "t": "2026-11-16T11:00:09Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-16T11-00-09Z-motion-4109.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1426,
+          "area_grow": 13.85,
+          "clipped": false,
+          "shade": 0.919,
+          "kept": 0.389,
+          "area_ratio": 0.00577,
+          "duration_s": 10.0,
+          "frames": 11,
+          "width_m": 6.6,
+          "height_m": 7.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.123,
+          "seen_as": []
+        },
+        "box": [
+          0.0703,
+          0.6583,
+          0.0547,
+          0.1056
+        ]
+      },
+      "closeup": "data/closeups/2026-11-16T11-00-09Z-motion-4109.jpg"
+    },
+    {
+      "id": "2026-11-16T10-50-58Z-vehicle-4108",
+      "t": "2026-11-16T10:50:58Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.407,
+      "thumb": "data/thumbs/2026-11-16T10-50-58Z-vehicle-4108.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0409,
+          "area_grow": 0.55,
+          "clipped": false,
+          "shade": 0.951,
+          "kept": 0.333,
+          "area_ratio": 0.00067,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 7.4,
+          "height_m": 5.2,
+          "width_named_m": 6.1,
+          "height_named_m": 4.3,
+          "rise_ms": 2.98,
+          "drift_rate": 1.074,
+          "seen_as": [
+            "car 0.41 sur 68%"
+          ]
+        },
+        "box": [
+          0.1042,
+          0.6538,
+          0.0327,
+          0.0415
+        ],
+        "trace": [
+          [
+            1794826257.02,
+            0.1047,
+            0.6556,
+            0.0312,
+            0.0389
+          ],
+          [
+            1794826258.02,
+            0.0781,
+            0.6333,
+            0.0219,
+            0.0306
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-16T10-50-58Z-vehicle-4108.jpg"
+    },
+    {
       "id": "2026-11-16T10-49-11Z-cycle-4107",
       "t": "2026-11-16T10:49:11Z",
       "type": "cycle",
@@ -854408,89 +854507,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-17T11-00-17Z-person-140.jpg"
-    },
-    {
-      "id": "2026-10-17T10-59-06Z-missed-139",
-      "t": "2026-10-17T10:59:06Z",
-      "type": "missed",
-      "label": "Décor de l'îlot",
-      "zone": "roundabout",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-17T10-59-06Z-missed-139.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Sur l'îlot central du rond-point, et ça n'a pas bougé. Les pierres et les figures y sont plantées.",
-        "period": "day",
-        "weather": "peu nuageux",
-        "context": "de jour, peu nuageux",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0,
-          "area_grow": 1.0,
-          "clipped": false,
-          "shade": 0.882,
-          "kept": 0.853,
-          "area_ratio": 0.0076,
-          "duration_s": 0.0,
-          "frames": 1,
-          "width_m": 3.7,
-          "height_m": 2.6,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.0,
-          "seen_as": []
-        },
-        "refused": "island",
-        "box": [
-          0.0844,
-          0.7667,
-          0.0781,
-          0.0972
-        ]
-      },
-      "closeup": "data/closeups/2026-10-17T10-59-06Z-missed-139.jpg"
-    },
-    {
-      "id": "2026-10-17T10-58-22Z-motion-138",
-      "t": "2026-10-17T10:58:22Z",
-      "type": "motion",
-      "label": "Mouvement détecté",
-      "zone": "other",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-17T10-58-22Z-motion-138.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "day",
-        "weather": "ciel dégagé",
-        "context": "de jour, ciel dégagé",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0659,
-          "area_grow": 1.93,
-          "clipped": false,
-          "shade": 0.654,
-          "kept": 1.0,
-          "area_ratio": 0.0009,
-          "duration_s": 6.0,
-          "frames": 7,
-          "width_m": 8.6,
-          "height_m": 7.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.269,
-          "seen_as": []
-        },
-        "box": [
-          0.225,
-          0.6,
-          0.025,
-          0.0361
-        ]
-      },
-      "closeup": "data/closeups/2026-10-17T10-58-22Z-motion-138.jpg"
     }
   ]
 }
