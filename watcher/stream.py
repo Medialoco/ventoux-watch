@@ -7394,6 +7394,10 @@ def _camera_secours(cfg: dict) -> dict | None:
 # Cannes. On ne la recopie pas hors de la machine.
 RESERVE_URL = Path("data/secours.url")
 RESERVE_URL_S = 5 * 3600
+# Pour basculer sans attendre yt-dlp : une adresse de moins d'une heure,
+# renouvelée toutes les demi-heures par un fil à part.
+ADRESSE_FRAICHE_S = 3600
+ADRESSE_RENOUVELLE_S = 1800
 
 
 def _reserve_lue(chemin: Path, maintenant: float, max_age_s: float) -> str | None:
@@ -7633,8 +7637,14 @@ def _ouvre_secours(cfg: dict, largeur: int, hauteur: int, fps: int) -> subproces
         return None
     nom = str(cam.get("nom") or "webcam")
     try:
-        url = (adresse_youtube(str(cam["youtube"])) if cam.get("youtube")
-               else str(cam["url"]))
+        if cam.get("youtube"):
+            # Le fil des images attend cette adresse. yt-dlp y passait
+            # jusqu'à quarante-cinq secondes sans une image pour YouTube :
+            # l'adresse tenue à jour à côté sert d'abord.
+            url = (_reserve_lue(RESERVE_URL, time.time(), ADRESSE_FRAICHE_S)
+                   or adresse_youtube(str(cam["youtube"])))
+        else:
+            url = str(cam["url"])
     except Exception:
         log.warning("Secours indisponible : %s", nom, exc_info=True)
         return None
@@ -7642,6 +7652,20 @@ def _ouvre_secours(cfg: dict, largeur: int, hauteur: int, fps: int) -> subproces
     recul = max(1, int(round(RETARD_SECOURS_S / duree)))
     log.info("Secours ouvert : %s, marge %.0f s", nom, recul * duree)
     return _entree_cadre(url, largeur, hauteur, fps, recul, FILS_ENTREE)
+
+
+def _tient_l_adresse(cfg: dict, coupe: threading.Event) -> None:
+    """Redemande l'adresse du secours à côté, pour qu'elle soit prête."""
+    cam = _camera_secours(cfg)
+    if not cam or not cam.get("youtube"):
+        return
+    while not coupe.is_set():
+        try:
+            adresse_youtube(str(cam["youtube"]))
+        except Exception:
+            log.warning("Adresse du secours non renouvelée", exc_info=True)
+        if coupe.wait(ADRESSE_RENOUVELLE_S):
+            return
 
 
 def _webcam_vive(url: str) -> bool:
@@ -8329,6 +8353,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     threading.Thread(target=_regard_le_ventoux, args=(cfg["stream_url"], coupe, ventoux_vif),
                      daemon=True).start()
     garde = GardeEntree()
+    threading.Thread(target=_tient_l_adresse, args=(cfg, coupe), daemon=True).start()
     cam_secours = _camera_secours(cfg)
     nom_secours = str((cam_secours or {}).get("nom") or "backup")
     phrase_secours = f"Backup webcam, {nom_secours}. Waiting for Mont Serein."

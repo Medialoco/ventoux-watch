@@ -54,6 +54,28 @@ class EntreeTests(unittest.TestCase):
             vivant.stdout.close()
 
 
+class SecoursRapideTests(unittest.TestCase):
+    CFG = {"stream_url": "mont", "collection": [{"nom": "Cannes", "youtube": "abc"}]}
+
+    def test_une_adresse_fraiche_evite_yt_dlp(self):
+        with mock.patch.object(stream, "_reserve_lue", return_value="https://cannes"), \
+                mock.patch.object(stream, "adresse_youtube") as yt, \
+                mock.patch.object(stream, "duree_de_segment", return_value=6.0), \
+                mock.patch.object(stream, "_entree_cadre", return_value="proc") as cadre:
+            self.assertEqual(stream._ouvre_secours(self.CFG, 960, 540, 6), "proc")
+        yt.assert_not_called()
+        self.assertEqual(cadre.call_args.args[0], "https://cannes")
+
+    def test_sans_adresse_fraiche_on_demande_a_yt_dlp(self):
+        with mock.patch.object(stream, "_reserve_lue", return_value=None), \
+                mock.patch.object(stream, "adresse_youtube", return_value="https://neuve") as yt, \
+                mock.patch.object(stream, "duree_de_segment", return_value=6.0), \
+                mock.patch.object(stream, "_entree_cadre", return_value="proc") as cadre:
+            stream._ouvre_secours(self.CFG, 960, 540, 6)
+        yt.assert_called_once_with("abc")
+        self.assertEqual(cadre.call_args.args[0], "https://neuve")
+
+
 class RetourVentouxTests(unittest.TestCase):
     def _regarde(self, reponses):
         coupe = threading.Event()
