@@ -40,7 +40,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from watcher import __version__, direct
+from watcher import __version__, direct, youtube_api
 from watcher.coloriage import PORT as COLORIAGE_PORT
 from watcher.coloriage import Coloriage
 from watcher.motion import Afficheur
@@ -210,6 +210,17 @@ LACHE_GARDE_S = 90.0
 # Une heure laissait l'image noire. Trois minutes : le temps d'adopter,
 # puis un nouvel essai, et la radio ne troue pas sans cesse.
 RELANCE_VIDE_S = 180.0
+# YouTube ne rouvre jamais seul une diffusion terminée. Deux minutes sans
+# direct, et on la rouvre par l'API ; pas plus d'un essai par quart d'heure,
+# chaque création coûte cent cinquante unités sur dix mille par jour.
+REOUVRE_APRES_S = 120.0
+REOUVRE_PAUSE_S = 900.0
+
+
+def faut_rouvrir_par_l_api(depuis: float, essaye_a: float, maintenant: float) -> bool:
+    if maintenant - depuis < REOUVRE_APRES_S:
+        return False
+    return not essaye_a or maintenant - essaye_a >= REOUVRE_PAUSE_S
 
 
 def faut_rouvrir_le_vide(porte: bool, depuis: float, rouvert_a: float,
@@ -520,6 +531,8 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     # chaîne restait noire vingt minutes avant qu'on le confirme.
     depuis = 0.0
     rouvert_a = 0.0
+    essaye_a = 0.0
+    reouverture: threading.Thread | None = None
 
     def _debloque() -> None:
         if not sortie_tenue:
@@ -600,6 +613,15 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
                     enterre_direct_perime(racine, chaine)
                 except (OSError, ValueError) as souci:
                     log.warning("Direct périmé non retiré : %s", souci)
+        # Avant le lâcher de la sortie, qui peut attendre la boucle des
+        # images une minute et demie.
+        if (racine is not None and absences >= VEILLE_DIRECT_SEUIL
+                and not (reouverture is not None and reouverture.is_alive())
+                and faut_rouvrir_par_l_api(depuis, essaye_a, time.monotonic())):
+            essaye_a = time.monotonic()
+            reouverture = threading.Thread(target=youtube_api.rouvre, args=(racine,),
+                                           daemon=True)
+            reouverture.start()
         if (absences >= VEILLE_DIRECT_SEUIL and lache is not None
                 and not lache.is_set()
                 and faut_rouvrir_le_vide(porte, depuis, rouvert_a, time.monotonic())):
