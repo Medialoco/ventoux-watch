@@ -145,6 +145,15 @@ def attends_la_webcam(url: str) -> tuple[str, float, float]:
                 log.warning("Webcam indisponible (%s) : on attend sans couper "
                             "la diffusion", erreur)
             souci = erreur
+            # Une liste close, sans aucun segment, ne va pas se remplir dans
+            # les vingt secondes. Attendre une demi-heure laisse YouTube noir.
+            # On sort tout de suite : le départ ouvre alors la webcam de secours.
+            try:
+                texte = _lire(playlist_media(url))
+            except Exception:
+                texte = ""
+            if "#EXT-X-ENDLIST" in texte and "PROGRAM-DATE-TIME" not in texte:
+                raise RuntimeError("playlist du Mont Serein close, sans segment")
             time.sleep(ATTENTE_PAS_S)
     raise RuntimeError(f"webcam muette depuis {ATTENTE_WEBCAM_S:.0f} s : {souci}")
 
@@ -196,6 +205,26 @@ LACHE_DIRECT_S = 12.0
 # et la chaîne est restée noire. Passé ce délai, le processus s'arrête de
 # lui-même et systemd le rouvre.
 LACHE_GARDE_S = 90.0
+# Tant que la chaîne n'a pas de direct, on rouvre la sortie à ce rythme.
+# Vingt secondes tuaient une connexion que YouTube s'apprêtait à prendre.
+# Une heure laissait l'image noire. Trois minutes : le temps d'adopter,
+# puis un nouvel essai, et la radio ne troue pas sans cesse.
+RELANCE_VIDE_S = 180.0
+
+
+def faut_rouvrir_le_vide(porte: bool, depuis: float, rouvert_a: float,
+                         maintenant: float) -> bool:
+    """Faut-il lâcher la sortie pour qu'un direct puisse s'y accrocher.
+
+    Une connexion neuve a trois minutes pour que YouTube l'adopte. Passé
+    ce délai, on rouvre, y compris quand ce processus n'a jamais porté de
+    direct : c'est lui qui restait des heures à pousser dans le vide.
+    """
+    if not porte and maintenant - depuis < RELANCE_VIDE_S:
+        return False
+    if rouvert_a and maintenant - rouvert_a < RELANCE_VIDE_S:
+        return False
+    return True
 
 
 def _abandonne() -> None:
@@ -420,6 +449,29 @@ def note_le_direct(racine: Path, chaine: str, numero: str, *, live: bool) -> Non
     passage.replace(fichier)
 
 
+def enterre_direct_perime(racine: Path, chaine: str) -> None:
+    """Retire de la page une diffusion que ce processus n'a jamais portée.
+
+    Après un redémarrage, le fichier dit encore que l'ancienne vidéo est en
+    direct. Tant qu'on n'en a pas vu une nouvelle, on ne le réécrivait pas :
+    la page montrait l'enregistrement fini, donc un autre morceau que la radio.
+    """
+    fichier = racine / "data" / "direct.json"
+    try:
+        fiche = json.loads(fichier.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if not isinstance(fiche, dict) or fiche.get("live") is not True:
+        return
+    if fiche.get("chaine") != chaine:
+        return
+    numero = str(fiche.get("video") or "")
+    if not NUMERO_VIDEO.fullmatch(numero):
+        return
+    note_le_direct(racine, chaine, numero, live=False)
+    log.info("Diffusion %s terminée : on la retire de la page", numero)
+
+
 def veille_le_direct(chaine: str, coupe: threading.Event,
                      racine: Path | None = None,
                      lache: threading.Event | None = None,
@@ -432,11 +484,13 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     reste propre. Le premier octobre, on a poussé quatre heures dans le vide
     avec un journal irréprochable, et c'est l'utilisateur qui s'en est aperçu.
 
-    Alors on va regarder dehors. Quand on a déjà vu un direct et que la chaîne
-    ne le montre plus, on lâche la sortie une fois : douze secondes sans octets,
-    dans le même processus, pour que la radio reste servie. On ne le fait pas
-    tant qu'on n'a jamais été en direct, sinon un démarrage qui attend le
-    studio se relancerait en boucle. Si l'écriture vers ffmpeg est coincée,
+    Alors on va regarder dehors. Quand la chaîne ne montre pas de direct, on
+    lâche la sortie, douze secondes sans octets, dans le même processus, pour
+    que la radio reste servie. On le refait toutes les trois minutes, même si
+    ce processus n'a jamais porté de direct : une seule tentative laissait
+    des heures d'images dans le vide. La première connexion a ces trois
+    minutes pour être adoptée, sinon un démarrage se couperait tout seul.
+    Si l'écriture vers ffmpeg est coincée,
     on tue ffmpeg : c'est lui qui bloque la boucle, comme le 21 octobre à
     21 h 12, quand YouTube a fermé l'arrivée et que le signal n'a jamais été lu.
 
@@ -465,6 +519,7 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
     # Une absence vue, on revérifie au rythme rapide : au rythme lent, la
     # chaîne restait noire vingt minutes avant qu'on le confirme.
     depuis = 0.0
+    rouvert_a = 0.0
 
     def _debloque() -> None:
         if not sortie_tenue:
@@ -540,24 +595,30 @@ def veille_le_direct(chaine: str, coupe: threading.Event,
                       "alors qu'on émet : les octets partent dans le vide. Il "
                       "faut rouvrir un direct dans YouTube Studio, la clé est "
                       "déjà alimentée.", time.monotonic() - depuis)
-            # Une fois, et seulement si ce processus a déjà porté un direct.
-            # La page noire d'un démarrage n'est pas une coupure.
-            if porte and lache is not None and not lache.is_set():
-                log.warning("On lâche la sortie %.0f s pour qu'une diffusion "
-                            "neuve puisse s'attacher", LACHE_DIRECT_S)
-                if silence is not None:
-                    silence.set()
-                lache.set()
-                # L'écriture peut être coincée dans le tuyau plein. Tuer
-                # ffmpeg la fait échouer, et la boucle lit alors le signal.
-                # S'il est encore là au bout du délai, elle est bloquée pour
-                # de bon, comme le 15 octobre, et on s'arrête.
-                _debloque()
-                if not coupe.wait(LACHE_GARDE_S) and lache.is_set():
-                    log.error("La boucle des images n'a pas lâché la sortie en "
-                              "%.0f s : on arrête le processus, systemd le rouvre",
-                              LACHE_GARDE_S)
-                    _abandonne()
+            if racine is not None and not connu:
+                try:
+                    enterre_direct_perime(racine, chaine)
+                except (OSError, ValueError) as souci:
+                    log.warning("Direct périmé non retiré : %s", souci)
+        if (absences >= VEILLE_DIRECT_SEUIL and lache is not None
+                and not lache.is_set()
+                and faut_rouvrir_le_vide(porte, depuis, rouvert_a, time.monotonic())):
+            log.warning("On lâche la sortie %.0f s : la chaîne n'a pas de direct",
+                        LACHE_DIRECT_S)
+            if silence is not None:
+                silence.set()
+            lache.set()
+            rouvert_a = time.monotonic()
+            # L'écriture peut être coincée dans le tuyau plein. Tuer
+            # ffmpeg la fait échouer, et la boucle lit alors le signal.
+            # S'il est encore là au bout du délai, elle est bloquée pour
+            # de bon, comme le 15 octobre, et on s'arrête.
+            _debloque()
+            if not coupe.wait(LACHE_GARDE_S) and lache.is_set():
+                log.error("La boucle des images n'a pas lâché la sortie en "
+                          "%.0f s : on arrête le processus, systemd le rouvre",
+                          LACHE_GARDE_S)
+                _abandonne()
 
 
 def identifications(chemin: Path, depuis: float) -> list[dict]:
@@ -7417,6 +7478,12 @@ MARGE_DUPLEX_S = 180.0
 # Le Mont Serein se regarde à côté, une fois par minute. Pas sur le fil
 # des images : une lecture de playlist qui traîne figerait Cannes.
 REGARD_VENTOUX_S = 60.0
+# Trois regards sains d'affilée, deux minutes au moins, avant de rendre
+# l'antenne au Mont Serein.
+REGARD_VENTOUX_STABLE = 3
+# Une image du Mont Serein arrive tous les sixièmes de seconde. Vingt
+# secondes sans rien, ce n'est plus un retard, c'est une connexion figée.
+ENTREE_MUETTE_S = 20.0
 
 
 def duree_de_segment(url: str) -> float:
@@ -7585,17 +7652,74 @@ def _webcam_vive(url: str) -> bool:
         return False
 
 
-def _regard_le_ventoux(url: str, coupe: threading.Event, vif: threading.Event) -> None:
-    """De temps en temps, sans toucher au fil des images."""
+def _regard_le_ventoux(url: str, coupe: threading.Event, vif: threading.Event,
+                      stable: int = REGARD_VENTOUX_STABLE) -> None:
+    """De temps en temps, sans toucher au fil des images.
+
+    Une playlist qui revit une minute ne suffit pas : au réveil, Quanteec
+    rouvre et referme parfois plusieurs fois. On ne quitte Cannes qu'après
+    plusieurs regards sains d'affilée.
+    """
+    sains = 0
     while not coupe.is_set():
         if _webcam_vive(url):
-            if not vif.is_set():
-                log.info("Mont Serein a repris")
-            vif.set()
+            sains += 1
+            if sains >= stable:
+                if not vif.is_set():
+                    log.info("Mont Serein a repris")
+                vif.set()
         else:
+            sains = 0
             vif.clear()
         if coupe.wait(REGARD_VENTOUX_S):
             return
+
+
+class GardeEntree:
+    """Tue l'entrée quand une lecture d'image dure trop.
+
+    La boucle des images ne lit le signal de la veille qu'entre deux images.
+    Bloquée sur un ffmpeg muet, elle ne lâchait plus rien : YouTube terminait
+    le direct, et la veille finissait par arrêter le processus. Tuer l'entrée
+    fait revenir la lecture courte, et la boucle prend le chemin du flux tari.
+    """
+
+    def __init__(self, delai_s: float = ENTREE_MUETTE_S, pas_s: float = 1.0) -> None:
+        self.delai_s = delai_s
+        self.pas_s = pas_s
+        self._lock = threading.Lock()
+        self._proc: subprocess.Popen | None = None
+        self._depuis = 0.0
+        self._stop = threading.Event()
+        threading.Thread(target=self._boucle, daemon=True).start()
+
+    def lit(self, proc: subprocess.Popen) -> None:
+        with self._lock:
+            self._proc = proc
+            self._depuis = time.monotonic()
+
+    def fini(self) -> None:
+        with self._lock:
+            self._proc = None
+
+    def arrete(self) -> None:
+        self._stop.set()
+
+    def _boucle(self) -> None:
+        while not self._stop.wait(self.pas_s):
+            with self._lock:
+                proc = self._proc
+                muet = time.monotonic() - self._depuis
+                if proc is None or muet < self.delai_s:
+                    continue
+                self._proc = None
+            if proc.poll() is None:
+                log.warning("Entrée muette depuis %.0f s : on la tue pour "
+                            "garder le direct", muet)
+                try:
+                    proc.kill()
+                except OSError:
+                    pass
 
 
 def _ancre_montage(url: str, recul: int) -> float:
@@ -7611,7 +7735,11 @@ def _ancre_montage(url: str, recul: int) -> float:
 
 def _entree(url: str, recul: int, fps: int = 6) -> subprocess.Popen:
     commande = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin",
+        # Sans délai, une connexion figée chez Quanteec gardait ffmpeg muet
+        # pour toujours, et la boucle des images avec lui : le 18 novembre,
+        # quatre directs YouTube sont morts ainsi. Cannes avait déjà le sien.
+        "-rw_timeout", "15000000",
         "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
         # Le retard, pris chez le serveur plutôt qu'en mémoire.
         "-live_start_index", str(-recul),
@@ -7921,15 +8049,25 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         log.warning("Musique coupée : le flux part en silence")
     if musique.session is None:
         log.warning("Aucune musique dans data/musique : le flux sortira muet")
-    media, dernier, segment = attends_la_webcam(cfg["stream_url"])
-    log.info("Segments de %.1f s, dernier publié il y a %.1f s", segment, _maintenant() - dernier)
-
-    # L'ancre est prise juste avant d'ouvrir ffmpeg, sur la date du segment
-    # qu'il va montrer. La veille fait le même calcul : les deux horloges
-    # partent de la même seconde de montagne.
-    origine = _ancre_montage(cfg["stream_url"], recul)
-    entree = _entree(cfg["stream_url"], recul, int(cfg["stream_fps"]))
-    assert entree.stdout is not None
+    demarre_en_secours = False
+    try:
+        media, dernier, segment = attends_la_webcam(cfg["stream_url"])
+        log.info("Segments de %.1f s, dernier publié il y a %.1f s",
+                 segment, _maintenant() - dernier)
+        # L'ancre est prise juste avant d'ouvrir ffmpeg, sur la date du segment
+        # qu'il va montrer. La veille fait le même calcul : les deux horloges
+        # partent de la même seconde de montagne.
+        origine = _ancre_montage(cfg["stream_url"], recul)
+        entree = _entree(cfg["stream_url"], recul, int(cfg["stream_fps"]))
+        assert entree.stdout is not None
+    except Exception as erreur:
+        log.warning("Mont Serein fermé au départ (%s) : on ouvre le secours", erreur)
+        origine = _maintenant()
+        entree = _ouvre_secours(cfg, *TAILLE_CANNES, int(cfg["stream_fps"]))
+        if entree is None or entree.stdout is None:
+            raise RuntimeError("secours indisponible") from erreur
+        demarre_en_secours = True
+        media, dernier, segment = "", origine, 7.0
     # La toile, et donc ce que l'encodeur doit avaler chaque image.
     #
     # Elle était figée à 1920x1080, et c'est ce qui a fini par lâcher. Mesuré
@@ -8182,12 +8320,15 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         log.info("Survol du terrain : %d images", len(images3d))
     tirage = random.Random()
     figee = False
-    secours = False
+    secours = demarre_en_secours
+    if secours:
+        _vue_source(True)
     photo_figee: np.ndarray | None = None
     sonde_webcam = 0.0
     ventoux_vif = threading.Event()
     threading.Thread(target=_regard_le_ventoux, args=(cfg["stream_url"], coupe, ventoux_vif),
                      daemon=True).start()
+    garde = GardeEntree()
     cam_secours = _camera_secours(cfg)
     nom_secours = str((cam_secours or {}).get("nom") or "backup")
     phrase_secours = f"Backup webcam, {nom_secours}. Waiting for Mont Serein."
@@ -8303,7 +8444,11 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                             _vue_source(True)
                             cadence = None
                         continue
-                brut = entree.stdout.read(octets)
+                garde.lit(entree)
+                try:
+                    brut = entree.stdout.read(octets)
+                finally:
+                    garde.fini()
                 if len(brut) < octets:
                     # Le raisonnement d'attends_la_webcam, appliqué en cours de
                     # route. Au démarrage on a appris à patienter plutôt qu'à
@@ -8354,6 +8499,20 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                         log.warning("Webcam interrompue : on tient la dernière image, "
                                     "le direct continue")
                         continue
+                    # attends_la_webcam peut patienter une demi-heure sans
+                    # une image pour YouTube, qui termine le direct bien
+                    # avant. Cannes prend l'antenne tout de suite, et le
+                    # regard sur le Ventoux la lui reprendra.
+                    if not _webcam_vive(cfg["stream_url"]):
+                        autre = _ouvre_secours(cfg, *TAILLE_CANNES, int(cfg["stream_fps"]))
+                        if autre is not None:
+                            entree = autre
+                            _vue_source(True)
+                            secours = True
+                            ventoux_vif.clear()
+                            cadence = None
+                            log.info("Collection : %s remplace Mont Serein", nom_secours)
+                            continue
                     _, dernier, segment = attends_la_webcam(cfg["stream_url"])
                     # La nouvelle entrée repart au bord du direct : l'ancre et le
                     # compte d'images la suivent, et la cadence se refait sur la
@@ -8559,7 +8718,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                          (quand - dernier_mouvement) / 60, musique.voix_dit)
             a_poser = None
             if rediff is not None:
-                if quand - rediff[1] <= REDIFF_TENUE_S or coloriage.tient(quand):
+                # Dix secondes, puis on rend l'antenne. Le coloriage ne prolonge
+                # plus la carte : un trait gardé des semaines la laissait collée.
+                if quand - rediff[1] <= REDIFF_TENUE_S:
                     a_poser = rediff[0]
                 else:
                     rediff, fin_rediff, dernier_vu = None, quand, quand
@@ -8957,7 +9118,9 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             elif survol is not None:
                 coloriage.mode = "survol"
             elif rediff is not None:
-                coloriage.mode = "reprise"
+                # Pas « reprise » : ce nom réveille un coloriage déjà archivé,
+                # long de plusieurs semaines, qui bloquait la carte à l'écran.
+                coloriage.mode = "archive"
             else:
                 coloriage.mode = "serein"
             # La page recharge cette photo nue et dessine dessus, sur son
@@ -9049,6 +9212,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             if duree_s is not None and _maintenant() - debut >= duree_s:
                 break
     finally:
+        garde.arrete()
         coloriage.ferme()
         entree.kill()
         coupe.set()
