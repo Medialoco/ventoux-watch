@@ -108,3 +108,73 @@ class RetourVentouxTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class _Tuyau:
+    def __init__(self, casse=False):
+        self.ecrits = []
+        self.casse = casse
+
+    def write(self, image):
+        if self.casse:
+            raise BrokenPipeError
+        self.ecrits.append(image)
+
+
+class _Sortie:
+    def __init__(self, casse=False):
+        self.stdin = _Tuyau(casse)
+
+
+class RelaisTests(unittest.TestCase):
+    def test_le_relais_remplit_le_silence_de_la_boucle(self):
+        relais = stream.Relais(fps=50, silence_s=0.1)
+        sortie = _Sortie()
+        try:
+            relais.ecrit(sortie, b"image")
+            time.sleep(0.5)
+        finally:
+            relais.arrete()
+        self.assertGreater(relais.relayees, 5)
+        self.assertEqual(len(sortie.stdin.ecrits), relais.relayees + 1)
+        self.assertEqual(set(sortie.stdin.ecrits), {b"image"})
+
+    def test_le_relais_se_tait_quand_la_boucle_ecrit(self):
+        relais = stream.Relais(fps=50, silence_s=0.2)
+        sortie = _Sortie()
+        try:
+            fin = time.monotonic() + 0.5
+            while time.monotonic() < fin:
+                relais.ecrit(sortie, b"image")
+                time.sleep(0.02)
+        finally:
+            relais.arrete()
+        self.assertEqual(relais.relayees, 0)
+
+    def test_le_relais_lache_une_sortie_morte(self):
+        relais = stream.Relais(fps=50, silence_s=0.05)
+        sortie = _Sortie()
+        try:
+            relais.ecrit(sortie, b"image")
+            sortie.stdin.casse = True
+            time.sleep(0.3)
+            self.assertEqual(relais.relayees, 0)
+            self.assertIsNone(relais._sortie)
+        finally:
+            relais.arrete()
+
+    def test_le_relais_oublie_une_sortie_fermee(self):
+        relais = stream.Relais(fps=50, silence_s=0.05)
+        sortie = _Sortie()
+        try:
+            relais.ecrit(sortie, b"image")
+            relais.oublie()
+            time.sleep(0.3)
+        finally:
+            relais.arrete()
+        self.assertEqual(relais.relayees, 0)
+
+    def test_la_boucle_ecrit_par_le_relais(self):
+        source = inspect.getsource(stream.diffuse)
+        self.assertIn("relais.ecrit(sortie, toile.tobytes())", source)
+        self.assertNotIn("sortie.stdin.write(", source)

@@ -7809,6 +7809,77 @@ def _entree(url: str, recul: int, fps: int = 6) -> subprocess.Popen:
 REPRISE_SORTIE_S = 15.0
 
 
+class Relais:
+    """Garde l'arrivée YouTube nourrie quand la boucle des images s'arrête.
+
+    Le 19 novembre, Quanteec a coupé la connexion du Mont Serein toutes les
+    heures. La garde de l'entrée la relançait en une demi-minute, mais
+    pendant cette demi-minute aucune image ne partait, et YouTube terminait
+    le direct. Le relais renvoie la dernière image au rythme de l'antenne
+    dès que la boucle se tait : le spectateur voit une image figée quelques
+    secondes, YouTube ne voit jamais de trou.
+    """
+
+    def __init__(self, fps: float, silence_s: float = 0.5) -> None:
+        self.pas_s = 1.0 / fps
+        self.silence_s = silence_s
+        self.relayees = 0
+        self._lock = threading.Lock()
+        self._sortie: subprocess.Popen | None = None
+        self._image: bytes | None = None
+        self._dernier = time.monotonic()
+        self._stop = threading.Event()
+        threading.Thread(target=self._boucle, daemon=True).start()
+
+    def ecrit(self, sortie: subprocess.Popen, image: bytes) -> None:
+        """L'écriture de la boucle. Ses erreurs restent les siennes."""
+        assert sortie.stdin is not None
+        with self._lock:
+            self._sortie = sortie
+            self._image = image
+            sortie.stdin.write(image)
+            self._dernier = time.monotonic()
+
+    def oublie(self) -> None:
+        # Sans verrou : un relais coincé dans une écriture le garde, et la
+        # sortie qu'on ferme le fera échouer.
+        self._sortie = None
+
+    def arrete(self) -> None:
+        self._stop.set()
+        self._sortie = None
+
+    def _boucle(self) -> None:
+        # Une horloge à pas fixes, pas un sommeil après chaque image : les
+        # images relayées doivent tenir le rythme de l'antenne, sans quoi la
+        # vidéo prend du retard sur le son et l'arrivée finit par manquer.
+        prochaine: float | None = None
+        while not self._stop.is_set():
+            maintenant = time.monotonic()
+            if maintenant - self._dernier < self.silence_s:
+                prochaine = None
+                self._stop.wait(self.pas_s)
+                continue
+            if prochaine is None:
+                prochaine = maintenant
+            elif maintenant < prochaine:
+                self._stop.wait(prochaine - maintenant)
+                continue
+            prochaine += self.pas_s
+            with self._lock:
+                if time.monotonic() - self._dernier < self.silence_s:
+                    continue
+                sortie, image = self._sortie, self._image
+                if sortie is None or image is None or sortie.stdin is None:
+                    continue
+                try:
+                    sortie.stdin.write(image)
+                except (OSError, ValueError):
+                    self._sortie = None
+                    continue
+                self.relayees += 1
+
+
 def _ferme_sortie(sortie: subprocess.Popen | None, son: int | None) -> None:
     """Rend l'arrivée et le descripteur de son, sans rien laisser derrière."""
     if son is not None:
@@ -8375,6 +8446,8 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
     threading.Thread(target=_regard_le_ventoux, args=(cfg["stream_url"], coupe, ventoux_vif),
                      daemon=True).start()
     garde = GardeEntree()
+    relais = Relais(cfg["stream_fps"])
+    relayees_vues = 0
     threading.Thread(target=_tient_l_adresse, args=(cfg, coupe), daemon=True).start()
     cam_secours = _camera_secours(cfg)
     nom_secours = str((cam_secours or {}).get("nom") or "backup")
@@ -8418,6 +8491,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
         # la radio est servie ici, un arrêt la coupait avec le direct.
         pause = LACHE_DIRECT_S if silence.is_set() else 0.0
         log.warning("Sortie lâchée %.0f s : on la rouvre sans quitter", pause)
+        relais.oublie()
         coupe_son.set()
         if verseur is not None:
             verseur.join(timeout=5)
@@ -8590,6 +8664,13 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             # L'instant où l'image qu'on s'apprête à dessiner sera regardée.
             # Posé avant de dessiner quoi que ce soit, puisque c'est l'heure
             # que le crédit musical va lire.
+            # Les images relayées pendant un silence de la boucle comptent
+            # dans l'heure de la vidéo, et la cadence repart d'ici : sinon la
+            # boucle rattraperait ce trou en rafale, devant le son.
+            if relais.relayees != relayees_vues:
+                diffusees += relais.relayees - relayees_vues
+                relayees_vues = relais.relayees
+                cadence = None
             musique.a_l_ecran(diffusees / cfg["stream_fps"])
             if montre - relu >= 2.0:
                 vus = identifications(racine / "data" / "events.json", quand - TENUE_S - 60)
@@ -9224,7 +9305,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
             try:
                 # Le même trait que le calque, sur l'image qui part.
                 coloriage.dessine(toile, time.time(), coloriage.mode)
-                sortie.stdin.write(toile.tobytes())
+                relais.ecrit(sortie, toile.tobytes())
                 diffusees += 1
             except (BrokenPipeError, OSError) as erreur:
                 # La veille a tué ffmpeg pour débloquer cette écriture. On
@@ -9246,6 +9327,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                               "%.0f s avant de rouvrir", REPRISE_SORTIE_S)
                     time.sleep(REPRISE_SORTIE_S)
                 log.warning("La sortie a lâché : on la rouvre sans toucher à l'entrée")
+                relais.oublie()
                 coupe_son.set()
                 if verseur is not None:
                     verseur.join(timeout=5)
@@ -9260,6 +9342,7 @@ def diffuse(cfg: dict, racine: Path, cible: str, duree_s: float | None, recul: i
                 break
     finally:
         garde.arrete()
+        relais.arrete()
         coloriage.ferme()
         entree.kill()
         coupe.set()
