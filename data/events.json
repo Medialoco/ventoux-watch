@@ -2,6 +2,90 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-19T04-37-24Z-missed-4339",
+      "t": "2026-11-19T04:37:24Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-19T04-37-24Z-missed-4339.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.5216,
+          "area_grow": 264.48,
+          "clipped": false,
+          "shade": 0.578,
+          "kept": 0.348,
+          "area_ratio": 0.0287,
+          "duration_s": 6.0,
+          "frames": 7,
+          "width_m": 25.0,
+          "height_m": 21.8,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.153,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.3187,
+          0.4639,
+          0.1359,
+          0.2111
+        ]
+      },
+      "closeup": "data/closeups/2026-11-19T04-37-24Z-missed-4339.jpg"
+    },
+    {
+      "id": "2026-11-19T04-33-37Z-missed-4338",
+      "t": "2026-11-19T04:33:37Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-19T04-33-37Z-missed-4338.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2854,
+          "area_grow": 2.72,
+          "clipped": false,
+          "shade": 0.534,
+          "kept": 0.0,
+          "area_ratio": 0.00021,
+          "duration_s": 34.0,
+          "frames": 4,
+          "width_m": 17.1,
+          "height_m": 17.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.582,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.7734,
+          0.1806,
+          0.0109,
+          0.0194
+        ]
+      },
+      "closeup": "data/closeups/2026-11-19T04-33-37Z-missed-4338.jpg"
+    },
+    {
       "id": "2026-11-19T03-37-57Z-cycle-4337",
       "t": "2026-11-19T03:37:57Z",
       "type": "cycle",
@@ -828680,48 +828764,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-20T05-12-39Z-missed-10.jpg"
-    },
-    {
-      "id": "2026-10-20T04-12-32Z-missed-9",
-      "t": "2026-10-20T04:12:32Z",
-      "type": "missed",
-      "label": "Brouillard",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-20T04-12-32Z-missed-9.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.5077,
-          "area_grow": 31.5,
-          "clipped": false,
-          "shade": 1.282,
-          "kept": 0.278,
-          "area_ratio": 0.00574,
-          "duration_s": 16.4,
-          "frames": 14,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.288,
-          "seen_as": []
-        },
-        "refused": "fog",
-        "box": [
-          0.5625,
-          0.6444,
-          0.0984,
-          0.0667
-        ]
-      },
-      "closeup": "data/closeups/2026-10-20T04-12-32Z-missed-9.jpg"
     }
   ]
 }
