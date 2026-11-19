@@ -2,6 +2,89 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-19T13-06-55Z-missed-4392",
+      "t": "2026-11-19T13:06:55Z",
+      "type": "missed",
+      "label": "machine",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-19T13-06-55Z-missed-4392.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Le haut de la tache ne monte qu'à 0.9 m/s. La fumée d'un feu qui vient de prendre s'élève plusieurs fois plus vite : elle est portée par sa propre chaleur.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0117,
+          "area_grow": 1.71,
+          "clipped": false,
+          "shade": 1.472,
+          "kept": 0.556,
+          "area_ratio": 0.00073,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 11.2,
+          "height_m": 13.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.93,
+          "drift_rate": 0.053,
+          "seen_as": []
+        },
+        "refused": "machine",
+        "box": [
+          0.9141,
+          0.2611,
+          0.0187,
+          0.0389
+        ]
+      },
+      "closeup": "data/closeups/2026-11-19T13-06-55Z-missed-4392.jpg"
+    },
+    {
+      "id": "2026-11-19T13-06-55Z-motion-4393",
+      "t": "2026-11-19T13:06:55Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-19T13-06-55Z-motion-4393.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "day",
+        "weather": "ciel dégagé",
+        "context": "de jour, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2682,
+          "area_grow": 29.88,
+          "clipped": false,
+          "shade": 0.947,
+          "kept": 0.25,
+          "area_ratio": 0.01284,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 3.0,
+          "height_m": 2.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.305,
+          "seen_as": []
+        },
+        "box": [
+          0.1297,
+          0.8,
+          0.0906,
+          0.1417
+        ]
+      },
+      "closeup": "data/closeups/2026-11-19T13-06-55Z-motion-4393.jpg"
+    },
+    {
       "id": "2026-11-19T13-04-45Z-missed-4391",
       "t": "2026-11-19T13:04:45Z",
       "type": "missed",
@@ -814895,62 +814978,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-20T13-07-47Z-person-280.jpg"
-    },
-    {
-      "id": "2026-10-20T13-04-57Z-cycle-279",
-      "t": "2026-10-20T13:04:57Z",
-      "type": "cycle",
-      "label": "Vélo",
-      "zone": "road",
-      "confidence": 0.5,
-      "thumb": "data/thumbs/2026-10-20T13-04-57Z-cycle-279.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "day",
-        "weather": "couvert",
-        "context": "de jour, couvert",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.1267,
-          "area_grow": 1.44,
-          "clipped": false,
-          "shade": 1.646,
-          "kept": 0.333,
-          "area_ratio": 0.00079,
-          "duration_s": 1.4,
-          "frames": 2,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 1.818,
-          "seen_as": []
-        },
-        "box": [
-          0.8313,
-          0.8694,
-          0.0219,
-          0.025
-        ],
-        "trace": [
-          [
-            1792501496.05,
-            0.8313,
-            0.8694,
-            0.0219,
-            0.025
-          ],
-          [
-            1792501497.46,
-            0.7562,
-            0.9806,
-            0.0406,
-            0.0194
-          ]
-        ]
-      },
-      "closeup": "data/closeups/2026-10-20T13-04-57Z-cycle-279.jpg"
     }
   ]
 }
