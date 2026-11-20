@@ -2,6 +2,131 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-20T20-59-14Z-missed-4649",
+      "t": "2026-11-20T20:59:14Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-20T20-59-14Z-missed-4649.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.8323,
+          "area_grow": 2.66,
+          "clipped": false,
+          "shade": 1.178,
+          "kept": 0.5,
+          "area_ratio": 0.00115,
+          "duration_s": 10.0,
+          "frames": 11,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 2.254,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.775,
+          0.0139,
+          0.0312,
+          0.0528
+        ]
+      },
+      "closeup": "data/closeups/2026-11-20T20-59-14Z-missed-4649.jpg"
+    },
+    {
+      "id": "2026-11-20T20-59-14Z-missed-4650",
+      "t": "2026-11-20T20:59:14Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-20T20-59-14Z-missed-4650.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2847,
+          "area_grow": 206.87,
+          "clipped": false,
+          "shade": 1.158,
+          "kept": 0.531,
+          "area_ratio": 0.0404,
+          "duration_s": 9.0,
+          "frames": 10,
+          "width_m": 49.7,
+          "height_m": 40.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.825,
+          0.2139,
+          0.1672,
+          0.2417
+        ]
+      },
+      "closeup": "data/closeups/2026-11-20T20-59-14Z-missed-4650.jpg"
+    },
+    {
+      "id": "2026-11-20T20-59-12Z-motion-4648",
+      "t": "2026-11-20T20:59:12Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-20T20-59-12Z-motion-4648.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0634,
+          "area_grow": 0.22,
+          "clipped": false,
+          "shade": 1.123,
+          "kept": 0.0,
+          "area_ratio": 0.0001,
+          "duration_s": 8.0,
+          "frames": 9,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.323,
+          "seen_as": []
+        },
+        "box": [
+          0.0469,
+          0.2806,
+          0.0156,
+          0.0306
+        ]
+      },
+      "closeup": "data/closeups/2026-11-20T20-59-12Z-motion-4648.jpg"
+    },
+    {
       "id": "2026-11-20T20-37-38Z-missed-4647",
       "t": "2026-11-20T20:37:38Z",
       "type": "missed",
@@ -768487,48 +768612,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-21T21-53-17Z-missed-1140.jpg"
-    },
-    {
-      "id": "2026-10-21T20-52-34Z-missed-1139",
-      "t": "2026-10-21T20:52:34Z",
-      "type": "missed",
-      "label": "Brouillard",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-21T20-52-34Z-missed-1139.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.5122,
-          "area_grow": 4.29,
-          "clipped": false,
-          "shade": 1.209,
-          "kept": 0.478,
-          "area_ratio": 0.00078,
-          "duration_s": 19.8,
-          "frames": 10,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.202,
-          "seen_as": []
-        },
-        "refused": "fog",
-        "box": [
-          0.6406,
-          0.6667,
-          0.0969,
-          0.0722
-        ]
-      },
-      "closeup": "data/closeups/2026-10-21T20-52-34Z-missed-1139.jpg"
     }
   ]
 }
