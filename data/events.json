@@ -2,6 +2,228 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-20T21-23-05Z-missed-4655",
+      "t": "2026-11-20T21:23:05Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-20T21-23-05Z-missed-4655.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 44 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.136,
+          "area_grow": 0.54,
+          "clipped": true,
+          "shade": 1.702,
+          "kept": 0.594,
+          "area_ratio": 0.0007,
+          "duration_s": 24.0,
+          "frames": 24,
+          "width_m": 44.3,
+          "height_m": 20.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.107,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.9453,
+          0.1667,
+          0.0547,
+          0.0444
+        ]
+      },
+      "closeup": "data/closeups/2026-11-20T21-23-05Z-missed-4655.jpg"
+    },
+    {
+      "id": "2026-11-20T21-20-13Z-cycle-4653",
+      "t": "2026-11-20T21:20:13Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-20T21-20-13Z-cycle-4653.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 1.0,
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3853,
+          "area_grow": 1.53,
+          "clipped": false,
+          "shade": 0.958,
+          "kept": 1.0,
+          "area_ratio": 0.00266,
+          "duration_s": 9.0,
+          "frames": 10,
+          "width_m": 1.0,
+          "height_m": 0.8,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.731,
+          "seen_as": []
+        },
+        "surface": "roundabout",
+        "box": [
+          0.3,
+          0.9139,
+          0.0375,
+          0.05
+        ],
+        "trace": [
+          [
+            1795209604.41,
+            0.0688,
+            0.6806,
+            0.0391,
+            0.0444
+          ],
+          [
+            1795209605.41,
+            0.0703,
+            0.6806,
+            0.025,
+            0.0333
+          ],
+          [
+            1795209606.41,
+            0.1656,
+            0.6806,
+            0.025,
+            0.0389
+          ],
+          [
+            1795209607.41,
+            0.2062,
+            0.6889,
+            0.0281,
+            0.0444
+          ],
+          [
+            1795209608.41,
+            0.2594,
+            0.7389,
+            0.0375,
+            0.0333
+          ],
+          [
+            1795209609.41,
+            0.2141,
+            0.7778,
+            0.0172,
+            0.0361
+          ],
+          [
+            1795209610.41,
+            0.3812,
+            0.7944,
+            0.0219,
+            0.0278
+          ],
+          [
+            1795209611.41,
+            0.0813,
+            0.7806,
+            0.2031,
+            0.2194
+          ],
+          [
+            1795209612.41,
+            0.3,
+            0.9139,
+            0.0375,
+            0.05
+          ],
+          [
+            1795209613.41,
+            0.3344,
+            0.95,
+            0.0531,
+            0.05
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-20T21-20-13Z-cycle-4653.jpg"
+    },
+    {
+      "id": "2026-11-20T21-20-11Z-motion-4652",
+      "t": "2026-11-20T21:20:13Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-20T21-20-11Z-motion-4652.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0965,
+          "area_grow": 1.25,
+          "clipped": false,
+          "shade": 1.211,
+          "kept": 0.556,
+          "area_ratio": 0.00078,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 12.6,
+          "height_m": 12.6,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 2.347,
+          "seen_as": []
+        },
+        "surface": "path",
+        "box": [
+          0.0609,
+          0.5583,
+          0.0187,
+          0.0333
+        ],
+        "trace": [
+          [
+            1795209611.41,
+            0.0859,
+            0.5722,
+            0.0187,
+            0.0333
+          ],
+          [
+            1795209612.41,
+            0.0609,
+            0.5583,
+            0.0187,
+            0.0333
+          ],
+          [
+            1795209613.41,
+            0.0,
+            0.6,
+            0.0141,
+            0.0556
+          ]
+        ],
+        "count": 2,
+        "since": "2026-11-20T21:20:11Z"
+      },
+      "closeup": "data/closeups/2026-11-20T21-20-11Z-motion-4652.jpg"
+    },
+    {
       "id": "2026-11-20T21-05-55Z-missed-4651",
       "t": "2026-11-20T21:05:55Z",
       "type": "missed",
