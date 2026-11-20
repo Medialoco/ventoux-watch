@@ -2,6 +2,79 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-20T19-00-27Z-motion-4636",
+      "t": "2026-11-20T19:00:28Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-20T19-00-27Z-motion-4636.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0952,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 1.045,
+          "kept": 0.7,
+          "area_ratio": 0.001,
+          "duration_s": 4.0,
+          "frames": 4,
+          "width_m": 2.6,
+          "height_m": 5.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.682,
+          "seen_as": []
+        },
+        "surface": "parking",
+        "box": [
+          0.0406,
+          0.6917,
+          0.0172,
+          0.0583
+        ],
+        "trace": [
+          [
+            1795201224.0,
+            0.0406,
+            0.6917,
+            0.0172,
+            0.0583
+          ],
+          [
+            1795201225.0,
+            0.0406,
+            0.7111,
+            0.0203,
+            0.0361
+          ],
+          [
+            1795201227.0,
+            0.0,
+            0.7083,
+            0.1437,
+            0.1806
+          ],
+          [
+            1795201228.0,
+            0.0,
+            0.7778,
+            0.0172,
+            0.0583
+          ]
+        ],
+        "count": 2,
+        "since": "2026-11-20T19:00:27Z"
+      },
+      "closeup": "data/closeups/2026-11-20T19-00-27Z-motion-4636.jpg"
+    },
+    {
       "id": "2026-11-20T18-50-05Z-missed-4635",
       "t": "2026-11-20T18:50:05Z",
       "type": "missed",
@@ -768149,48 +768222,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-21T19-09-51Z-missed-1135.jpg"
-    },
-    {
-      "id": "2026-10-21T18-51-55Z-missed-1134",
-      "t": "2026-10-21T18:51:55Z",
-      "type": "missed",
-      "label": "Brouillard",
-      "zone": "road",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-21T18-51-55Z-missed-1134.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.4339,
-          "area_grow": 0.22,
-          "clipped": false,
-          "shade": 0.982,
-          "kept": 0.646,
-          "area_ratio": 0.00059,
-          "duration_s": 6.6,
-          "frames": 7,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.157,
-          "seen_as": []
-        },
-        "refused": "fog",
-        "box": [
-          0.5641,
-          0.6694,
-          0.3797,
-          0.25
-        ]
-      },
-      "closeup": "data/closeups/2026-10-21T18-51-55Z-missed-1134.jpg"
     }
   ]
 }
