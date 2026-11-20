@@ -2,6 +2,93 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-20T20-22-15Z-motion-4646",
+      "t": "2026-11-20T20:22:15Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-20T20-22-15Z-motion-4646.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1426,
+          "area_grow": 0.11,
+          "clipped": true,
+          "shade": 1.088,
+          "kept": 0.8,
+          "area_ratio": 0.00011,
+          "duration_s": 5.0,
+          "frames": 5,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.582,
+          "seen_as": []
+        },
+        "box": [
+          0.0,
+          0.2778,
+          0.0172,
+          0.0556
+        ]
+      },
+      "closeup": "data/closeups/2026-11-20T20-22-15Z-motion-4646.jpg"
+    },
+    {
+      "id": "2026-11-20T20-22-09Z-vehicle-4645",
+      "t": "2026-11-20T20:22:09Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "roundabout",
+      "confidence": 0.836,
+      "thumb": "data/thumbs/2026-11-20T20-22-09Z-vehicle-4645.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 5.0,
+        "height_m": 1.8,
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": false,
+          "shade": 0.988,
+          "kept": 0.65,
+          "area_ratio": 0.0102,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 5.0,
+          "height_m": 1.8,
+          "width_named_m": 3.8,
+          "height_named_m": 1.7,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.84 sur 66%",
+            "person 0.30 sur 0%"
+          ]
+        },
+        "surface": "island",
+        "box": [
+          0.2646,
+          0.7686,
+          0.1193,
+          0.0924
+        ]
+      },
+      "closeup": "data/closeups/2026-11-20T20-22-09Z-vehicle-4645.jpg"
+    },
+    {
       "id": "2026-11-20T19-59-38Z-motion-4644",
       "t": "2026-11-20T19:59:38Z",
       "type": "motion",
@@ -768400,48 +768487,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-21T20-52-34Z-missed-1139.jpg"
-    },
-    {
-      "id": "2026-10-21T20-17-47Z-missed-1138",
-      "t": "2026-10-21T20:17:47Z",
-      "type": "missed",
-      "label": "Masse dans le ciel",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-21T20-17-47Z-missed-1138.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.3367,
-          "area_grow": 30.87,
-          "clipped": true,
-          "shade": 1.128,
-          "kept": 0.852,
-          "area_ratio": 0.05226,
-          "duration_s": 4.2,
-          "frames": 4,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.234,
-          "seen_as": []
-        },
-        "refused": "sky_mass",
-        "box": [
-          0.6156,
-          0.7611,
-          0.2188,
-          0.2389
-        ]
-      },
-      "closeup": "data/closeups/2026-10-21T20-17-47Z-missed-1138.jpg"
     }
   ]
 }
