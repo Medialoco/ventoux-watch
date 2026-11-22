@@ -2,6 +2,91 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-22T18-31-14Z-missed-5261",
+      "t": "2026-11-22T18:31:14Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-22T18-31-14Z-missed-5261.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2554,
+          "area_grow": 57.0,
+          "clipped": true,
+          "shade": 0.633,
+          "kept": 0.299,
+          "area_ratio": 0.02078,
+          "duration_s": 20.0,
+          "frames": 18,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 27.1,
+          "height_named_m": 4.5,
+          "rise_ms": 0.0,
+          "drift_rate": 0.081,
+          "seen_as": [
+            "car 0.27 sur 0%"
+          ]
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.2812,
+          0.0,
+          0.1313,
+          0.1583
+        ]
+      },
+      "closeup": "data/closeups/2026-11-22T18-31-14Z-missed-5261.jpg"
+    },
+    {
+      "id": "2026-11-22T18-31-07Z-motion-5260",
+      "t": "2026-11-22T18:31:07Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-22T18-31-07Z-motion-5260.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.144,
+          "area_grow": 0.7,
+          "clipped": false,
+          "shade": 0.7,
+          "kept": 0.375,
+          "area_ratio": 0.00055,
+          "duration_s": 20.0,
+          "frames": 21,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.067,
+          "seen_as": []
+        },
+        "box": [
+          0.0375,
+          0.3417,
+          0.1047,
+          0.0417
+        ]
+      },
+      "closeup": "data/closeups/2026-11-22T18-31-07Z-motion-5260.jpg"
+    },
+    {
       "id": "2026-11-22T18-02-23Z-motion-5259",
       "t": "2026-11-22T18:02:23Z",
       "type": "motion",
@@ -755569,47 +755654,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-23T18-35-04Z-missed-375.jpg"
-    },
-    {
-      "id": "2026-10-23T18-06-08Z-motion-374",
-      "t": "2026-10-23T18:06:08Z",
-      "type": "motion",
-      "label": "Mouvement détecté",
-      "zone": "road",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-23T18-06-08Z-motion-374.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "night",
-        "weather": "peu nuageux",
-        "context": "de nuit, peu nuageux",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.2204,
-          "area_grow": 0.04,
-          "clipped": true,
-          "shade": 1.118,
-          "kept": 0.863,
-          "area_ratio": 0.00091,
-          "duration_s": 2.0,
-          "frames": 3,
-          "width_m": 27.2,
-          "height_m": 20.8,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.563,
-          "seen_as": []
-        },
-        "box": [
-          0.0,
-          0.5389,
-          0.1266,
-          0.1722
-        ]
-      },
-      "closeup": "data/closeups/2026-10-23T18-06-08Z-motion-374.jpg"
     }
   ]
 }
