@@ -2,6 +2,48 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-22T18-40-42Z-missed-5262",
+      "t": "2026-11-22T18:40:42Z",
+      "type": "missed",
+      "label": "Brume",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-22T18-40-42Z-missed-5262.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête est noyée, on y voit mal. Une lueur chaude qui gonfle ne suffit pas ici, il faut un panache qui monte.",
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1029,
+          "area_grow": 2.29,
+          "clipped": false,
+          "shade": 1.411,
+          "kept": 0.75,
+          "area_ratio": 0.00048,
+          "duration_s": 14.0,
+          "frames": 15,
+          "width_m": 25.1,
+          "height_m": 22.8,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.403,
+          "seen_as": []
+        },
+        "refused": "haze",
+        "box": [
+          0.8625,
+          0.125,
+          0.0172,
+          0.0278
+        ]
+      },
+      "closeup": "data/closeups/2026-11-22T18-40-42Z-missed-5262.jpg"
+    },
+    {
       "id": "2026-11-22T18-31-14Z-missed-5261",
       "t": "2026-11-22T18:31:14Z",
       "type": "missed",
@@ -755472,188 +755514,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-23T18-41-59Z-missed-379.jpg"
-    },
-    {
-      "id": "2026-10-23T18-39-52Z-missed-377",
-      "t": "2026-10-23T18:39:52Z",
-      "type": "missed",
-      "label": "Tache trop large",
-      "zone": "road",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-23T18-39-52Z-missed-377.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Environ 21 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
-        "period": "night",
-        "weather": "peu nuageux",
-        "context": "de nuit, peu nuageux",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.1445,
-          "area_grow": 0.12,
-          "clipped": false,
-          "shade": 1.173,
-          "kept": 0.86,
-          "area_ratio": 0.00047,
-          "duration_s": 5.0,
-          "frames": 5,
-          "width_m": 21.4,
-          "height_m": 11.8,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 3.65,
-          "drift_rate": 0.35,
-          "seen_as": []
-        },
-        "refused": "oversized",
-        "box": [
-          0.0187,
-          0.5917,
-          0.0625,
-          0.0611
-        ]
-      },
-      "closeup": "data/closeups/2026-10-23T18-39-52Z-missed-377.jpg"
-    },
-    {
-      "id": "2026-10-23T18-39-52Z-cycle-378",
-      "t": "2026-10-23T18:39:52Z",
-      "type": "cycle",
-      "label": "Vélo",
-      "zone": "other",
-      "confidence": 0.5,
-      "thumb": "data/thumbs/2026-10-23T18-39-52Z-cycle-378.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "night",
-        "weather": "peu nuageux",
-        "context": "de nuit, peu nuageux",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0636,
-          "area_grow": 0.68,
-          "clipped": false,
-          "shade": 1.195,
-          "kept": 0.571,
-          "area_ratio": 0.0009,
-          "duration_s": 1.0,
-          "frames": 2,
-          "width_m": 0.0,
-          "height_m": 0.0,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 1.7,
-          "seen_as": []
-        },
-        "surface": "sky",
-        "box": [
-          0.1,
-          0.4444,
-          0.0219,
-          0.0611
-        ],
-        "trace": [
-          [
-            1792780791.45,
-            0.1,
-            0.4444,
-            0.0219,
-            0.0611
-          ],
-          [
-            1792780792.45,
-            0.1203,
-            0.5167,
-            0.025,
-            0.0361
-          ]
-        ]
-      },
-      "closeup": "data/closeups/2026-10-23T18-39-52Z-cycle-378.jpg"
-    },
-    {
-      "id": "2026-10-23T18-39-50Z-motion-376",
-      "t": "2026-10-23T18:39:50Z",
-      "type": "motion",
-      "label": "Mouvement détecté",
-      "zone": "roundabout",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-23T18-39-50Z-motion-376.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
-        "period": "night",
-        "weather": "peu nuageux",
-        "context": "de nuit, peu nuageux",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.1652,
-          "area_grow": 0.36,
-          "clipped": false,
-          "shade": 1.068,
-          "kept": 0.905,
-          "area_ratio": 0.00062,
-          "duration_s": 6.0,
-          "frames": 7,
-          "width_m": 4.3,
-          "height_m": 2.2,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.427,
-          "seen_as": []
-        },
-        "box": [
-          0.175,
-          0.7333,
-          0.0437,
-          0.0389
-        ]
-      },
-      "closeup": "data/closeups/2026-10-23T18-39-50Z-motion-376.jpg"
-    },
-    {
-      "id": "2026-10-23T18-35-04Z-missed-375",
-      "t": "2026-10-23T18:35:04Z",
-      "type": "missed",
-      "label": "Brume",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-23T18-35-04Z-missed-375.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête est noyée, on y voit mal. Une lueur chaude qui gonfle ne suffit pas ici, il faut un panache qui monte.",
-        "period": "night",
-        "weather": "peu nuageux",
-        "context": "de nuit, peu nuageux",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.1605,
-          "area_grow": 79.17,
-          "clipped": false,
-          "shade": 1.609,
-          "kept": 0.231,
-          "area_ratio": 0.00825,
-          "duration_s": 7.0,
-          "frames": 8,
-          "width_m": 100.2,
-          "height_m": 76.1,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.031,
-          "seen_as": []
-        },
-        "refused": "haze",
-        "box": [
-          0.7172,
-          0.125,
-          0.0781,
-          0.1056
-        ]
-      },
-      "closeup": "data/closeups/2026-10-23T18-35-04Z-missed-375.jpg"
     }
   ]
 }
