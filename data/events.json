@@ -2,6 +2,174 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-22T01-02-30Z-cycle-5035",
+      "t": "2026-11-22T01:02:30Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-22T01-02-30Z-cycle-5035.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0245,
+          "area_grow": 0.91,
+          "clipped": false,
+          "shade": 0.865,
+          "kept": 1.0,
+          "area_ratio": 0.00048,
+          "duration_s": 11.0,
+          "frames": 12,
+          "width_m": 2.7,
+          "height_m": 2.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.087,
+          "seen_as": []
+        },
+        "surface": "parking",
+        "box": [
+          0.0141,
+          0.7167,
+          0.0172,
+          0.0306
+        ],
+        "trace": [
+          [
+            1795309339.0,
+            0.0141,
+            0.7167,
+            0.0172,
+            0.0306
+          ],
+          [
+            1795309340.0,
+            0.0,
+            0.5083,
+            0.0328,
+            0.2389
+          ],
+          [
+            1795309341.0,
+            0.0,
+            0.5111,
+            0.0359,
+            0.2389
+          ],
+          [
+            1795309342.0,
+            0.0,
+            0.5111,
+            0.0359,
+            0.2389
+          ],
+          [
+            1795309343.0,
+            0.0,
+            0.5111,
+            0.0359,
+            0.2389
+          ],
+          [
+            1795309344.0,
+            0.0,
+            0.5111,
+            0.0359,
+            0.2389
+          ],
+          [
+            1795309345.0,
+            0.0,
+            0.5111,
+            0.0359,
+            0.2361
+          ],
+          [
+            1795309346.0,
+            0.0,
+            0.5111,
+            0.0344,
+            0.2361
+          ],
+          [
+            1795309347.0,
+            0.0,
+            0.5111,
+            0.0328,
+            0.2361
+          ],
+          [
+            1795309348.0,
+            0.0,
+            0.7361,
+            0.0172,
+            0.0306
+          ],
+          [
+            1795309349.0,
+            0.0,
+            0.7361,
+            0.0156,
+            0.0306
+          ],
+          [
+            1795309350.0,
+            0.0,
+            0.7361,
+            0.0156,
+            0.0306
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-22T01-02-30Z-cycle-5035.jpg"
+    },
+    {
+      "id": "2026-11-22T01-02-29Z-motion-5034",
+      "t": "2026-11-22T01:02:29Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-22T01-02-29Z-motion-5034.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.3097,
+          "area_grow": 0.06,
+          "clipped": true,
+          "shade": 0.827,
+          "kept": 0.656,
+          "area_ratio": 0.00043,
+          "duration_s": 10.0,
+          "frames": 11,
+          "width_m": 7.5,
+          "height_m": 26.4,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.895,
+          "seen_as": []
+        },
+        "box": [
+          0.0,
+          0.5083,
+          0.0328,
+          0.2056
+        ]
+      },
+      "closeup": "data/closeups/2026-11-22T01-02-29Z-motion-5034.jpg"
+    },
+    {
       "id": "2026-11-22T00-17-59Z-missed-5033",
       "t": "2026-11-22T00:17:59Z",
       "type": "missed",
