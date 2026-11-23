@@ -2,6 +2,48 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-23T01-24-55Z-missed-5277",
+      "t": "2026-11-23T01:24:55Z",
+      "type": "missed",
+      "label": "Brume",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-23T01-24-55Z-missed-5277.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête est noyée, on y voit mal. Une lueur chaude qui gonfle ne suffit pas ici, il faut un panache qui monte.",
+        "period": "night",
+        "weather": "peu nuageux",
+        "context": "de nuit, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0173,
+          "area_grow": 0.86,
+          "clipped": false,
+          "shade": 0.533,
+          "kept": 0.111,
+          "area_ratio": 0.00018,
+          "duration_s": 5.0,
+          "frames": 6,
+          "width_m": 34.5,
+          "height_m": 29.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.106,
+          "seen_as": []
+        },
+        "refused": "haze",
+        "box": [
+          0.925,
+          0.0778,
+          0.0234,
+          0.0361
+        ]
+      },
+      "closeup": "data/closeups/2026-11-23T01-24-55Z-missed-5277.jpg"
+    },
+    {
       "id": "2026-11-23T00-20-47Z-missed-5276",
       "t": "2026-11-23T00:20:47Z",
       "type": "missed",
@@ -753208,48 +753250,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-24T02-10-05Z-missed-429.jpg"
-    },
-    {
-      "id": "2026-10-24T00-55-58Z-missed-428",
-      "t": "2026-10-24T00:55:58Z",
-      "type": "missed",
-      "label": "Brouillard",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-24T00-55-58Z-missed-428.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
-        "period": "night",
-        "weather": "brouillard",
-        "context": "de nuit, brouillard",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0154,
-          "area_grow": 0.23,
-          "clipped": true,
-          "shade": 1.559,
-          "kept": 0.167,
-          "area_ratio": 0.00013,
-          "duration_s": 6.0,
-          "frames": 7,
-          "width_m": 20.1,
-          "height_m": 40.2,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.0,
-          "seen_as": []
-        },
-        "refused": "fog",
-        "box": [
-          0.9875,
-          0.0222,
-          0.0125,
-          0.0444
-        ]
-      },
-      "closeup": "data/closeups/2026-10-24T00-55-58Z-missed-428.jpg"
     }
   ]
 }
