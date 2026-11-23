@@ -2,6 +2,47 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-23T16-22-58Z-motion-5475",
+      "t": "2026-11-23T16:22:58Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-23T16-22-58Z-motion-5475.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "twilight",
+        "weather": "peu nuageux",
+        "context": "au crépuscule, peu nuageux",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0593,
+          "area_grow": 0.37,
+          "clipped": true,
+          "shade": 0.875,
+          "kept": 0.143,
+          "area_ratio": 0.00061,
+          "duration_s": 9.0,
+          "frames": 10,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.075,
+          "seen_as": []
+        },
+        "box": [
+          0.0,
+          0.2889,
+          0.0734,
+          0.0833
+        ]
+      },
+      "closeup": "data/closeups/2026-11-23T16-22-58Z-motion-5475.jpg"
+    },
+    {
       "id": "2026-11-23T16-02-59Z-vehicle-5474",
       "t": "2026-11-23T16:02:59Z",
       "type": "vehicle",
@@ -738076,214 +738117,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-24T16-25-47Z-cycle-814.jpg"
-    },
-    {
-      "id": "2026-10-24T16-11-39Z-cycle-813",
-      "t": "2026-10-24T16:11:39Z",
-      "type": "cycle",
-      "label": "Vélo",
-      "zone": "roundabout",
-      "confidence": 0.5,
-      "thumb": "data/thumbs/2026-10-24T16-11-39Z-cycle-813.jpg",
-      "clip_url": "",
-      "detail": {
-        "width_m": 0.6,
-        "period": "twilight",
-        "weather": "peu nuageux",
-        "context": "au crépuscule, peu nuageux",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.0934,
-          "area_grow": 0.54,
-          "clipped": false,
-          "shade": 0.859,
-          "kept": 0.167,
-          "area_ratio": 0.00059,
-          "duration_s": 2.0,
-          "frames": 3,
-          "width_m": 0.6,
-          "height_m": 1.5,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 0.18,
-          "drift_rate": 2.868,
-          "seen_as": []
-        },
-        "surface": "island",
-        "box": [
-          0.3719,
-          0.7833,
-          0.0156,
-          0.0694
-        ],
-        "trace": [
-          [
-            1792858297.27,
-            0.3719,
-            0.7833,
-            0.0156,
-            0.0694
-          ],
-          [
-            1792858298.27,
-            0.3266,
-            0.7667,
-            0.0141,
-            0.0361
-          ],
-          [
-            1792858299.27,
-            0.2844,
-            0.7667,
-            0.0141,
-            0.0417
-          ]
-        ]
-      },
-      "closeup": "data/closeups/2026-10-24T16-11-39Z-cycle-813.jpg"
-    },
-    {
-      "id": "2026-10-24T16-05-25Z-vehicle-812",
-      "t": "2026-10-24T16:05:25Z",
-      "type": "vehicle",
-      "label": "Voiture",
-      "zone": "road",
-      "confidence": 0.543,
-      "thumb": "data/thumbs/2026-10-24T16-05-25Z-vehicle-812.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "twilight",
-        "weather": "peu nuageux",
-        "context": "au crépuscule, peu nuageux",
-        "autonomous": true,
-        "measured": {
-          "travel": 0.1643,
-          "area_grow": 0.19,
-          "clipped": false,
-          "shade": 0.796,
-          "kept": 0.325,
-          "area_ratio": 0.00057,
-          "duration_s": 13.0,
-          "frames": 14,
-          "width_m": 6.2,
-          "height_m": 4.2,
-          "width_named_m": 5.5,
-          "height_named_m": 3.5,
-          "rise_ms": 0.52,
-          "drift_rate": 0.204,
-          "seen_as": [
-            "truck 0.54 sur 72%",
-            "airplane 0.25 sur 0%"
-          ]
-        },
-        "box": [
-          0.1547,
-          0.6893,
-          0.0567,
-          0.064
-        ],
-        "trace": [
-          [
-            1792857912.27,
-            0.1578,
-            0.6944,
-            0.05,
-            0.0611
-          ],
-          [
-            1792857913.27,
-            0.1328,
-            0.675,
-            0.0422,
-            0.05
-          ],
-          [
-            1792857914.27,
-            0.1078,
-            0.6556,
-            0.0359,
-            0.0472
-          ],
-          [
-            1792857915.27,
-            0.0922,
-            0.6417,
-            0.0281,
-            0.0389
-          ],
-          [
-            1792857916.27,
-            0.0766,
-            0.625,
-            0.025,
-            0.0361
-          ],
-          [
-            1792857917.27,
-            0.0672,
-            0.6139,
-            0.0203,
-            0.0389
-          ],
-          [
-            1792857918.27,
-            0.0578,
-            0.6028,
-            0.0172,
-            0.0306
-          ],
-          [
-            1792857919.27,
-            0.0531,
-            0.5972,
-            0.0172,
-            0.0333
-          ],
-          [
-            1792857920.27,
-            0.0531,
-            0.5972,
-            0.0172,
-            0.0333
-          ],
-          [
-            1792857921.27,
-            0.0531,
-            0.5972,
-            0.0172,
-            0.0333
-          ],
-          [
-            1792857922.27,
-            0.0531,
-            0.5972,
-            0.0172,
-            0.0333
-          ],
-          [
-            1792857923.27,
-            0.0531,
-            0.5972,
-            0.0172,
-            0.0333
-          ],
-          [
-            1792857924.27,
-            0.0531,
-            0.5972,
-            0.0172,
-            0.0333
-          ],
-          [
-            1792857925.27,
-            0.0531,
-            0.5972,
-            0.0172,
-            0.0333
-          ]
-        ]
-      },
-      "closeup": "data/closeups/2026-10-24T16-05-25Z-vehicle-812.jpg"
     }
   ]
 }
