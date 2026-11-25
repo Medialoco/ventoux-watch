@@ -2,6 +2,149 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-25T16-49-04Z-missed-5848",
+      "t": "2026-11-25T16:49:04Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-25T16-49-04Z-missed-5848.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2707,
+          "area_grow": 0.39,
+          "clipped": true,
+          "shade": 1.064,
+          "kept": 0.2,
+          "area_ratio": 0.00013,
+          "duration_s": 0.7,
+          "frames": 4,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 14.918,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.3375,
+          0.9667,
+          0.0125,
+          0.0333
+        ]
+      },
+      "closeup": "data/closeups/2026-11-25T16-49-04Z-missed-5848.jpg"
+    },
+    {
+      "id": "2026-11-25T16-43-11Z-motion-5847",
+      "t": "2026-11-25T16:43:11Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-25T16-43-11Z-motion-5847.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1432,
+          "area_grow": 5.71,
+          "clipped": false,
+          "shade": 1.769,
+          "kept": 0.0,
+          "area_ratio": 0.00382,
+          "duration_s": 1.0,
+          "frames": 2,
+          "width_m": 3.2,
+          "height_m": 10.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.39,
+          "seen_as": []
+        },
+        "box": [
+          0.975,
+          0.3694,
+          0.0109,
+          0.0611
+        ]
+      },
+      "closeup": "data/closeups/2026-11-25T16-43-11Z-motion-5847.jpg"
+    },
+    {
+      "id": "2026-11-25T16-39-04Z-cycle-5844",
+      "t": "2026-11-25T16:39:04Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-25T16-39-04Z-cycle-5844.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 0.6,
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0435,
+          "area_grow": 1.35,
+          "clipped": false,
+          "shade": 1.745,
+          "kept": 0.125,
+          "area_ratio": 0.00074,
+          "duration_s": 2.0,
+          "frames": 2,
+          "width_m": 0.6,
+          "height_m": 1.1,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 1.442,
+          "seen_as": []
+        },
+        "surface": "building",
+        "box": [
+          0.9219,
+          0.85,
+          0.0156,
+          0.0472
+        ],
+        "trace": [
+          [
+            1795624742.81,
+            0.9672,
+            0.8417,
+            0.0109,
+            0.05
+          ],
+          [
+            1795624744.81,
+            0.9219,
+            0.85,
+            0.0156,
+            0.0472
+          ]
+        ],
+        "count": 3,
+        "since": "2026-11-25T16:39:04Z"
+      },
+      "closeup": "data/closeups/2026-11-25T16-39-04Z-cycle-5844.jpg"
+    },
+    {
       "id": "2026-11-25T16-37-03Z-motion-5843",
       "t": "2026-11-25T16:37:03Z",
       "type": "motion",
