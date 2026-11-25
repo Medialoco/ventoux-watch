@@ -2,6 +2,89 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-25T19-53-10Z-motion-5907",
+      "t": "2026-11-25T19:53:10Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-25T19-53-10Z-motion-5907.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2366,
+          "area_grow": 5.1,
+          "clipped": false,
+          "shade": 0.948,
+          "kept": 0.317,
+          "area_ratio": 0.00478,
+          "duration_s": 15.0,
+          "frames": 15,
+          "width_m": 6.3,
+          "height_m": 4.8,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.025,
+          "seen_as": []
+        },
+        "box": [
+          0.0516,
+          0.6972,
+          0.0594,
+          0.0806
+        ]
+      },
+      "closeup": "data/closeups/2026-11-25T19-53-10Z-motion-5907.jpg"
+    },
+    {
+      "id": "2026-11-25T19-51-51Z-missed-5906",
+      "t": "2026-11-25T19:51:51Z",
+      "type": "missed",
+      "label": "Brouillard",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-25T19-51-51Z-missed-5906.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête du Ventoux a disparu : le brouillard est descendu. Il rend visibles les faisceaux des lampes et les bancs qui dérivent, et tout cela a la taille, la couleur et la croissance de ce qu'on cherche.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2188,
+          "area_grow": 3.88,
+          "clipped": false,
+          "shade": 0.98,
+          "kept": 0.156,
+          "area_ratio": 0.00286,
+          "duration_s": 13.0,
+          "frames": 12,
+          "width_m": 7.7,
+          "height_m": 4.3,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.138,
+          "seen_as": []
+        },
+        "refused": "fog",
+        "box": [
+          0.0391,
+          0.7083,
+          0.0609,
+          0.0611
+        ]
+      },
+      "closeup": "data/closeups/2026-11-25T19-51-51Z-missed-5906.jpg"
+    },
+    {
       "id": "2026-11-25T19-47-12Z-cycle-5905",
       "t": "2026-11-25T19:47:12Z",
       "type": "cycle",
