@@ -2,6 +2,71 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-25T07-20-38Z-cycle-5598",
+      "t": "2026-11-25T07:20:38Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "road",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-25T07-20-38Z-cycle-5598.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "twilight",
+        "weather": "brouillard",
+        "context": "au crépuscule, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0368,
+          "area_grow": 1.01,
+          "clipped": false,
+          "shade": 1.125,
+          "kept": 0.062,
+          "area_ratio": 0.00157,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 4.8,
+          "height_m": 4.8,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.278,
+          "seen_as": []
+        },
+        "box": [
+          0.1,
+          0.6778,
+          0.0297,
+          0.0528
+        ],
+        "trace": [
+          [
+            1795591236.76,
+            0.0859,
+            0.6417,
+            0.0266,
+            0.0583
+          ],
+          [
+            1795591237.76,
+            0.0984,
+            0.6611,
+            0.0234,
+            0.0444
+          ],
+          [
+            1795591238.76,
+            0.1,
+            0.6778,
+            0.0297,
+            0.0528
+          ]
+        ],
+        "count": 2,
+        "since": "2026-11-25T07:20:38Z"
+      },
+      "closeup": "data/closeups/2026-11-25T07-20-38Z-cycle-5598.jpg"
+    },
+    {
       "id": "2026-11-25T07-10-03Z-missed-5596",
       "t": "2026-11-25T07:10:03Z",
       "type": "missed",
@@ -712005,48 +712070,6 @@
         ]
       },
       "closeup": "data/closeups/2026-10-26T07-25-06Z-vehicle-1334.jpg"
-    },
-    {
-      "id": "2026-10-26T07-20-25Z-missed-1333",
-      "t": "2026-10-26T07:20:25Z",
-      "type": "missed",
-      "label": "Nuage",
-      "zone": "sky",
-      "confidence": 0.3,
-      "thumb": "data/thumbs/2026-10-26T07-20-25Z-missed-1333.jpg",
-      "clip_url": "",
-      "detail": {
-        "reading": "Une masse pâle monte, mais elle est dans le ciel. Rien n'y brûle.",
-        "period": "day",
-        "weather": "nuageux",
-        "context": "de jour, nuageux",
-        "autonomous": false,
-        "measured": {
-          "travel": 0.007,
-          "area_grow": 2.04,
-          "clipped": false,
-          "shade": 1.144,
-          "kept": 0.0,
-          "area_ratio": 0.0009,
-          "duration_s": 5.0,
-          "frames": 6,
-          "width_m": 40.9,
-          "height_m": 33.7,
-          "width_named_m": 0.0,
-          "height_named_m": 0.0,
-          "rise_ms": 2.89,
-          "drift_rate": 0.015,
-          "seen_as": []
-        },
-        "refused": "cloud",
-        "box": [
-          0.7328,
-          0.1667,
-          0.0266,
-          0.0389
-        ]
-      },
-      "closeup": "data/closeups/2026-10-26T07-20-25Z-missed-1333.jpg"
     }
   ]
 }
