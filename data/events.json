@@ -2,6 +2,198 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-25T10-30-57Z-vehicle-5663",
+      "t": "2026-11-25T10:30:57Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.864,
+      "thumb": "data/thumbs/2026-11-25T10-30-57Z-vehicle-5663.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 2.3,
+        "height_m": 1.9,
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2804,
+          "area_grow": 0.28,
+          "clipped": false,
+          "shade": 0.899,
+          "kept": 0.336,
+          "area_ratio": 0.0028,
+          "duration_s": 3.0,
+          "frames": 4,
+          "width_m": 2.3,
+          "height_m": 1.9,
+          "width_named_m": 2.4,
+          "height_named_m": 1.5,
+          "rise_ms": 0.68,
+          "drift_rate": 0.948,
+          "seen_as": [
+            "car 0.86 sur 68%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.4009,
+          0.8344,
+          0.106,
+          0.1173
+        ],
+        "trace": [
+          [
+            1795602654.72,
+            0.4141,
+            0.8556,
+            0.0813,
+            0.1222
+          ],
+          [
+            1795602655.72,
+            0.35,
+            0.8028,
+            0.075,
+            0.0889
+          ],
+          [
+            1795602656.72,
+            0.2812,
+            0.7611,
+            0.0578,
+            0.0806
+          ],
+          [
+            1795602657.72,
+            0.2016,
+            0.725,
+            0.0531,
+            0.0528
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-25T10-30-57Z-vehicle-5663.jpg"
+    },
+    {
+      "id": "2026-11-25T10-29-37Z-vehicle-5662",
+      "t": "2026-11-25T10:29:37Z",
+      "type": "vehicle",
+      "label": "Voiture grise",
+      "zone": "road",
+      "confidence": 0.831,
+      "thumb": "data/thumbs/2026-11-25T10-29-37Z-vehicle-5662.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 2.2,
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.2531,
+          "area_grow": 25.89,
+          "clipped": false,
+          "shade": 0.659,
+          "kept": 0.23,
+          "area_ratio": 0.01461,
+          "duration_s": 4.0,
+          "frames": 4,
+          "width_m": 2.2,
+          "height_m": 2.9,
+          "width_named_m": 2.5,
+          "height_named_m": 2.5,
+          "rise_ms": 0.0,
+          "drift_rate": 0.416,
+          "seen_as": [
+            "truck 0.83 sur 68%",
+            "person 0.28 sur 0%"
+          ]
+        },
+        "surface": "roundabout",
+        "box": [
+          0.1376,
+          0.7839,
+          0.0987,
+          0.173
+        ],
+        "trace": [
+          [
+            1795602573.72,
+            0.0672,
+            0.6556,
+            0.0156,
+            0.0361
+          ],
+          [
+            1795602575.72,
+            0.0922,
+            0.7389,
+            0.0344,
+            0.0389
+          ],
+          [
+            1795602576.72,
+            0.1062,
+            0.7889,
+            0.0437,
+            0.075
+          ],
+          [
+            1795602577.72,
+            0.1484,
+            0.8083,
+            0.0797,
+            0.1833
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-25T10-29-37Z-vehicle-5662.jpg"
+    },
+    {
+      "id": "2026-11-25T10-24-17Z-missed-5661",
+      "t": "2026-11-25T10:24:17Z",
+      "type": "missed",
+      "label": "Brume",
+      "zone": "slope",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-25T10-24-17Z-missed-5661.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "La crête est noyée, on y voit mal. Une lueur chaude qui gonfle ne suffit pas ici, il faut un panache qui monte.",
+        "period": "day",
+        "weather": "brouillard",
+        "context": "de jour, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.2734,
+          "area_grow": 0.1,
+          "clipped": false,
+          "shade": 0.846,
+          "kept": 0.73,
+          "area_ratio": 0.0013,
+          "duration_s": 9.0,
+          "frames": 10,
+          "width_m": 40.0,
+          "height_m": 35.9,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.302,
+          "seen_as": []
+        },
+        "refused": "haze",
+        "box": [
+          0.35,
+          0.4139,
+          0.1047,
+          0.1667
+        ]
+      },
+      "closeup": "data/closeups/2026-11-25T10-24-17Z-missed-5661.jpg"
+    },
+    {
       "id": "2026-11-25T10-20-48Z-vehicle-5660",
       "t": "2026-11-25T10:20:48Z",
       "type": "vehicle",
