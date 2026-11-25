@@ -2,6 +2,110 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-25T01-25-22Z-motion-5535",
+      "t": "2026-11-25T01:25:22Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "road",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-25T01-25-22Z-motion-5535.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1777,
+          "area_grow": 0.44,
+          "clipped": false,
+          "shade": 1.478,
+          "kept": 0.167,
+          "area_ratio": 0.00056,
+          "duration_s": 9.0,
+          "frames": 10,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.433,
+          "seen_as": []
+        },
+        "box": [
+          0.1047,
+          0.3917,
+          0.0266,
+          0.075
+        ]
+      },
+      "closeup": "data/closeups/2026-11-25T01-25-22Z-motion-5535.jpg"
+    },
+    {
+      "id": "2026-11-25T01-25-10Z-cycle-5534",
+      "t": "2026-11-25T01:25:10Z",
+      "type": "cycle",
+      "label": "Vélo",
+      "zone": "other",
+      "confidence": 0.5,
+      "thumb": "data/thumbs/2026-11-25T01-25-10Z-cycle-5534.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "brouillard",
+        "context": "de nuit, brouillard",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1374,
+          "area_grow": 2.73,
+          "clipped": false,
+          "shade": 1.243,
+          "kept": 0.5,
+          "area_ratio": 0.00117,
+          "duration_s": 2.0,
+          "frames": 3,
+          "width_m": 5.6,
+          "height_m": 6.7,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 1.088,
+          "seen_as": []
+        },
+        "box": [
+          0.1078,
+          0.6361,
+          0.0234,
+          0.05
+        ],
+        "trace": [
+          [
+            1795569908.0,
+            0.1594,
+            0.5167,
+            0.0141,
+            0.0306
+          ],
+          [
+            1795569909.0,
+            0.1594,
+            0.5056,
+            0.0187,
+            0.0417
+          ],
+          [
+            1795569910.0,
+            0.1078,
+            0.6361,
+            0.0234,
+            0.05
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-25T01-25-10Z-cycle-5534.jpg"
+    },
+    {
       "id": "2026-11-25T01-13-09Z-missed-5533",
       "t": "2026-11-25T01:13:09Z",
       "type": "missed",
