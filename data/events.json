@@ -2,6 +2,131 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-27T02-23-18Z-missed-6329",
+      "t": "2026-11-27T02:23:18Z",
+      "type": "missed",
+      "label": "Véhicule non nommé",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-27T02-23-18Z-missed-6329.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1325,
+          "area_grow": 0.4,
+          "clipped": false,
+          "shade": 0.872,
+          "kept": 1.0,
+          "area_ratio": 0.00059,
+          "duration_s": 7.0,
+          "frames": 8,
+          "width_m": 17.6,
+          "height_m": 7.5,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.388,
+          "seen_as": []
+        },
+        "refused": "unnamed_vehicle",
+        "box": [
+          0.3656,
+          0.5694,
+          0.0516,
+          0.0389
+        ]
+      },
+      "closeup": "data/closeups/2026-11-27T02-23-18Z-missed-6329.jpg"
+    },
+    {
+      "id": "2026-11-27T02-23-12Z-motion-6328",
+      "t": "2026-11-27T02:23:12Z",
+      "type": "motion",
+      "label": "Mouvement détecté",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-27T02-23-12Z-motion-6328.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Quelque chose a traversé la chaussée ou le rond-point, sans classe sûre.",
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.1165,
+          "area_grow": 0.34,
+          "clipped": false,
+          "shade": 0.938,
+          "kept": 0.875,
+          "area_ratio": 0.00059,
+          "duration_s": 19.0,
+          "frames": 19,
+          "width_m": 3.2,
+          "height_m": 3.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.13,
+          "drift_rate": 0.18,
+          "seen_as": []
+        },
+        "box": [
+          0.7937,
+          0.6222,
+          0.0312,
+          0.0556
+        ]
+      },
+      "closeup": "data/closeups/2026-11-27T02-23-12Z-motion-6328.jpg"
+    },
+    {
+      "id": "2026-11-27T02-23-10Z-missed-6327",
+      "t": "2026-11-27T02:23:10Z",
+      "type": "missed",
+      "label": "Tache trop large",
+      "zone": "other",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-27T02-23-10Z-missed-6327.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Environ 29 m au sol. Rien ne roule et ne marche à cette taille : de la lumière ou de l'ombre.",
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0472,
+          "area_grow": 0.8,
+          "clipped": false,
+          "shade": 0.931,
+          "kept": 0.835,
+          "area_ratio": 0.00044,
+          "duration_s": 17.0,
+          "frames": 17,
+          "width_m": 29.0,
+          "height_m": 8.2,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.38,
+          "drift_rate": 0.001,
+          "seen_as": []
+        },
+        "refused": "oversized",
+        "box": [
+          0.4609,
+          0.5528,
+          0.1109,
+          0.0556
+        ]
+      },
+      "closeup": "data/closeups/2026-11-27T02-23-10Z-missed-6327.jpg"
+    },
+    {
       "id": "2026-11-27T02-03-10Z-motion-6326",
       "t": "2026-11-27T02:03:10Z",
       "type": "motion",
