@@ -2,6 +2,129 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-27T06-07-58Z-vehicle-6339",
+      "t": "2026-11-27T06:07:58Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "road",
+      "confidence": 0.651,
+      "thumb": "data/thumbs/2026-11-27T06-07-58Z-vehicle-6339.jpg",
+      "clip_url": "",
+      "detail": {
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.03,
+          "area_grow": 1.57,
+          "clipped": false,
+          "shade": 1.038,
+          "kept": 0.649,
+          "area_ratio": 0.01028,
+          "duration_s": 4.0,
+          "frames": 5,
+          "width_m": 13.4,
+          "height_m": 6.4,
+          "width_named_m": 6.8,
+          "height_named_m": 4.0,
+          "rise_ms": 0.47,
+          "drift_rate": 0.037,
+          "seen_as": [
+            "truck 0.65 sur 25%",
+            "car 0.45 sur 0%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.1525,
+          0.6854,
+          0.072,
+          0.0747
+        ],
+        "trace": [
+          [
+            1795759674.05,
+            0.1078,
+            0.6806,
+            0.0875,
+            0.075
+          ],
+          [
+            1795759675.05,
+            0.0922,
+            0.6667,
+            0.1219,
+            0.1028
+          ],
+          [
+            1795759676.05,
+            0.0766,
+            0.65,
+            0.1,
+            0.1028
+          ],
+          [
+            1795759677.05,
+            0.0766,
+            0.65,
+            0.1,
+            0.1028
+          ],
+          [
+            1795759678.05,
+            0.0766,
+            0.65,
+            0.1,
+            0.1028
+          ]
+        ]
+      },
+      "closeup": "data/closeups/2026-11-27T06-07-58Z-vehicle-6339.jpg"
+    },
+    {
+      "id": "2026-11-27T06-03-57Z-missed-6338",
+      "t": "2026-11-27T06:03:57Z",
+      "type": "missed",
+      "label": "Masse dans le ciel",
+      "zone": "sky",
+      "confidence": 0.3,
+      "thumb": "data/thumbs/2026-11-27T06-03-57Z-missed-6338.jpg",
+      "clip_url": "",
+      "detail": {
+        "reading": "Trop large pour un avion. Nuage, ou changement de lumière.",
+        "period": "night",
+        "weather": "ciel dégagé",
+        "context": "de nuit, ciel dégagé",
+        "autonomous": false,
+        "measured": {
+          "travel": 0.0424,
+          "area_grow": 277.43,
+          "clipped": true,
+          "shade": 1.192,
+          "kept": 0.556,
+          "area_ratio": 0.03612,
+          "duration_s": 13.0,
+          "frames": 14,
+          "width_m": 0.0,
+          "height_m": 0.0,
+          "width_named_m": 0.0,
+          "height_named_m": 0.0,
+          "rise_ms": 0.0,
+          "drift_rate": 0.018,
+          "seen_as": []
+        },
+        "refused": "sky_mass",
+        "box": [
+          0.3672,
+          0.0,
+          0.375,
+          0.1639
+        ]
+      },
+      "closeup": "data/closeups/2026-11-27T06-03-57Z-missed-6338.jpg"
+    },
+    {
       "id": "2026-11-27T06-02-57Z-missed-6337",
       "t": "2026-11-27T06:02:57Z",
       "type": "missed",
