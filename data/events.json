@@ -2,6 +2,51 @@
   "version": "0.6.48",
   "events": [
     {
+      "id": "2026-11-28T06-43-38Z-vehicle-6656",
+      "t": "2026-11-28T06:43:38Z",
+      "type": "vehicle",
+      "label": "Voiture",
+      "zone": "other",
+      "confidence": 0.684,
+      "thumb": "data/thumbs/2026-11-28T06-43-38Z-vehicle-6656.jpg",
+      "clip_url": "",
+      "detail": {
+        "width_m": 4.4,
+        "height_m": 1.0,
+        "period": "twilight",
+        "weather": "ciel dégagé",
+        "context": "au crépuscule, ciel dégagé",
+        "autonomous": true,
+        "measured": {
+          "travel": 0.0,
+          "area_grow": 1.0,
+          "clipped": true,
+          "shade": 0.654,
+          "kept": 0.296,
+          "area_ratio": 0.00907,
+          "duration_s": 0.0,
+          "frames": 1,
+          "width_m": 4.4,
+          "height_m": 1.0,
+          "width_named_m": 4.4,
+          "height_named_m": 0.9,
+          "rise_ms": 0.0,
+          "drift_rate": 0.0,
+          "seen_as": [
+            "car 0.68 sur 85%"
+          ]
+        },
+        "surface": "road",
+        "box": [
+          0.7959,
+          0.9361,
+          0.19,
+          0.0639
+        ]
+      },
+      "closeup": "data/closeups/2026-11-28T06-43-38Z-vehicle-6656.jpg"
+    },
+    {
       "id": "2026-11-28T06-40-30Z-vehicle-6655",
       "t": "2026-11-28T06:40:30Z",
       "type": "vehicle",
@@ -659888,80 +659933,6 @@
         "since": "2026-10-29T06:48:57Z"
       },
       "closeup": "data/closeups/2026-10-29T06-48-57Z-vehicle-3033.jpg"
-    },
-    {
-      "id": "2026-10-29T06-42-16Z-vehicle-3032",
-      "t": "2026-10-29T06:42:16Z",
-      "type": "vehicle",
-      "label": "Voiture",
-      "zone": "road",
-      "confidence": 0.692,
-      "thumb": "data/thumbs/2026-10-29T06-42-16Z-vehicle-3032.jpg",
-      "clip_url": "",
-      "detail": {
-        "period": "twilight",
-        "weather": "peu nuageux",
-        "context": "au crépuscule, peu nuageux",
-        "autonomous": true,
-        "measured": {
-          "travel": 0.141,
-          "area_grow": 9.6,
-          "clipped": false,
-          "shade": 0.88,
-          "kept": 0.422,
-          "area_ratio": 0.00458,
-          "duration_s": 3.0,
-          "frames": 4,
-          "width_m": 5.0,
-          "height_m": 5.2,
-          "width_named_m": 4.4,
-          "height_named_m": 5.0,
-          "rise_ms": 0.0,
-          "drift_rate": 0.448,
-          "seen_as": [
-            "truck 0.69 sur 57%",
-            "car 0.39 sur 6%"
-          ]
-        },
-        "surface": "road",
-        "box": [
-          0.0715,
-          0.6861,
-          0.046,
-          0.0936
-        ],
-        "trace": [
-          [
-            1793256133.01,
-            0.0344,
-            0.5889,
-            0.0156,
-            0.0306
-          ],
-          [
-            1793256134.01,
-            0.0422,
-            0.6139,
-            0.0234,
-            0.0361
-          ],
-          [
-            1793256135.01,
-            0.0547,
-            0.6444,
-            0.0297,
-            0.05
-          ],
-          [
-            1793256136.01,
-            0.0703,
-            0.6889,
-            0.05,
-            0.0917
-          ]
-        ]
-      },
-      "closeup": "data/closeups/2026-10-29T06-42-16Z-vehicle-3032.jpg"
     }
   ]
 }
